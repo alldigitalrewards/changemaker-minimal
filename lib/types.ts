@@ -8,8 +8,14 @@
  * - API request/response types
  */
 
-import { Role } from '@prisma/client'
 import { type User } from '@supabase/supabase-js'
+
+// Role type matching Prisma schema
+export type Role = 'ADMIN' | 'PARTICIPANT'
+
+// Role constants for runtime usage
+export const ROLE_ADMIN = 'ADMIN' as const
+export const ROLE_PARTICIPANT = 'PARTICIPANT' as const
 
 // =============================================================================
 // TYPE ALIASES FOR CLARITY (can be upgraded to branded types later)

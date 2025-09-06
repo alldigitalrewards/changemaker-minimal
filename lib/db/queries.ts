@@ -33,7 +33,8 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { Role, type Workspace, type User, type Challenge, type Enrollment } from '@prisma/client'
+import { type Workspace, type User, type Challenge, type Enrollment } from '@prisma/client'
+import { type Role } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 
 // =============================================================================
