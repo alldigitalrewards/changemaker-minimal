@@ -55,26 +55,24 @@ function PublicLandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button
-              asChild
-              size="lg"
-              className="bg-coral-600 hover:bg-coral-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-            >
-              <Link href="/how-it-works">
+            <Link href="/how-it-works">
+              <Button
+                size="lg"
+                className="bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+              >
                 See How <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
+              </Button>
+            </Link>
 
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="border-coral-500 text-coral-600 hover:bg-coral-50"
-            >
-              <Link href="/auth/login">
+            <Link href="/auth/login">
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-coral-500 text-coral-600 hover:bg-coral-50"
+              >
                 Sign In
-              </Link>
-            </Button>
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -159,16 +157,15 @@ function PublicLandingPage() {
               Join thousands of changemakers who are already creating positive
               impact in their communities.
             </p>
-            <Button
-              asChild
-              size="lg"
-              variant="secondary"
-              className="bg-white text-coral-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-            >
-              <Link href="/how-it-works">
+            <Link href="/how-it-works">
+              <Button
+                size="lg"
+                variant="secondary"
+                className="bg-white text-coral-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              >
                 See How <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
+              </Button>
+            </Link>
           </div>
         </div>
       </section>

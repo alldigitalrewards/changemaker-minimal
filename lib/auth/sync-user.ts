@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { type User } from '@supabase/supabase-js'
-import { type Role } from '@prisma/client'
+import { type Role } from '@/lib/types'
 
 export async function syncSupabaseUser(supabaseUser: User): Promise<void> {
   if (!supabaseUser?.id || !supabaseUser?.email) {
@@ -11,7 +11,7 @@ export async function syncSupabaseUser(supabaseUser: User): Promise<void> {
     const role = (supabaseUser.user_metadata?.role as Role) || 'PARTICIPANT'
     
     // Use transaction to handle race conditions
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.user.upsert({
         where: { supabaseUserId: supabaseUser.id },
         update: {

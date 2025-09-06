@@ -7,6 +7,7 @@ import { LogoutButton } from "@/components/auth/logout-button"
 import Link from "next/link"
 import CreateWorkspaceDialog from "./create-workspace-dialog"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
+import { cn } from "@/lib/utils"
 
 export default async function WorkspacesPage() {
   const supabase = await createClient()
@@ -97,28 +98,53 @@ export default async function WorkspacesPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {allWorkspaces.map((workspace) => (
-                <Card key={workspace.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">{workspace.name}</CardTitle>
-                    <CardDescription>/{workspace.slug}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm space-y-1 text-gray-600">
-                      <p>{workspace._count.users} members</p>
-                      <p>{workspace._count.challenges} challenges</p>
-                    </div>
-                    {dbUser?.workspaceId !== workspace.id && (
-                      <JoinWorkspaceDialog 
-                        userId={dbUser?.id} 
-                        workspaceId={workspace.id}
-                        workspaceName={workspace.name}
-                        className="mt-3"
-                      />
+              {allWorkspaces.map((workspace) => {
+                const isUserWorkspace = dbUser?.workspaceId === workspace.id
+                const dashboardPath = isUserWorkspace && dbUser
+                  ? `/w/${workspace.slug}/${dbUser.role.toLowerCase()}/dashboard`
+                  : null
+                
+                return (
+                  <Card 
+                    key={workspace.id} 
+                    className={cn(
+                      "hover:shadow-md transition-shadow",
+                      isUserWorkspace && "cursor-pointer hover:border-coral-500/50"
                     )}
-                  </CardContent>
-                </Card>
-              ))}
+                    onClick={isUserWorkspace && dashboardPath ? () => window.location.href = dashboardPath : undefined}
+                  >
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">{workspace.name}</CardTitle>
+                      <CardDescription>/{workspace.slug}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm space-y-1 text-gray-600">
+                        <p>{workspace._count.users} members</p>
+                        <p>{workspace._count.challenges} challenges</p>
+                      </div>
+                      {isUserWorkspace ? (
+                        <Button 
+                          variant="outline" 
+                          className="mt-3 w-full"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (dashboardPath) window.location.href = dashboardPath
+                          }}
+                        >
+                          Go to Dashboard
+                        </Button>
+                      ) : (
+                        <JoinWorkspaceDialog 
+                          userId={dbUser?.id} 
+                          workspaceId={workspace.id}
+                          workspaceName={workspace.name}
+                          className="mt-3"
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
