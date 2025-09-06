@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
-const config = {
+const config: NextConfig = {
   reactStrictMode: true,
-  // Disable Turbopack for now to avoid build issues
-  experimental: { turbopack: false },
 };
 
 export default config;

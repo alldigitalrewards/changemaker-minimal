@@ -3,7 +3,8 @@
  * Populates the database with default workspaces, users, and mock data
  */
 
-import { PrismaClient, Role } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
+import { type Role, ROLE_ADMIN, ROLE_PARTICIPANT } from '../lib/types'
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
 
@@ -154,7 +155,7 @@ async function seed() {
           data: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
-            role: Role.ADMIN,
+            role: ROLE_ADMIN,
             workspaceId: workspace?.id
           }
         })
@@ -179,7 +180,7 @@ async function seed() {
           data: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
-            role: Role.PARTICIPANT,
+            role: ROLE_PARTICIPANT,
             workspaceId: workspace?.id
           }
         })
@@ -210,7 +211,7 @@ async function seed() {
     // Create enrollments (participants in challenges)
     console.log('\n📝 Creating enrollments...')
     const participants = await prisma.user.findMany({
-      where: { role: Role.PARTICIPANT }
+      where: { role: ROLE_PARTICIPANT }
     })
 
     for (const participant of participants) {

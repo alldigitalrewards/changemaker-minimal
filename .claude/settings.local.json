@@ -8,7 +8,12 @@
       "Bash(pnpm build:*)",
       "Bash(pnpm prisma:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_close",
+      "mcp__serena__find_symbol",
+      "mcp__serena__search_for_pattern",
+      "mcp__zen__analyze"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1"
