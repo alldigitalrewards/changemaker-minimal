@@ -38,7 +38,7 @@ export const GET = withErrorHandling(async (
     return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
   }
 
-  return NextResponse.json(challenge);
+  return NextResponse.json({ challenge });
 });
 
 export const PUT = withErrorHandling(async (
@@ -65,7 +65,7 @@ export const PUT = withErrorHandling(async (
     },
   });
 
-  return NextResponse.json(challenge);
+  return NextResponse.json({ challenge });
 });
 
 export const DELETE = withErrorHandling(async (

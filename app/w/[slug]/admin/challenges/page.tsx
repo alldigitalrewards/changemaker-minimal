@@ -57,7 +57,7 @@ export default function ChallengesPage() {
       const response = await fetch(`/api/workspaces/${params.slug}/challenges`);
       if (response.ok) {
         const data = await response.json();
-        setChallenges(data);
+        setChallenges(data.challenges || []);
       }
     } catch (error) {
       console.error('Failed to fetch challenges:', error);
