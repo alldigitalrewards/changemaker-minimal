@@ -93,24 +93,49 @@ const challengeTemplates = [
   }
 ]
 
-async function createSupabaseUser(email: string, password: string, metadata: any = {}) {
+async function getOrCreateSupabaseUser(email: string, password: string, metadata: any = {}) {
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    // First, try to create the user
+    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: metadata
     })
     
-    if (error) {
-      console.error(`Error creating Supabase user ${email}:`, error.message)
+    if (createData?.user) {
+      console.log(`✓ Created Supabase user: ${email}`)
+      return createData.user
+    }
+    
+    // If creation failed due to user already existing, try to retrieve existing user
+    if (createError?.message?.includes('already been registered') || createError?.message?.includes('already exists')) {
+      console.log(`📧 User already exists, retrieving: ${email}`)
+      
+      // Get existing user by email
+      const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+      
+      if (listError) {
+        console.error(`Error listing users to find ${email}:`, listError.message)
+        return null
+      }
+      
+      const existingUser = listData.users.find(user => user.email === email)
+      if (existingUser) {
+        console.log(`✓ Found existing Supabase user: ${email}`)
+        return existingUser
+      }
+      
+      console.error(`Could not find existing user: ${email}`)
       return null
     }
     
-    console.log(`✓ Created Supabase user: ${email}`)
-    return data.user
+    // Other creation errors
+    console.error(`Error creating Supabase user ${email}:`, createError?.message || 'Unknown error')
+    return null
+    
   } catch (error) {
-    console.error(`Failed to create Supabase user ${email}:`, error)
+    console.error(`Failed to get or create Supabase user ${email}:`, error)
     return null
   }
 }
