@@ -8,6 +8,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://changemaker.im'),
   title: {
     default: 'Changemaker - Transform Ideas into Impact',
     template: '%s | Changemaker'
