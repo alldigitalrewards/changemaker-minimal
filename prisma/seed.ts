@@ -241,10 +241,20 @@ async function seed() {
       const numChallenges = Math.floor(Math.random() * 3) + 3
       for (let i = 0; i < numChallenges; i++) {
         const template = challengeTemplates[i % challengeTemplates.length]
+        
+        // Generate realistic dates for demo data
+        const now = new Date()
+        const startDate = new Date(now.getTime() + (i * 7 + Math.floor(Math.random() * 14)) * 24 * 60 * 60 * 1000) // Start 0-2 weeks from now, staggered
+        const endDate = new Date(startDate.getTime() + (30 + Math.floor(Math.random() * 30)) * 24 * 60 * 60 * 1000) // End 30-60 days after start
+        const enrollmentDeadline = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000) // Enrollment deadline 1 week before start
+        
         const challenge = await prisma.challenge.create({
           data: {
             title: `${template.title} - ${workspace.name}`,
             description: template.description,
+            startDate,
+            endDate,
+            enrollmentDeadline,
             workspaceId: workspace.id
           }
         })
