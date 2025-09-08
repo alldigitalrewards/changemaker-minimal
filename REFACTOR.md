@@ -12,7 +12,9 @@ Changemaker is a multi-tenant platform for organizations to run innovation chall
 
 ## 🏗️ Architecture (Best Path Forward)
 
-Base: Vercel Platforms template (multi-tenancy via paths now, no Redis – use Prisma/Supabase). Best implementation: Simplify to path-based workspaces; enum-based roles; RLS for security. Extracted from original + template, resolving conflicts (no super admin, no subdomains).
+Base: Minimal Next.js 15 app with path-based multi-tenancy. Extracted essentials from original repo, resolved conflicts (no super admin, no subdomains).
+
+- **Nixed**: Super admin, subdomains, Redis—use paths (/w/[slug]) and simple ADMIN/PARTICIPANT roles.
 
 ### Key Changes from Original/Template
 

@@ -22,6 +22,8 @@ model Workspace {
   name       String
   users      User[]
   challenges Challenge[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt @default(now())
 }
 
 model User {
@@ -30,8 +32,13 @@ model User {
   supabaseUserId String?      @unique @db.Uuid
   role           Role
   workspaceId    String?      @db.Uuid
-  workspace      Workspace?   @relation(fields: [workspaceId], references: [id])
+  workspace      Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   enrollments    Enrollment[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt @default(now())
+
+  @@index([workspaceId])
+  @@index([workspaceId, role])
 }
 
 model Challenge {
@@ -39,8 +46,13 @@ model Challenge {
   title       String
   description String
   workspaceId String       @db.Uuid
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   enrollments Enrollment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt @default(now())
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
 }
 
 model Enrollment {
@@ -48,6 +60,13 @@ model Enrollment {
   userId      String    @db.Uuid
   challengeId String    @db.Uuid
   status      String
-  user        User      @relation(fields: [userId], references: [id])
-  challenge   Challenge @relation(fields: [challengeId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
+
+  @@unique([userId, challengeId])
+  @@index([userId])
+  @@index([challengeId])
+  @@index([status])
 }

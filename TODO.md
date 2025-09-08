@@ -87,3 +87,19 @@ The application structure is solid, but these missing pieces are essential for a
 3. Workspace Flow - Enable multi-tenancy
 4. Participant Dashboard - Complete the user experience
 5. Home Page - Entry point for users
+
+## Agent Management (New Section)
+- Review and test the 5 consolidated agents; delete if they introduce complexity.
+- If restarting agents, implement the proposed 4 new ones (refactor-guardian.md, etc.) and update CLAUDE.md to remove old references.
+- Monitor for scope creep: Ensure agents stay limited to MVP support.
+
+## Public Pages Honeypot (New Section)
+- Analyze old repo pages with refactor-guardian: Extract UI/UX context, identify bloat.
+- Refactor each page to static (hardcode data, remove dynamics, add comments).
+- Integrate refactored pages into /app/ using task-executor.
+- Verify visual match with old repo; test CTAs for lead gen (e.g., sign-up links).
+- Document any dynamic remnants in code comments for future reference.
+
+## General Tracking
+- Update README.md with summaries of discussions (e.g., agent overhauls, page strategies) for team reference.
+- Schedule weekly review of TODO.md/TODAY.md to memorize progress and prevent overengineering.
