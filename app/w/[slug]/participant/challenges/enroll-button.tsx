@@ -7,15 +7,13 @@ import { Button } from "@/components/ui/button"
 interface EnrollButtonProps {
   challengeId: string
   challengeTitle: string
-  userId: string
   workspaceSlug: string
   isEnrolled: boolean
 }
 
 export default function EnrollButton({ 
   challengeId, 
-  challengeTitle, 
-  userId,
+  challengeTitle,
   workspaceSlug,
   isEnrolled 
 }: EnrollButtonProps) {
@@ -30,8 +28,7 @@ export default function EnrollButton({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          challengeId,
-          userId 
+          challengeId
         })
       })
 

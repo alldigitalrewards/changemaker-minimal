@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, requireWorkspaceAccess } from '@/lib/auth/session';
+import JoinButton from './join-button';
 
 interface PageProps {
   params: Promise<{
@@ -203,10 +204,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
               </CardHeader>
               <CardContent className="space-y-2">
                 {!isEnrolled ? (
-                  <Button className="w-full bg-blue-500 hover:bg-blue-600">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Join Challenge
-                  </Button>
+                  <JoinButton challengeId={challenge.id} workspaceSlug={slug} />
                 ) : (
                   <>
                     <Button className="w-full" variant="outline">
@@ -261,10 +259,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                 <div className="text-center py-8">
                   <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                   <p className="text-gray-500 mb-4">Join this challenge to start tracking your progress</p>
-                  <Button className="bg-blue-500 hover:bg-blue-600">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Join Challenge
-                  </Button>
+                  <JoinButton challengeId={challenge.id} workspaceSlug={slug} />
                 </div>
               )}
             </CardContent>

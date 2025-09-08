@@ -186,10 +186,11 @@ export default function NewChallengePage() {
               <Input
                 id="title"
                 value={title}
-                onChange={(e) => setTitle(e.target.value.slice(0, 100))}
+                onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter challenge title"
                 required
                 disabled={isSaving}
+                maxLength={100}
                 className={!isTitleValid && title.length > 0 ? 'border-red-300' : ''}
               />
               <div className="flex justify-between text-sm text-gray-500">
@@ -213,11 +214,12 @@ export default function NewChallengePage() {
               <Textarea
                 id="description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe the challenge objectives, requirements, and expectations"
                 rows={6}
                 required
                 disabled={isSaving}
+                maxLength={500}
                 className={!isDescriptionValid && description.length > 0 ? 'border-red-300' : ''}
               />
               <div className="flex justify-between text-sm text-gray-500">

@@ -14,14 +14,14 @@ export const POST = withErrorHandling(async (
   context: { params: Promise<{ slug: string }> }
 ) => {
   const { slug } = await context.params
-  const { challengeId, userId } = await request.json()
+  const { challengeId } = await request.json()
 
   // Require workspace access
   const { workspace, user } = await requireWorkspaceAccess(slug)
 
   // Create enrollment using standardized query (includes validation)
   try {
-    const enrollment = await createEnrollment(userId, challengeId, workspace.id)
+    const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id)
     return NextResponse.json(enrollment)
   } catch (error) {
     if (error instanceof DatabaseError) {

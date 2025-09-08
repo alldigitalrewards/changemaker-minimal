@@ -48,11 +48,12 @@ export default function ParticipantChallengesPage() {
       const response = await fetch(`/api/workspaces/${params.slug}/challenges`);
       if (response.ok) {
         const data = await response.json();
-        setChallenges(data);
+        const challengesArray = data.challenges || [];
+        setChallenges(challengesArray);
         
         // Check which challenges the user is enrolled in
         const enrolledIds = new Set<string>();
-        data.forEach((challenge: Challenge) => {
+        challengesArray.forEach((challenge: Challenge) => {
           if (challenge.enrollments && challenge.enrollments.length > 0) {
             enrolledIds.add(challenge.id);
           }
