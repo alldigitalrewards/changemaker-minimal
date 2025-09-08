@@ -13,7 +13,9 @@
       "mcp__playwright__browser_close",
       "mcp__serena__find_symbol",
       "mcp__serena__search_for_pattern",
-      "mcp__zen__analyze"
+      "mcp__zen__analyze",
+      "mcp__playwright__browser_fill_form",
+      "mcp__playwright__browser_click"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1"
