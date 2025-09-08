@@ -18,6 +18,9 @@ export default function NewChallengePage() {
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +47,59 @@ export default function NewChallengePage() {
       });
       return;
     }
+
+    if (!startDate) {
+      toast({
+        title: 'Validation Error',
+        description: 'Start date is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!endDate) {
+      toast({
+        title: 'Validation Error',
+        description: 'End date is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (start < today) {
+      toast({
+        title: 'Validation Error',
+        description: 'Start date cannot be in the past',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (end < start) {
+      toast({
+        title: 'Validation Error',
+        description: 'End date must be on or after start date',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (enrollmentDeadline) {
+      const enrollDeadline = new Date(enrollmentDeadline);
+      if (enrollDeadline > start) {
+        toast({
+          title: 'Validation Error',
+          description: 'Enrollment deadline must be before or on the start date',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     
     if (!params?.slug) return;
     
@@ -54,7 +110,10 @@ export default function NewChallengePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           title: trimmedTitle, 
-          description: trimmedDescription 
+          description: trimmedDescription,
+          startDate,
+          endDate,
+          enrollmentDeadline: enrollmentDeadline || undefined
         }),
       });
 
@@ -89,7 +148,10 @@ export default function NewChallengePage() {
   const descriptionCharCount = description.length;
   const isTitleValid = title.trim().length >= 3;
   const isDescriptionValid = description.trim().length >= 10;
-  const isFormValid = isTitleValid && isDescriptionValid;
+  const isStartDateValid = startDate.length > 0;
+  const isEndDateValid = endDate.length > 0;
+  const areDatesValid = isStartDateValid && isEndDateValid && new Date(endDate) >= new Date(startDate);
+  const isFormValid = isTitleValid && isDescriptionValid && areDatesValid;
 
   return (
     <div className="space-y-6">
@@ -171,6 +233,69 @@ export default function NewChallengePage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">
+                  Start Date <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  required
+                  disabled={isSaving}
+                  className={!isStartDateValid && startDate.length === 0 ? 'border-red-300' : ''}
+                />
+                {!isStartDateValid && startDate.length === 0 && (
+                  <span className="text-sm text-red-500">Start date is required</span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endDate">
+                  End Date <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || new Date().toISOString().split('T')[0]}
+                  required
+                  disabled={isSaving}
+                  className={!isEndDateValid && endDate.length === 0 ? 'border-red-300' : ''}
+                />
+                {!isEndDateValid && endDate.length === 0 && (
+                  <span className="text-sm text-red-500">End date is required</span>
+                )}
+                {startDate && endDate && new Date(endDate) < new Date(startDate) && (
+                  <span className="text-sm text-red-500">End date must be on or after start date</span>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="enrollmentDeadline">
+                Enrollment Deadline (Optional)
+              </Label>
+              <Input
+                id="enrollmentDeadline"
+                type="date"
+                value={enrollmentDeadline}
+                onChange={(e) => setEnrollmentDeadline(e.target.value)}
+                max={startDate}
+                disabled={isSaving}
+              />
+              <div className="text-sm text-gray-500">
+                If not set, participants can enroll until the challenge starts
+              </div>
+              {enrollmentDeadline && startDate && new Date(enrollmentDeadline) > new Date(startDate) && (
+                <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
+              )}
+            </div>
+
             <div className="flex justify-end space-x-2">
               <Button
                 type="button"
@@ -183,7 +308,11 @@ export default function NewChallengePage() {
               <Button 
                 type="submit" 
                 disabled={isSaving || !isFormValid}
-                className="bg-coral-500 hover:bg-coral-600 disabled:bg-gray-300"
+                className={`transition-colors ${
+                  isSaving || !isFormValid
+                    ? 'opacity-100 bg-gray-300 text-gray-500 cursor-not-allowed border-gray-300'
+                    : 'bg-coral-500 hover:bg-coral-600 text-white'
+                }`}
               >
                 {isSaving ? (
                   <>

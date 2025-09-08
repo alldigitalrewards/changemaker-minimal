@@ -104,7 +104,7 @@ export async function POST(
       );
     }
 
-    const { title, description } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -134,7 +134,13 @@ export async function POST(
 
     // Create challenge using standardized query
     const challenge = await createChallenge(
-      { title, description },
+      { 
+        title, 
+        description,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined
+      },
       workspace.id
     );
 
