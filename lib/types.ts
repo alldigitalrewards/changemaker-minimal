@@ -73,6 +73,9 @@ export interface Challenge {
   readonly id: ChallengeId
   readonly title: string
   readonly description: string
+  readonly startDate: Date
+  readonly endDate: Date
+  readonly enrollmentDeadline: Date | null
   readonly workspaceId: WorkspaceId
 }
 
@@ -156,6 +159,9 @@ export interface PaginatedResponse<T> {
 export interface ChallengeCreateRequest {
   readonly title: string
   readonly description: string
+  readonly startDate: string // ISO string format for API
+  readonly endDate: string   // ISO string format for API
+  readonly enrollmentDeadline?: string // Optional ISO string format for API
 }
 
 export interface ChallengeCreateResponse {
@@ -198,6 +204,9 @@ export interface FormState<T = unknown> {
 export interface ChallengeFormData {
   readonly title: string
   readonly description: string
+  readonly startDate: string // ISO date string
+  readonly endDate: string   // ISO date string
+  readonly enrollmentDeadline?: string // Optional ISO date string
 }
 
 // =============================================================================
@@ -326,16 +335,45 @@ export const USER_ROLES = ['ADMIN', 'PARTICIPANT'] as const
  * Validation helper for challenge creation
  */
 export function validateChallengeData(data: unknown): data is ChallengeCreateRequest {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'title' in data &&
-    'description' in data &&
-    typeof (data as any).title === 'string' &&
-    typeof (data as any).description === 'string' &&
-    (data as any).title.trim().length > 0 &&
-    (data as any).description.trim().length > 0
-  )
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !('title' in data) ||
+    !('description' in data) ||
+    !('startDate' in data) ||
+    !('endDate' in data) ||
+    typeof (data as any).title !== 'string' ||
+    typeof (data as any).description !== 'string' ||
+    typeof (data as any).startDate !== 'string' ||
+    typeof (data as any).endDate !== 'string' ||
+    (data as any).title.trim().length === 0 ||
+    (data as any).description.trim().length === 0
+  ) {
+    return false
+  }
+
+  // Validate date formats
+  const startDate = new Date((data as any).startDate)
+  const endDate = new Date((data as any).endDate)
+  
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return false
+  }
+
+  // Validate date logic
+  if (endDate <= startDate) {
+    return false
+  }
+
+  // Validate enrollment deadline if provided
+  if ('enrollmentDeadline' in data && (data as any).enrollmentDeadline) {
+    const enrollmentDeadline = new Date((data as any).enrollmentDeadline)
+    if (isNaN(enrollmentDeadline.getTime()) || enrollmentDeadline > startDate) {
+      return false
+    }
+  }
+
+  return true
 }
 
 /**
