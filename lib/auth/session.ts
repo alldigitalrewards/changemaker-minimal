@@ -5,13 +5,19 @@ import { type User } from '@prisma/client'
 export async function getSession() {
   try {
     const supabase = await createClient()
-    const { data: { session }, error } = await supabase.auth.getSession()
+    // Use getUser for secure authentication
+    const { data: { user }, error } = await supabase.auth.getUser()
     
-    if (error || !session) {
+    if (error || !user) {
       return null
     }
     
-    return session
+    // Return user data in session-like format for compatibility
+    return {
+      user,
+      access_token: '', // Not available from getUser
+      refresh_token: '' // Not available from getUser
+    }
   } catch (error) {
     console.error('Failed to get session:', error)
     return null
@@ -20,11 +26,13 @@ export async function getSession() {
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const session = await getSession()
-    if (!session?.user) return null
+    const supabase = await createClient()
+    const { data: { user: authUser }, error } = await supabase.auth.getUser()
+    
+    if (error || !authUser) return null
 
     const user = await prisma.user.findUnique({
-      where: { supabaseUserId: session.user.id }
+      where: { supabaseUserId: authUser.id }
     })
 
     return user

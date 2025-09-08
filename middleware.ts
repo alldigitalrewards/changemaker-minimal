@@ -40,10 +40,11 @@ export async function middleware(request: NextRequest) {
   )
 
   try {
-    const { data: { session } } = await supabase.auth.getSession()
+    // Use getUser for secure authentication check
+    const { data: { user }, error } = await supabase.auth.getUser()
     
     // Require authentication
-    if (!session) {
+    if (error || !user) {
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
 
@@ -51,7 +52,7 @@ export async function middleware(request: NextRequest) {
     const slugMatch = pathname.match(/^\/w\/([^\/]+)/)
     if (slugMatch) {
       const slug = slugMatch[1]
-      const userRole = session.user?.user_metadata?.role
+      const userRole = user.user_metadata?.role
       
       // Admin route protection
       if (pathname.includes('/admin/') && userRole !== 'ADMIN') {

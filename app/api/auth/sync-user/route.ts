@@ -5,30 +5,31 @@ import { createClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
+    // Use getUser for secure authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError) {
       console.error('Auth error during sync:', authError)
       return NextResponse.json({ error: 'Authentication error' }, { status: 401 })
     }
     
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json({ error: 'No authenticated user' }, { status: 401 })
     }
 
     // Validate user has required fields
-    if (!session.user.id || !session.user.email) {
+    if (!user.id || !user.email) {
       return NextResponse.json({ error: 'Invalid user session data' }, { status: 400 })
     }
 
-    await syncSupabaseUser(session.user)
+    await syncSupabaseUser(user)
     
     return NextResponse.json({ 
       success: true, 
       user: {
-        id: session.user.id,
-        email: session.user.email,
-        role: session.user.user_metadata?.role || 'PARTICIPANT'
+        id: user.id,
+        email: user.email,
+        role: user.user_metadata?.role || 'PARTICIPANT'
       }
     })
   } catch (error) {
