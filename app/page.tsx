@@ -58,9 +58,11 @@ function PublicLandingPage() {
             <Link href="/how-it-works">
               <Button
                 size="lg"
-                className="bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                className="bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 px-6 py-3 font-medium rounded-md inline-flex items-center"
+                style={{ backgroundColor: '#ff6b6b', color: 'white' }}
               >
-                See How <ArrowRight className="ml-2 h-5 w-5" />
+                <span style={{ color: 'white' }}>See How</span>
+                <ArrowRight className="ml-2 h-5 w-5" style={{ color: 'white' }} />
               </Button>
             </Link>
 
