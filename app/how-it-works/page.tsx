@@ -38,57 +38,52 @@ export default function HowItWorksPage() {
     <div className="min-h-screen bg-white">
       <PublicNavbar />
       {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 bg-gray-900 text-white overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-orange-500/10"></div>
-        </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-6 py-3 rounded-full text-sm font-semibold border border-white/30 shadow-lg">
-              <Play className="h-4 w-4 text-white" />
-              <span className="text-white font-semibold">Platform Guide</span>
-            </div>
+      <section className="container mx-auto px-4 py-20 lg:py-32 text-center">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="inline-flex items-center gap-2 bg-coral-100 text-coral-700 px-6 py-3 rounded-full text-sm font-semibold shadow-md">
+            <Play className="h-4 w-4 text-coral-700" />
+            <span className="text-coral-700 font-semibold">Platform Guide</span>
+          </div>
 
-            <div className="space-y-6">
-              <h1 className="text-5xl lg:text-7xl font-bold leading-tight tracking-tight">
-                <span className="text-white drop-shadow-lg">How </span>
-                <span className="text-orange-500 drop-shadow-lg">
-                  Changemaker
+          <div className="space-y-6">
+            <h1 className="text-5xl lg:text-7xl font-bold leading-tight tracking-tight">
+              <span className="text-navy-900">How </span>
+              <span className="text-coral-600">
+                Changemaker
+              </span>
+              <br className="hidden sm:block" />
+              <span className="text-navy-900">Works</span>
+            </h1>
+
+            <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed max-w-3xl mx-auto font-medium">
+              Turn your innovative ideas into real-world impact through our
+              proven methodology for creating positive change.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
+            <Link href="/challenges">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-semibold px-8 py-4 border-0"
+              >
+                <span className="text-white font-semibold">
+                  Explore Challenges
                 </span>
-                <br className="hidden sm:block" />
-                <span className="text-white drop-shadow-lg">Works</span>
-              </h1>
-
-              <p className="text-xl lg:text-2xl text-white leading-relaxed max-w-3xl mx-auto font-medium drop-shadow-md">
-                Turn your innovative ideas into real-world impact through our
-                proven methodology for creating positive change.
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-              <Link href="/challenges">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-semibold px-8 py-4 border-0"
-                >
-                  <span className="text-white font-semibold">
-                    Explore Challenges
-                  </span>
-                  <ArrowRight className="ml-2 h-5 w-5 text-white" />
-                </Button>
-              </Link>
-              <Link href="/about">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto border-2 border-white/60 text-white hover:bg-white/20 hover:border-white/80 transition-all duration-300 font-semibold px-8 py-4 backdrop-blur-md"
-                >
-                  <span className="text-white font-semibold drop-shadow-sm">
-                    Learn More
-                  </span>
-                </Button>
-              </Link>
-            </div>
+                <ArrowRight className="ml-2 h-5 w-5 text-white" />
+              </Button>
+            </Link>
+            <Link href="/about">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto border-2 border-coral-500 text-coral-600 hover:bg-coral-50 hover:border-coral-600 transition-all duration-300 font-semibold px-8 py-4"
+              >
+                <span className="text-coral-600 font-semibold">
+                  Learn More
+                </span>
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -416,19 +411,19 @@ export default function HowItWorksPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 lg:py-32 bg-gray-900 text-white relative overflow-hidden">
+      <section className="py-20 lg:py-32 bg-gray-50 relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-orange-500/10"></div>
+          <div className="absolute inset-0 bg-coral-500/5"></div>
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-5xl mx-auto space-y-10">
             <div className="space-y-8">
               <h2 className="text-5xl lg:text-7xl font-bold leading-tight tracking-tight">
-                <span className="text-white drop-shadow-lg">Transform Ideas Into </span>
-                <span className="text-orange-300 drop-shadow-lg">Real Change</span>
+                <span className="text-gray-900">Transform Ideas Into </span>
+                <span className="text-coral-600">Real Change</span>
               </h2>
 
-              <p className="text-xl lg:text-2xl text-white leading-relaxed max-w-4xl mx-auto font-medium drop-shadow-md">
+              <p className="text-xl lg:text-2xl text-gray-700 leading-relaxed max-w-4xl mx-auto font-medium">
                 Join a global community of changemakers who are solving real
                 problems and creating lasting positive impact. Your journey to
                 meaningful change starts now.
@@ -439,7 +434,7 @@ export default function HowItWorksPage() {
               <Link href="/challenges">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-semibold px-10 py-4 text-lg border-0"
+                  className="w-full sm:w-auto bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-semibold px-10 py-4 text-lg border-0"
                 >
                   <Rocket className="mr-3 h-5 w-5 text-white" />
                   <span className="text-white font-semibold">Explore Challenges</span>
@@ -450,15 +445,15 @@ export default function HowItWorksPage() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="w-full sm:w-auto border-2 border-white/60 text-white hover:bg-white/20 hover:border-white/80 transition-all duration-300 font-semibold px-10 py-4 text-lg backdrop-blur-md"
+                  className="w-full sm:w-auto border-2 border-coral-500 text-coral-600 hover:bg-coral-50 hover:border-coral-600 transition-all duration-300 font-semibold px-10 py-4 text-lg"
                 >
-                  <span className="text-white font-semibold drop-shadow-sm">Get in Touch</span>
+                  <span className="text-coral-600 font-semibold">Get in Touch</span>
                 </Button>
               </Link>
             </div>
 
             <div className="pt-8">
-              <p className="text-white/90 text-sm font-medium drop-shadow-sm">
+              <p className="text-gray-600 text-sm font-medium">
                 Join 10,000+ changemakers already creating positive impact worldwide
               </p>
             </div>
