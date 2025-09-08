@@ -166,25 +166,35 @@ async function seed() {
     // Create admin users
     console.log('👤 Creating admin users...')
     for (const admin of adminUsers) {
-      // Create Supabase auth user
-      const supabaseUser = await createSupabaseUser(
+      // Get or create Supabase auth user
+      const supabaseUser = await getOrCreateSupabaseUser(
         admin.email,
         DEFAULT_PASSWORD,
         { role: 'ADMIN', name: admin.name }
       )
 
       if (supabaseUser) {
-        // Create Prisma user linked to AllDigitalRewards workspace
+        // Create or update Prisma user linked to AllDigitalRewards workspace
         const workspace = createdWorkspaces.find(w => w.slug === 'alldigitalrewards')
-        await prisma.user.create({
-          data: {
+        
+        // Use upsert to handle existing Prisma users
+        await prisma.user.upsert({
+          where: { email: admin.email },
+          update: {
+            supabaseUserId: supabaseUser.id,
+            role: ROLE_ADMIN,
+            workspaceId: workspace?.id
+          },
+          create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_ADMIN,
             workspaceId: workspace?.id
           }
         })
-        console.log(`✓ Created admin: ${admin.email}`)
+        console.log(`✓ Created/updated admin: ${admin.email}`)
+      } else {
+        console.error(`❌ Failed to create/retrieve admin user: ${admin.email}`)
       }
     }
 
