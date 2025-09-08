@@ -8,8 +8,7 @@ import {
   Calendar, 
   Users, 
   Trophy, 
-  Edit, 
-  Trash2,
+  Edit,
   UserPlus,
   Clock,
   Target,
@@ -18,6 +17,7 @@ import {
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { prisma } from '@/lib/db';
+import { DeleteChallengeButton } from './delete-button';
 
 interface PageProps {
   params: Promise<{
@@ -119,10 +119,11 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
               Edit
             </Button>
           </Link>
-          <Button variant="destructive">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
+          <DeleteChallengeButton 
+            challengeId={id}
+            challengeTitle={challenge.title}
+            workspaceSlug={slug}
+          />
         </div>
       </div>
 
