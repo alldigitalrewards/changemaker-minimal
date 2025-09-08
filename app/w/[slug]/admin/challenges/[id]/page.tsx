@@ -79,6 +79,25 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
   const enrolledUsers = challenge.enrollments || [];
   const activeEnrollments = enrolledUsers.filter(e => e.status === 'ACTIVE').length;
   const completedEnrollments = enrolledUsers.filter(e => e.status === 'COMPLETED').length;
+  
+  // Calculate challenge status based on dates
+  const now = new Date();
+  const startDate = new Date(challenge.startDate);
+  const endDate = new Date(challenge.endDate);
+  
+  let challengeStatus: string;
+  let statusVariant: "default" | "secondary" | "destructive" | "outline";
+  
+  if (now < startDate) {
+    challengeStatus = "UPCOMING";
+    statusVariant = "outline";
+  } else if (now >= startDate && now <= endDate) {
+    challengeStatus = "ACTIVE";
+    statusVariant = "default";
+  } else {
+    challengeStatus = "ENDED";
+    statusVariant = "secondary";
+  }
 
   return (
     <div className="space-y-6">
@@ -148,8 +167,8 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Badge variant="default" className="text-lg">
-              ACTIVE
+            <Badge variant={statusVariant} className="text-lg">
+              {challengeStatus}
             </Badge>
           </CardContent>
         </Card>
@@ -180,6 +199,23 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                 <CardTitle>Challenge Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <div className="flex items-center text-sm">
+                  <Calendar className="h-4 w-4 mr-2 text-green-600" />
+                  <span className="font-medium">Start Date:</span>
+                  <span className="ml-2">{format(new Date(challenge.startDate), 'MMM d, yyyy')}</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <Calendar className="h-4 w-4 mr-2 text-red-600" />
+                  <span className="font-medium">End Date:</span>
+                  <span className="ml-2">{format(new Date(challenge.endDate), 'MMM d, yyyy')}</span>
+                </div>
+                {challenge.enrollmentDeadline && (
+                  <div className="flex items-center text-sm">
+                    <Clock className="h-4 w-4 mr-2 text-amber-600" />
+                    <span className="font-medium">Enrollment Deadline:</span>
+                    <span className="ml-2">{format(new Date(challenge.enrollmentDeadline), 'MMM d, yyyy')}</span>
+                  </div>
+                )}
                 <div className="flex items-center text-sm">
                   <Calendar className="h-4 w-4 mr-2 text-gray-500" />
                   <span className="font-medium">Created:</span>
