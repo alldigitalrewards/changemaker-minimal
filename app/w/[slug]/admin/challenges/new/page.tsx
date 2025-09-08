@@ -70,6 +70,7 @@ export default function NewChallengePage() {
     const end = new Date(endDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
 
     if (start < today) {
       toast({
