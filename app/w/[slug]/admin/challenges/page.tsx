@@ -22,10 +22,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, MoreVertical, Trash2, Edit, Eye, Users, Calendar, Trophy, AlertTriangle } from 'lucide-react';
+import { MoreVertical, Trash2, Edit, Eye, Users, Calendar, Trophy, AlertTriangle, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { CreateChallengeButton } from '@/components/challenges/CreateChallengeButton';
 
 interface Challenge {
   id: string;
@@ -125,13 +126,7 @@ export default function ChallengesPage() {
           <p className="text-gray-600">Manage challenges for workspace: {params?.slug}</p>
         </div>
         
-        <Button 
-          className="bg-coral-500 hover:bg-coral-600 text-white"
-          onClick={() => router.push(`/w/${params?.slug}/admin/challenges/new`)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Challenge
-        </Button>
+        <CreateChallengeButton workspaceSlug={params?.slug || ''} />
       </div>
 
       {/* Challenges Grid */}
@@ -141,13 +136,7 @@ export default function ChallengesPage() {
             <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No challenges yet</h3>
             <p className="text-gray-500 mb-4">Get started by creating your first challenge</p>
-            <Button 
-              className="bg-coral-500 hover:bg-coral-600 text-white"
-              onClick={() => router.push(`/w/${params?.slug}/admin/challenges/new`)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Challenge
-            </Button>
+            <CreateChallengeButton workspaceSlug={params?.slug || ''} />
           </CardContent>
         </Card>
       ) : (

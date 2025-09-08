@@ -1,16 +1,5 @@
 # Focused Practical Improvements for Challenge Creation
 
-
-## Add Timeline Fields (Critical Missing Feature)
-
-  Current Gap: No way to control when challenges run
-  Add to form:
-
-- startDate (with min = today)
-- endDate (with min = startDate + 1 day)
-- enrollmentDeadline (optional, defaults to startDate)
-  User Value: Admins can schedule challenges in advance and they auto-activate/close
-
 ## Challenge Status Field (Workflow Control)
 
   Current Gap: All challenges appear active immediately
@@ -101,3 +90,5 @@
 - Auto-save - Unnecessary complexity
 - Advanced integrations - YAGNI
 - Stay DRY
+
+### KNOWN ISSUES:

@@ -309,21 +309,23 @@ export default function NewChallengePage() {
               <Button 
                 type="submit" 
                 disabled={isSaving || !isFormValid}
-                className={`transition-colors ${
-                  isSaving || !isFormValid
-                    ? 'opacity-100 bg-gray-300 text-gray-500 cursor-not-allowed border-gray-300'
-                    : 'bg-coral-500 hover:bg-coral-600 text-white'
-                }`}
+                className="px-4 py-2 font-medium rounded-md shadow-sm inline-flex items-center transition-all"
+                style={{
+                  backgroundColor: isSaving || !isFormValid ? '#d1d5db' : '#ff6b6b',
+                  color: isSaving || !isFormValid ? '#6b7280' : 'white',
+                  cursor: isSaving || !isFormValid ? 'not-allowed' : 'pointer',
+                  opacity: isSaving || !isFormValid ? 0.6 : 1
+                }}
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" style={{ color: '#6b7280' }} />
+                    <span style={{ color: '#6b7280' }}>Creating...</span>
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Create Challenge
+                    <Save className="h-4 w-4 mr-2" style={{ color: isSaving || !isFormValid ? '#6b7280' : 'white' }} />
+                    <span style={{ color: isSaving || !isFormValid ? '#6b7280' : 'white' }}>Create Challenge</span>
                   </>
                 )}
               </Button>
