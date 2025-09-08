@@ -201,25 +201,35 @@ async function seed() {
     // Create participant users
     console.log('\n👥 Creating participant users...')
     for (const participant of participantUsers) {
-      // Create Supabase auth user
-      const supabaseUser = await createSupabaseUser(
+      // Get or create Supabase auth user
+      const supabaseUser = await getOrCreateSupabaseUser(
         participant.email,
         DEFAULT_PASSWORD,
         { role: 'PARTICIPANT', name: participant.name }
       )
 
       if (supabaseUser) {
-        // Create Prisma user linked to respective workspace
+        // Create or update Prisma user linked to respective workspace
         const workspace = createdWorkspaces.find(w => w.slug === participant.workspace)
-        await prisma.user.create({
-          data: {
+        
+        // Use upsert to handle existing Prisma users
+        await prisma.user.upsert({
+          where: { email: participant.email },
+          update: {
+            supabaseUserId: supabaseUser.id,
+            role: ROLE_PARTICIPANT,
+            workspaceId: workspace?.id
+          },
+          create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
             workspaceId: workspace?.id
           }
         })
-        console.log(`✓ Created participant: ${participant.email}`)
+        console.log(`✓ Created/updated participant: ${participant.email}`)
+      } else {
+        console.error(`❌ Failed to create/retrieve participant user: ${participant.email}`)
       }
     }
 
