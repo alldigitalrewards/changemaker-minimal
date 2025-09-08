@@ -1,37 +1,21 @@
-// How It Works page - static, no client components
 import React from 'react';
 import Link from 'next/link';
 import PublicNavbar from '@/components/navigation/public-navbar';
 import {
   Target,
   Zap,
-  TrendingUp,
-  Calendar,
   Users,
   Trophy,
-  CheckCircle,
   ArrowRight,
   Lightbulb,
-  FileText,
-  Award,
   Heart,
-  Star,
-  Mail,
-  Clock,
-  BarChart3,
-  Sparkles,
   Play,
   CheckCircle2,
   Rocket,
   Globe,
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { CoralButton } from '@/components/ui/coral-button';
 
 export default function HowItWorksPage() {
   return (
@@ -63,26 +47,15 @@ export default function HowItWorksPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
             <Link href="/challenges">
-              <Button
-                size="lg"
-                className="w-full sm:w-auto bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-semibold px-8 py-4 border-0"
-              >
-                <span className="text-white font-semibold">
-                  Explore Challenges
-                </span>
-                <ArrowRight className="ml-2 h-5 w-5 text-white" />
-              </Button>
+              <CoralButton size="lg" className="w-full sm:w-auto px-8 py-4">
+                Explore Challenges
+                <ArrowRight className="ml-2 h-5 w-5 inline-block" />
+              </CoralButton>
             </Link>
             <Link href="/about">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto border-2 border-coral-500 text-coral-600 hover:bg-coral-50 hover:border-coral-600 transition-all duration-300 font-semibold px-8 py-4"
-              >
-                <span className="text-coral-600 font-semibold">
-                  Learn More
-                </span>
-              </Button>
+              <CoralButton variant="outline" size="lg" className="w-full sm:w-auto px-8 py-4">
+                Learn More
+              </CoralButton>
             </Link>
           </div>
         </div>
@@ -432,23 +405,16 @@ export default function HowItWorksPage() {
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center pt-8">
               <Link href="/challenges">
-                <Button
-                  size="lg"
-                  className="w-full sm:w-auto bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 font-semibold px-10 py-4 text-lg border-0"
-                >
-                  <Rocket className="mr-3 h-5 w-5 text-white" />
-                  <span className="text-white font-semibold">Explore Challenges</span>
-                  <ArrowRight className="ml-3 h-5 w-5 text-white" />
-                </Button>
+                <CoralButton size="lg" className="w-full sm:w-auto">
+                  <Rocket className="mr-3 h-5 w-5 inline-block" />
+                  Explore Challenges
+                  <ArrowRight className="ml-3 h-5 w-5 inline-block" />
+                </CoralButton>
               </Link>
               <Link href="/contact">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="w-full sm:w-auto border-2 border-coral-500 text-coral-600 hover:bg-coral-50 hover:border-coral-600 transition-all duration-300 font-semibold px-10 py-4 text-lg"
-                >
-                  <span className="text-coral-600 font-semibold">Get in Touch</span>
-                </Button>
+                <CoralButton variant="outline" size="lg" className="w-full sm:w-auto">
+                  Get in Touch
+                </CoralButton>
               </Link>
             </div>
 
