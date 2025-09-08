@@ -16,10 +16,12 @@ import {
   Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PublicNavbar from '@/components/navigation/public-navbar';
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen">
+      <PublicNavbar />
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-orange-50 via-white to-orange-50 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-white/90 to-transparent" />
