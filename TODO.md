@@ -1,1 +1,2 @@
-- Fix the visibility of the How It Works page
+- Fix the visibility of the Challenges page
+- add newly created supabase remote project connection for Vercel deployment , keep local supaabse for local devel
