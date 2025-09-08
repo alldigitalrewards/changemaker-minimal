@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import PublicNavbar from '@/components/navigation/public-navbar';
 
 // Static challenge data for MVP - no API calls needed
 const featuredChallenges = [
@@ -215,6 +216,7 @@ function ChallengeCard({ challenge, featured = false }: { challenge: typeof allC
 export default function ChallengesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+      <PublicNavbar />
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
