@@ -15,7 +15,8 @@
     "start": "next start",
     "seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force && pnpm seed",
-    "db:push": "prisma db push && pnpm seed"
+    "db:push": "prisma db push && pnpm seed",
+    "test": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -44,6 +45,7 @@
     "zod": "^4.1.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@supabase/supabase-js": "^2.57.0",
     "@tailwindcss/postcss": "^4.1.6",
     "@types/node": "^22.15.17",
@@ -51,6 +53,7 @@
     "@types/react-dom": "^19.1.5",
     "dotenv": "^17.2.2",
     "dotenv-cli": "^10.0.0",
+    "playwright": "^1.55.0",
     "prisma": "^6.15.0",
     "tailwindcss": "^4.1.6",
     "tsx": "^4.20.5",
