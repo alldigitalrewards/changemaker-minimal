@@ -365,6 +365,9 @@ export async function createChallenge(
   data: {
     title: string
     description: string
+    startDate: Date
+    endDate: Date
+    enrollmentDeadline?: Date
   },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {
@@ -373,6 +376,9 @@ export async function createChallenge(
       data: {
         title: data.title,
         description: data.description,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        enrollmentDeadline: data.enrollmentDeadline || data.startDate,
         workspaceId
       }
     })
@@ -386,7 +392,13 @@ export async function createChallenge(
  */
 export async function updateChallenge(
   challengeId: ChallengeId,
-  data: { title?: string; description?: string },
+  data: { 
+    title?: string; 
+    description?: string;
+    startDate?: Date;
+    endDate?: Date;
+    enrollmentDeadline?: Date;
+  },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {
   // Verify challenge belongs to workspace

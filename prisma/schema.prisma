@@ -42,17 +42,21 @@ model User {
 }
 
 model Challenge {
-  id          String       @id @default(uuid()) @db.Uuid
-  title       String
-  description String
-  workspaceId String       @db.Uuid
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  enrollments Enrollment[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt @default(now())
+  id                 String       @id @default(uuid()) @db.Uuid
+  title              String
+  description        String
+  startDate          DateTime
+  endDate            DateTime
+  enrollmentDeadline DateTime?
+  workspaceId        String       @db.Uuid
+  workspace          Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  enrollments        Enrollment[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt @default(now())
 
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
+  @@index([workspaceId, startDate])
 }
 
 model Enrollment {

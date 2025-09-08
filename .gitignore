@@ -72,3 +72,4 @@ node_modules/
 tasks.json
 tasks/ 
 .serena
+.claude/settings.local.json

@@ -15,6 +15,9 @@ interface Challenge {
   id: string;
   title: string;
   description: string;
+  startDate: string;
+  endDate: string;
+  enrollmentDeadline?: string;
   status?: string;
   createdAt: string;
   updatedAt: string;
@@ -29,6 +32,9 @@ export default function EditChallengePage() {
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -50,6 +56,9 @@ export default function EditChallengePage() {
         setChallenge(challengeData);
         setTitle(challengeData.title);
         setDescription(challengeData.description);
+        setStartDate(challengeData.startDate ? new Date(challengeData.startDate).toISOString().split('T')[0] : '');
+        setEndDate(challengeData.endDate ? new Date(challengeData.endDate).toISOString().split('T')[0] : '');
+        setEnrollmentDeadline(challengeData.enrollmentDeadline ? new Date(challengeData.enrollmentDeadline).toISOString().split('T')[0] : '');
       } else {
         throw new Error('Failed to fetch challenge');
       }
@@ -70,13 +79,53 @@ export default function EditChallengePage() {
     e.preventDefault();
     
     if (!params?.slug || !params?.id) return;
+
+    // Validation
+    if (!startDate || !endDate) {
+      toast({
+        title: 'Validation Error',
+        description: 'Start date and end date are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end <= start) {
+      toast({
+        title: 'Validation Error',
+        description: 'End date must be after start date',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (enrollmentDeadline) {
+      const enrollDeadline = new Date(enrollmentDeadline);
+      if (enrollDeadline > start) {
+        toast({
+          title: 'Validation Error',
+          description: 'Enrollment deadline must be before or on the start date',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     
     setIsSaving(true);
     try {
       const response = await fetch(`/api/workspaces/${params.slug}/challenges/${params.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({ 
+          title, 
+          description,
+          startDate,
+          endDate,
+          enrollmentDeadline: enrollmentDeadline || undefined
+        }),
       });
 
       if (response.ok) {
@@ -179,6 +228,66 @@ export default function EditChallengePage() {
                 required
                 disabled={isSaving}
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">
+                  Start Date <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                  disabled={isSaving}
+                />
+                {!startDate && (
+                  <span className="text-sm text-red-500">Start date is required</span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endDate">
+                  End Date <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate}
+                  required
+                  disabled={isSaving}
+                />
+                {!endDate && (
+                  <span className="text-sm text-red-500">End date is required</span>
+                )}
+                {startDate && endDate && new Date(endDate) <= new Date(startDate) && (
+                  <span className="text-sm text-red-500">End date must be after start date</span>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="enrollmentDeadline">
+                Enrollment Deadline (Optional)
+              </Label>
+              <Input
+                id="enrollmentDeadline"
+                type="date"
+                value={enrollmentDeadline}
+                onChange={(e) => setEnrollmentDeadline(e.target.value)}
+                max={startDate}
+                disabled={isSaving}
+              />
+              <div className="text-sm text-gray-500">
+                If not set, participants can enroll until the challenge starts
+              </div>
+              {enrollmentDeadline && startDate && new Date(enrollmentDeadline) > new Date(startDate) && (
+                <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
+              )}
             </div>
 
             <div className="flex justify-end space-x-2">
