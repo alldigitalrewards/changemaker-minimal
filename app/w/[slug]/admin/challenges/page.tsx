@@ -12,7 +12,17 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Plus, MoreVertical, Trash2, Edit, Eye, Users, Calendar, Trophy } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, MoreVertical, Trash2, Edit, Eye, Users, Calendar, Trophy, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +42,9 @@ interface Challenge {
 
 export default function ChallengesPage() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [challengeToDelete, setChallengeToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -61,29 +74,41 @@ export default function ChallengesPage() {
   };
 
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this challenge?')) return;
+  const handleDeleteClick = (challenge: Challenge) => {
+    setChallengeToDelete({ id: challenge.id, title: challenge.title });
+    setDeleteDialogOpen(true);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!challengeToDelete) return;
+    
+    setIsDeleting(true);
+    
     try {
-      const response = await fetch(`/api/workspaces/${params?.slug}/challenges/${id}`, {
+      const response = await fetch(`/api/workspaces/${params?.slug}/challenges/${challengeToDelete.id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         toast({
-          title: 'Challenge deleted',
-          description: 'The challenge has been deleted successfully.',
+          title: 'Success',
+          description: `"${challengeToDelete.title}" has been deleted successfully.`,
         });
         fetchChallenges();
+        setDeleteDialogOpen(false);
+        setChallengeToDelete(null);
       } else {
-        throw new Error('Failed to delete challenge');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete challenge');
       }
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to delete challenge',
+        description: error instanceof Error ? error.message : 'Failed to delete challenge. Please try again.',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -171,7 +196,7 @@ export default function ChallengesPage() {
                       <DropdownMenuItem 
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(challenge.id);
+                          handleDeleteClick(challenge);
                         }}
                         className="text-red-600"
                       >
@@ -201,6 +226,51 @@ export default function ChallengesPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <AlertDialogTitle>Delete Challenge</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="pt-2">
+              Are you sure you want to delete <span className="font-semibold">"{challengeToDelete?.title}"</span>?
+              <br />
+              <br />
+              This action cannot be undone. This will permanently delete the challenge and remove all associated enrollments and data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setChallengeToDelete(null);
+                setDeleteDialogOpen(false);
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? (
+                <>
+                  <span className="animate-pulse">Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Challenge
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
