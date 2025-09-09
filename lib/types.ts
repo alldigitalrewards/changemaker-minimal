@@ -91,7 +91,7 @@ export interface Enrollment {
   readonly updatedAt: Date
 }
 
-export type EnrollmentStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'WITHDRAWN'
+export type EnrollmentStatus = 'INVITED' | 'ENROLLED' | 'WITHDRAWN'
 
 // =============================================================================
 // AUTHENTICATION & AUTHORIZATION
@@ -162,6 +162,7 @@ export interface ChallengeCreateRequest {
   readonly startDate: string // ISO string format for API
   readonly endDate: string   // ISO string format for API
   readonly enrollmentDeadline?: string // Optional ISO string format for API
+  readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment
 }
 
 export interface ChallengeCreateResponse {
@@ -183,6 +184,17 @@ export interface EnrollmentCreateResponse {
 
 export interface EnrollmentListResponse {
   readonly enrollments: Enrollment[]
+}
+
+// Participant API Types
+export interface WorkspaceParticipant {
+  readonly id: UserId
+  readonly email: string
+  readonly role: Role
+}
+
+export interface ParticipantsListResponse {
+  readonly participants: WorkspaceParticipant[]
 }
 
 // =============================================================================
@@ -207,6 +219,7 @@ export interface ChallengeFormData {
   readonly startDate: string // ISO date string
   readonly endDate: string   // ISO date string
   readonly enrollmentDeadline?: string // Optional ISO date string
+  readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment
 }
 
 // =============================================================================
@@ -324,7 +337,7 @@ export function isParticipant(role: Role): boolean {
 // CONSTANTS
 // =============================================================================
 
-export const ENROLLMENT_STATUSES = ['PENDING', 'ACTIVE', 'COMPLETED', 'WITHDRAWN'] as const
+export const ENROLLMENT_STATUSES = ['INVITED', 'ENROLLED', 'WITHDRAWN'] as const
 export const USER_ROLES = ['ADMIN', 'PARTICIPANT'] as const
 
 // =============================================================================
