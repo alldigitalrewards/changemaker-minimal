@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { Toaster } from '@/components/ui/sonner';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -27,6 +28,7 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+      <Toaster />
     </div>
   );
 }
