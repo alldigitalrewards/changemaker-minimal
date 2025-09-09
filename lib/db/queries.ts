@@ -1143,3 +1143,144 @@ export async function updatePointsBalance(
     throw new DatabaseError(`Failed to update points balance: ${error}`)
   }
 }
+
+/**
+ * Get workspace leaderboard (top points earners)
+ */
+export async function getWorkspaceLeaderboard(
+  workspaceId: WorkspaceId,
+  limit: number = 10
+): Promise<(PointsBalance & { user: Pick<User, 'id' | 'email'> })[]> {
+  try {
+    return await prisma.pointsBalance.findMany({
+      where: { workspaceId },
+      include: {
+        user: {
+          select: { id: true, email: true }
+        }
+      },
+      orderBy: { totalPoints: 'desc' },
+      take: limit
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace leaderboard: ${error}`)
+  }
+}
+
+/**
+ * Get user's activity submissions across all challenges in workspace
+ */
+export async function getUserActivitySubmissions(
+  userId: UserId,
+  workspaceId: WorkspaceId,
+  status?: SubmissionStatus
+): Promise<(ActivitySubmission & {
+  activity: Activity & {
+    template: ActivityTemplate
+    challenge: Challenge
+  }
+  enrollment: Enrollment
+})[]> {
+  try {
+    return await prisma.activitySubmission.findMany({
+      where: {
+        userId,
+        activity: {
+          challenge: {
+            workspaceId
+          }
+        },
+        ...(status && { status })
+      },
+      include: {
+        activity: {
+          include: {
+            template: true,
+            challenge: true
+          }
+        },
+        enrollment: true
+      },
+      orderBy: { submittedAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch user activity submissions: ${error}`)
+  }
+}
+
+/**
+ * Get challenge-specific leaderboard (participants ranked by points in challenge)
+ */
+export async function getChallengeLeaderboard(
+  challengeId: ChallengeId,
+  workspaceId: WorkspaceId,
+  limit: number = 10
+): Promise<{
+  userId: string
+  email: string
+  totalPoints: number
+  submissions: number
+  completedActivities: number
+}[]> {
+  try {
+    // First verify challenge belongs to workspace
+    const challenge = await prisma.challenge.findFirst({
+      where: { id: challengeId, workspaceId }
+    })
+
+    if (!challenge) {
+      throw new ResourceNotFoundError('Challenge', challengeId)
+    }
+
+    // Get all enrollments for this challenge with their activity submission stats
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        challengeId,
+        status: 'ENROLLED'
+      },
+      include: {
+        user: {
+          select: { id: true, email: true }
+        },
+        activitySubmissions: {
+          where: {
+            activity: {
+              challengeId
+            }
+          },
+          include: {
+            activity: true
+          }
+        }
+      }
+    })
+
+    // Calculate leaderboard data
+    const leaderboardData = enrollments.map(enrollment => {
+      const submissions = enrollment.activitySubmissions
+      const approvedSubmissions = submissions.filter(s => s.status === 'APPROVED')
+      const totalPoints = approvedSubmissions.reduce((sum, s) => sum + (s.pointsAwarded || 0), 0)
+      const uniqueActivities = new Set(approvedSubmissions.map(s => s.activityId))
+
+      return {
+        userId: enrollment.user.id,
+        email: enrollment.user.email,
+        totalPoints,
+        submissions: submissions.length,
+        completedActivities: uniqueActivities.size
+      }
+    })
+
+    // Sort by points descending, then by completed activities
+    return leaderboardData
+      .sort((a, b) => {
+        if (a.totalPoints !== b.totalPoints) {
+          return b.totalPoints - a.totalPoints
+        }
+        return b.completedActivities - a.completedActivities
+      })
+      .slice(0, limit)
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch challenge leaderboard: ${error}`)
+  }
+}
