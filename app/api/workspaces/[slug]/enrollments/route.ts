@@ -5,10 +5,12 @@ import {
   getUserEnrollments,
   getAllWorkspaceEnrollments,
   getWorkspaceUsers,
+  createActivitySubmission,
   DatabaseError,
   WorkspaceAccessError,
   ResourceNotFoundError
 } from "@/lib/db/queries"
+import { prisma } from "@/lib/db"
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
@@ -26,17 +28,110 @@ export const POST = withErrorHandling(async (
       return NextResponse.json({ error: 'Activity ID is required' }, { status: 400 })
     }
 
-    // For now, return a simple success response - will implement full logic later
-    const fakeSubmission = {
-      id: 'sub-' + Date.now(),
-      activityId,
-      userId: user.dbUser.id,
-      textContent,
-      status: 'PENDING',
-      submittedAt: new Date().toISOString(),
-    }
+    try {
+      // Verify user is enrolled in the challenge that contains this activity
+      const activity = await prisma.activity.findFirst({
+        where: { 
+          id: activityId,
+          challenge: { workspaceId: workspace.id }
+        },
+        include: {
+          template: true,
+          challenge: true,
+          submissions: {
+            where: { userId: user.dbUser.id },
+            orderBy: { submittedAt: 'desc' }
+          }
+        }
+      })
 
-    return NextResponse.json({ submission: fakeSubmission })
+      if (!activity) {
+        return NextResponse.json({ error: 'Activity not found' }, { status: 404 })
+      }
+
+      // Check if user is enrolled in the challenge
+      const enrollment = await prisma.enrollment.findFirst({
+        where: {
+          userId: user.dbUser.id,
+          challengeId: activity.challengeId,
+          status: 'ENROLLED'
+        }
+      })
+
+      if (!enrollment) {
+        return NextResponse.json({ error: 'You must be enrolled in this challenge to submit activities' }, { status: 403 })
+      }
+
+      // Check submission limits
+      const existingSubmissions = activity.submissions.length
+      if (existingSubmissions >= activity.maxSubmissions) {
+        return NextResponse.json({ error: 'Maximum submissions reached for this activity' }, { status: 400 })
+      }
+
+      // Check deadline
+      if (activity.deadline && new Date() > new Date(activity.deadline)) {
+        return NextResponse.json({ error: 'Submission deadline has passed' }, { status: 400 })
+      }
+
+      // Determine initial status based on template settings
+      const initialStatus = activity.template.requiresApproval ? 'PENDING' : 'APPROVED'
+      
+      // Create the submission
+      const submission = await createActivitySubmission({
+        activityId,
+        userId: user.dbUser.id,
+        enrollmentId: enrollment.id,
+        textContent,
+        fileUrls,
+        linkUrl
+      })
+
+      // If auto-approved, award points immediately
+      if (initialStatus === 'APPROVED') {
+        await prisma.activitySubmission.update({
+          where: { id: submission.id },
+          data: {
+            status: 'APPROVED',
+            pointsAwarded: activity.pointsValue,
+            reviewedAt: new Date()
+          }
+        })
+
+        // Update or create points balance
+        await prisma.pointsBalance.upsert({
+          where: {
+            userId_workspaceId: {
+              userId: user.dbUser.id,
+              workspaceId: workspace.id
+            }
+          },
+          update: {
+            totalPoints: { increment: activity.pointsValue },
+            availablePoints: { increment: activity.pointsValue }
+          },
+          create: {
+            userId: user.dbUser.id,
+            workspaceId: workspace.id,
+            totalPoints: activity.pointsValue,
+            availablePoints: activity.pointsValue
+          }
+        })
+      }
+
+      return NextResponse.json({ 
+        submission: {
+          ...submission,
+          status: initialStatus,
+          pointsAwarded: initialStatus === 'APPROVED' ? activity.pointsValue : null
+        }
+      })
+    } catch (error) {
+      console.error('Activity submission error:', error)
+      if (error instanceof DatabaseError || error instanceof ResourceNotFoundError) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      throw error
+    }
   }
 
   // Handle regular enrollment
@@ -69,33 +164,6 @@ export const POST = withErrorHandling(async (
   }
 })
 
-// Activity submissions route handler
-export const ACTIVITY_SUBMISSIONS_POST = withErrorHandling(async (
-  request: NextRequest,
-  context: { params: Promise<{ slug: string }> }
-) => {
-  const { slug } = await context.params
-  const { activityId, textContent, linkUrl, fileUrls } = await request.json()
-
-  // Require workspace access
-  const { workspace, user } = await requireWorkspaceAccess(slug)
-
-  if (!activityId) {
-    return NextResponse.json({ error: 'Activity ID is required' }, { status: 400 })
-  }
-
-  // For now, return a simple success response - will implement full logic later
-  const fakeSubmission = {
-    id: 'sub-' + Date.now(),
-    activityId,
-    userId: user.dbUser.id,
-    textContent,
-    status: 'PENDING',
-    submittedAt: new Date().toISOString(),
-  }
-
-  return NextResponse.json({ submission: fakeSubmission })
-})
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
