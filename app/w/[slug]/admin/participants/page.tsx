@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Plus } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -11,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { CreateUserDialog } from "@/components/admin/create-user-dialog"
 
 export default async function AdminParticipantsPage({ 
   params 
@@ -121,8 +124,13 @@ export default async function AdminParticipantsPage({
         {/* Participants Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Participants</CardTitle>
-            <CardDescription>View and manage workspace participants</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>All Participants</CardTitle>
+                <CardDescription>View and manage workspace participants</CardDescription>
+              </div>
+              <CreateUserDialog workspaceSlug={slug} />
+            </div>
           </CardHeader>
           <CardContent>
             {participants.length > 0 ? (
