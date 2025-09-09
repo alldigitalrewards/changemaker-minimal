@@ -12,12 +12,14 @@ import {
   UserPlus,
   Clock,
   Target,
-  CheckCircle
+  CheckCircle,
+  Activity
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { prisma } from '@/lib/db';
 import { DeleteChallengeButton } from './delete-button';
+import { ChallengeActivities } from '@/components/activities/challenge-activities';
 
 interface PageProps {
   params: Promise<{
@@ -179,6 +181,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="participants">Participants</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -246,6 +249,11 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Activities Tab */}
+        <TabsContent value="activities" className="space-y-4">
+          <ChallengeActivities challengeId={id} workspaceSlug={slug} />
         </TabsContent>
 
         {/* Participants Tab */}
