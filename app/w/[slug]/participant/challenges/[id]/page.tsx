@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, requireWorkspaceAccess } from '@/lib/auth/session';
-import JoinButton from './join-button';
+import JoinButton, { SimpleSubmissionDialog } from './join-button';
 
 interface PageProps {
   params: Promise<{
@@ -47,6 +47,24 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
         enrollments: {
           where: {
             userId: userId,
+          },
+        },
+        activities: {
+          include: {
+            template: true,
+            submissions: {
+              where: {
+                userId: userId,
+              },
+              orderBy: {
+                submittedAt: 'desc',
+              },
+            },
+            _count: {
+              select: {
+                submissions: true,
+              },
+            },
           },
         },
         _count: {
@@ -159,6 +177,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="progress">My Progress</TabsTrigger>
           <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
         </TabsList>
@@ -220,6 +239,127 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Activities Tab */}
+        <TabsContent value="activities" className="space-y-4">
+          {isEnrolled ? (
+            challenge.activities && challenge.activities.length > 0 ? (
+              <div className="space-y-4">
+                {challenge.activities.map((activity) => {
+                  const userSubmissions = activity.submissions || [];
+                  const submissionCount = userSubmissions.length;
+                  const canSubmit = submissionCount < activity.maxSubmissions;
+                  const hasDeadlinePassed = activity.deadline && new Date() > new Date(activity.deadline);
+                  const latestSubmission = userSubmissions[0];
+                  
+                  return (
+                    <Card key={activity.id}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <CardTitle className="flex items-center gap-2">
+                              {activity.template.name}
+                              {activity.isRequired && (
+                                <Badge variant="destructive" className="text-xs">Required</Badge>
+                              )}
+                            </CardTitle>
+                            <CardDescription>{activity.template.description}</CardDescription>
+                          </div>
+                          <div className="text-right space-y-1">
+                            <Badge variant="outline">
+                              {activity.pointsValue} points
+                            </Badge>
+                            <p className="text-xs text-muted-foreground">
+                              {submissionCount}/{activity.maxSubmissions} submissions
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {/* Activity Details */}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>Type: {activity.template.type.replace('_', ' ')}</span>
+                          {activity.deadline && (
+                            <span>Due: {format(new Date(activity.deadline), 'MMM d, yyyy')}</span>
+                          )}
+                          <span>Max: {activity.maxSubmissions}</span>
+                        </div>
+
+                        {/* Latest Submission Status */}
+                        {latestSubmission && (
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium">Latest Submission</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Submitted {format(new Date(latestSubmission.submittedAt), 'MMM d, yyyy h:mm a')}
+                                </p>
+                              </div>
+                              <Badge 
+                                variant={
+                                  latestSubmission.status === 'APPROVED' ? 'default' :
+                                  latestSubmission.status === 'REJECTED' ? 'destructive' :
+                                  latestSubmission.status === 'DRAFT' ? 'secondary' : 'outline'
+                                }
+                              >
+                                {latestSubmission.status}
+                              </Badge>
+                            </div>
+                            {latestSubmission.pointsAwarded && (
+                              <p className="text-xs text-green-600 mt-1">
+                                Points awarded: {latestSubmission.pointsAwarded}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          {canSubmit && !hasDeadlinePassed ? (
+                            <SimpleSubmissionDialog 
+                              activity={activity}
+                              challenge={challenge}
+                              workspaceSlug={slug}
+                            />
+                          ) : hasDeadlinePassed ? (
+                            <Button variant="outline" disabled>
+                              Deadline Passed
+                            </Button>
+                          ) : (
+                            <Button variant="outline" disabled>
+                              Submission Limit Reached
+                            </Button>
+                          )}
+                          
+                          {userSubmissions.length > 0 && (
+                            <div className="text-sm text-muted-foreground">
+                              {userSubmissions.length} submission(s) made
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500">No activities have been assigned to this challenge yet.</p>
+                </CardContent>
+              </Card>
+            )
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500 mb-4">Join this challenge to view and participate in activities.</p>
+                <JoinButton challengeId={challenge.id} workspaceSlug={slug} />
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Progress Tab */}
