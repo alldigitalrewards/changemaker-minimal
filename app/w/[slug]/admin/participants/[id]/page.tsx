@@ -9,7 +9,8 @@ import { CoralButton } from "@/components/ui/coral-button"
 import { ParticipantDetailCard } from "@/components/ui/participant-detail-card"
 import { ParticipantRoleToggle } from "./participant-role-toggle"
 import { RemoveParticipantAction } from "./remove-participant-action"
-import { ArrowLeft, Calendar, Mail, User, Trophy } from "lucide-react"
+import { ParticipantManagementDialog } from "../participant-management-dialog"
+import { ArrowLeft, Calendar, Mail, User, Trophy, Edit } from "lucide-react"
 import Link from "next/link"
 
 export default async function ParticipantDetailPage({ 
@@ -93,11 +94,13 @@ export default async function ParticipantDetailPage({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <ParticipantRoleToggle
+            <ParticipantManagementDialog
               slug={slug}
+              mode="edit"
               participantId={participant.id}
-              currentRole={participant.role}
               participantEmail={participant.email}
+              participantRole={participant.role}
+              showLabel={true}
             />
             <RemoveParticipantAction
               slug={slug}
