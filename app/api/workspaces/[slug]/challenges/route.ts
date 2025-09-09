@@ -12,6 +12,8 @@ import {
   getWorkspaceBySlug,
   getWorkspaceChallenges, 
   createChallenge,
+  createBulkEnrollments,
+  getWorkspaceUsers,
   getUserBySupabaseId,
   verifyWorkspaceAdmin,
   DatabaseError,
@@ -25,6 +27,8 @@ export async function GET(
 ): Promise<NextResponse<ChallengeListResponse | ApiError>> {
   try {
     const { slug } = await context.params;
+    const { searchParams } = new URL(request.url);
+    const resource = searchParams.get('resource');
     
     // Verify authentication
     const supabase = await createClient();
@@ -50,6 +54,20 @@ export async function GET(
         { error: 'Access denied to workspace' },
         { status: 403 }
       );
+    }
+
+    // Handle users resource request (admin only)
+    if (resource === 'users') {
+      const isAdmin = await verifyWorkspaceAdmin(dbUser.id, workspace.id);
+      if (!isAdmin) {
+        return NextResponse.json(
+          { error: 'Admin privileges required' },
+          { status: 403 }
+        );
+      }
+
+      const users = await getWorkspaceUsers(workspace.id);
+      return NextResponse.json({ users });
     }
 
     // Get challenges using standardized query
@@ -104,7 +122,7 @@ export async function POST(
       );
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, participantIds } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -143,6 +161,16 @@ export async function POST(
       },
       workspace.id
     );
+
+    // Handle participant enrollments if provided
+    if (participantIds && participantIds.length > 0) {
+      try {
+        await createBulkEnrollments(participantIds, challenge.id, workspace.id, 'ACTIVE');
+      } catch (enrollmentError) {
+        console.warn('Failed to create enrollments:', enrollmentError);
+        // Don't fail the challenge creation, but log the error
+      }
+    }
 
     return NextResponse.json({ challenge }, { status: 201 });
   } catch (error) {

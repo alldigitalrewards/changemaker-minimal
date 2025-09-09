@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
+import { createBulkEnrollments, getChallengeEnrollments } from '@/lib/db/queries';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -49,7 +50,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, participantIds } = body;
 
   // Basic validation
   if (!title || !description) {
@@ -95,6 +96,16 @@ export const PUT = withErrorHandling(async (
     },
     data: updateData,
   });
+
+  // Handle participant enrollments if provided
+  if (participantIds && participantIds.length > 0) {
+    try {
+      await createBulkEnrollments(participantIds, id, workspace.id, 'ACTIVE');
+    } catch (enrollmentError) {
+      console.warn('Failed to update enrollments:', enrollmentError);
+      // Don't fail the challenge update, but log the error
+    }
+  }
 
   return NextResponse.json({ challenge });
 });
