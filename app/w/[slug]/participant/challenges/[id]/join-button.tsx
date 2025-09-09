@@ -91,6 +91,7 @@ export function SimpleSubmissionDialog({
   workspaceSlug,
 }: SimpleSubmissionDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
   const [textContent, setTextContent] = useState('')
@@ -129,6 +130,7 @@ export function SimpleSubmissionDialog({
         description: 'Your activity has been submitted successfully.',
       })
       setTextContent('')
+      setIsOpen(false)
       router.refresh()
     } catch (error: any) {
       toast({
