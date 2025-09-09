@@ -49,7 +49,7 @@ export default function JoinButton({ challengeId, workspaceSlug }: JoinButtonPro
 
   return (
     <Button 
-      className="w-full bg-blue-500 hover:bg-blue-600"
+      className="w-full bg-coral-500 hover:bg-coral-600"
       onClick={handleJoin}
       disabled={isLoading}
     >
@@ -63,31 +63,32 @@ export default function JoinButton({ challengeId, workspaceSlug }: JoinButtonPro
 // (This is a temporary approach - should be moved to separate file later)
 
 interface SimpleSubmissionDialogProps {
-  activity: {
-    id: string
-    pointsValue: number
-    maxSubmissions: number
-    deadline: Date | null
-    isRequired: boolean
-    template: {
-      id: string
-      name: string
-      description: string
-      type: string
-      requiresApproval: boolean
-    }
-    submissions: any[]
-  }
-  challenge: {
-    id: string
-    title: string
-  }
-  workspaceSlug: string
+  activityId: string;
+  activityName: string;
+  activityType: string;
+  pointsValue: number;
+  maxSubmissions: number;
+  deadline: string | null; // Serialized date
+  isRequired: boolean;
+  requiresApproval: boolean;
+  submissionCount: number;
+  challengeId: string;
+  challengeTitle: string;
+  workspaceSlug: string;
 }
 
 export function SimpleSubmissionDialog({
-  activity,
-  challenge,
+  activityId,
+  activityName,
+  activityType,
+  pointsValue,
+  maxSubmissions,
+  deadline,
+  isRequired,
+  requiresApproval,
+  submissionCount,
+  challengeId,
+  challengeTitle,
   workspaceSlug,
 }: SimpleSubmissionDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -115,7 +116,7 @@ export function SimpleSubmissionDialog({
           'X-Action': 'ACTIVITY_SUBMISSION',
         },
         body: JSON.stringify({
-          activityId: activity.id,
+          activityId,
           textContent: textContent.trim(),
         }),
       })
@@ -154,16 +155,16 @@ export function SimpleSubmissionDialog({
         <DialogHeader>
           <DialogTitle className="text-coral-800">Submit Activity</DialogTitle>
           <DialogDescription>
-            <span className="font-medium">{activity.template.name}</span> - Worth {activity.pointsValue} points
+            <span className="font-medium">{activityName}</span> - Worth {pointsValue} points
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {/* Activity Info */}
           <div className="p-3 bg-coral-50 rounded-lg border border-coral-200">
             <p className="text-sm text-coral-700 mb-1">
-              <strong>Activity Type:</strong> {activity.template.type.replace('_', ' ').toLowerCase()}
+              <strong>Activity Type:</strong> {activityType.replace('_', ' ').toLowerCase()}
             </p>
-            {activity.template.requiresApproval && (
+            {requiresApproval && (
               <p className="text-xs text-coral-600">
                 📋 This submission will be reviewed before points are awarded
               </p>
