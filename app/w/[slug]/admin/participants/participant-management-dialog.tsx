@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { CoralButton } from "@/components/ui/coral-button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -104,10 +105,10 @@ export function ParticipantManagementDialog({
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button className="bg-coral-500 hover:bg-coral-600">
+          <CoralButton variant="default">
             <UserPlus className="h-4 w-4 mr-2" />
             Add Participant
-          </Button>
+          </CoralButton>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -137,10 +138,10 @@ export function ParticipantManagementDialog({
             >
               Cancel
             </Button>
-            <Button
+            <CoralButton
               onClick={handleAddParticipant}
               disabled={loading || !email}
-              className="bg-coral-500 hover:bg-coral-600"
+              variant="default"
             >
               {loading ? (
                 <>
@@ -150,7 +151,7 @@ export function ParticipantManagementDialog({
               ) : (
                 "Add Participant"
               )}
-            </Button>
+            </CoralButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
