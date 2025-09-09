@@ -52,11 +52,14 @@ export async function middleware(request: NextRequest) {
     const slugMatch = pathname.match(/^\/w\/([^\/]+)/)
     if (slugMatch) {
       const slug = slugMatch[1]
-      const userRole = user.user_metadata?.role
       
-      // Admin route protection
-      if (pathname.includes('/admin/') && userRole !== 'ADMIN') {
-        return NextResponse.redirect(new URL(`/w/${slug}/participant/dashboard`, request.url))
+      // For admin routes, defer role checking to the API layer
+      // This prevents the middleware from blocking legitimate admin access
+      // The actual role validation happens in the API routes using database queries
+      if (pathname.includes('/admin/')) {
+        // Let the API routes handle admin verification using database roles
+        // If user lacks admin access, they'll be redirected by the page component
+        return response
       }
     }
 

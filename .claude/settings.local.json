@@ -18,7 +18,9 @@
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_type",
       "Bash(supabase projects api-keys:*)",
-      "mcp__serena__list_dir"
+      "mcp__serena__list_dir",
+      "mcp__zen__thinkdeep",
+      "mcp__serena__replace_symbol_body"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1"
