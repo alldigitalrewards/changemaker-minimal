@@ -23,13 +23,14 @@ interface Challenge {
   };
   enrollments?: Array<{
     userId: string;
-    status: string;
+    status: 'INVITED' | 'ENROLLED' | 'WITHDRAWN';
   }>;
 }
 
 export default function ParticipantChallengesPage() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [enrolledChallenges, setEnrolledChallenges] = useState<Set<string>>(new Set());
+  const [invitedChallenges, setInvitedChallenges] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
@@ -51,14 +52,21 @@ export default function ParticipantChallengesPage() {
         const challengesArray = data.challenges || [];
         setChallenges(challengesArray);
         
-        // Check which challenges the user is enrolled in
+        // Check which challenges the user is enrolled in or invited to
         const enrolledIds = new Set<string>();
+        const invitedIds = new Set<string>();
         challengesArray.forEach((challenge: Challenge) => {
           if (challenge.enrollments && challenge.enrollments.length > 0) {
-            enrolledIds.add(challenge.id);
+            const enrollment = challenge.enrollments[0]; // Should only be one per user
+            if (enrollment.status === 'ENROLLED') {
+              enrolledIds.add(challenge.id);
+            } else if (enrollment.status === 'INVITED') {
+              invitedIds.add(challenge.id);
+            }
           }
         });
         setEnrolledChallenges(enrolledIds);
+        setInvitedChallenges(invitedIds);
       }
     } catch (error) {
       console.error('Failed to fetch challenges:', error);
@@ -95,6 +103,44 @@ export default function ParticipantChallengesPage() {
       toast({
         title: 'Error',
         description: error.message || 'Failed to enroll in challenge',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAcceptInvitation = async (challengeId: string) => {
+    setIsLoading(true);
+    try {
+      // For now, use the same enrollment endpoint - in production you'd have a separate accept endpoint
+      const response = await fetch(`/api/workspaces/${params?.slug}/enrollments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengeId }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Invitation accepted!',
+          description: 'You have successfully joined this challenge.',
+        });
+        
+        setInvitedChallenges(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(challengeId);
+          return newSet;
+        });
+        setEnrolledChallenges(prev => new Set(prev).add(challengeId));
+        fetchChallenges(); // Refresh to get updated counts
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to accept invitation');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to accept invitation',
         variant: 'destructive',
       });
     } finally {
@@ -144,11 +190,14 @@ export default function ParticipantChallengesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredChallenges.map((challenge) => {
             const isEnrolled = enrolledChallenges.has(challenge.id);
+            const isInvited = invitedChallenges.has(challenge.id);
             
             return (
               <Card 
                 key={challenge.id} 
-                className="relative hover:shadow-lg transition-shadow cursor-pointer"
+                className={`relative hover:shadow-lg transition-shadow cursor-pointer ${
+                  isInvited ? 'ring-2 ring-coral-500 bg-coral-50' : ''
+                }`}
                 onClick={() => handleCardClick(challenge.id)}
               >
                 <CardHeader>
@@ -162,6 +211,11 @@ export default function ParticipantChallengesPage() {
                     {isEnrolled && (
                       <Badge className="bg-green-100 text-green-800">
                         Enrolled
+                      </Badge>
+                    )}
+                    {isInvited && (
+                      <Badge className="bg-coral-100 text-coral-800">
+                        Invited
                       </Badge>
                     )}
                   </div>
@@ -182,7 +236,21 @@ export default function ParticipantChallengesPage() {
                     <Calendar className="h-3 w-3 mr-1" />
                     {format(new Date(challenge.createdAt), 'MMM d, yyyy')}
                   </div>
-                  {!isEnrolled ? (
+                  {isInvited ? (
+                    <Button 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAcceptInvitation(challenge.id);
+                      }}
+                      disabled={isLoading}
+                      className="bg-coral-500 hover:bg-coral-600"
+                      style={{ backgroundColor: '#ff6b6b', color: 'white' }}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Accept Invitation
+                    </Button>
+                  ) : !isEnrolled ? (
                     <Button 
                       size="sm"
                       onClick={(e) => {
