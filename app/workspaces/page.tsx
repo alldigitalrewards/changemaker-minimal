@@ -65,11 +65,19 @@ export default async function WorkspacesPage() {
                   <h3 className="text-xl font-semibold">{dbUser.workspace.name}</h3>
                   <p className="text-sm text-gray-500">/{dbUser.workspace.slug}</p>
                 </div>
-                <Link href={`/w/${dbUser.workspace.slug}/${dbUser.role.toLowerCase()}/dashboard`}>
-                  <Button variant="default">
-                    Go to Dashboard
-                  </Button>
-                </Link>
+                <div className="flex gap-3">
+                  <Link href={`/w/${dbUser.workspace.slug}/${dbUser.role.toLowerCase()}/dashboard`}>
+                    <Button variant="default">
+                      Go to Dashboard
+                    </Button>
+                  </Link>
+                  {dbUser.role === "ADMIN" && (
+                    <CreateWorkspaceDialog 
+                      userId={dbUser.id} 
+                      currentWorkspace={dbUser.workspace} 
+                    />
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -82,7 +90,10 @@ export default async function WorkspacesPage() {
             <CardContent>
               <div className="flex gap-4">
                 {dbUser?.role === "ADMIN" && (
-                  <CreateWorkspaceDialog userId={dbUser.id} />
+                  <CreateWorkspaceDialog 
+                    userId={dbUser.id} 
+                    currentWorkspace={null} 
+                  />
                 )}
                 <JoinWorkspaceDialog userId={dbUser?.id} />
               </div>
