@@ -94,7 +94,7 @@ export type ChallengeWithDetails = Challenge & {
 
 export type EnrollmentWithDetails = Enrollment & {
   user: Pick<User, 'id' | 'email'>
-  challenge: Pick<Challenge, 'id' | 'title' | 'workspaceId'>
+  challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId'>
 }
 
 // =============================================================================
@@ -469,7 +469,7 @@ export async function getUserEnrollments(
           select: { id: true, email: true }
         },
         challenge: {
-          select: { id: true, title: true, workspaceId: true }
+          select: { id: true, title: true, description: true, workspaceId: true }
         }
       }
     }) as EnrollmentWithDetails[]
@@ -502,7 +502,7 @@ export async function getChallengeEnrollments(
           select: { id: true, email: true }
         },
         challenge: {
-          select: { id: true, title: true, workspaceId: true }
+          select: { id: true, title: true, description: true, workspaceId: true }
         }
       }
     }) as EnrollmentWithDetails[]
@@ -710,7 +710,7 @@ export async function getAllWorkspaceEnrollments(
           select: { id: true, email: true }
         },
         challenge: {
-          select: { id: true, title: true, workspaceId: true }
+          select: { id: true, title: true, description: true, workspaceId: true }
         }
       },
       orderBy: { createdAt: 'desc' }
