@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, 
   Calendar, 
@@ -13,10 +15,17 @@ import {
   Target,
   CheckCircle,
   Star,
-  Award
+  Award,
+  AlertCircle,
+  Activity,
+  TrendingUp,
+  FileText,
+  ExternalLink,
+  BarChart3,
+  Share2
 } from 'lucide-react';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, requireWorkspaceAccess } from '@/lib/auth/session';
 import JoinButton, { SimpleSubmissionDialog } from './join-button';
