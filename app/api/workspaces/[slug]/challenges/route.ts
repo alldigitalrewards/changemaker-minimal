@@ -5,6 +5,7 @@ import {
   ChallengeCreateRequest, 
   ChallengeListResponse,
   ChallengeCreateResponse,
+  ParticipantsListResponse,
   validateChallengeData,
   ApiError
 } from '@/lib/types';
@@ -12,6 +13,8 @@ import {
   getWorkspaceBySlug,
   getWorkspaceChallenges, 
   createChallenge,
+  createChallengeEnrollments,
+  getWorkspaceUsers,
   getUserBySupabaseId,
   verifyWorkspaceAdmin,
   DatabaseError,
@@ -52,10 +55,18 @@ export async function GET(
       );
     }
 
-    // Get challenges using standardized query
+    // Get challenges with user-specific enrollment data
     const challenges = await getWorkspaceChallenges(workspace.id);
+    
+    // Filter enrollments to only show current user's enrollment status
+    const challengesWithUserEnrollment = challenges.map(challenge => ({
+      ...challenge,
+      enrollments: challenge.enrollments?.filter(enrollment => 
+        enrollment.userId === dbUser.id
+      ) || []
+    }));
 
-    return NextResponse.json({ challenges });
+    return NextResponse.json({ challenges: challengesWithUserEnrollment });
   } catch (error) {
     console.error('Error fetching challenges:', error);
     
@@ -104,7 +115,7 @@ export async function POST(
       );
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, participantIds } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -144,6 +155,21 @@ export async function POST(
       workspace.id
     );
 
+    // If participants are specified, create invitations for them
+    if (participantIds && participantIds.length > 0) {
+      try {
+        await createChallengeEnrollments(
+          challenge.id,
+          participantIds,
+          workspace.id,
+          'INVITED'
+        );
+      } catch (error) {
+        console.error('Error creating participant invitations:', error);
+        // Continue even if invitations fail - challenge was created successfully
+      }
+    }
+
     return NextResponse.json({ challenge }, { status: 201 });
   } catch (error) {
     console.error('Error creating challenge:', error);
@@ -168,4 +194,76 @@ export async function POST(
     );
   }
 }
+
+/* TEMPORARY PARTICIPANTS ENDPOINT - WILL MOVE TO OWN FILE */
+// This function has been moved to /app/api/workspaces/[slug]/participants/route.ts
+// Keeping as internal helper for now but not exported
+async function getParticipants(
+  request: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+): Promise<NextResponse<ParticipantsListResponse | ApiError>> {
+  try {
+    const { slug } = await context.params;
+    
+    // Verify authentication
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // Get workspace with validation
+    const workspace = await getWorkspaceBySlug(slug);
+    if (!workspace) {
+      return NextResponse.json(
+        { error: 'Workspace not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user belongs to workspace
+    const dbUser = await getUserBySupabaseId(user.id);
+    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+      return NextResponse.json(
+        { error: 'Access denied to workspace' },
+        { status: 403 }
+      );
+    }
+
+    // Get all workspace users (participants)
+    const users = await getWorkspaceUsers(workspace.id);
+    
+    // Transform to participant format
+    const participants = users.map(user => ({
+      id: user.id,
+      email: user.email,
+      role: user.role
+    }));
+
+    return NextResponse.json({ participants });
+  } catch (error) {
+    console.error('Error fetching participants:', error);
+    
+    if (error instanceof DatabaseError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+    
+    if (error instanceof WorkspaceAccessError) {
+      return NextResponse.json(
+        { error: 'Access denied' },
+        { status: 403 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to fetch participants' },
+      { status: 500 }
+    );
+  }
+}
+/* END TEMPORARY PARTICIPANTS ENDPOINT */
 

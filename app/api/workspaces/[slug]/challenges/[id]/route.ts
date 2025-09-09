@@ -122,3 +122,5 @@ export const DELETE = withErrorHandling(async (
 
   return NextResponse.json({ success: true });
 });
+
+// Participants endpoint has been moved to /app/api/workspaces/[slug]/participants/route.ts
