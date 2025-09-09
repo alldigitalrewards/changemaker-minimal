@@ -102,11 +102,6 @@ export default async function ParticipantDetailPage({
               participantRole={participant.role}
               showLabel={true}
             />
-            <RemoveParticipantAction
-              slug={slug}
-              participantId={participant.id}
-              participantEmail={participant.email}
-            />
           </div>
         </div>
       </div>
@@ -114,6 +109,26 @@ export default async function ParticipantDetailPage({
       <div className="grid gap-6">
         {/* Participant Info Card */}
         <ParticipantDetailCard participant={participant} />
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Administrative actions for this participant</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <RemoveParticipantAction
+                slug={slug}
+                participantId={participant.id}
+                participantEmail={participant.email}
+              />
+              <p className="text-sm text-gray-500">
+                Remove this participant and all their enrollments from the workspace
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

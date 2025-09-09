@@ -215,13 +215,10 @@ export function ParticipantManagementDialog({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           {showLabel ? (
-            <Button
-              variant="outline"
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            >
+            <CoralButton variant="default">
               <Edit className="h-4 w-4 mr-2" />
               Edit Participant
-            </Button>
+            </CoralButton>
           ) : (
             <Button
               variant="ghost"
