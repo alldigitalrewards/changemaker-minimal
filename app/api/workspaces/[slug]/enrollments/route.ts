@@ -44,6 +44,34 @@ export const POST = withErrorHandling(async (
   }
 })
 
+// Activity submissions route handler
+export const ACTIVITY_SUBMISSIONS_POST = withErrorHandling(async (
+  request: NextRequest,
+  context: { params: Promise<{ slug: string }> }
+) => {
+  const { slug } = await context.params
+  const { activityId, textContent, linkUrl, fileUrls } = await request.json()
+
+  // Require workspace access
+  const { workspace, user } = await requireWorkspaceAccess(slug)
+
+  if (!activityId) {
+    return NextResponse.json({ error: 'Activity ID is required' }, { status: 400 })
+  }
+
+  // For now, return a simple success response - will implement full logic later
+  const fakeSubmission = {
+    id: 'sub-' + Date.now(),
+    activityId,
+    userId: user.dbUser.id,
+    textContent,
+    status: 'PENDING',
+    submittedAt: new Date().toISOString(),
+  }
+
+  return NextResponse.json({ submission: fakeSubmission })
+})
+
 export const GET = withErrorHandling(async (
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }
@@ -67,39 +95,4 @@ export const GET = withErrorHandling(async (
   return NextResponse.json(enrollments)
 })
 
-/* TEMP: participants route content to copy */
-const PARTICIPANTS_ROUTE_CONTENT = `import { NextRequest, NextResponse } from "next/server"
-import { requireWorkspaceAccess, withErrorHandling } from "@/lib/auth/api-auth"
-import { prisma } from "@/lib/db"
-
-export const GET = withErrorHandling(async (
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) => {
-  const { slug } = await params;
-  const { workspace, user } = await requireWorkspaceAccess(slug);
-
-  const users = await prisma.user.findMany({
-    where: {
-      workspaceId: workspace.id,
-    },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-    },
-    orderBy: {
-      email: 'asc',
-    },
-  });
-
-  const participants = users.map(user => ({
-    id: user.id,
-    email: user.email,
-    role: user.role,
-  }));
-
-  return NextResponse.json({ participants });
-});`
-
-console.log("Create participants/route.ts with:", PARTICIPANTS_ROUTE_CONTENT)
+// TODO: Create activity-submissions API route separately
