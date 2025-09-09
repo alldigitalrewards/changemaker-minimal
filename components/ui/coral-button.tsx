@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface CoralButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'default' | 'outline';
+  variant?: 'default' | 'outline' | 'secondary';
   size?: 'default' | 'sm' | 'lg';
   children: React.ReactNode;
   className?: string;
+  asChild?: boolean;
 }
 
 export function CoralButton({ 
@@ -16,6 +17,7 @@ export function CoralButton({
   size = 'default',
   children, 
   className,
+  asChild,
   ...props 
 }: CoralButtonProps) {
   const [isHovered, setIsHovered] = React.useState(false);
@@ -33,6 +35,7 @@ export function CoralButton({
       <Button
         variant="outline"
         size={size}
+        asChild={asChild}
         className={cn(baseStyles, "border-2")}
         style={{
           borderColor: '#FF6B6B',
@@ -48,9 +51,29 @@ export function CoralButton({
     );
   }
 
+  if (variant === 'secondary') {
+    return (
+      <Button
+        size={size}
+        asChild={asChild}
+        className={cn(baseStyles, "shadow-lg hover:shadow-xl transform hover:scale-105")}
+        style={{
+          backgroundColor: isHovered ? '#F5F5F5' : 'white',
+          color: '#FF6B6B'
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        {...props}
+      >
+        {children}
+      </Button>
+    );
+  }
+
   return (
     <Button
       size={size}
+      asChild={asChild}
       className={cn(baseStyles, "text-white shadow-xl hover:shadow-2xl transform hover:scale-105")}
       style={{
         backgroundColor: isHovered ? '#FF5252' : '#FF6B6B',
