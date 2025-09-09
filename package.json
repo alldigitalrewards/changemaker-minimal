@@ -16,6 +16,7 @@
     "seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force && pnpm seed",
     "db:push": "prisma db push && pnpm seed",
+    "fix:enrollment-status": "tsx scripts/migrate-enrollment-status.ts",
     "test": "playwright test"
   },
   "dependencies": {
