@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { ParticipantSelector } from '@/components/ui/participant-selector';
 
 interface Challenge {
   id: string;
@@ -35,6 +36,7 @@ export default function EditChallengePage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
+  const [participantIds, setParticipantIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -124,7 +126,8 @@ export default function EditChallengePage() {
           description,
           startDate,
           endDate,
-          enrollmentDeadline: enrollmentDeadline || undefined
+          enrollmentDeadline: enrollmentDeadline || undefined,
+          participantIds: participantIds.length > 0 ? participantIds : undefined
         }),
       });
 
@@ -289,6 +292,14 @@ export default function EditChallengePage() {
                 <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
               )}
             </div>
+
+            {/* Participant Management */}
+            <ParticipantSelector
+              workspaceSlug={params?.slug || ''}
+              selectedParticipantIds={participantIds}
+              onParticipantsChange={setParticipantIds}
+              disabled={isSaving}
+            />
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button

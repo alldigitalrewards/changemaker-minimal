@@ -41,35 +41,21 @@ export function ParticipantSelector({
   const fetchParticipants = async () => {
     setIsLoading(true);
     try {
-      // For now, we'll simulate the API by directly calling a temporary endpoint
-      // In production, this would be /api/workspaces/${workspaceSlug}/participants
-      const response = await fetch(`/api/workspaces/${workspaceSlug}/challenges`);
+      const response = await fetch(`/api/workspaces/${workspaceSlug}/participants`);
       if (response.ok) {
         const data = await response.json();
-        // For now, extract participants from any existing challenge data or return empty
-        // This is a temporary solution until the participants endpoint is properly set up
-        setParticipants([]);
-        
-        // TODO: Replace with actual participants endpoint
-        // const response = await fetch(`/api/workspaces/${workspaceSlug}/participants`);
-        // const data = await response.json();
-        // setParticipants(data.participants || []);
+        setParticipants(data.participants || []);
       } else {
         throw new Error('Failed to fetch participants');
       }
     } catch (error) {
       console.error('Failed to fetch participants:', error);
-      // For development, provide some mock data
-      setParticipants([
-        { id: 'mock-1', email: 'participant1@example.com', role: 'PARTICIPANT' },
-        { id: 'mock-2', email: 'participant2@example.com', role: 'PARTICIPANT' },
-        { id: 'mock-3', email: 'admin@example.com', role: 'ADMIN' }
-      ]);
+      setParticipants([]);
       
       toast({
-        title: 'Info',
-        description: 'Using mock participant data for development',
-        variant: 'default',
+        title: 'Error',
+        description: 'Failed to load participants',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
