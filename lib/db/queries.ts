@@ -859,9 +859,18 @@ export async function updateActivityTemplate(
   }>,
   workspaceId: WorkspaceId
 ): Promise<ActivityTemplate> {
+  // Verify template exists in workspace
+  const template = await prisma.activityTemplate.findFirst({
+    where: { id: templateId, workspaceId }
+  })
+
+  if (!template) {
+    throw new ResourceNotFoundError('ActivityTemplate', templateId)
+  }
+
   try {
     return await prisma.activityTemplate.update({
-      where: { id: templateId, workspaceId },
+      where: { id: templateId },
       data
     })
   } catch (error) {
@@ -876,9 +885,18 @@ export async function deleteActivityTemplate(
   templateId: string,
   workspaceId: WorkspaceId
 ): Promise<void> {
+  // Verify template exists in workspace
+  const template = await prisma.activityTemplate.findFirst({
+    where: { id: templateId, workspaceId }
+  })
+
+  if (!template) {
+    throw new ResourceNotFoundError('ActivityTemplate', templateId)
+  }
+
   try {
     await prisma.activityTemplate.delete({
-      where: { id: templateId, workspaceId }
+      where: { id: templateId }
     })
   } catch (error) {
     throw new DatabaseError(`Failed to delete activity template: ${error}`)
