@@ -148,55 +148,66 @@ export default async function AdminParticipantsPage({
                 </TableHeader>
                 <TableBody>
                   {participants.map((participant) => (
-                    <TableRow key={participant.id}>
+                    <TableRow 
+                      key={participant.id} 
+                      className="hover:bg-gray-50"
+                    >
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{participant.email}</p>
-                          <p className="text-sm text-gray-500">
-                            {participant.enrollments.length} enrollment{participant.enrollments.length !== 1 ? 's' : ''}
-                          </p>
-                        </div>
+                        <Link href={`/w/${slug}/admin/participants/${participant.id}`} className="block">
+                          <div>
+                            <p className="font-medium">{participant.email}</p>
+                            <p className="text-sm text-gray-500">
+                              {participant.enrollments.length} enrollment{participant.enrollments.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </Link>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={participant.role === "ADMIN" 
-                            ? "bg-blue-100 text-blue-800 border-blue-200" 
-                            : "bg-gray-100 text-gray-800 border-gray-200"
-                          }
-                        >
-                          {participant.role === "ADMIN" ? (
-                            <Shield className="h-3 w-3 mr-1" />
-                          ) : (
-                            <UserCheck className="h-3 w-3 mr-1" />
-                          )}
-                          {participant.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                            {participant.enrollments.length}
+                        <Link href={`/w/${slug}/admin/participants/${participant.id}`} className="block">
+                          <Badge 
+                            variant="outline" 
+                            className={participant.role === "ADMIN" 
+                              ? "bg-blue-100 text-blue-800 border-blue-200" 
+                              : "bg-gray-100 text-gray-800 border-gray-200"
+                            }
+                          >
+                            {participant.role === "ADMIN" ? (
+                              <Shield className="h-3 w-3 mr-1" />
+                            ) : (
+                              <UserCheck className="h-3 w-3 mr-1" />
+                            )}
+                            {participant.role}
                           </Badge>
-                          {participant.enrollments.length > 0 && (
-                            <div className="flex gap-1">
-                              {participant.enrollments.filter(e => e.status === 'ENROLLED').length > 0 && (
-                                <div className="h-2 w-2 rounded-full bg-green-500" title={`${participant.enrollments.filter(e => e.status === 'ENROLLED').length} active`}></div>
-                              )}
-                              {participant.enrollments.filter(e => e.status === 'INVITED').length > 0 && (
-                                <div className="h-2 w-2 rounded-full bg-yellow-500" title={`${participant.enrollments.filter(e => e.status === 'INVITED').length} invited`}></div>
-                              )}
-                              {participant.enrollments.filter(e => e.status === 'WITHDRAWN').length > 0 && (
-                                <div className="h-2 w-2 rounded-full bg-blue-500" title={`${participant.enrollments.filter(e => e.status === 'WITHDRAWN').length} completed`}></div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        </Link>
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-gray-500">
-                          {new Date(participant.createdAt).toLocaleDateString()}
-                        </span>
+                        <Link href={`/w/${slug}/admin/participants/${participant.id}`} className="block">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                              {participant.enrollments.length}
+                            </Badge>
+                            {participant.enrollments.length > 0 && (
+                              <div className="flex gap-1">
+                                {participant.enrollments.filter(e => e.status === 'ENROLLED').length > 0 && (
+                                  <div className="h-2 w-2 rounded-full bg-green-500" title={`${participant.enrollments.filter(e => e.status === 'ENROLLED').length} active`}></div>
+                                )}
+                                {participant.enrollments.filter(e => e.status === 'INVITED').length > 0 && (
+                                  <div className="h-2 w-2 rounded-full bg-yellow-500" title={`${participant.enrollments.filter(e => e.status === 'INVITED').length} invited`}></div>
+                                )}
+                                {participant.enrollments.filter(e => e.status === 'WITHDRAWN').length > 0 && (
+                                  <div className="h-2 w-2 rounded-full bg-blue-500" title={`${participant.enrollments.filter(e => e.status === 'WITHDRAWN').length} completed`}></div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/w/${slug}/admin/participants/${participant.id}`} className="block">
+                          <span className="text-sm text-gray-500">
+                            {new Date(participant.createdAt).toLocaleDateString()}
+                          </span>
+                        </Link>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">

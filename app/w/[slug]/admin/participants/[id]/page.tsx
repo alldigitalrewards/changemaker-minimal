@@ -9,7 +9,8 @@ import { CoralButton } from "@/components/ui/coral-button"
 import { ParticipantDetailCard } from "@/components/ui/participant-detail-card"
 import { ParticipantRoleToggle } from "./participant-role-toggle"
 import { RemoveParticipantAction } from "./remove-participant-action"
-import { ArrowLeft, Calendar, Mail, User, Trophy } from "lucide-react"
+import { ParticipantManagementDialog } from "../participant-management-dialog"
+import { ArrowLeft, Calendar, Mail, User, Trophy, Edit } from "lucide-react"
 import Link from "next/link"
 
 export default async function ParticipantDetailPage({ 
@@ -93,16 +94,13 @@ export default async function ParticipantDetailPage({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <ParticipantRoleToggle
+            <ParticipantManagementDialog
               slug={slug}
-              participantId={participant.id}
-              currentRole={participant.role}
-              participantEmail={participant.email}
-            />
-            <RemoveParticipantAction
-              slug={slug}
+              mode="edit"
               participantId={participant.id}
               participantEmail={participant.email}
+              participantRole={participant.role}
+              showLabel={true}
             />
           </div>
         </div>
@@ -111,6 +109,26 @@ export default async function ParticipantDetailPage({
       <div className="grid gap-6">
         {/* Participant Info Card */}
         <ParticipantDetailCard participant={participant} />
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Administrative actions for this participant</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <RemoveParticipantAction
+                slug={slug}
+                participantId={participant.id}
+                participantEmail={participant.email}
+              />
+              <p className="text-sm text-gray-500">
+                Remove this participant and all their enrollments from the workspace
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
