@@ -17,12 +17,15 @@ import {
   Activity,
   TrendingUp,
   FileText,
-  BarChart3
+  BarChart3,
+  Crown,
+  Medal
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, requireWorkspaceAccess } from '@/lib/auth/session';
+import { getChallengeLeaderboard } from '@/lib/db/queries';
 import JoinButton, { SimpleSubmissionDialog } from './join-button';
 import { TabNavigationButtons } from './tab-navigation-buttons';
 
@@ -94,6 +97,236 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
   } catch (error) {
     console.error('Error fetching challenge:', error);
     return null;
+  }
+}
+
+async function ChallengeLeaderboardContent({ 
+  challengeId, 
+  workspaceId, 
+  currentUserId 
+}: { 
+  challengeId: string; 
+  workspaceId: string; 
+  currentUserId: string; 
+}) {
+  try {
+    const leaderboardData = await getChallengeLeaderboard(challengeId, workspaceId, 15)
+    
+    if (leaderboardData.length === 0) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-coral-500" />
+              Challenge Leaderboard
+            </CardTitle>
+            <CardDescription>
+              Top participants in this challenge based on points earned
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-12">
+              <Award className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No rankings yet</h3>
+              <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                Start completing activities to see rankings for this challenge. Be the first to earn points!
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )
+    }
+
+    const topThree = leaderboardData.slice(0, 3)
+    const remaining = leaderboardData.slice(3)
+    const currentUserRank = leaderboardData.findIndex(entry => entry.userId === currentUserId) + 1
+
+    return (
+      <div className="space-y-6">
+        {/* Current User Rank */}
+        {currentUserRank > 0 && (
+          <Card className="bg-gradient-to-r from-coral-50 to-blue-50 border-coral-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-coral-500 rounded-full flex items-center justify-center">
+                    <Trophy className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-900">Your Challenge Ranking</p>
+                    <p className="text-sm text-gray-600">
+                      {leaderboardData.find(entry => entry.userId === currentUserId)?.totalPoints || 0} points earned in this challenge
+                    </p>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-coral-600">#{currentUserRank}</div>
+                  <div className="text-sm text-gray-500">of {leaderboardData.length}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top 3 Challenge Winners */}
+        {topThree.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-amber-500" />
+                Top Challenge Performers
+              </CardTitle>
+              <CardDescription>
+                Leading participants in this challenge
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {topThree.map((entry, index) => {
+                  const rank = index + 1
+                  const isCurrentUser = entry.userId === currentUserId
+                  const displayName = entry.email.split('@')[0]
+                  
+                  const cardStyles = {
+                    1: "bg-gradient-to-br from-amber-100 to-yellow-100 border-amber-300",
+                    2: "bg-gradient-to-br from-gray-100 to-slate-100 border-gray-300", 
+                    3: "bg-gradient-to-br from-orange-100 to-amber-100 border-orange-300"
+                  }
+
+                  const icons = {
+                    1: <Crown className="h-8 w-8 text-amber-600" />,
+                    2: <Medal className="h-8 w-8 text-gray-500" />,
+                    3: <Award className="h-8 w-8 text-amber-600" />
+                  }
+
+                  const positions = {
+                    1: "🥇 1st Place",
+                    2: "🥈 2nd Place", 
+                    3: "🥉 3rd Place"
+                  }
+
+                  return (
+                    <Card key={entry.userId} className={`${cardStyles[rank as keyof typeof cardStyles]} transition-all duration-200 hover:shadow-lg`}>
+                      <CardContent className="p-6 text-center">
+                        <div className="mb-4">
+                          {icons[rank as keyof typeof icons]}
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm font-medium text-gray-600">
+                            {positions[rank as keyof typeof positions]}
+                          </p>
+                          <div className="flex items-center justify-center gap-2">
+                            <p className="font-bold text-lg text-gray-900">{displayName}</p>
+                            {isCurrentUser && (
+                              <Badge className="bg-coral-500 text-white text-xs">You</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-center gap-1">
+                            <Star className="h-4 w-4 text-amber-500" />
+                            <span className="text-2xl font-bold text-gray-800">{entry.totalPoints}</span>
+                            <span className="text-sm text-gray-600">pts</span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {entry.completedActivities} activities • {entry.submissions} submissions
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Full Challenge Leaderboard */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-coral-500" />
+              Complete Rankings
+            </CardTitle>
+            <CardDescription>
+              All participants ranked by points earned in this challenge
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {leaderboardData.map((entry, index) => {
+                const rank = index + 1
+                const isCurrentUser = entry.userId === currentUserId
+                const displayName = entry.email.split('@')[0]
+                
+                const getRankIcon = (rank: number) => {
+                  switch (rank) {
+                    case 1:
+                      return <Crown className="h-5 w-5 text-amber-500" />
+                    case 2:
+                      return <Medal className="h-5 w-5 text-gray-400" />
+                    case 3:
+                      return <Award className="h-5 w-5 text-amber-600" />
+                    default:
+                      return <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">{rank}</div>
+                  }
+                }
+
+                const getRankColor = (rank: number) => {
+                  switch (rank) {
+                    case 1:
+                      return "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200"
+                    case 2:
+                      return "bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200"
+                    case 3:
+                      return "bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200"
+                    default:
+                      return isCurrentUser 
+                        ? "bg-gradient-to-r from-coral-50 to-pink-50 border-coral-200" 
+                        : "bg-white border-gray-200"
+                  }
+                }
+
+                return (
+                  <Card key={entry.userId} className={`transition-all duration-200 ${getRankColor(rank)} ${isCurrentUser ? 'ring-2 ring-coral-300' : ''}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {getRankIcon(rank)}
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-gray-900">{displayName}</p>
+                              {isCurrentUser && (
+                                <Badge className="bg-coral-500 text-white text-xs">You</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {entry.completedActivities} activities completed • {entry.submissions} submissions
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-coral-600">{entry.totalPoints}</div>
+                          <div className="text-xs text-gray-500">points</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  } catch (error) {
+    console.error('Error loading challenge leaderboard:', error)
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <Award className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-500">Unable to load leaderboard data</p>
+        </CardContent>
+      </Card>
+    )
   }
 }
 
@@ -661,20 +894,11 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
 
         {/* Leaderboard Tab */}
         <TabsContent value="leaderboard" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Leaderboard</CardTitle>
-              <CardDescription>
-                Top participants in this challenge
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Award className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">Leaderboard will be available once the challenge begins</p>
-              </div>
-            </CardContent>
-          </Card>
+          <ChallengeLeaderboardContent 
+            challengeId={challenge.id} 
+            workspaceId={workspace.id} 
+            currentUserId={user.id}
+          />
         </TabsContent>
       </Tabs>
     </div>
