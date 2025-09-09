@@ -122,9 +122,9 @@ export default async function AdminDashboard({
                 <Link 
                   key={challenge.id} 
                   href={`/w/${slug}/admin/challenges`}
-                  className="block transition-all hover:shadow-md"
+                  className="block transition-all hover:shadow-md group"
                 >
-                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-coral-300 cursor-pointer">
+                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg group-hover:border-coral-300 cursor-pointer">
                     <div className="flex-1">
                       <h3 className="font-medium">{challenge.title}</h3>
                       <p className="text-sm text-gray-600">{challenge.description}</p>
@@ -132,17 +132,9 @@ export default async function AdminDashboard({
                         {challenge.enrollments.length} enrollments
                       </p>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="ml-4"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        window.location.href = `/w/${slug}/admin/challenges`
-                      }}
-                    >
+                    <div className="ml-4 px-3 py-1 border border-gray-300 rounded-md text-sm group-hover:border-coral-500 group-hover:text-coral-600">
                       View
-                    </Button>
+                    </div>
                   </div>
                 </Link>
               ))}
