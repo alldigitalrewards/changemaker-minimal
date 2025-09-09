@@ -13,13 +13,15 @@ import {
   Clock,
   Target,
   CheckCircle,
-  Activity
+  Activity,
+  ClipboardList
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { prisma } from '@/lib/db';
 import { DeleteChallengeButton } from './delete-button';
 import { ChallengeActivities } from '@/components/activities/challenge-activities';
+import { SubmissionReviewButton } from './submission-review-button';
 
 interface PageProps {
   params: Promise<{
@@ -54,6 +56,25 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
               },
             },
           },
+        },
+        activities: {
+          include: {
+            template: true,
+            submissions: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                  }
+                },
+                enrollment: true,
+              },
+              orderBy: {
+                submittedAt: 'desc'
+              }
+            }
+          }
         },
         _count: {
           select: {
@@ -182,6 +203,15 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>
+          <TabsTrigger value="submissions">
+            <ClipboardList className="h-4 w-4 mr-1" />
+            Submissions
+            {challenge.activities && challenge.activities.some(a => a.submissions.some(s => s.status === 'PENDING')) && (
+              <Badge className="ml-2 bg-red-500 text-white text-xs">
+                {challenge.activities.reduce((count, a) => count + a.submissions.filter(s => s.status === 'PENDING').length, 0)}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="participants">Participants</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -254,6 +284,142 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
         {/* Activities Tab */}
         <TabsContent value="activities" className="space-y-4">
           <ChallengeActivities challengeId={id} workspaceSlug={slug} />
+        </TabsContent>
+
+        {/* Submissions Tab */}
+        <TabsContent value="submissions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-coral-500" />
+                Activity Submissions
+              </CardTitle>
+              <CardDescription>
+                Review and approve participant submissions for activities in this challenge
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {challenge.activities && challenge.activities.length > 0 ? (
+                <div className="space-y-6">
+                  {challenge.activities.map((activity) => {
+                    const submissions = activity.submissions || [];
+                    const pendingSubmissions = submissions.filter(s => s.status === 'PENDING');
+                    const approvedSubmissions = submissions.filter(s => s.status === 'APPROVED');
+                    const rejectedSubmissions = submissions.filter(s => s.status === 'REJECTED');
+
+                    if (submissions.length === 0) return null;
+
+                    return (
+                      <div key={activity.id} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="font-semibold text-lg">{activity.template.name}</h3>
+                            <p className="text-sm text-gray-600">{activity.template.description}</p>
+                            <div className="flex gap-4 text-xs text-gray-500 mt-1">
+                              <span>Points: {activity.pointsValue}</span>
+                              <span>Type: {activity.template.type.replace('_', ' ')}</span>
+                              <span>Max submissions: {activity.maxSubmissions}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-600">Submissions</div>
+                            <div className="flex gap-2 text-xs">
+                              {pendingSubmissions.length > 0 && (
+                                <Badge className="bg-yellow-500 text-white">
+                                  {pendingSubmissions.length} Pending
+                                </Badge>
+                              )}
+                              {approvedSubmissions.length > 0 && (
+                                <Badge className="bg-green-500 text-white">
+                                  {approvedSubmissions.length} Approved
+                                </Badge>
+                              )}
+                              {rejectedSubmissions.length > 0 && (
+                                <Badge className="bg-red-500 text-white">
+                                  {rejectedSubmissions.length} Rejected
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {submissions.map((submission) => (
+                            <div 
+                              key={submission.id} 
+                              className={`border rounded-lg p-4 ${
+                                submission.status === 'PENDING' ? 'bg-yellow-50 border-yellow-200' :
+                                submission.status === 'APPROVED' ? 'bg-green-50 border-green-200' :
+                                'bg-red-50 border-red-200'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{submission.user.email}</span>
+                                    <Badge 
+                                      className={
+                                        submission.status === 'PENDING' ? 'bg-yellow-500 text-white' :
+                                        submission.status === 'APPROVED' ? 'bg-green-500 text-white' :
+                                        'bg-red-500 text-white'
+                                      }
+                                    >
+                                      {submission.status.toLowerCase()}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    Submitted {format(new Date(submission.submittedAt), 'MMM d, yyyy h:mm a')}
+                                  </div>
+                                </div>
+                                {submission.status === 'PENDING' && (
+                                  <div className="flex gap-2">
+                                    <SubmissionReviewButton
+                                      submissionId={submission.id}
+                                      action="approve"
+                                      workspaceSlug={slug}
+                                      pointsValue={activity.pointsValue}
+                                    />
+                                    <SubmissionReviewButton
+                                      submissionId={submission.id}
+                                      action="reject"
+                                      workspaceSlug={slug}
+                                      pointsValue={activity.pointsValue}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="bg-white p-3 rounded border">
+                                <p className="text-sm">{submission.textContent}</p>
+                              </div>
+                              
+                              {submission.pointsAwarded && (
+                                <div className="mt-2 text-xs text-green-600">
+                                  Points awarded: {submission.pointsAwarded}
+                                </div>
+                              )}
+                              
+                              {submission.reviewNotes && (
+                                <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+                                  <strong>Review notes:</strong> {submission.reviewNotes}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <ClipboardList className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-gray-500">No activities with submissions yet.</p>
+                  <p className="text-sm text-gray-400">Add activities to this challenge to see submissions here.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Participants Tab */}
