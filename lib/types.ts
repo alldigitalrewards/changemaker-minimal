@@ -162,6 +162,7 @@ export interface ChallengeCreateRequest {
   readonly startDate: string // ISO string format for API
   readonly endDate: string   // ISO string format for API
   readonly enrollmentDeadline?: string // Optional ISO string format for API
+  readonly participantIds?: string[] // Optional array of user IDs for enrollment
 }
 
 export interface ChallengeCreateResponse {
@@ -170,6 +171,19 @@ export interface ChallengeCreateResponse {
 
 export interface ChallengeListResponse {
   readonly challenges: Challenge[]
+}
+
+export interface ChallengeUpdateRequest {
+  readonly title?: string
+  readonly description?: string
+  readonly startDate?: string // ISO string format for API
+  readonly endDate?: string   // ISO string format for API
+  readonly enrollmentDeadline?: string // Optional ISO string format for API
+  readonly participantIds?: string[] // Optional array of user IDs for enrollment
+}
+
+export interface UserListResponse {
+  readonly users: Pick<AppUser, 'id' | 'email' | 'role'>[]
 }
 
 // Enrollment API Types
@@ -369,6 +383,17 @@ export function validateChallengeData(data: unknown): data is ChallengeCreateReq
   if ('enrollmentDeadline' in data && (data as any).enrollmentDeadline) {
     const enrollmentDeadline = new Date((data as any).enrollmentDeadline)
     if (isNaN(enrollmentDeadline.getTime()) || enrollmentDeadline > startDate) {
+      return false
+    }
+  }
+
+  // Validate participantIds if provided
+  if ('participantIds' in data && (data as any).participantIds) {
+    if (!Array.isArray((data as any).participantIds)) {
+      return false
+    }
+    // Check all entries are strings
+    if (!(data as any).participantIds.every((id: any) => typeof id === 'string')) {
       return false
     }
   }
