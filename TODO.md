@@ -38,96 +38,110 @@
 
   // Phase 1: Core Activities (6 models total)
   model ActivityTemplate {
-    id              String        @id @default(uuid())
-    name            String
-    description     String
-    type            ActivityType
-    basePoints      Int           @default(10)
-    workspaceId     String
-    workspace       Workspace     @relation(...)
-    activities      Activity[]    // Instances in challenges
+  id              String        @id @default(uuid())
+  name            String
+  description     String
+  type            ActivityType
+  basePoints      Int           @default(10)
+  workspaceId     String
+  workspace       Workspace     @relation(...)
+  activities      Activity[]    // Instances in challenges
 
-    // Template configuration
-    requiresApproval Boolean      @default(true)
-    allowMultiple    Boolean      @default(false)  // Can submit multiple times?
+  // Template configuration
+  requiresApproval Boolean      @default(true)
+  allowMultiple    Boolean      @default(false)  // Can submit multiple times?
 
-    createdAt       DateTime
-    updatedAt       DateTime
+  createdAt       DateTime
+  updatedAt       DateTime
   }
 
   model Activity {
-    id              String        @id @default(uuid())
-    templateId      String
-    template        ActivityTemplate @relation(...)
-    challengeId     String
-    challenge       Challenge     @relation(...)
+  id              String        @id @default(uuid())
+  templateId      String
+  template        ActivityTemplate @relation(...)
+  challengeId     String
+  challenge       Challenge     @relation(...)
 
-    // Challenge-specific overrides
-    pointsValue     Int           // Can override template
-    maxSubmissions  Int           @default(1)
-    deadline        DateTime?
-    isRequired      Boolean       @default(false)
+  // Challenge-specific overrides
+  pointsValue     Int           // Can override template
+  maxSubmissions  Int           @default(1)
+  deadline        DateTime?
+  isRequired      Boolean       @default(false)
 
-    submissions     ActivitySubmission[]
+  submissions     ActivitySubmission[]
   }
 
   model ActivitySubmission {
-    id              String        @id @default(uuid())
-    activityId      String
-    activity        Activity      @relation(...)
-    userId          String
-    user            User          @relation(...)
-    enrollmentId    String
-    enrollment      Enrollment    @relation(...)
+  id              String        @id @default(uuid())
+  activityId      String
+  activity        Activity      @relation(...)
+  userId          String
+  user            User          @relation(...)
+  enrollmentId    String
+  enrollment      Enrollment    @relation(...)
 
-    // Submission content
-    textContent     String?       // For text submissions
-    fileUrls        String[]      // For file/photo uploads
-    linkUrl         String?       // For link submissions
+  // Submission content
+  textContent     String?       // For text submissions
+  fileUrls        String[]      // For file/photo uploads
+  linkUrl         String?       // For link submissions
 
-    // Review & points
-    status          SubmissionStatus @default(PENDING)
-    pointsAwarded   Int?
-    reviewNotes     String?
-    reviewedBy      String?
-    reviewedAt      DateTime?
+  // Review & points
+  status          SubmissionStatus @default(PENDING)
+  pointsAwarded   Int?
+  reviewNotes     String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
 
-    submittedAt     DateTime      @default(now())
-    updatedAt       DateTime      @updatedAt
+  submittedAt     DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
   }
 
   // Phase 2: Points System
   model PointsBalance {
-    id              String        @id @default(uuid())
-    userId          String
-    user            User          @relation(...)
-    workspaceId     String
-    workspace       Workspace     @relation(...)
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(...)
+  workspaceId     String
+  workspace       Workspace     @relation(...)
 
-    totalPoints     Int           @default(0)
-    availablePoints Int           @default(0)
+  totalPoints     Int           @default(0)
+  availablePoints Int           @default(0)
 
-    @@unique([userId, workspaceId])
+  @@unique([userId, workspaceId])
   }
 
   Implementation Phases
 
   **Implementation Status:**
-  - [x] Phase 1: Database Schema - Extended Prisma schema with ActivityTemplate, Activity, ActivitySubmission, PointsBalance models
-  - [x] Phase 2: Activity Templates Management - Admin CRUD interface with /w/[slug]/admin/activity-templates page
-  - [ ] Phase 3: Challenge Integration - Link activities to challenges  
+
+  - [X] Phase 1: Database Schema - Extended Prisma schema with ActivityTemplate, Activity, ActivitySubmission, PointsBalance models
+  - [X] Phase 2: Activity Templates Management - Admin CRUD interface with /w/[slug]/admin/activity-templates page
+  - [X] Phase 3: Challenge Integration - Link activities to challenges
   - [ ] Phase 4: Participant Submission Flow - Submission forms and file upload
   - [ ] Phase 5: Admin Review System - Review dashboard and approval
   - [ ] Phase 6: Basic Points System - Points calculation and tracking
 
   **Phase 2 Complete:**
+
   - ✅ Admin sidebar navigation updated
-  - ✅ Activity templates page with CRUD interface  
+  - ✅ Activity templates page with CRUD interface
   - ✅ API routes: GET/POST /api/workspaces/[slug]/activity-templates and PUT/DELETE [id]
   - ✅ Database query functions for activity templates
   - ✅ ActivityTemplateCard and ActivityTemplateForm components
   - ✅ Custom Switch UI component for form toggles
   - ✅ Type definitions and validation functions
+
+  **Phase 3 Complete:**
+
+  - ✅ Activities tab added to challenge detail page (/w/[slug]/admin/challenges/[id])
+  - ✅ ChallengeActivities component for displaying and managing activities
+  - ✅ ActivityTemplateSelector component for assigning templates to challenges
+  - ✅ API routes: GET/POST /api/workspaces/[slug]/challenges/[id]/activities
+  - ✅ Individual activity management: PUT/DELETE /api/workspaces/[slug]/challenges/[id]/activities/[activityId]
+  - ✅ Challenge-specific activity configuration (points, deadlines, requirements)
+  - ✅ Additional UI components: RadioGroup, Checkbox, Separator
+  - ✅ Activity creation from templates with workspace isolation
+  - ✅ Remove activities from challenges functionality
 
   Phase 1: Activity Templates & Management (Week 1)
 
@@ -295,3 +309,35 @@
 
   This plan maintains the minimalist approach while adding substantial value. We're essentially creating a lightweight LMS (Learning
   Management System) within your challenge platform.
+
+
+
+
+  ✅ Successfully Implemented Phase 1 & 2 of the Activities Feature:
+
+  Completed:
+
+1. Database Schema - Added 4 new models (ActivityTemplate, Activity, ActivitySubmission, PointsBalance)
+2. Admin Activity Templates Management - Full CRUD interface at /w/[slug]/admin/activity-templates
+3. API Routes - Complete REST API for activity template operations
+4. UI Components - ActivityTemplateCard, ActivityTemplateForm, and Switch components
+5. Build Verification - Project builds successfully with no errors
+
+  Key Features:
+
+- 6 activity types supported (text, file, photo, link, video, multiple choice)
+- Points configuration per activity
+- Approval workflow settings
+- Workspace-isolated templates
+- Reusable across challenges
+
+  Next Steps (Phase 3):
+
+@ continue with Challenge Integration where we:
+
+- Add Activities tab to challenge edit page
+- Allow admins to assign activity templates to challenges
+- Create Activity instances from templates
+- Configure challenge-specific settings (points, deadlines, requirements)
+
+  The foundation is solid and ready for the next phase of implementation.
