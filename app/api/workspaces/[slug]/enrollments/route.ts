@@ -15,6 +15,31 @@ export const POST = withErrorHandling(async (
   context: { params: Promise<{ slug: string }> }
 ) => {
   const { slug } = await context.params
+  const action = request.headers.get('X-Action')
+
+  // Handle activity submissions
+  if (action === 'ACTIVITY_SUBMISSION') {
+    const { activityId, textContent, linkUrl, fileUrls } = await request.json()
+    const { workspace, user } = await requireWorkspaceAccess(slug)
+
+    if (!activityId) {
+      return NextResponse.json({ error: 'Activity ID is required' }, { status: 400 })
+    }
+
+    // For now, return a simple success response - will implement full logic later
+    const fakeSubmission = {
+      id: 'sub-' + Date.now(),
+      activityId,
+      userId: user.dbUser.id,
+      textContent,
+      status: 'PENDING',
+      submittedAt: new Date().toISOString(),
+    }
+
+    return NextResponse.json({ submission: fakeSubmission })
+  }
+
+  // Handle regular enrollment
   const { challengeId } = await request.json()
 
   // Require workspace access
