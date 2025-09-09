@@ -1078,3 +1078,68 @@ export async function reviewActivitySubmission(
     throw new DatabaseError(`Failed to review activity submission: ${error}`)
   }
 }
+
+// =============================================================================
+// POINTS BALANCE QUERIES
+// =============================================================================
+
+/**
+ * Get or create points balance for user in workspace
+ */
+export async function getOrCreatePointsBalance(
+  userId: UserId,
+  workspaceId: WorkspaceId
+): Promise<{ totalPoints: number; availablePoints: number }> {
+  try {
+    const balance = await prisma.pointsBalance.upsert({
+      where: {
+        userId_workspaceId: {
+          userId,
+          workspaceId
+        }
+      },
+      update: {},
+      create: {
+        userId,
+        workspaceId,
+        totalPoints: 0,
+        availablePoints: 0
+      }
+    })
+    return balance
+  } catch (error) {
+    throw new DatabaseError(`Failed to get points balance: ${error}`)
+  }
+}
+
+/**
+ * Update points balance (add/subtract points)
+ */
+export async function updatePointsBalance(
+  userId: UserId,
+  workspaceId: WorkspaceId,
+  pointsToAdd: number
+): Promise<void> {
+  try {
+    await prisma.pointsBalance.upsert({
+      where: {
+        userId_workspaceId: {
+          userId,
+          workspaceId
+        }
+      },
+      update: {
+        totalPoints: { increment: pointsToAdd },
+        availablePoints: { increment: pointsToAdd }
+      },
+      create: {
+        userId,
+        workspaceId,
+        totalPoints: Math.max(0, pointsToAdd),
+        availablePoints: Math.max(0, pointsToAdd)
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to update points balance: ${error}`)
+  }
+}
