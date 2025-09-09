@@ -237,7 +237,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
               <CardContent className="space-y-2">
                 <Button className="w-full" variant="outline">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Invite Participants
+                  Add Participants
                 </Button>
                 <Button className="w-full" variant="outline">
                   <Trophy className="h-4 w-4 mr-2" />
@@ -273,9 +273,20 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                           Role: {enrollment.user.role} | Status: {enrollment.status}
                         </p>
                       </div>
-                      <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                        {enrollment.status}
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                          {enrollment.status}
+                        </Badge>
+                        <Button
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            // TODO: Implement remove participant
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

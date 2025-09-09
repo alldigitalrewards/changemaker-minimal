@@ -11,6 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { UserPlus } from "lucide-react"
+// import { ParticipantBulkActions } from "./bulk-actions" // TODO: Create this component
 
 export default async function AdminParticipantsPage({ 
   params 
@@ -71,8 +75,22 @@ export default async function AdminParticipantsPage({
   })
 
   const totalEnrollments = enrollmentStats.reduce((sum, stat) => sum + stat._count, 0)
-  const activeEnrollments = enrollmentStats.find(s => s.status === "active")?._count || 0
-  const completedEnrollments = enrollmentStats.find(s => s.status === "completed")?._count || 0
+  const activeEnrollments = enrollmentStats.find(s => s.status === "ACTIVE")?._count || 0
+  const completedEnrollments = enrollmentStats.find(s => s.status === "COMPLETED")?._count || 0
+
+  // Get challenges for bulk operations
+  const challenges = await prisma.challenge.findMany({
+    where: {
+      workspaceId: workspace.id
+    },
+    select: {
+      id: true,
+      title: true
+    },
+    orderBy: {
+      title: 'asc'
+    }
+  })
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -121,8 +139,18 @@ export default async function AdminParticipantsPage({
         {/* Participants Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Participants</CardTitle>
-            <CardDescription>View and manage workspace participants</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>All Participants</CardTitle>
+                <CardDescription>View and manage workspace participants</CardDescription>
+              </div>
+              {challenges.length > 0 && participants.length > 0 && (
+                <Button className="bg-coral-500 hover:bg-coral-600">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Bulk Add to Challenge
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {participants.length > 0 ? (
@@ -132,6 +160,7 @@ export default async function AdminParticipantsPage({
                     <TableHead>Email</TableHead>
                     <TableHead>Enrolled Challenges</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -144,15 +173,12 @@ export default async function AdminParticipantsPage({
                             {participant.enrollments.map((enrollment) => (
                               <div key={enrollment.id} className="text-sm">
                                 {enrollment.challenge.title}
-                                <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${
-                                  enrollment.status === "active" 
-                                    ? "bg-green-100 text-green-800"
-                                    : enrollment.status === "completed"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}>
+                                <Badge
+                                  variant={enrollment.status === "ACTIVE" ? "default" : "secondary"}
+                                  className="ml-2 text-xs"
+                                >
                                   {enrollment.status}
-                                </span>
+                                </Badge>
                               </div>
                             ))}
                           </div>
@@ -161,9 +187,15 @@ export default async function AdminParticipantsPage({
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                        <Badge variant="outline" className="text-xs">
                           Active
-                        </span>
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="outline">
+                          <UserPlus className="h-3 w-3 mr-1" />
+                          Add to Challenge
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
