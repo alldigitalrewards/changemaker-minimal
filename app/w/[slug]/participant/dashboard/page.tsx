@@ -59,13 +59,13 @@ export default async function ParticipantDashboard({
               </div>
               <div className="text-center p-4 bg-gray-50 rounded-lg">
                 <p className="text-2xl font-bold text-coral-500">
-                  {enrollments.filter(e => e.status === "active").length}
+                  {enrollments.filter(e => e.status === "ENROLLED").length}
                 </p>
                 <p className="text-sm text-gray-600">Active</p>
               </div>
               <div className="text-center p-4 bg-gray-50 rounded-lg">
                 <p className="text-2xl font-bold text-coral-500">
-                  {enrollments.filter(e => e.status === "completed").length}
+                  {enrollments.filter(e => e.status === "WITHDRAWN").length}
                 </p>
                 <p className="text-sm text-gray-600">Completed</p>
               </div>
@@ -93,10 +93,12 @@ export default async function ParticipantDashboard({
                           </CardDescription>
                         </div>
                         <span className={`px-2 py-1 text-xs rounded-full ${
-                          enrollment.status === "active" 
+                          enrollment.status === "ENROLLED" 
                             ? "bg-green-100 text-green-800"
-                            : enrollment.status === "completed"
+                            : enrollment.status === "WITHDRAWN"
                             ? "bg-blue-100 text-blue-800"
+                            : enrollment.status === "INVITED"
+                            ? "bg-yellow-100 text-yellow-800"
                             : "bg-gray-100 text-gray-800"
                         }`}>
                           {enrollment.status}
