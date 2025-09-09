@@ -22,6 +22,8 @@ import {
   WorkspaceAccessError
 } from '@/lib/db/queries';
 
+// Remove the temporary function - will create in separate file
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }

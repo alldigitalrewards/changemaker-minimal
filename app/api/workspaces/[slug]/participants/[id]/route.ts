@@ -238,3 +238,133 @@ export async function DELETE(
     )
   }
 }
+
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ slug: string; id: string }> }
+) {
+  try {
+    const { slug, id } = await context.params
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { message: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+
+    // Check admin access
+    const role = await getUserWorkspaceRole(slug)
+    if (!role || role !== "ADMIN") {
+      return NextResponse.json(
+        { message: "Forbidden: Admin access required" },
+        { status: 403 }
+      )
+    }
+
+    const workspace = await getCurrentWorkspace(slug)
+    if (!workspace) {
+      return NextResponse.json(
+        { message: "Workspace not found" },
+        { status: 404 }
+      )
+    }
+
+    const { action } = await request.json()
+
+    // Get participant
+    const participant = await prisma.user.findFirst({
+      where: {
+        id,
+        workspaceId: workspace.id
+      }
+    })
+
+    if (!participant) {
+      return NextResponse.json(
+        { message: "Participant not found" },
+        { status: 404 }
+      )
+    }
+
+    if (action === 'send_password_reset') {
+      // Use Supabase Auth to send password reset email
+      const { error } = await supabase.auth.resetPasswordForEmail(participant.email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`
+      })
+
+      if (error) {
+        console.error("Error sending password reset:", error)
+        return NextResponse.json(
+          { message: "Failed to send password reset email" },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({ 
+        message: "Password reset email sent successfully" 
+      })
+    }
+
+    if (action === 'resend_invite') {
+      // Send invite email using Resend API
+      if (!process.env.RESEND_API_KEY) {
+        return NextResponse.json(
+          { message: "Email service not configured" },
+          { status: 500 }
+        )
+      }
+
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'team@updates.changemaker.im',
+          to: [participant.email],
+          subject: `Invitation to join ${workspace.name}`,
+          html: `
+            <div>
+              <h2>You're invited to join ${workspace.name}</h2>
+              <p>Hello,</p>
+              <p>You've been invited to join the ${workspace.name} workspace as a ${participant.role.toLowerCase()}.</p>
+              <p>Click the link below to get started:</p>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/w/${workspace.slug}" style="background-color: #1e7b8b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Join Workspace
+              </a>
+              <p>If you don't have an account yet, you'll be prompted to create one.</p>
+              <p>Best regards,<br>The Changemaker Team</p>
+            </div>
+          `,
+        }),
+      })
+
+      if (!response.ok) {
+        console.error("Failed to send invite email:", await response.text())
+        return NextResponse.json(
+          { message: "Failed to send invite email" },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({ 
+        message: "Invite email sent successfully" 
+      })
+    }
+
+    return NextResponse.json(
+      { message: "Invalid action" },
+      { status: 400 }
+    )
+  } catch (error) {
+    console.error("Error processing email action:", error)
+    return NextResponse.json(
+      { message: "Failed to process email action" },
+      { status: 500 }
+    )
+  }
+}

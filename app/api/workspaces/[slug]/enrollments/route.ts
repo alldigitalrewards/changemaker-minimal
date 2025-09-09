@@ -5,16 +5,136 @@ import {
   getUserEnrollments,
   getAllWorkspaceEnrollments,
   getWorkspaceUsers,
+  createActivitySubmission,
   DatabaseError,
   WorkspaceAccessError,
   ResourceNotFoundError
 } from "@/lib/db/queries"
+import { prisma } from "@/lib/db"
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }
 ) => {
   const { slug } = await context.params
+  const action = request.headers.get('X-Action')
+
+  // Handle activity submissions
+  if (action === 'ACTIVITY_SUBMISSION') {
+    const { activityId, textContent, linkUrl, fileUrls } = await request.json()
+    const { workspace, user } = await requireWorkspaceAccess(slug)
+
+    if (!activityId) {
+      return NextResponse.json({ error: 'Activity ID is required' }, { status: 400 })
+    }
+
+    try {
+      // Verify user is enrolled in the challenge that contains this activity
+      const activity = await prisma.activity.findFirst({
+        where: { 
+          id: activityId,
+          challenge: { workspaceId: workspace.id }
+        },
+        include: {
+          template: true,
+          challenge: true,
+          submissions: {
+            where: { userId: user.dbUser.id },
+            orderBy: { submittedAt: 'desc' }
+          }
+        }
+      })
+
+      if (!activity) {
+        return NextResponse.json({ error: 'Activity not found' }, { status: 404 })
+      }
+
+      // Check if user is enrolled in the challenge
+      const enrollment = await prisma.enrollment.findFirst({
+        where: {
+          userId: user.dbUser.id,
+          challengeId: activity.challengeId,
+          status: 'ENROLLED'
+        }
+      })
+
+      if (!enrollment) {
+        return NextResponse.json({ error: 'You must be enrolled in this challenge to submit activities' }, { status: 403 })
+      }
+
+      // Check submission limits
+      const existingSubmissions = activity.submissions.length
+      if (existingSubmissions >= activity.maxSubmissions) {
+        return NextResponse.json({ error: 'Maximum submissions reached for this activity' }, { status: 400 })
+      }
+
+      // Check deadline
+      if (activity.deadline && new Date() > new Date(activity.deadline)) {
+        return NextResponse.json({ error: 'Submission deadline has passed' }, { status: 400 })
+      }
+
+      // Determine initial status based on template settings
+      const initialStatus = activity.template.requiresApproval ? 'PENDING' : 'APPROVED'
+      
+      // Create the submission
+      const submission = await createActivitySubmission({
+        activityId,
+        userId: user.dbUser.id,
+        enrollmentId: enrollment.id,
+        textContent,
+        fileUrls,
+        linkUrl
+      })
+
+      // If auto-approved, award points immediately
+      if (initialStatus === 'APPROVED') {
+        await prisma.activitySubmission.update({
+          where: { id: submission.id },
+          data: {
+            status: 'APPROVED',
+            pointsAwarded: activity.pointsValue,
+            reviewedAt: new Date()
+          }
+        })
+
+        // Update or create points balance
+        await prisma.pointsBalance.upsert({
+          where: {
+            userId_workspaceId: {
+              userId: user.dbUser.id,
+              workspaceId: workspace.id
+            }
+          },
+          update: {
+            totalPoints: { increment: activity.pointsValue },
+            availablePoints: { increment: activity.pointsValue }
+          },
+          create: {
+            userId: user.dbUser.id,
+            workspaceId: workspace.id,
+            totalPoints: activity.pointsValue,
+            availablePoints: activity.pointsValue
+          }
+        })
+      }
+
+      return NextResponse.json({ 
+        submission: {
+          ...submission,
+          status: initialStatus,
+          pointsAwarded: initialStatus === 'APPROVED' ? activity.pointsValue : null
+        }
+      })
+    } catch (error) {
+      console.error('Activity submission error:', error)
+      if (error instanceof DatabaseError || error instanceof ResourceNotFoundError) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      throw error
+    }
+  }
+
+  // Handle regular enrollment
   const { challengeId } = await request.json()
 
   // Require workspace access
@@ -44,6 +164,7 @@ export const POST = withErrorHandling(async (
   }
 })
 
+
 export const GET = withErrorHandling(async (
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }
@@ -67,39 +188,3 @@ export const GET = withErrorHandling(async (
   return NextResponse.json(enrollments)
 })
 
-/* TEMP: participants route content to copy */
-const PARTICIPANTS_ROUTE_CONTENT = `import { NextRequest, NextResponse } from "next/server"
-import { requireWorkspaceAccess, withErrorHandling } from "@/lib/auth/api-auth"
-import { prisma } from "@/lib/db"
-
-export const GET = withErrorHandling(async (
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) => {
-  const { slug } = await params;
-  const { workspace, user } = await requireWorkspaceAccess(slug);
-
-  const users = await prisma.user.findMany({
-    where: {
-      workspaceId: workspace.id,
-    },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-    },
-    orderBy: {
-      email: 'asc',
-    },
-  });
-
-  const participants = users.map(user => ({
-    id: user.id,
-    email: user.email,
-    role: user.role,
-  }));
-
-  return NextResponse.json({ participants });
-});`
-
-console.log("Create participants/route.ts with:", PARTICIPANTS_ROUTE_CONTENT)

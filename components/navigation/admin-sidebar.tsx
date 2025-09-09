@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
+  ClipboardList,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Participants', href: '/admin/participants', icon: Users },
   { name: 'Challenges', href: '/admin/challenges', icon: Trophy },
+  { name: 'Activity Templates', href: '/admin/activity-templates', icon: ClipboardList },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 

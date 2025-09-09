@@ -16,7 +16,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createWorkspace } from "./actions"
 
-export default function CreateWorkspaceDialog({ userId }: { userId: string }) {
+export default function CreateWorkspaceDialog({ 
+  userId, 
+  currentWorkspace 
+}: { 
+  userId: string
+  currentWorkspace?: { name: string; slug: string } | null
+}) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -47,6 +53,11 @@ export default function CreateWorkspaceDialog({ userId }: { userId: string }) {
           <DialogTitle>Create New Workspace</DialogTitle>
           <DialogDescription>
             Create a new workspace to manage challenges and participants
+            {currentWorkspace && (
+              <span className="block mt-2 text-orange-600 font-medium">
+                Note: You will be moved from "{currentWorkspace.name}" to the new workspace.
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
         <form action={onSubmit}>

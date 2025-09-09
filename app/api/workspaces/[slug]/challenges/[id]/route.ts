@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
+import { getChallengeActivities } from '@/lib/db/queries';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -38,7 +39,10 @@ export const GET = withErrorHandling(async (
     return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
   }
 
-  return NextResponse.json({ challenge });
+  // Also get activities for this challenge
+  const activities = await getChallengeActivities(id, workspace.id);
+
+  return NextResponse.json({ challenge, activities });
 });
 
 export const PUT = withErrorHandling(async (

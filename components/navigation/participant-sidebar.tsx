@@ -6,6 +6,8 @@ import {
   LayoutDashboard,
   Trophy,
   Building2,
+  Activity,
+  TrendingUp,
 } from 'lucide-react';
 
 interface ParticipantSidebarProps {
@@ -15,9 +17,12 @@ interface ParticipantSidebarProps {
   };
 }
 
+// Essential navigation for MVP participant experience
 const navigation = [
   { name: 'Dashboard', href: '/participant/dashboard', icon: LayoutDashboard },
   { name: 'Challenges', href: '/participant/challenges', icon: Trophy },
+  { name: 'My Activities', href: '/participant/activities', icon: Activity },
+  { name: 'Leaderboard', href: '/participant/leaderboard', icon: TrendingUp },
 ];
 
 export default function ParticipantSidebar({ workspace }: ParticipantSidebarProps) {

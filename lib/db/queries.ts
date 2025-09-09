@@ -33,8 +33,8 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment } from '@prisma/client'
-import { type Role } from '@/lib/types'
+import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance } from '@prisma/client'
+import { type Role, type ActivityType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 
 // =============================================================================
@@ -94,7 +94,7 @@ export type ChallengeWithDetails = Challenge & {
 
 export type EnrollmentWithDetails = Enrollment & {
   user: Pick<User, 'id' | 'email'>
-  challenge: Pick<Challenge, 'id' | 'title' | 'workspaceId'>
+  challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId'>
 }
 
 // =============================================================================
@@ -469,7 +469,7 @@ export async function getUserEnrollments(
           select: { id: true, email: true }
         },
         challenge: {
-          select: { id: true, title: true, workspaceId: true }
+          select: { id: true, title: true, description: true, workspaceId: true }
         }
       }
     }) as EnrollmentWithDetails[]
@@ -502,7 +502,7 @@ export async function getChallengeEnrollments(
           select: { id: true, email: true }
         },
         challenge: {
-          select: { id: true, title: true, workspaceId: true }
+          select: { id: true, title: true, description: true, workspaceId: true }
         }
       }
     }) as EnrollmentWithDetails[]
@@ -710,7 +710,7 @@ export async function getAllWorkspaceEnrollments(
           select: { id: true, email: true }
         },
         challenge: {
-          select: { id: true, title: true, workspaceId: true }
+          select: { id: true, title: true, description: true, workspaceId: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -780,5 +780,507 @@ export async function getWorkspaceStats(workspaceId: WorkspaceId) {
     }
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace statistics: ${error}`)
+  }
+}
+
+// =============================================================================
+// ACTIVITY TEMPLATE QUERIES
+// =============================================================================
+
+/**
+ * Get all activity templates for a workspace
+ */
+export async function getWorkspaceActivityTemplates(workspaceId: WorkspaceId): Promise<ActivityTemplate[]> {
+  try {
+    return await prisma.activityTemplate.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch activity templates: ${error}`)
+  }
+}
+
+/**
+ * Create activity template (admin-only)
+ */
+export async function createActivityTemplate(
+  data: {
+    name: string
+    description: string
+    type: ActivityType
+    basePoints: number
+    requiresApproval?: boolean
+    allowMultiple?: boolean
+  },
+  workspaceId: WorkspaceId
+): Promise<ActivityTemplate> {
+  try {
+    return await prisma.activityTemplate.create({
+      data: {
+        ...data,
+        workspaceId,
+        requiresApproval: data.requiresApproval ?? true,
+        allowMultiple: data.allowMultiple ?? false
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to create activity template: ${error}`)
+  }
+}
+
+/**
+ * Get activity template by id (workspace-scoped)
+ */
+export async function getActivityTemplate(
+  templateId: string,
+  workspaceId: WorkspaceId
+): Promise<ActivityTemplate | null> {
+  try {
+    return await prisma.activityTemplate.findFirst({
+      where: { id: templateId, workspaceId }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch activity template: ${error}`)
+  }
+}
+
+/**
+ * Update activity template (admin-only)
+ */
+export async function updateActivityTemplate(
+  templateId: string,
+  data: Partial<{
+    name: string
+    description: string
+    basePoints: number
+    requiresApproval: boolean
+    allowMultiple: boolean
+  }>,
+  workspaceId: WorkspaceId
+): Promise<ActivityTemplate> {
+  // Verify template exists in workspace
+  const template = await prisma.activityTemplate.findFirst({
+    where: { id: templateId, workspaceId }
+  })
+
+  if (!template) {
+    throw new ResourceNotFoundError('ActivityTemplate', templateId)
+  }
+
+  try {
+    return await prisma.activityTemplate.update({
+      where: { id: templateId },
+      data
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to update activity template: ${error}`)
+  }
+}
+
+/**
+ * Delete activity template (admin-only)
+ */
+export async function deleteActivityTemplate(
+  templateId: string,
+  workspaceId: WorkspaceId
+): Promise<void> {
+  // Verify template exists in workspace
+  const template = await prisma.activityTemplate.findFirst({
+    where: { id: templateId, workspaceId }
+  })
+
+  if (!template) {
+    throw new ResourceNotFoundError('ActivityTemplate', templateId)
+  }
+
+  try {
+    await prisma.activityTemplate.delete({
+      where: { id: templateId }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to delete activity template: ${error}`)
+  }
+}
+
+// =============================================================================
+// ACTIVITY QUERIES
+// =============================================================================
+
+/**
+ * Create activity from template (for challenges)
+ */
+export async function createActivity(
+  data: {
+    templateId: string
+    challengeId: ChallengeId
+    pointsValue?: number
+    maxSubmissions?: number
+    deadline?: Date
+    isRequired?: boolean
+  },
+  workspaceId: WorkspaceId
+): Promise<Activity> {
+  // Verify template and challenge exist in workspace
+  const [template, challenge] = await Promise.all([
+    prisma.activityTemplate.findFirst({
+      where: { id: data.templateId, workspaceId }
+    }),
+    prisma.challenge.findFirst({
+      where: { id: data.challengeId, workspaceId }
+    })
+  ])
+
+  if (!template) {
+    throw new ResourceNotFoundError('ActivityTemplate', data.templateId)
+  }
+
+  if (!challenge) {
+    throw new ResourceNotFoundError('Challenge', data.challengeId)
+  }
+
+  try {
+    return await prisma.activity.create({
+      data: {
+        templateId: data.templateId,
+        challengeId: data.challengeId,
+        pointsValue: data.pointsValue ?? template.basePoints,
+        maxSubmissions: data.maxSubmissions ?? 1,
+        deadline: data.deadline,
+        isRequired: data.isRequired ?? false
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to create activity: ${error}`)
+  }
+}
+
+/**
+ * Get activities for a challenge
+ */
+export async function getChallengeActivities(
+  challengeId: ChallengeId,
+  workspaceId: WorkspaceId
+): Promise<(Activity & { template: ActivityTemplate })[]> {
+  try {
+    return await prisma.activity.findMany({
+      where: { 
+        challengeId,
+        challenge: { workspaceId }
+      },
+      include: { template: true },
+      orderBy: { createdAt: 'asc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch challenge activities: ${error}`)
+  }
+}
+
+// =============================================================================
+// ACTIVITY SUBMISSION QUERIES
+// =============================================================================
+
+/**
+ * Create activity submission
+ */
+export async function createActivitySubmission(
+  data: {
+    activityId: string
+    userId: UserId
+    enrollmentId: EnrollmentId
+    textContent?: string
+    fileUrls?: string[]
+    linkUrl?: string
+  }
+): Promise<ActivitySubmission> {
+  try {
+    return await prisma.activitySubmission.create({
+      data: {
+        activityId: data.activityId,
+        userId: data.userId,
+        enrollmentId: data.enrollmentId,
+        textContent: data.textContent,
+        fileUrls: data.fileUrls ?? [],
+        linkUrl: data.linkUrl,
+        status: 'PENDING'
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to create activity submission: ${error}`)
+  }
+}
+
+/**
+ * Get submissions for review (admin)
+ */
+export async function getWorkspaceSubmissionsForReview(
+  workspaceId: WorkspaceId
+): Promise<(ActivitySubmission & {
+  activity: Activity & { template: ActivityTemplate, challenge: Challenge }
+  user: User
+  enrollment: Enrollment
+})[]> {
+  try {
+    return await prisma.activitySubmission.findMany({
+      where: {
+        status: 'PENDING',
+        activity: {
+          challenge: { workspaceId }
+        }
+      },
+      include: {
+        activity: {
+          include: {
+            template: true,
+            challenge: true
+          }
+        },
+        user: true,
+        enrollment: true
+      },
+      orderBy: { submittedAt: 'asc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch submissions for review: ${error}`)
+  }
+}
+
+/**
+ * Review activity submission (approve/reject)
+ */
+export async function reviewActivitySubmission(
+  submissionId: string,
+  data: {
+    status: 'APPROVED' | 'REJECTED'
+    reviewNotes?: string
+    pointsAwarded?: number
+    reviewedBy: UserId
+  },
+  workspaceId: WorkspaceId
+): Promise<ActivitySubmission> {
+  try {
+    return await prisma.activitySubmission.update({
+      where: {
+        id: submissionId,
+        activity: {
+          challenge: { workspaceId }
+        }
+      },
+      data: {
+        status: data.status,
+        reviewNotes: data.reviewNotes,
+        pointsAwarded: data.pointsAwarded,
+        reviewedBy: data.reviewedBy,
+        reviewedAt: new Date()
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to review activity submission: ${error}`)
+  }
+}
+
+// =============================================================================
+// POINTS BALANCE QUERIES
+// =============================================================================
+
+/**
+ * Get or create points balance for user in workspace
+ */
+export async function getOrCreatePointsBalance(
+  userId: UserId,
+  workspaceId: WorkspaceId
+): Promise<{ totalPoints: number; availablePoints: number }> {
+  try {
+    const balance = await prisma.pointsBalance.upsert({
+      where: {
+        userId_workspaceId: {
+          userId,
+          workspaceId
+        }
+      },
+      update: {},
+      create: {
+        userId,
+        workspaceId,
+        totalPoints: 0,
+        availablePoints: 0
+      }
+    })
+    return balance
+  } catch (error) {
+    throw new DatabaseError(`Failed to get points balance: ${error}`)
+  }
+}
+
+/**
+ * Update points balance (add/subtract points)
+ */
+export async function updatePointsBalance(
+  userId: UserId,
+  workspaceId: WorkspaceId,
+  pointsToAdd: number
+): Promise<void> {
+  try {
+    await prisma.pointsBalance.upsert({
+      where: {
+        userId_workspaceId: {
+          userId,
+          workspaceId
+        }
+      },
+      update: {
+        totalPoints: { increment: pointsToAdd },
+        availablePoints: { increment: pointsToAdd }
+      },
+      create: {
+        userId,
+        workspaceId,
+        totalPoints: Math.max(0, pointsToAdd),
+        availablePoints: Math.max(0, pointsToAdd)
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to update points balance: ${error}`)
+  }
+}
+
+/**
+ * Get workspace leaderboard (top points earners)
+ */
+export async function getWorkspaceLeaderboard(
+  workspaceId: WorkspaceId,
+  limit: number = 10
+): Promise<(PointsBalance & { user: Pick<User, 'id' | 'email'> })[]> {
+  try {
+    return await prisma.pointsBalance.findMany({
+      where: { workspaceId },
+      include: {
+        user: {
+          select: { id: true, email: true }
+        }
+      },
+      orderBy: { totalPoints: 'desc' },
+      take: limit
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace leaderboard: ${error}`)
+  }
+}
+
+/**
+ * Get user's activity submissions across all challenges in workspace
+ */
+export async function getUserActivitySubmissions(
+  userId: UserId,
+  workspaceId: WorkspaceId,
+  status?: SubmissionStatus
+): Promise<(ActivitySubmission & {
+  activity: Activity & {
+    template: ActivityTemplate
+    challenge: Challenge
+  }
+  enrollment: Enrollment
+})[]> {
+  try {
+    return await prisma.activitySubmission.findMany({
+      where: {
+        userId,
+        activity: {
+          challenge: {
+            workspaceId
+          }
+        },
+        ...(status && { status })
+      },
+      include: {
+        activity: {
+          include: {
+            template: true,
+            challenge: true
+          }
+        },
+        enrollment: true
+      },
+      orderBy: { submittedAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch user activity submissions: ${error}`)
+  }
+}
+
+/**
+ * Get challenge-specific leaderboard (participants ranked by points in challenge)
+ */
+export async function getChallengeLeaderboard(
+  challengeId: ChallengeId,
+  workspaceId: WorkspaceId,
+  limit: number = 10
+): Promise<{
+  userId: string
+  email: string
+  totalPoints: number
+  submissions: number
+  completedActivities: number
+}[]> {
+  try {
+    // First verify challenge belongs to workspace
+    const challenge = await prisma.challenge.findFirst({
+      where: { id: challengeId, workspaceId }
+    })
+
+    if (!challenge) {
+      throw new ResourceNotFoundError('Challenge', challengeId)
+    }
+
+    // Get all enrollments for this challenge with their activity submission stats
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        challengeId,
+        status: 'ENROLLED'
+      },
+      include: {
+        user: {
+          select: { id: true, email: true }
+        },
+        activitySubmissions: {
+          where: {
+            activity: {
+              challengeId
+            }
+          },
+          include: {
+            activity: true
+          }
+        }
+      }
+    })
+
+    // Calculate leaderboard data
+    const leaderboardData = enrollments.map(enrollment => {
+      const submissions = enrollment.activitySubmissions
+      const approvedSubmissions = submissions.filter(s => s.status === 'APPROVED')
+      const totalPoints = approvedSubmissions.reduce((sum, s) => sum + (s.pointsAwarded || 0), 0)
+      const uniqueActivities = new Set(approvedSubmissions.map(s => s.activityId))
+
+      return {
+        userId: enrollment.user.id,
+        email: enrollment.user.email,
+        totalPoints,
+        submissions: submissions.length,
+        completedActivities: uniqueActivities.size
+      }
+    })
+
+    // Sort by points descending, then by completed activities
+    return leaderboardData
+      .sort((a, b) => {
+        if (a.totalPoints !== b.totalPoints) {
+          return b.totalPoints - a.totalPoints
+        }
+        return b.completedActivities - a.completedActivities
+      })
+      .slice(0, limit)
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch challenge leaderboard: ${error}`)
   }
 }
