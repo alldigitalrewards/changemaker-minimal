@@ -168,7 +168,7 @@ export default function ActivityTemplateForm({ children, workspace, template }: 
               <SelectTrigger>
                 <SelectValue>
                   <div className="flex items-center space-x-2">
-                    {selectedTypeIcon && selectedTypeIcon({ className: "h-4 w-4" })}
+                    {selectedTypeIcon && <selectedTypeIcon className="h-4 w-4" />}
                     <span>{selectedTypeLabel}</span>
                   </div>
                 </SelectValue>
