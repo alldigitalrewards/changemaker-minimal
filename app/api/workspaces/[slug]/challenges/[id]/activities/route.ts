@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
+import { requireWorkspaceAdmin, requireWorkspaceAccess, withErrorHandling } from '@/lib/auth/api-auth';
 import { getChallengeActivities, createActivity, getActivityTemplate } from '@/lib/db/queries';
 import { ActivityType } from '@/lib/types';
 
@@ -8,7 +8,8 @@ export const GET = withErrorHandling(async (
   { params }: { params: Promise<{ slug: string; id: string }> }
 ) => {
   const { slug, id } = await params;
-  const { workspace, user } = await requireWorkspaceAdmin(slug);
+  // Allow both admins and participants to view activities
+  const { workspace, user } = await requireWorkspaceAccess(slug);
 
   const activities = await getChallengeActivities(id, workspace.id);
 
