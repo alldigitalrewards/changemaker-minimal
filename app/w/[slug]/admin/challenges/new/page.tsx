@@ -1,15 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, MultiSelect } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+
+interface User {
+  id: string;
+  email: string;
+  role: string;
+}
 
 export default function NewChallengePage() {
   const router = useRouter();
@@ -21,7 +27,34 @@ export default function NewChallengePage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
+  const [participantIds, setParticipantIds] = useState<string[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Load workspace users on component mount
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!params?.slug) return;
+      
+      setIsLoadingUsers(true);
+      try {
+        const response = await fetch(`/api/workspaces/${params.slug}/challenges?resource=users`);
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data.users || []);
+        } else {
+          console.error('Failed to load users');
+        }
+      } catch (error) {
+        console.error('Failed to load users:', error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    loadUsers();
+  }, [params?.slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +147,8 @@ export default function NewChallengePage() {
           description: trimmedDescription,
           startDate,
           endDate,
-          enrollmentDeadline: enrollmentDeadline || undefined
+          enrollmentDeadline: enrollmentDeadline || undefined,
+          participantIds: participantIds.length > 0 ? participantIds : undefined
         }),
       });
 
@@ -297,6 +331,29 @@ export default function NewChallengePage() {
               {enrollmentDeadline && startDate && new Date(enrollmentDeadline) > new Date(startDate) && (
                 <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="participants">
+                Invite Participants (Optional)
+              </Label>
+              {isLoadingUsers ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="ml-2 text-sm text-gray-500">Loading participants...</span>
+                </div>
+              ) : (
+                <MultiSelect
+                  options={users}
+                  value={participantIds}
+                  onChange={setParticipantIds}
+                  placeholder="Select participants to invite..."
+                  disabled={isSaving}
+                />
+              )}
+              <div className="text-sm text-gray-500">
+                Selected participants will be automatically invited with status "invited"
+              </div>
             </div>
 
             <div className="flex justify-end space-x-2">

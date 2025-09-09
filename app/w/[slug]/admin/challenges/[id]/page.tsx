@@ -78,6 +78,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
 
   const enrolledUsers = challenge.enrollments || [];
   const activeEnrollments = enrolledUsers.filter(e => e.status === 'ACTIVE').length;
+  const invitedEnrollments = enrolledUsers.filter(e => e.status === 'invited').length;
   const completedEnrollments = enrolledUsers.filter(e => e.status === 'COMPLETED').length;
   
   // Calculate challenge status based on dates
@@ -128,7 +129,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Enrolled</CardTitle>
@@ -137,6 +138,17 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
           <CardContent>
             <div className="text-2xl font-bold">{challenge._count.enrollments}</div>
             <p className="text-xs text-muted-foreground">Participants</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Invited</CardTitle>
+            <UserPlus className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{invitedEnrollments}</div>
+            <p className="text-xs text-muted-foreground">Pending response</p>
           </CardContent>
         </Card>
 
@@ -252,16 +264,32 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
         <TabsContent value="participants" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Enrolled Participants</CardTitle>
-              <CardDescription>
-                {enrolledUsers.length} participants enrolled in this challenge
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Enrolled Participants</CardTitle>
+                  <CardDescription>
+                    {enrolledUsers.length} participants enrolled in this challenge
+                  </CardDescription>
+                </div>
+                <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
+                  <Button variant="outline" size="sm">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Manage Participants
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
               {enrolledUsers.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">No participants enrolled yet</p>
+                  <p className="text-gray-500 mb-4">No participants enrolled yet</p>
+                  <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
+                    <Button variant="outline">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Invite Participants
+                    </Button>
+                  </Link>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -270,10 +298,15 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                       <div>
                         <p className="font-medium">{enrollment.user.email}</p>
                         <p className="text-sm text-gray-500">
-                          Role: {enrollment.user.role} | Status: {enrollment.status}
+                          Role: {enrollment.user.role} | Enrolled: {format(new Date(enrollment.createdAt || ''), 'MMM d, yyyy')}
                         </p>
                       </div>
-                      <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                      <Badge variant={
+                        enrollment.status === 'ACTIVE' ? 'default' : 
+                        enrollment.status === 'invited' ? 'outline' : 
+                        enrollment.status === 'COMPLETED' ? 'secondary' : 
+                        'destructive'
+                      }>
                         {enrollment.status}
                       </Badge>
                     </div>
