@@ -14,7 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ParticipantManagementDialog } from "./participant-management-dialog"
-import { ParticipantsWithMultiSelect } from "./participants-with-multi-select"
 import { Eye, Shield, UserCheck } from "lucide-react"
 import Link from "next/link"
 

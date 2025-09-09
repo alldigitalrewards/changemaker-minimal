@@ -119,18 +119,32 @@ export default async function AdminDashboard({
           ) : (
             <div className="space-y-4">
               {stats?.challenges.slice(0, 3).map((challenge) => (
-                <div key={challenge.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <h3 className="font-medium">{challenge.title}</h3>
-                    <p className="text-sm text-gray-600">{challenge.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {challenge.enrollments.length} enrollments
-                    </p>
+                <Link 
+                  key={challenge.id} 
+                  href={`/w/${slug}/admin/challenges`}
+                  className="block transition-all hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-coral-300 cursor-pointer">
+                    <div className="flex-1">
+                      <h3 className="font-medium">{challenge.title}</h3>
+                      <p className="text-sm text-gray-600">{challenge.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {challenge.enrollments.length} enrollments
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="ml-4"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        window.location.href = `/w/${slug}/admin/challenges`
+                      }}
+                    >
+                      View
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/w/${slug}/admin/challenges`}>View</Link>
-                  </Button>
-                </div>
+                </Link>
               ))}
             </div>
           )}
