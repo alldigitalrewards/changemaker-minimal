@@ -3,7 +3,7 @@
  * Populates the database with default workspaces, users, and mock data
  */
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, EnrollmentStatus } from '@prisma/client'
 import { type Role, ROLE_ADMIN, ROLE_PARTICIPANT } from '../lib/types'
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
@@ -289,7 +289,7 @@ async function seed() {
           data: {
             userId: participant.id,
             challengeId: challenge.id,
-            status: ['active', 'pending', 'completed'][Math.floor(Math.random() * 3)]
+            status: [EnrollmentStatus.INVITED, EnrollmentStatus.ENROLLED, EnrollmentStatus.WITHDRAWN][Math.floor(Math.random() * 3)]
           }
         })
         console.log(`✓ Enrolled ${participant.email} in challenge`)
