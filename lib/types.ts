@@ -162,7 +162,9 @@ export interface ChallengeCreateRequest {
   readonly startDate: string // ISO string format for API
   readonly endDate: string   // ISO string format for API
   readonly enrollmentDeadline?: string // Optional ISO string format for API
-  readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment
+  readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment (legacy)
+  readonly invitedParticipantIds?: UserId[] // Optional participant IDs to invite
+  readonly enrolledParticipantIds?: UserId[] // Optional participant IDs to enroll automatically
 }
 
 export interface ChallengeCreateResponse {
@@ -219,7 +221,9 @@ export interface ChallengeFormData {
   readonly startDate: string // ISO date string
   readonly endDate: string   // ISO date string
   readonly enrollmentDeadline?: string // Optional ISO date string
-  readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment
+  readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment (legacy)
+  readonly invitedParticipantIds?: UserId[] // Optional participant IDs to invite
+  readonly enrolledParticipantIds?: UserId[] // Optional participant IDs to enroll automatically
 }
 
 // =============================================================================
