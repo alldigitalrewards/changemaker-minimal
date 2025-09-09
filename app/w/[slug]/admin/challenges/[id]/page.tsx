@@ -252,16 +252,32 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
         <TabsContent value="participants" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Enrolled Participants</CardTitle>
-              <CardDescription>
-                {enrolledUsers.length} participants enrolled in this challenge
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Challenge Participants</CardTitle>
+                  <CardDescription>
+                    {enrolledUsers.length} participants enrolled in this challenge
+                  </CardDescription>
+                </div>
+                <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
+                  <Button variant="outline">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Manage Participants
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
               {enrolledUsers.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">No participants enrolled yet</p>
+                  <p className="text-gray-500 mb-4">No participants enrolled yet</p>
+                  <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
+                    <Button>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Participants
+                    </Button>
+                  </Link>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -272,10 +288,21 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                         <p className="text-sm text-gray-500">
                           Role: {enrollment.user.role} | Status: {enrollment.status}
                         </p>
+                        <p className="text-xs text-gray-400">
+                          Joined: {new Date(enrollment.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <Badge variant={enrollment.status === 'ENROLLED' ? 'default' : 'secondary'}>
-                        {enrollment.status}
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Badge 
+                          variant={
+                            enrollment.status === 'ENROLLED' ? 'default' :
+                            enrollment.status === 'INVITED' ? 'secondary' :
+                            'outline'
+                          }
+                        >
+                          {enrollment.status}
+                        </Badge>
+                      </div>
                     </div>
                   ))}
                 </div>

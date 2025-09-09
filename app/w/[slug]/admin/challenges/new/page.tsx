@@ -23,6 +23,7 @@ export default function NewChallengePage() {
   const [endDate, setEndDate] = useState('');
   const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
   const [participantIds, setParticipantIds] = useState<string[]>([]);
+  const [participantData, setParticipantData] = useState<{ invited: string[]; enrolled: string[] }>({ invited: [], enrolled: [] });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,7 +118,8 @@ export default function NewChallengePage() {
           startDate,
           endDate,
           enrollmentDeadline: enrollmentDeadline || undefined,
-          participantIds: participantIds.length > 0 ? participantIds : undefined
+          invitedParticipantIds: participantData.invited.length > 0 ? participantData.invited : undefined,
+          enrolledParticipantIds: participantData.enrolled.length > 0 ? participantData.enrolled : undefined
         }),
       });
 
@@ -302,11 +304,12 @@ export default function NewChallengePage() {
               )}
             </div>
 
-            {/* Participant Selection */}
+            {/* Participant Management */}
             <ParticipantSelector
               workspaceSlug={params?.slug || ''}
               selectedParticipantIds={participantIds}
               onParticipantsChange={setParticipantIds}
+              onParticipantDataChange={setParticipantData}
               disabled={isSaving}
             />
 
