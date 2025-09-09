@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/db"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -12,6 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ParticipantManagementDialog } from "./participant-management-dialog"
+import { Eye, Shield, UserCheck } from "lucide-react"
+import Link from "next/link"
 
 export default async function AdminParticipantsPage({ 
   params 
@@ -39,8 +43,7 @@ export default async function AdminParticipantsPage({
   // Get all participants in workspace with their enrollments
   const participants = await prisma.user.findMany({
     where: {
-      workspaceId: workspace.id,
-      role: "PARTICIPANT"
+      workspaceId: workspace.id
     },
     include: {
       enrollments: {
@@ -57,7 +60,8 @@ export default async function AdminParticipantsPage({
           }
         }
       }
-    }
+    },
+    orderBy: { createdAt: 'desc' }
   })
 
   // Get enrollment statistics
@@ -135,52 +139,79 @@ export default async function AdminParticipantsPage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Enrolled Challenges</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Participant</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Enrollments</TableHead>
+                    <TableHead>Joined</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {participants.map((participant) => (
                     <TableRow key={participant.id}>
-                      <TableCell className="font-medium">{participant.email}</TableCell>
                       <TableCell>
-                        {participant.enrollments.length > 0 ? (
-                          <div className="space-y-1">
-                            {participant.enrollments.map((enrollment) => (
-                              <div key={enrollment.id} className="text-sm">
-                                {enrollment.challenge.title}
-                                <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${
-                                  enrollment.status === "ENROLLED" 
-                                    ? "bg-green-100 text-green-800"
-                                    : enrollment.status === "WITHDRAWN"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : enrollment.status === "INVITED"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}>
-                                  {enrollment.status}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">No enrollments</span>
-                        )}
+                        <div>
+                          <p className="font-medium">{participant.email}</p>
+                          <p className="text-sm text-gray-500">
+                            {participant.enrollments.length} enrollment{participant.enrollments.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                          Active
+                        <Badge 
+                          variant="outline" 
+                          className={participant.role === "ADMIN" 
+                            ? "bg-blue-100 text-blue-800 border-blue-200" 
+                            : "bg-gray-100 text-gray-800 border-gray-200"
+                          }
+                        >
+                          {participant.role === "ADMIN" ? (
+                            <Shield className="h-3 w-3 mr-1" />
+                          ) : (
+                            <UserCheck className="h-3 w-3 mr-1" />
+                          )}
+                          {participant.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+                            {participant.enrollments.length}
+                          </Badge>
+                          {participant.enrollments.length > 0 && (
+                            <div className="flex gap-1">
+                              {participant.enrollments.filter(e => e.status === 'ENROLLED').length > 0 && (
+                                <div className="h-2 w-2 rounded-full bg-green-500" title={`${participant.enrollments.filter(e => e.status === 'ENROLLED').length} active`}></div>
+                              )}
+                              {participant.enrollments.filter(e => e.status === 'INVITED').length > 0 && (
+                                <div className="h-2 w-2 rounded-full bg-yellow-500" title={`${participant.enrollments.filter(e => e.status === 'INVITED').length} invited`}></div>
+                              )}
+                              {participant.enrollments.filter(e => e.status === 'WITHDRAWN').length > 0 && (
+                                <div className="h-2 w-2 rounded-full bg-blue-500" title={`${participant.enrollments.filter(e => e.status === 'WITHDRAWN').length} completed`}></div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-gray-500">
+                          {new Date(participant.createdAt).toLocaleDateString()}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <ParticipantManagementDialog
-                          slug={slug}
-                          mode="remove"
-                          participantId={participant.id}
-                          participantEmail={participant.email}
-                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/w/${slug}/admin/participants/${participant.id}`}>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <ParticipantManagementDialog
+                            slug={slug}
+                            mode="remove"
+                            participantId={participant.id}
+                            participantEmail={participant.email}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
