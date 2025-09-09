@@ -115,7 +115,7 @@ export async function POST(
       );
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline, participantIds } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -155,19 +155,40 @@ export async function POST(
       workspace.id
     );
 
-    // If participants are specified, create invitations for them
-    if (participantIds && participantIds.length > 0) {
-      try {
+    // Handle participant enrollments
+    try {
+      // Create invitations for invited participants
+      if (invitedParticipantIds && invitedParticipantIds.length > 0) {
+        await createChallengeEnrollments(
+          challenge.id,
+          invitedParticipantIds,
+          workspace.id,
+          'INVITED'
+        );
+      }
+      
+      // Create enrollments for enrolled participants
+      if (enrolledParticipantIds && enrolledParticipantIds.length > 0) {
+        await createChallengeEnrollments(
+          challenge.id,
+          enrolledParticipantIds,
+          workspace.id,
+          'ENROLLED'
+        );
+      }
+      
+      // Legacy support: if only participantIds is provided, treat as invited
+      if (participantIds && participantIds.length > 0 && !invitedParticipantIds && !enrolledParticipantIds) {
         await createChallengeEnrollments(
           challenge.id,
           participantIds,
           workspace.id,
           'INVITED'
         );
-      } catch (error) {
-        console.error('Error creating participant invitations:', error);
-        // Continue even if invitations fail - challenge was created successfully
       }
+    } catch (error) {
+      console.error('Error creating participant enrollments:', error);
+      // Continue even if enrollments fail - challenge was created successfully
     }
 
     return NextResponse.json({ challenge }, { status: 201 });

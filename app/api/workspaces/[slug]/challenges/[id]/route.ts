@@ -49,7 +49,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline, participantIds } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
 
   // Basic validation
   if (!title || !description) {
@@ -96,20 +96,62 @@ export const PUT = withErrorHandling(async (
     data: updateData,
   });
 
-  // Handle participant updates if provided
-  if (participantIds && Array.isArray(participantIds)) {
+  // Handle participant updates
+  const shouldUpdateParticipants = invitedParticipantIds !== undefined || enrolledParticipantIds !== undefined || participantIds !== undefined;
+  
+  if (shouldUpdateParticipants) {
     try {
-      // First, remove all existing INVITED enrollments for this challenge
+      // Remove all existing enrollments for this challenge (we'll recreate them)
       await prisma.enrollment.deleteMany({
         where: {
           challengeId: id,
-          status: 'INVITED',
         },
       });
 
-      // Then create new invitations for selected participants
-      if (participantIds.length > 0) {
-        // Verify all participant IDs exist in the workspace
+      // Create invited participants
+      if (invitedParticipantIds && invitedParticipantIds.length > 0) {
+        const validInvitedParticipants = await prisma.user.findMany({
+          where: {
+            id: { in: invitedParticipantIds },
+            workspaceId: workspace.id,
+          },
+        });
+
+        if (validInvitedParticipants.length > 0) {
+          await prisma.enrollment.createMany({
+            data: validInvitedParticipants.map(participant => ({
+              userId: participant.id,
+              challengeId: id,
+              status: 'INVITED',
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      // Create enrolled participants
+      if (enrolledParticipantIds && enrolledParticipantIds.length > 0) {
+        const validEnrolledParticipants = await prisma.user.findMany({
+          where: {
+            id: { in: enrolledParticipantIds },
+            workspaceId: workspace.id,
+          },
+        });
+
+        if (validEnrolledParticipants.length > 0) {
+          await prisma.enrollment.createMany({
+            data: validEnrolledParticipants.map(participant => ({
+              userId: participant.id,
+              challengeId: id,
+              status: 'ENROLLED',
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      // Legacy support: if only participantIds is provided, treat as invited
+      if (participantIds && participantIds.length > 0 && !invitedParticipantIds && !enrolledParticipantIds) {
         const validParticipants = await prisma.user.findMany({
           where: {
             id: { in: participantIds },
