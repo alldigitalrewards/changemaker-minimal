@@ -49,7 +49,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, participantIds } = body;
 
   // Basic validation
   if (!title || !description) {
@@ -95,6 +95,44 @@ export const PUT = withErrorHandling(async (
     },
     data: updateData,
   });
+
+  // Handle participant updates if provided
+  if (participantIds && Array.isArray(participantIds)) {
+    try {
+      // First, remove all existing INVITED enrollments for this challenge
+      await prisma.enrollment.deleteMany({
+        where: {
+          challengeId: id,
+          status: 'INVITED',
+        },
+      });
+
+      // Then create new invitations for selected participants
+      if (participantIds.length > 0) {
+        // Verify all participant IDs exist in the workspace
+        const validParticipants = await prisma.user.findMany({
+          where: {
+            id: { in: participantIds },
+            workspaceId: workspace.id,
+          },
+        });
+
+        if (validParticipants.length > 0) {
+          await prisma.enrollment.createMany({
+            data: validParticipants.map(participant => ({
+              userId: participant.id,
+              challengeId: id,
+              status: 'INVITED',
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating challenge participants:', error);
+      // Continue even if participant update fails - challenge was updated successfully
+    }
+  }
 
   return NextResponse.json({ challenge });
 });
