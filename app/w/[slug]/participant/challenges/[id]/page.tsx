@@ -471,46 +471,163 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
 
         {/* Progress Tab */}
         <TabsContent value="progress" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Progress</CardTitle>
-              <CardDescription>
-                Track your journey through this challenge
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isEnrolled ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <div>
-                        <p className="font-medium">Enrolled in Challenge</p>
-                        <p className="text-sm text-gray-500">
+          {isEnrolled ? (
+            <>
+              {/* Progress Overview */}
+              <Card className="bg-gradient-to-r from-coral-50 to-blue-50 border-coral-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-coral-500" />
+                    Your Challenge Progress
+                  </CardTitle>
+                  <CardDescription>
+                    Track your activities and achievements in this challenge
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 bg-white rounded-lg border">
+                      <div className="text-2xl font-bold text-coral-600">
+                        {challenge.activities?.reduce((count, activity) => 
+                          count + (activity.submissions && activity.submissions.length > 0 ? 1 : 0), 0) || 0}
+                      </div>
+                      <div className="text-xs text-gray-600">Activities Attempted</div>
+                    </div>
+                    <div className="text-center p-3 bg-white rounded-lg border">
+                      <div className="text-2xl font-bold text-green-600">
+                        {challenge.activities?.reduce((count, activity) => 
+                          count + (activity.submissions?.filter(s => s.status === 'APPROVED').length || 0), 0) || 0}
+                      </div>
+                      <div className="text-xs text-gray-600">Approved</div>
+                    </div>
+                    <div className="text-center p-3 bg-white rounded-lg border">
+                      <div className="text-2xl font-bold text-amber-600">
+                        {challenge.activities?.reduce((count, activity) => 
+                          count + (activity.submissions?.reduce((sum, s) => sum + (s.pointsAwarded || 0), 0) || 0), 0) || 0}
+                      </div>
+                      <div className="text-xs text-gray-600">Points Earned</div>
+                    </div>
+                    <div className="text-center p-3 bg-white rounded-lg border">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {challenge.activities?.length ? 
+                          Math.round(((challenge.activities.reduce((count, activity) => 
+                            count + (activity.submissions && activity.submissions.length > 0 ? 1 : 0), 0)) / challenge.activities.length) * 100) : 0}%
+                      </div>
+                      <div className="text-xs text-gray-600">Completion</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Progress Timeline */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-500" />
+                    Progress Timeline
+                  </CardTitle>
+                  <CardDescription>
+                    Your journey through this challenge
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Enrollment Step */}
+                    <div className="flex items-start gap-4 p-4 border rounded-lg bg-green-50 border-green-200">
+                      <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="font-medium text-green-800">Challenge Enrolled</p>
+                        <p className="text-sm text-green-700">
                           Joined on {enrollment && format(new Date(enrollment.createdAt), 'MMM d, yyyy')}
                         </p>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Clock className="h-5 w-5 text-yellow-500" />
-                      <div>
-                        <p className="font-medium">In Progress</p>
-                        <p className="text-sm text-gray-500">Keep working on your submission</p>
+
+                    {/* Activities Progress */}
+                    {challenge.activities && challenge.activities.length > 0 ? (
+                      <>
+                        <div className="flex items-start gap-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
+                          <Activity className="h-6 w-6 text-blue-500 mt-1 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="font-medium text-blue-800">Activities Available</p>
+                            <p className="text-sm text-blue-700">
+                              {challenge.activities.length} activities to complete
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Individual Activity Progress */}
+                        {challenge.activities.map((activity) => {
+                          const userSubmissions = activity.submissions || [];
+                          const latestSubmission = userSubmissions[0];
+                          const hasSubmitted = userSubmissions.length > 0;
+                          
+                          return (
+                            <div key={activity.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                              {latestSubmission?.status === 'APPROVED' ? (
+                                <CheckCircle className="h-6 w-6 text-green-500 mt-1 flex-shrink-0" />
+                              ) : hasSubmitted ? (
+                                <Clock className="h-6 w-6 text-yellow-500 mt-1 flex-shrink-0" />
+                              ) : (
+                                <div className="h-6 w-6 border-2 border-gray-300 rounded-full mt-1 flex-shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className="font-medium">
+                                  {activity.template.name}
+                                  {activity.isRequired && (
+                                    <Badge className="ml-2 bg-red-100 text-red-800 text-xs">Required</Badge>
+                                  )}
+                                </p>
+                                <div className="text-sm text-gray-600">
+                                  {latestSubmission?.status === 'APPROVED' ? (
+                                    <span className="text-green-600">
+                                      ✅ Completed - {latestSubmission.pointsAwarded || activity.pointsValue} points earned
+                                    </span>
+                                  ) : hasSubmitted ? (
+                                    <span className="text-yellow-600">
+                                      ⏳ Submitted, waiting for review
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-500">
+                                      Not started - {activity.pointsValue} points available
+                                    </span>
+                                  )}
+                                </div>
+                                {latestSubmission && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Last activity: {format(new Date(latestSubmission.submittedAt), 'MMM d, yyyy h:mm a')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <div className="flex items-start gap-4 p-4 border rounded-lg border-dashed">
+                        <AlertCircle className="h-6 w-6 text-gray-400 mt-1 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-600">Waiting for Activities</p>
+                          <p className="text-sm text-gray-500">
+                            No activities have been assigned yet. Check back soon!
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500 mb-4">Join this challenge to start tracking your progress</p>
-                  <JoinButton challengeId={challenge.id} workspaceSlug={slug} />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card className="border-coral-200 bg-coral-50">
+              <CardContent className="text-center py-12">
+                <Trophy className="h-16 w-16 mx-auto text-coral-300 mb-4" />
+                <h3 className="text-lg font-semibold text-coral-800 mb-2">Track Your Progress</h3>
+                <p className="text-coral-700 mb-6">Join this challenge to start tracking your progress and achievements.</p>
+                <JoinButton challengeId={challenge.id} workspaceSlug={slug} />
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Leaderboard Tab */}
