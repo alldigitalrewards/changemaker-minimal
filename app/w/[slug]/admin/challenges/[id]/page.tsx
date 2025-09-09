@@ -77,8 +77,8 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
   }
 
   const enrolledUsers = challenge.enrollments || [];
-  const activeEnrollments = enrolledUsers.filter(e => e.status === 'ACTIVE').length;
-  const completedEnrollments = enrolledUsers.filter(e => e.status === 'COMPLETED').length;
+  const activeEnrollments = enrolledUsers.filter(e => e.status === 'ENROLLED').length;
+  const completedEnrollments = enrolledUsers.filter(e => e.status === 'WITHDRAWN').length;
   
   // Calculate challenge status based on dates
   const now = new Date();
@@ -273,7 +273,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                           Role: {enrollment.user.role} | Status: {enrollment.status}
                         </p>
                       </div>
-                      <Badge variant={enrollment.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                      <Badge variant={enrollment.status === 'ENROLLED' ? 'default' : 'secondary'}>
                         {enrollment.status}
                       </Badge>
                     </div>

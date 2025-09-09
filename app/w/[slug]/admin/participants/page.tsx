@@ -71,8 +71,8 @@ export default async function AdminParticipantsPage({
   })
 
   const totalEnrollments = enrollmentStats.reduce((sum, stat) => sum + stat._count, 0)
-  const activeEnrollments = enrollmentStats.find(s => s.status === "active")?._count || 0
-  const completedEnrollments = enrollmentStats.find(s => s.status === "completed")?._count || 0
+  const activeEnrollments = enrollmentStats.find(s => s.status === "ENROLLED")?._count || 0
+  const completedEnrollments = enrollmentStats.find(s => s.status === "WITHDRAWN")?._count || 0
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -145,10 +145,12 @@ export default async function AdminParticipantsPage({
                               <div key={enrollment.id} className="text-sm">
                                 {enrollment.challenge.title}
                                 <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${
-                                  enrollment.status === "active" 
+                                  enrollment.status === "ENROLLED" 
                                     ? "bg-green-100 text-green-800"
-                                    : enrollment.status === "completed"
+                                    : enrollment.status === "WITHDRAWN"
                                     ? "bg-blue-100 text-blue-800"
+                                    : enrollment.status === "INVITED"
+                                    ? "bg-yellow-100 text-yellow-800"
                                     : "bg-gray-100 text-gray-800"
                                 }`}>
                                   {enrollment.status}
