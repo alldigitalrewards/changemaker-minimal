@@ -144,20 +144,32 @@ export function SimpleSubmissionDialog({
   }
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-coral-500 hover:bg-coral-600">
+        <Button className="bg-coral-500 hover:bg-coral-600 flex-1">
           Submit Activity
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Submit Activity</DialogTitle>
+          <DialogTitle className="text-coral-800">Submit Activity</DialogTitle>
           <DialogDescription>
-            {activity.template.name} - {activity.pointsValue} points
+            <span className="font-medium">{activity.template.name}</span> - Worth {activity.pointsValue} points
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Activity Info */}
+          <div className="p-3 bg-coral-50 rounded-lg border border-coral-200">
+            <p className="text-sm text-coral-700 mb-1">
+              <strong>Activity Type:</strong> {activity.template.type.replace('_', ' ').toLowerCase()}
+            </p>
+            {activity.template.requiresApproval && (
+              <p className="text-xs text-coral-600">
+                📋 This submission will be reviewed before points are awarded
+              </p>
+            )}
+          </div>
+          
           <div>
             <label className="text-sm font-medium mb-2 block">Your Submission</label>
             <textarea
@@ -165,24 +177,31 @@ export function SimpleSubmissionDialog({
               onChange={(e) => setTextContent(e.target.value)}
               placeholder="Enter your submission content..."
               rows={4}
+              maxLength={500}
               className="w-full p-3 border rounded-md resize-none focus:ring-2 focus:ring-coral-500 focus:border-coral-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {textContent.length}/500 characters
-            </p>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Be detailed and specific</span>
+              <span className={textContent.length > 450 ? 'text-red-500' : ''}>
+                {textContent.length}/500 characters
+              </span>
+            </div>
           </div>
           <div className="flex gap-2">
-            <DialogTrigger asChild>
-              <Button variant="outline" className="flex-1">
-                Cancel
-              </Button>
-            </DialogTrigger>
+            <Button 
+              variant="outline" 
+              className="flex-1" 
+              onClick={() => setIsOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
             <Button 
               className="flex-1 bg-coral-500 hover:bg-coral-600"
               onClick={handleSubmit}
               disabled={isSubmitting || !textContent.trim()}
             >
-              {isSubmitting ? 'Submitting...' : 'Submit'}
+              {isSubmitting ? 'Submitting...' : 'Submit Activity'}
             </Button>
           </div>
         </div>
