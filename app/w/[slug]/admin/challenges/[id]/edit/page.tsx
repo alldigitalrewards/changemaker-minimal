@@ -203,7 +203,7 @@ export default function EditChallengePage() {
             Update the challenge information below
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
@@ -290,7 +290,7 @@ export default function EditChallengePage() {
               )}
             </div>
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -302,7 +302,8 @@ export default function EditChallengePage() {
               <Button 
                 type="submit" 
                 disabled={isSaving}
-                className="bg-coral-500 hover:bg-coral-600"
+                style={{ backgroundColor: '#FF6B6B', color: 'white' }}
+                className="hover:opacity-90"
               >
                 {isSaving ? (
                   <>
