@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -13,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CreateUserDialog } from "@/components/admin/create-user-dialog"
+import { ParticipantManagementDialog } from "./participant-management-dialog"
 
 export default async function AdminParticipantsPage({ 
   params 
@@ -129,7 +127,7 @@ export default async function AdminParticipantsPage({
                 <CardTitle>All Participants</CardTitle>
                 <CardDescription>View and manage workspace participants</CardDescription>
               </div>
-              <CreateUserDialog workspaceSlug={slug} />
+              <ParticipantManagementDialog slug={slug} mode="add" />
             </div>
           </CardHeader>
           <CardContent>
@@ -140,6 +138,7 @@ export default async function AdminParticipantsPage({
                     <TableHead>Email</TableHead>
                     <TableHead>Enrolled Challenges</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,6 +173,14 @@ export default async function AdminParticipantsPage({
                         <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
                           Active
                         </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ParticipantManagementDialog
+                          slug={slug}
+                          mode="remove"
+                          participantId={participant.id}
+                          participantEmail={participant.email}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
