@@ -3,22 +3,20 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { UserPlus } from "lucide-react"
 
 interface EnrollButtonProps {
   challengeId: string
-  challengeTitle: string
   workspaceSlug: string
-  isEnrolled: boolean
+  isInvited?: boolean
 }
 
 export default function EnrollButton({ 
   challengeId, 
-  challengeTitle,
   workspaceSlug,
-  isEnrolled 
+  isInvited = false
 }: EnrollButtonProps) {
   const [loading, setLoading] = useState(false)
-  const [enrolled, setEnrolled] = useState(isEnrolled)
   const router = useRouter()
 
   async function handleEnroll() {
@@ -27,13 +25,10 @@ export default function EnrollButton({
       const response = await fetch(`/api/workspaces/${workspaceSlug}/enrollments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          challengeId
-        })
+        body: JSON.stringify({ challengeId })
       })
 
       if (response.ok) {
-        setEnrolled(true)
         router.refresh()
       }
     } catch (error) {
@@ -43,21 +38,15 @@ export default function EnrollButton({
     }
   }
 
-  if (enrolled) {
-    return (
-      <Button variant="outline" disabled className="w-full border-coral-300 text-coral-700">
-        ✓ Enrolled
-      </Button>
-    )
-  }
-
   return (
     <Button 
       onClick={handleEnroll} 
       disabled={loading}
-      className="w-full bg-gradient-to-r from-coral-500 to-terracotta-600 hover:from-coral-600 hover:to-terracotta-700 text-white"
+      size="sm"
+      className={isInvited ? "bg-coral-500 hover:bg-coral-600" : "bg-blue-500 hover:bg-blue-600"}
     >
-      {loading ? "Enrolling..." : "Join Challenge"}
+      <UserPlus className="h-4 w-4 mr-1" />
+      {loading ? "Joining..." : isInvited ? "Accept" : "Join"}
     </Button>
   )
 }

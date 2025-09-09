@@ -15,6 +15,7 @@ interface ParticipantSidebarProps {
   };
 }
 
+// Keep navigation minimal - activities are shown within challenges
 const navigation = [
   { name: 'Dashboard', href: '/participant/dashboard', icon: LayoutDashboard },
   { name: 'Challenges', href: '/participant/challenges', icon: Trophy },

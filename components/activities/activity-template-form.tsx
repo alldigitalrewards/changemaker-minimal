@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ActivityTemplate, ActivityType, ACTIVITY_TYPES } from '@/lib/types'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -168,7 +168,7 @@ export default function ActivityTemplateForm({ children, workspace, template }: 
               <SelectTrigger>
                 <SelectValue>
                   <div className="flex items-center space-x-2">
-                    {selectedTypeIcon && <selectedTypeIcon className="h-4 w-4" />}
+                    {selectedTypeIcon && React.createElement(selectedTypeIcon, { className: "h-4 w-4" })}
                     <span>{selectedTypeLabel}</span>
                   </div>
                 </SelectValue>
