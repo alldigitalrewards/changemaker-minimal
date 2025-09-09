@@ -19,6 +19,12 @@ enum Role {
   PARTICIPANT
 }
 
+enum EnrollmentStatus {
+  INVITED
+  ENROLLED
+  WITHDRAWN
+}
+
 model Workspace {
   id         String      @id @default(uuid()) @db.Uuid
   slug       String      @unique
@@ -63,14 +69,14 @@ model Challenge {
 }
 
 model Enrollment {
-  id          String    @id @default(uuid()) @db.Uuid
-  userId      String    @db.Uuid
-  challengeId String    @db.Uuid
-  status      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt @default(now())
+  id          String           @id @default(uuid()) @db.Uuid
+  userId      String           @db.Uuid
+  challengeId String           @db.Uuid
+  status      EnrollmentStatus @default(INVITED)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt @default(now())
 
   @@unique([userId, challengeId])
   @@index([userId])
