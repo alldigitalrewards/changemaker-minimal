@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -12,6 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ParticipantManagementDialog } from "./participant-management-dialog"
+import { Eye, Shield, UserCheck } from "lucide-react"
+import Link from "next/link"
 
 export default async function AdminParticipantsPage({ 
   params 
@@ -39,8 +43,7 @@ export default async function AdminParticipantsPage({
   // Get all participants in workspace with their enrollments
   const participants = await prisma.user.findMany({
     where: {
-      workspaceId: workspace.id,
-      role: "PARTICIPANT"
+      workspaceId: workspace.id
     },
     include: {
       enrollments: {
@@ -57,7 +60,8 @@ export default async function AdminParticipantsPage({
           }
         }
       }
-    }
+    },
+    orderBy: { createdAt: 'desc' }
   })
 
   // Get enrollment statistics
