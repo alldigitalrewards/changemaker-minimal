@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { ParticipantSelector } from '@/components/ui/participant-selector';
 
 export default function NewChallengePage() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function NewChallengePage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
+  const [participantIds, setParticipantIds] = useState<string[]>([]);
+  const [participantData, setParticipantData] = useState<{ invited: string[]; enrolled: string[] }>({ invited: [], enrolled: [] });
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,7 +117,9 @@ export default function NewChallengePage() {
           description: trimmedDescription,
           startDate,
           endDate,
-          enrollmentDeadline: enrollmentDeadline || undefined
+          enrollmentDeadline: enrollmentDeadline || undefined,
+          invitedParticipantIds: participantData.invited.length > 0 ? participantData.invited : undefined,
+          enrolledParticipantIds: participantData.enrolled.length > 0 ? participantData.enrolled : undefined
         }),
       });
 
@@ -298,6 +303,15 @@ export default function NewChallengePage() {
                 <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
               )}
             </div>
+
+            {/* Participant Management */}
+            <ParticipantSelector
+              workspaceSlug={params?.slug || ''}
+              selectedParticipantIds={participantIds}
+              onParticipantsChange={setParticipantIds}
+              onParticipantDataChange={setParticipantData}
+              disabled={isSaving}
+            />
 
             <div className="flex justify-end space-x-2">
               <Button

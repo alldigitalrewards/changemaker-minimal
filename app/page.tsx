@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { ArrowRight, Users, Target, Award, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { CoralButton } from '@/components/ui/coral-button';
 import {
   Card,
   CardContent,
@@ -55,26 +55,18 @@ function PublicLandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/how-it-works">
-              <Button
-                size="lg"
-                className="bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 px-6 py-3 font-medium rounded-md inline-flex items-center"
-                style={{ backgroundColor: '#ff6b6b', color: 'white' }}
-              >
-                <span style={{ color: 'white' }}>See How</span>
-                <ArrowRight className="ml-2 h-5 w-5" style={{ color: 'white' }} />
-              </Button>
-            </Link>
+            <CoralButton asChild size="lg">
+              <Link href="/how-it-works">
+                See How
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </CoralButton>
 
-            <Link href="/auth/login">
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-coral-500 text-coral-600 hover:bg-coral-50"
-              >
+            <CoralButton asChild variant="outline" size="lg">
+              <Link href="/auth/login">
                 Sign In
-              </Button>
-            </Link>
+              </Link>
+            </CoralButton>
           </div>
         </div>
       </section>
@@ -159,15 +151,11 @@ function PublicLandingPage() {
               Join thousands of changemakers who are already creating positive
               impact in their communities.
             </p>
-            <Link href="/how-it-works">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="bg-white text-coral-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              >
+            <CoralButton asChild size="lg" variant="secondary">
+              <Link href="/how-it-works">
                 See How <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+              </Link>
+            </CoralButton>
           </div>
         </div>
       </section>

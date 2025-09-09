@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ParticipantManagementDialog } from "./participant-management-dialog"
 
 export default async function AdminParticipantsPage({ 
   params 
@@ -71,8 +72,8 @@ export default async function AdminParticipantsPage({
   })
 
   const totalEnrollments = enrollmentStats.reduce((sum, stat) => sum + stat._count, 0)
-  const activeEnrollments = enrollmentStats.find(s => s.status === "active")?._count || 0
-  const completedEnrollments = enrollmentStats.find(s => s.status === "completed")?._count || 0
+  const activeEnrollments = enrollmentStats.find(s => s.status === "ENROLLED")?._count || 0
+  const completedEnrollments = enrollmentStats.find(s => s.status === "WITHDRAWN")?._count || 0
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -121,8 +122,13 @@ export default async function AdminParticipantsPage({
         {/* Participants Table */}
         <Card>
           <CardHeader>
-            <CardTitle>All Participants</CardTitle>
-            <CardDescription>View and manage workspace participants</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>All Participants</CardTitle>
+                <CardDescription>View and manage workspace participants</CardDescription>
+              </div>
+              <ParticipantManagementDialog slug={slug} mode="add" />
+            </div>
           </CardHeader>
           <CardContent>
             {participants.length > 0 ? (
@@ -132,6 +138,7 @@ export default async function AdminParticipantsPage({
                     <TableHead>Email</TableHead>
                     <TableHead>Enrolled Challenges</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -145,10 +152,12 @@ export default async function AdminParticipantsPage({
                               <div key={enrollment.id} className="text-sm">
                                 {enrollment.challenge.title}
                                 <span className={`ml-2 px-1.5 py-0.5 text-xs rounded-full ${
-                                  enrollment.status === "active" 
+                                  enrollment.status === "ENROLLED" 
                                     ? "bg-green-100 text-green-800"
-                                    : enrollment.status === "completed"
+                                    : enrollment.status === "WITHDRAWN"
                                     ? "bg-blue-100 text-blue-800"
+                                    : enrollment.status === "INVITED"
+                                    ? "bg-yellow-100 text-yellow-800"
                                     : "bg-gray-100 text-gray-800"
                                 }`}>
                                   {enrollment.status}
@@ -164,6 +173,14 @@ export default async function AdminParticipantsPage({
                         <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
                           Active
                         </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <ParticipantManagementDialog
+                          slug={slug}
+                          mode="remove"
+                          participantId={participant.id}
+                          participantEmail={participant.email}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}

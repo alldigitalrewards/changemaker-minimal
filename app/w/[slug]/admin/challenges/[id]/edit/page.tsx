@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { ParticipantSelector } from '@/components/ui/participant-selector';
 
 interface Challenge {
   id: string;
@@ -35,6 +36,8 @@ export default function EditChallengePage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
+  const [participantIds, setParticipantIds] = useState<string[]>([]);
+  const [participantData, setParticipantData] = useState<{ invited: string[]; enrolled: string[] }>({ invited: [], enrolled: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -59,6 +62,22 @@ export default function EditChallengePage() {
         setStartDate(challengeData.startDate ? new Date(challengeData.startDate).toISOString().split('T')[0] : '');
         setEndDate(challengeData.endDate ? new Date(challengeData.endDate).toISOString().split('T')[0] : '');
         setEnrollmentDeadline(challengeData.enrollmentDeadline ? new Date(challengeData.enrollmentDeadline).toISOString().split('T')[0] : '');
+        
+        // Load current participants by status
+        if (challengeData.enrollments) {
+          const invitedParticipants = challengeData.enrollments
+            .filter((e: any) => e.status === 'INVITED')
+            .map((e: any) => e.userId);
+          const enrolledParticipants = challengeData.enrollments
+            .filter((e: any) => e.status === 'ENROLLED')
+            .map((e: any) => e.userId);
+          
+          setParticipantIds(invitedParticipants); // Keep for legacy support
+          setParticipantData({ 
+            invited: invitedParticipants,
+            enrolled: enrolledParticipants 
+          });
+        }
       } else {
         throw new Error('Failed to fetch challenge');
       }
@@ -124,7 +143,9 @@ export default function EditChallengePage() {
           description,
           startDate,
           endDate,
-          enrollmentDeadline: enrollmentDeadline || undefined
+          enrollmentDeadline: enrollmentDeadline || undefined,
+          invitedParticipantIds: participantData.invited,
+          enrolledParticipantIds: participantData.enrolled
         }),
       });
 
@@ -289,6 +310,17 @@ export default function EditChallengePage() {
                 <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
               )}
             </div>
+
+            {/* Participant Management */}
+            <ParticipantSelector
+              workspaceSlug={params?.slug || ''}
+              selectedParticipantIds={participantIds}
+              onParticipantsChange={setParticipantIds}
+              initialInvitedIds={participantData.invited}
+              initialEnrolledIds={participantData.enrolled}
+              onParticipantDataChange={setParticipantData}
+              disabled={isSaving}
+            />
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button

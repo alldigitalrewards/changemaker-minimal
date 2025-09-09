@@ -32,7 +32,6 @@ interface Challenge {
   id: string;
   title: string;
   description: string;
-  status?: string;
   createdAt: string;
   updatedAt: string;
   workspaceId: string;
@@ -202,8 +201,8 @@ export default function ChallengesPage() {
                     <Users className="h-4 w-4 mr-1" />
                     <span>{challenge._count?.enrollments || 0} enrolled</span>
                   </div>
-                  <Badge variant={challenge.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                    {challenge.status || 'ACTIVE'}
+                  <Badge variant="default">
+                    ACTIVE
                   </Badge>
                 </div>
               </CardContent>

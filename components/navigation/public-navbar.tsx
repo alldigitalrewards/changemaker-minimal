@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { CoralButton } from '@/components/ui/coral-button';
 import { Menu, X, Target } from 'lucide-react';
 
 export default function PublicNavbar() {
@@ -43,19 +43,12 @@ export default function PublicNavbar() {
               Contact
             </Link>
             <div className="flex items-center space-x-3">
-              <Button
-                asChild
-                variant="outline"
-                className="border-coral-500 text-coral-600 hover:bg-coral-50"
-              >
+              <CoralButton variant="outline" size="sm" asChild>
                 <Link href="/auth/login">Sign In</Link>
-              </Button>
-              <Button
-                asChild
-                className="bg-coral-600 hover:bg-coral-700 text-white"
-              >
+              </CoralButton>
+              <CoralButton size="sm" asChild>
                 <Link href="/auth/signup">Get Started</Link>
-              </Button>
+              </CoralButton>
             </div>
           </div>
 
@@ -98,23 +91,16 @@ export default function PublicNavbar() {
               Contact
             </Link>
             <div className="pt-4 pb-2 border-t border-gray-200 space-y-2">
-              <Button
-                asChild
-                variant="outline"
-                className="w-full border-coral-500 text-coral-600 hover:bg-coral-50"
-              >
+              <CoralButton variant="outline" size="sm" className="w-full" asChild>
                 <Link href="/auth/login" onClick={() => setIsOpen(false)}>
                   Sign In
                 </Link>
-              </Button>
-              <Button
-                asChild
-                className="w-full bg-coral-600 hover:bg-coral-700 text-white"
-              >
+              </CoralButton>
+              <CoralButton size="sm" className="w-full" asChild>
                 <Link href="/auth/signup" onClick={() => setIsOpen(false)}>
                   Get Started
                 </Link>
-              </Button>
+              </CoralButton>
             </div>
           </div>
         </div>

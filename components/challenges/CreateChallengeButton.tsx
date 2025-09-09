@@ -22,3 +22,4 @@ export function CreateChallengeButton({ workspaceSlug }: CreateChallengeButtonPr
     </Button>
   );
 }
+

@@ -4,6 +4,7 @@ import {
   createEnrollment,
   getUserEnrollments,
   getAllWorkspaceEnrollments,
+  getWorkspaceUsers,
   DatabaseError,
   WorkspaceAccessError,
   ResourceNotFoundError
@@ -21,7 +22,7 @@ export const POST = withErrorHandling(async (
 
   // Create enrollment using standardized query (includes validation)
   try {
-    const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id)
+    const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id, 'ENROLLED')
     return NextResponse.json(enrollment)
   } catch (error) {
     if (error instanceof DatabaseError) {
@@ -65,3 +66,40 @@ export const GET = withErrorHandling(async (
 
   return NextResponse.json(enrollments)
 })
+
+/* TEMP: participants route content to copy */
+const PARTICIPANTS_ROUTE_CONTENT = `import { NextRequest, NextResponse } from "next/server"
+import { requireWorkspaceAccess, withErrorHandling } from "@/lib/auth/api-auth"
+import { prisma } from "@/lib/db"
+
+export const GET = withErrorHandling(async (
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) => {
+  const { slug } = await params;
+  const { workspace, user } = await requireWorkspaceAccess(slug);
+
+  const users = await prisma.user.findMany({
+    where: {
+      workspaceId: workspace.id,
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+    },
+    orderBy: {
+      email: 'asc',
+    },
+  });
+
+  const participants = users.map(user => ({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  }));
+
+  return NextResponse.json({ participants });
+});`
+
+console.log("Create participants/route.ts with:", PARTICIPANTS_ROUTE_CONTENT)

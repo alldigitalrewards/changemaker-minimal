@@ -303,9 +303,9 @@ export async function updateUserRole(
 // =============================================================================
 
 /**
- * Get all challenges in workspace
+ * Get all challenges in workspace with enrollment data
  */
-export async function getWorkspaceChallenges(workspaceId: WorkspaceId): Promise<Challenge[]> {
+export async function getWorkspaceChallenges(workspaceId: WorkspaceId): Promise<(Challenge & { enrollments: Enrollment[], _count: { enrollments: number } })[]> {
   try {
     return await prisma.challenge.findMany({
       where: { workspaceId },
@@ -517,7 +517,8 @@ export async function getChallengeEnrollments(
 export async function createEnrollment(
   userId: UserId,
   challengeId: ChallengeId,
-  workspaceId: WorkspaceId
+  workspaceId: WorkspaceId,
+  status: 'INVITED' | 'ENROLLED' = 'ENROLLED'
 ): Promise<Enrollment> {
   // Verify user belongs to workspace and challenge exists in workspace
   const [user, challenge] = await Promise.all([
@@ -551,7 +552,7 @@ export async function createEnrollment(
       data: {
         userId,
         challengeId,
-        status: 'ACTIVE'
+        status
       }
     })
   } catch (error) {
@@ -560,11 +561,81 @@ export async function createEnrollment(
 }
 
 /**
+ * Create multiple enrollments (batch invite/enroll participants)
+ */
+export async function createChallengeEnrollments(
+  challengeId: ChallengeId,
+  participantIds: UserId[],
+  workspaceId: WorkspaceId,
+  status: 'INVITED' | 'ENROLLED' = 'INVITED'
+): Promise<Enrollment[]> {
+  // Verify challenge exists in workspace
+  const challenge = await prisma.challenge.findFirst({
+    where: { id: challengeId, workspaceId }
+  })
+
+  if (!challenge) {
+    throw new ResourceNotFoundError('Challenge', challengeId)
+  }
+
+  // Verify all users belong to workspace
+  const users = await prisma.user.findMany({
+    where: { 
+      id: { in: participantIds },
+      workspaceId 
+    }
+  })
+
+  if (users.length !== participantIds.length) {
+    throw new WorkspaceAccessError(workspaceId)
+  }
+
+  // Check for existing enrollments
+  const existingEnrollments = await prisma.enrollment.findMany({
+    where: {
+      challengeId,
+      userId: { in: participantIds }
+    }
+  })
+
+  // Filter out users who are already enrolled
+  const existingUserIds = existingEnrollments.map(e => e.userId)
+  const newParticipantIds = participantIds.filter(id => !existingUserIds.includes(id))
+
+  if (newParticipantIds.length === 0) {
+    return []
+  }
+
+  try {
+    // Create enrollments in batch
+    const enrollmentData = newParticipantIds.map(userId => ({
+      userId,
+      challengeId,
+      status
+    }))
+
+    const result = await prisma.enrollment.createMany({
+      data: enrollmentData
+    })
+
+    // Return the created enrollments
+    return await prisma.enrollment.findMany({
+      where: {
+        challengeId,
+        userId: { in: newParticipantIds }
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to create challenge enrollments: ${error}`)
+  }
+}
+
+/**
  * Update enrollment status (admin/participant, workspace-scoped)
  */
 export async function updateEnrollmentStatus(
   enrollmentId: EnrollmentId,
-  status: string,
+  status: 'INVITED' | 'ENROLLED' | 'WITHDRAWN',
   workspaceId: WorkspaceId
 ): Promise<Enrollment> {
   // Verify enrollment belongs to workspace via challenge
