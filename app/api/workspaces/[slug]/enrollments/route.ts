@@ -188,4 +188,3 @@ export const GET = withErrorHandling(async (
   return NextResponse.json(enrollments)
 })
 
-// TODO: Create activity-submissions API route separately
