@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { ParticipantSelector } from '@/components/challenges/CreateChallengeButton';
+import { ParticipantSelector } from '@/components/ui/participant-selector';
 
 export default function NewChallengePage() {
   const router = useRouter();
