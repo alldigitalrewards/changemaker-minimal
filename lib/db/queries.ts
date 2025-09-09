@@ -243,6 +243,23 @@ export async function getWorkspaceUsers(workspaceId: WorkspaceId): Promise<User[
 }
 
 /**
+ * Get workspace participants (users with PARTICIPANT role)
+ */
+export async function getWorkspaceParticipants(workspaceId: WorkspaceId): Promise<User[]> {
+  try {
+    return await prisma.user.findMany({
+      where: { 
+        workspaceId,
+        role: 'PARTICIPANT' 
+      },
+      orderBy: { email: 'asc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace participants: ${error}`)
+  }
+}
+
+/**
  * Create or update user (for auth sync)
  */
 export async function upsertUser(data: {
@@ -556,6 +573,79 @@ export async function createEnrollment(
     })
   } catch (error) {
     throw new DatabaseError(`Failed to create enrollment: ${error}`)
+  }
+}
+
+/**
+ * Create bulk enrollments for challenge invitation (admin only, workspace-scoped)
+ */
+export async function createBulkEnrollments(
+  userIds: UserId[],
+  challengeId: ChallengeId,
+  workspaceId: WorkspaceId
+): Promise<Enrollment[]> {
+  if (userIds.length === 0) {
+    return []
+  }
+
+  // Verify challenge exists in workspace
+  const challenge = await prisma.challenge.findFirst({
+    where: { id: challengeId, workspaceId }
+  })
+
+  if (!challenge) {
+    throw new ResourceNotFoundError('Challenge', challengeId)
+  }
+
+  // Verify all users belong to workspace
+  const users = await prisma.user.findMany({
+    where: { 
+      id: { in: userIds },
+      workspaceId,
+      role: 'PARTICIPANT' // Only participants can be enrolled
+    }
+  })
+
+  if (users.length !== userIds.length) {
+    throw new WorkspaceAccessError(workspaceId)
+  }
+
+  // Check for existing enrollments to avoid duplicates
+  const existingEnrollments = await prisma.enrollment.findMany({
+    where: {
+      userId: { in: userIds },
+      challengeId
+    }
+  })
+
+  const existingUserIds = new Set(existingEnrollments.map(e => e.userId))
+  const newUserIds = userIds.filter(userId => !existingUserIds.has(userId))
+
+  if (newUserIds.length === 0) {
+    return existingEnrollments
+  }
+
+  try {
+    // Create enrollments for users not already enrolled
+    const enrollmentData = newUserIds.map(userId => ({
+      userId,
+      challengeId,
+      status: 'ACTIVE'
+    }))
+
+    await prisma.enrollment.createMany({
+      data: enrollmentData
+    })
+
+    // Return all enrollments for the challenge from these users
+    return await prisma.enrollment.findMany({
+      where: {
+        userId: { in: userIds },
+        challengeId
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to create bulk enrollments: ${error}`)
   }
 }
 

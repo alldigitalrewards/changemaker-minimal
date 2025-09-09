@@ -14,6 +14,7 @@ import {
   createChallenge,
   getUserBySupabaseId,
   verifyWorkspaceAdmin,
+  createBulkEnrollments,
   DatabaseError,
   ResourceNotFoundError,
   WorkspaceAccessError
@@ -104,7 +105,7 @@ export async function POST(
       );
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, participantIds } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -143,6 +144,16 @@ export async function POST(
       },
       workspace.id
     );
+
+    // If participant IDs are provided, create enrollments
+    if (participantIds && Array.isArray(participantIds) && participantIds.length > 0) {
+      try {
+        await createBulkEnrollments(participantIds, challenge.id, workspace.id);
+      } catch (enrollmentError) {
+        // Log error but don't fail the challenge creation
+        console.error('Error creating bulk enrollments:', enrollmentError);
+      }
+    }
 
     return NextResponse.json({ challenge }, { status: 201 });
   } catch (error) {

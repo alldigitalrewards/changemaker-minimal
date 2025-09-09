@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -35,14 +35,45 @@ export default function EditChallengePage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [participants, setParticipants] = useState<{id: string, email: string}[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (params?.slug && params?.id) {
       fetchChallenge();
+      fetchParticipants();
     }
   }, [params?.slug, params?.id]);
+
+  const fetchParticipants = async () => {
+    if (!params?.slug) return;
+    
+    setLoadingParticipants(true);
+    try {
+      const response = await fetch(`/api/workspaces/${params.slug}/enrollments?participants=true`);
+      if (response.ok) {
+        const data = await response.json();
+        setParticipants(data.participants || []);
+      } else {
+        console.error('Failed to fetch participants');
+      }
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+    } finally {
+      setLoadingParticipants(false);
+    }
+  };
+
+  const handleParticipantToggle = (participantId: string) => {
+    setSelectedParticipants(prev => 
+      prev.includes(participantId) 
+        ? prev.filter(id => id !== participantId)
+        : [...prev, participantId]
+    );
+  };
 
   const fetchChallenge = async () => {
     if (!params?.slug || !params?.id) return;
@@ -124,7 +155,8 @@ export default function EditChallengePage() {
           description,
           startDate,
           endDate,
-          enrollmentDeadline: enrollmentDeadline || undefined
+          enrollmentDeadline: enrollmentDeadline || undefined,
+          participantIds: selectedParticipants
         }),
       });
 
@@ -287,6 +319,50 @@ export default function EditChallengePage() {
               </div>
               {enrollmentDeadline && startDate && new Date(enrollmentDeadline) > new Date(startDate) && (
                 <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
+              )}
+            </div>
+
+            {/* Participant Invitation Section */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-gray-500" />
+                <Label>Invite Additional Participants (Optional)</Label>
+              </div>
+              
+              {loadingParticipants ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="ml-2 text-sm text-gray-500">Loading participants...</span>
+                </div>
+              ) : participants.length === 0 ? (
+                <div className="text-sm text-gray-500 py-2">
+                  No participants found in this workspace
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-600">
+                    Select participants to automatically enroll them in this challenge
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-3 space-y-2">
+                    {participants.map((participant) => (
+                      <label key={participant.id} className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedParticipants.includes(participant.id)}
+                          onChange={() => handleParticipantToggle(participant.id)}
+                          disabled={isSaving}
+                          className="rounded border-gray-300 text-coral-600 focus:ring-coral-500"
+                        />
+                        <span className="text-sm text-gray-700">{participant.email}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedParticipants.length > 0 && (
+                    <div className="text-sm text-coral-600">
+                      {selectedParticipants.length} participant{selectedParticipants.length === 1 ? '' : 's'} selected for enrollment
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

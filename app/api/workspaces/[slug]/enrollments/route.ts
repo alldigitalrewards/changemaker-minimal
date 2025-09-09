@@ -4,6 +4,7 @@ import {
   createEnrollment,
   getUserEnrollments,
   getAllWorkspaceEnrollments,
+  getWorkspaceParticipants,
   DatabaseError,
   WorkspaceAccessError,
   ResourceNotFoundError
@@ -50,6 +51,14 @@ export const GET = withErrorHandling(async (
   const { slug } = await context.params
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get("userId")
+  const participants = searchParams.get("participants")
+
+  // Handle participants endpoint
+  if (participants === "true") {
+    const { workspace, user } = await requireWorkspaceAdmin(slug)
+    const participantsList = await getWorkspaceParticipants(workspace.id)
+    return NextResponse.json({ participants: participantsList })
+  }
 
   // Get enrollments using standardized query
   let enrollments

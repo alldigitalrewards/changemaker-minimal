@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
 import { requireAuth, requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
+import { createBulkEnrollments } from '@/lib/db/queries';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -49,7 +50,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, participantIds } = body;
 
   // Basic validation
   if (!title || !description) {
@@ -95,6 +96,16 @@ export const PUT = withErrorHandling(async (
     },
     data: updateData,
   });
+
+  // If participant IDs are provided, create enrollments
+  if (participantIds && Array.isArray(participantIds) && participantIds.length > 0) {
+    try {
+      await createBulkEnrollments(participantIds, id, workspace.id);
+    } catch (enrollmentError) {
+      // Log error but don't fail the challenge update
+      console.error('Error creating bulk enrollments:', enrollmentError);
+    }
+  }
 
   return NextResponse.json({ challenge });
 });
