@@ -3,14 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, 
   Calendar, 
   Users, 
   Trophy, 
-  UserPlus,
   Clock,
   Target,
   CheckCircle,
@@ -20,15 +17,14 @@ import {
   Activity,
   TrendingUp,
   FileText,
-  ExternalLink,
-  BarChart3,
-  Share2
+  BarChart3
 } from 'lucide-react';
 import Link from 'next/link';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, requireWorkspaceAccess } from '@/lib/auth/session';
 import JoinButton, { SimpleSubmissionDialog } from './join-button';
+import { TabNavigationButtons } from './tab-navigation-buttons';
 
 interface PageProps {
   params: Promise<{
@@ -47,44 +43,54 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
       return null;
     }
 
-    const challenge = await prisma.challenge.findFirst({
-      where: {
-        id: challengeId,
-        workspaceId: workspace.id,
-      },
-      include: {
-        enrollments: {
-          where: {
-            userId: userId,
-          },
+    const [challenge, pointsBalance] = await Promise.all([
+      prisma.challenge.findFirst({
+        where: {
+          id: challengeId,
+          workspaceId: workspace.id,
         },
-        activities: {
-          include: {
-            template: true,
-            submissions: {
-              where: {
-                userId: userId,
-              },
-              orderBy: {
-                submittedAt: 'desc',
-              },
-            },
-            _count: {
-              select: {
-                submissions: true,
-              },
+        include: {
+          enrollments: {
+            where: {
+              userId: userId,
             },
           },
-        },
-        _count: {
-          select: {
-            enrollments: true,
+          activities: {
+            include: {
+              template: true,
+              submissions: {
+                where: {
+                  userId: userId,
+                },
+                orderBy: {
+                  submittedAt: 'desc',
+                },
+              },
+              _count: {
+                select: {
+                  submissions: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              enrollments: true,
+            },
           },
         },
-      },
-    });
+      }),
+      prisma.pointsBalance.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId,
+            workspaceId: workspace.id
+          }
+        }
+      })
+    ]);
 
-    return challenge;
+    return { challenge, pointsBalance };
   } catch (error) {
     console.error('Error fetching challenge:', error);
     return null;
@@ -95,14 +101,18 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
   try {
     const { slug, id } = await params;
     const { user, workspace } = await requireWorkspaceAccess(slug);
-    const challenge = await getChallengeForParticipant(slug, id, user.id);
+    const result = await getChallengeForParticipant(slug, id, user.id);
 
-    if (!challenge) {
+    if (!result || !result.challenge) {
       notFound();
     }
 
-    const isEnrolled = challenge.enrollments && challenge.enrollments.length > 0;
-    const enrollment = challenge.enrollments?.[0];
+    const { challenge, pointsBalance } = result;
+
+    // Define variables with explicit typing and null checks
+    const isEnrolled = Boolean(challenge?.enrollments && challenge.enrollments.length > 0);
+    const enrollment = challenge?.enrollments?.[0];
+    const hasActivities = Boolean(challenge?.activities && challenge.activities.length > 0);
 
     return (
     <div className="space-y-6">
@@ -192,14 +202,27 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
 
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-amber-800">Points</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-800">Your Points</CardTitle>
             <Star className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl md:text-2xl font-bold text-amber-900">
-              {challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 100}
-            </div>
-            <p className="text-xs text-amber-700">Available points</p>
+            {isEnrolled ? (
+              <div>
+                <div className="text-xl md:text-2xl font-bold text-amber-900">
+                  {pointsBalance?.totalPoints || 0}
+                </div>
+                <p className="text-xs text-amber-700">
+                  / {challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0} available
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="text-xl md:text-2xl font-bold text-amber-900">
+                  {challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0}
+                </div>
+                <p className="text-xs text-amber-700">Points available</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -260,15 +283,12 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                       You're enrolled! Get started.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button className="w-full bg-coral-500 hover:bg-coral-600" size="sm">
-                      <Activity className="h-4 w-4 mr-2" />
-                      View Activities
-                    </Button>
-                    <Button className="w-full" variant="outline" size="sm">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      Check Progress
-                    </Button>
+                  <CardContent>
+                    {typeof hasActivities === 'boolean' ? (
+                      <TabNavigationButtons hasActivities={hasActivities} />
+                    ) : (
+                      <TabNavigationButtons hasActivities={false} />
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -418,8 +438,17 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                           <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t">
                             {canSubmit && !hasDeadlinePassed ? (
                               <SimpleSubmissionDialog 
-                                activity={activity}
-                                challenge={challenge}
+                                activityId={activity.id}
+                                activityName={activity.template.name}
+                                activityType={activity.template.type}
+                                pointsValue={activity.pointsValue}
+                                maxSubmissions={activity.maxSubmissions}
+                                deadline={activity.deadline ? activity.deadline.toISOString() : null}
+                                isRequired={activity.isRequired}
+                                requiresApproval={activity.template.requiresApproval}
+                                submissionCount={activity._count.submissions}
+                                challengeId={challenge.id}
+                                challengeTitle={challenge.title}
                                 workspaceSlug={slug}
                               />
                             ) : hasDeadlinePassed ? (
