@@ -9,6 +9,7 @@ import { CoralButton } from "@/components/ui/coral-button"
 import { ParticipantDetailCard } from "@/components/ui/participant-detail-card"
 import { ParticipantRoleToggle } from "./participant-role-toggle"
 import { RemoveParticipantAction } from "./remove-participant-action"
+import { EmailActions } from "./email-actions"
 import { ParticipantManagementDialog } from "../participant-management-dialog"
 import { ArrowLeft, Calendar, Mail, User, Trophy, Edit } from "lucide-react"
 import Link from "next/link"
@@ -116,16 +117,35 @@ export default async function ParticipantDetailPage({
             <CardTitle>Quick Actions</CardTitle>
             <CardDescription>Administrative actions for this participant</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <RemoveParticipantAction
-                slug={slug}
-                participantId={participant.id}
-                participantEmail={participant.email}
-              />
-              <p className="text-sm text-gray-500">
-                Remove this participant and all their enrollments from the workspace
-              </p>
+          <CardContent className="space-y-6">
+            {/* Email Actions */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-2">Email Actions</h4>
+              <div className="flex items-center gap-4">
+                <EmailActions
+                  slug={slug}
+                  participantId={participant.id}
+                  participantEmail={participant.email}
+                />
+                <p className="text-sm text-gray-500">
+                  Send password reset or resend workspace invitation
+                </p>
+              </div>
+            </div>
+
+            {/* Remove Participant */}
+            <div className="border-t pt-6">
+              <h4 className="font-medium text-gray-900 mb-2">Danger Zone</h4>
+              <div className="flex items-center gap-4">
+                <RemoveParticipantAction
+                  slug={slug}
+                  participantId={participant.id}
+                  participantEmail={participant.email}
+                />
+                <p className="text-sm text-gray-500">
+                  Remove this participant and all their enrollments from the workspace
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

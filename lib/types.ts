@@ -93,6 +93,62 @@ export interface Enrollment {
 
 export type EnrollmentStatus = 'INVITED' | 'ENROLLED' | 'WITHDRAWN'
 
+// Activity types
+export type ActivityType = 'TEXT_SUBMISSION' | 'FILE_UPLOAD' | 'PHOTO_UPLOAD' | 'LINK_SUBMISSION' | 'MULTIPLE_CHOICE' | 'VIDEO_SUBMISSION'
+export type SubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DRAFT'
+
+export interface ActivityTemplate {
+  readonly id: string
+  readonly name: string
+  readonly description: string
+  readonly type: ActivityType
+  readonly basePoints: number
+  readonly workspaceId: string
+  readonly requiresApproval: boolean
+  readonly allowMultiple: boolean
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
+export interface Activity {
+  readonly id: string
+  readonly templateId: string
+  readonly challengeId: string
+  readonly pointsValue: number
+  readonly maxSubmissions: number
+  readonly deadline: Date | null
+  readonly isRequired: boolean
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
+export interface ActivitySubmission {
+  readonly id: string
+  readonly activityId: string
+  readonly userId: string
+  readonly enrollmentId: string
+  readonly textContent: string | null
+  readonly fileUrls: string[]
+  readonly linkUrl: string | null
+  readonly status: SubmissionStatus
+  readonly pointsAwarded: number | null
+  readonly reviewNotes: string | null
+  readonly reviewedBy: string | null
+  readonly reviewedAt: Date | null
+  readonly submittedAt: Date
+  readonly updatedAt: Date
+}
+
+export interface PointsBalance {
+  readonly id: string
+  readonly userId: string
+  readonly workspaceId: string
+  readonly totalPoints: number
+  readonly availablePoints: number
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
 // =============================================================================
 // AUTHENTICATION & AUTHORIZATION
 // =============================================================================
@@ -343,6 +399,106 @@ export function isParticipant(role: Role): boolean {
 
 export const ENROLLMENT_STATUSES = ['INVITED', 'ENROLLED', 'WITHDRAWN'] as const
 export const USER_ROLES = ['ADMIN', 'PARTICIPANT'] as const
+export const ACTIVITY_TYPES = ['TEXT_SUBMISSION', 'FILE_UPLOAD', 'PHOTO_UPLOAD', 'LINK_SUBMISSION', 'MULTIPLE_CHOICE', 'VIDEO_SUBMISSION'] as const
+export const SUBMISSION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'DRAFT'] as const
+
+// =============================================================================
+// DETAILED ENTITY TYPES WITH RELATIONS
+// =============================================================================
+
+export interface ChallengeWithDetails extends Challenge {
+  workspace: Workspace;
+  enrollments: (Enrollment & {
+    user: AppUser;
+  })[];
+  activities?: (Activity & {
+    template: ActivityTemplate;
+    submissions: ActivitySubmission[];
+  })[];
+}
+
+export interface EnrollmentWithDetails extends Enrollment {
+  user: AppUser;
+  challenge: ChallengeWithDetails;
+  activitySubmissions?: (ActivitySubmission & {
+    activity: Activity & {
+      template: ActivityTemplate;
+    };
+  })[];
+}
+
+export interface ActivityTemplateWithDetails extends ActivityTemplate {
+  workspace: Workspace;
+  activities: Activity[];
+}
+
+export interface ActivityWithDetails extends Activity {
+  template: ActivityTemplate;
+  challenge: Challenge;
+  submissions: (ActivitySubmission & {
+    user: AppUser;
+    enrollment: Enrollment;
+  })[];
+}
+
+export interface ActivitySubmissionWithDetails extends ActivitySubmission {
+  activity: Activity & {
+    template: ActivityTemplate;
+    challenge: Challenge;
+  };
+  user: AppUser;
+  enrollment: Enrollment;
+}
+
+// =============================================================================
+// ACTIVITY API TYPES
+// =============================================================================
+
+export interface ActivityTemplateCreateRequest {
+  readonly name: string
+  readonly description: string
+  readonly type: ActivityType
+  readonly basePoints: number
+  readonly requiresApproval?: boolean
+  readonly allowMultiple?: boolean
+}
+
+export interface ActivityTemplateCreateResponse {
+  readonly template: ActivityTemplate
+}
+
+export interface ActivityTemplateListResponse {
+  readonly templates: ActivityTemplate[]
+}
+
+export interface ActivityCreateRequest {
+  readonly templateId: string
+  readonly pointsValue?: number
+  readonly maxSubmissions?: number
+  readonly deadline?: string
+  readonly isRequired?: boolean
+}
+
+export interface ActivityCreateResponse {
+  readonly activity: Activity
+}
+
+export interface ActivitySubmissionCreateRequest {
+  readonly activityId: string
+  readonly textContent?: string
+  readonly fileUrls?: string[]
+  readonly linkUrl?: string
+}
+
+export interface ActivitySubmissionCreateResponse {
+  readonly submission: ActivitySubmission
+}
+
+export interface ActivitySubmissionReviewRequest {
+  readonly status: 'APPROVED' | 'REJECTED'
+  readonly reviewNotes?: string
+  readonly pointsAwarded?: number
+}
 
 // =============================================================================
 // VALIDATION SCHEMAS (for runtime type checking)
@@ -391,6 +547,50 @@ export function validateChallengeData(data: unknown): data is ChallengeCreateReq
   }
 
   return true
+}
+
+/**
+ * Validation helper for activity template creation
+ */
+export function validateActivityTemplateData(data: unknown): data is ActivityTemplateCreateRequest {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'name' in data &&
+    'description' in data &&
+    'type' in data &&
+    'basePoints' in data &&
+    typeof (data as any).name === 'string' &&
+    typeof (data as any).description === 'string' &&
+    typeof (data as any).type === 'string' &&
+    typeof (data as any).basePoints === 'number' &&
+    (data as any).name.trim().length > 0 &&
+    (data as any).description.trim().length > 0 &&
+    ACTIVITY_TYPES.includes((data as any).type) &&
+    (data as any).basePoints > 0
+  )
+}
+
+/**
+ * Validation helper for activity submission creation
+ */
+export function validateActivitySubmissionData(data: unknown): data is ActivitySubmissionCreateRequest {
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !('activityId' in data) ||
+    typeof (data as any).activityId !== 'string' ||
+    (data as any).activityId.trim().length === 0
+  ) {
+    return false
+  }
+
+  // At least one content field must be provided
+  const hasTextContent = 'textContent' in data && typeof (data as any).textContent === 'string' && (data as any).textContent.trim().length > 0
+  const hasFileUrls = 'fileUrls' in data && Array.isArray((data as any).fileUrls) && (data as any).fileUrls.length > 0
+  const hasLinkUrl = 'linkUrl' in data && typeof (data as any).linkUrl === 'string' && (data as any).linkUrl.trim().length > 0
+
+  return hasTextContent || hasFileUrls || hasLinkUrl
 }
 
 /**

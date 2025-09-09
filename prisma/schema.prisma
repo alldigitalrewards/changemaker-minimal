@@ -25,26 +25,46 @@ enum EnrollmentStatus {
   WITHDRAWN
 }
 
+enum ActivityType {
+  TEXT_SUBMISSION
+  FILE_UPLOAD
+  PHOTO_UPLOAD
+  LINK_SUBMISSION
+  MULTIPLE_CHOICE
+  VIDEO_SUBMISSION
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DRAFT
+}
+
 model Workspace {
-  id         String      @id @default(uuid()) @db.Uuid
-  slug       String      @unique
-  name       String
-  users      User[]
-  challenges Challenge[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt @default(now())
+  id                String             @id @default(uuid()) @db.Uuid
+  slug              String             @unique
+  name              String
+  users             User[]
+  challenges        Challenge[]
+  activityTemplates ActivityTemplate[]
+  pointsBalances    PointsBalance[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt @default(now())
 }
 
 model User {
-  id             String       @id @default(uuid()) @db.Uuid
-  email          String       @unique
-  supabaseUserId String?      @unique @db.Uuid
-  role           Role
-  workspaceId    String?      @db.Uuid
-  workspace      Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
-  enrollments    Enrollment[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt @default(now())
+  id                  String                @id @default(uuid()) @db.Uuid
+  email               String                @unique
+  supabaseUserId      String?               @unique @db.Uuid
+  role                Role
+  workspaceId         String?               @db.Uuid
+  workspace           Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  enrollments         Enrollment[]
+  activitySubmissions ActivitySubmission[]
+  pointsBalances      PointsBalance[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt @default(now())
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -60,6 +80,7 @@ model Challenge {
   workspaceId        String       @db.Uuid
   workspace          Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   enrollments        Enrollment[]
+  activities         Activity[]
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt @default(now())
 
@@ -69,17 +90,94 @@ model Challenge {
 }
 
 model Enrollment {
-  id          String           @id @default(uuid()) @db.Uuid
-  userId      String           @db.Uuid
-  challengeId String           @db.Uuid
-  status      EnrollmentStatus @default(INVITED)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  challenge   Challenge        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt @default(now())
+  id                  String               @id @default(uuid()) @db.Uuid
+  userId              String               @db.Uuid
+  challengeId         String               @db.Uuid
+  status              EnrollmentStatus     @default(INVITED)
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge           Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  activitySubmissions ActivitySubmission[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt @default(now())
 
   @@unique([userId, challengeId])
   @@index([userId])
   @@index([challengeId])
   @@index([status])
+}
+
+model ActivityTemplate {
+  id               String       @id @default(uuid()) @db.Uuid
+  name             String
+  description      String
+  type             ActivityType
+  basePoints       Int          @default(10)
+  workspaceId      String       @db.Uuid
+  workspace        Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activities       Activity[]
+  requiresApproval Boolean      @default(true)
+  allowMultiple    Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt @default(now())
+
+  @@index([workspaceId])
+  @@index([workspaceId, type])
+}
+
+model Activity {
+  id             String               @id @default(uuid()) @db.Uuid
+  templateId     String               @db.Uuid
+  template       ActivityTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  challengeId    String               @db.Uuid
+  challenge      Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  pointsValue    Int
+  maxSubmissions Int                  @default(1)
+  deadline       DateTime?
+  isRequired     Boolean              @default(false)
+  submissions    ActivitySubmission[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt @default(now())
+
+  @@index([challengeId])
+  @@index([templateId])
+}
+
+model ActivitySubmission {
+  id           String           @id @default(uuid()) @db.Uuid
+  activityId   String           @db.Uuid
+  activity     Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId       String           @db.Uuid
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollmentId String           @db.Uuid
+  enrollment   Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  textContent  String?
+  fileUrls     String[]
+  linkUrl      String?
+  status       SubmissionStatus @default(PENDING)
+  pointsAwarded Int?
+  reviewNotes  String?
+  reviewedBy   String?          @db.Uuid
+  reviewedAt   DateTime?
+  submittedAt  DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt @default(now())
+
+  @@index([activityId])
+  @@index([userId])
+  @@index([enrollmentId])
+  @@index([status])
+}
+
+model PointsBalance {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @db.Uuid
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId     String    @db.Uuid
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  totalPoints     Int       @default(0)
+  availablePoints Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt @default(now())
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
 }

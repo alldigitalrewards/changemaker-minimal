@@ -21,7 +21,8 @@
       "mcp__serena__list_dir",
       "mcp__zen__thinkdeep",
       "mcp__serena__replace_symbol_body",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "mcp__task-master-ai__parse_prd"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1"
