@@ -82,3 +82,4 @@ test-results/.last-run.json
 playwright-report/index.html
 .gitignore
 button-issues-report.json
+
