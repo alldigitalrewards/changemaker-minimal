@@ -148,6 +148,7 @@ async function seed() {
     console.log('🧹 Cleaning existing data...')
     await prisma.enrollment.deleteMany()
     await prisma.challenge.deleteMany()
+    await prisma.workspaceMembership.deleteMany()
     await prisma.user.deleteMany()
     await prisma.workspace.deleteMany()
     console.log('✓ Existing data cleared\n')
@@ -178,20 +179,45 @@ async function seed() {
         const workspace = createdWorkspaces.find(w => w.slug === 'alldigitalrewards')
         
         // Use upsert to handle existing Prisma users
-        await prisma.user.upsert({
+        const user = await prisma.user.upsert({
           where: { email: admin.email },
           update: {
             supabaseUserId: supabaseUser.id,
             role: ROLE_ADMIN,
-            workspaceId: workspace?.id
+            workspaceId: workspace?.id,
+            primaryWorkspaceId: workspace?.id
           },
           create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_ADMIN,
-            workspaceId: workspace?.id
+            workspaceId: workspace?.id,
+            primaryWorkspaceId: workspace?.id
           }
         })
+        
+        // Create WorkspaceMembership record
+        if (workspace) {
+          await prisma.workspaceMembership.upsert({
+            where: {
+              userId_workspaceId: {
+                userId: user.id,
+                workspaceId: workspace.id
+              }
+            },
+            update: {
+              role: ROLE_ADMIN,
+              isPrimary: true
+            },
+            create: {
+              userId: user.id,
+              workspaceId: workspace.id,
+              role: ROLE_ADMIN,
+              isPrimary: true
+            }
+          })
+        }
+        
         console.log(`✓ Created/updated admin: ${admin.email}`)
       } else {
         console.error(`❌ Failed to create/retrieve admin user: ${admin.email}`)
@@ -213,20 +239,45 @@ async function seed() {
         const workspace = createdWorkspaces.find(w => w.slug === participant.workspace)
         
         // Use upsert to handle existing Prisma users
-        await prisma.user.upsert({
+        const user = await prisma.user.upsert({
           where: { email: participant.email },
           update: {
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
-            workspaceId: workspace?.id
+            workspaceId: workspace?.id,
+            primaryWorkspaceId: workspace?.id
           },
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
-            workspaceId: workspace?.id
+            workspaceId: workspace?.id,
+            primaryWorkspaceId: workspace?.id
           }
         })
+        
+        // Create WorkspaceMembership record
+        if (workspace) {
+          await prisma.workspaceMembership.upsert({
+            where: {
+              userId_workspaceId: {
+                userId: user.id,
+                workspaceId: workspace.id
+              }
+            },
+            update: {
+              role: ROLE_PARTICIPANT,
+              isPrimary: true
+            },
+            create: {
+              userId: user.id,
+              workspaceId: workspace.id,
+              role: ROLE_PARTICIPANT,
+              isPrimary: true
+            }
+          })
+        }
+        
         console.log(`✓ Created/updated participant: ${participant.email}`)
       } else {
         console.error(`❌ Failed to create/retrieve participant user: ${participant.email}`)
