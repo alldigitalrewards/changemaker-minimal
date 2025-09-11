@@ -33,9 +33,10 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance } from '@prisma/client'
+import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode } from '@prisma/client'
 import { type Role, type ActivityType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
+import { nanoid } from 'nanoid'
 
 // =============================================================================
 // ERROR TYPES
@@ -1282,5 +1283,226 @@ export async function getChallengeLeaderboard(
       .slice(0, limit)
   } catch (error) {
     throw new DatabaseError(`Failed to fetch challenge leaderboard: ${error}`)
+  }
+}
+
+// =============================================================================
+// INVITE CODE QUERIES
+// =============================================================================
+
+export type InviteCodeWithDetails = InviteCode & {
+  workspace: Workspace
+  challenge?: Challenge | null
+  creator: Pick<User, 'id' | 'email'>
+}
+
+/**
+ * Create invite code (admin only, workspace-scoped)
+ */
+export async function createInviteCode(
+  data: {
+    challengeId?: ChallengeId
+    role?: Role
+    expiresIn?: number // hours, defaults to 168 (1 week)
+    maxUses?: number
+  },
+  workspaceId: WorkspaceId,
+  createdBy: UserId
+): Promise<InviteCode> {
+  // Verify creator is admin in workspace
+  const admin = await prisma.user.findFirst({
+    where: { id: createdBy, workspaceId, role: 'ADMIN' }
+  })
+  
+  if (!admin) {
+    throw new WorkspaceAccessError(workspaceId)
+  }
+  
+  // Verify challenge exists in workspace if provided
+  if (data.challengeId) {
+    const challenge = await prisma.challenge.findFirst({
+      where: { id: data.challengeId, workspaceId }
+    })
+    
+    if (!challenge) {
+      throw new ResourceNotFoundError('Challenge', data.challengeId)
+    }
+  }
+  
+  const code = nanoid(10)
+  const expiresAt = new Date()
+  expiresAt.setHours(expiresAt.getHours() + (data.expiresIn || 168))
+  
+  try {
+    return await prisma.inviteCode.create({
+      data: {
+        code,
+        workspaceId,
+        challengeId: data.challengeId || null,
+        role: data.role || 'PARTICIPANT',
+        expiresAt,
+        maxUses: data.maxUses || 1,
+        usedCount: 0,
+        createdBy
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to create invite code: ${error}`)
+  }
+}
+
+/**
+ * Get invite code by code with validation
+ */
+export async function getInviteByCode(code: string): Promise<InviteCodeWithDetails | null> {
+  try {
+    return await prisma.inviteCode.findUnique({
+      where: { code },
+      include: {
+        workspace: true,
+        challenge: true,
+        creator: {
+          select: { id: true, email: true }
+        }
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch invite code: ${error}`)
+  }
+}
+
+/**
+ * Accept invite code (authenticated user)
+ */
+export async function acceptInviteCode(
+  code: string,
+  userId: UserId,
+  userEmail: string
+): Promise<{ 
+  workspace: Workspace
+  challenge?: Challenge | null
+  enrollment?: Enrollment | null
+  isExistingMember: boolean
+}> {
+  const invite = await getInviteByCode(code)
+  
+  if (!invite) {
+    throw new ResourceNotFoundError('Invite', code)
+  }
+  
+  // Check if invite is valid
+  if (invite.expiresAt < new Date()) {
+    throw new DatabaseError('Invite code has expired')
+  }
+  
+  if (invite.usedCount >= invite.maxUses) {
+    throw new DatabaseError('Invite code has reached maximum uses')
+  }
+  
+  // Check if user is already in workspace
+  const existingUser = await prisma.user.findFirst({
+    where: { id: userId, workspaceId: invite.workspaceId }
+  })
+  
+  let enrollment: Enrollment | null = null
+  let isExistingMember = false
+  
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (!existingUser) {
+        // Add user to workspace
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            workspaceId: invite.workspaceId,
+            role: invite.role
+          }
+        })
+      } else {
+        isExistingMember = true
+      }
+      
+      // If invite is for specific challenge, enroll user
+      if (invite.challengeId) {
+        const existingEnrollment = await tx.enrollment.findFirst({
+          where: { userId, challengeId: invite.challengeId }
+        })
+        
+        if (!existingEnrollment) {
+          enrollment = await tx.enrollment.create({
+            data: {
+              userId,
+              challengeId: invite.challengeId,
+              status: 'ENROLLED'
+            }
+          })
+        } else {
+          enrollment = existingEnrollment
+        }
+      }
+      
+      // Increment used count
+      await tx.inviteCode.update({
+        where: { id: invite.id },
+        data: { usedCount: { increment: 1 } }
+      })
+    })
+    
+    return {
+      workspace: invite.workspace,
+      challenge: invite.challenge,
+      enrollment,
+      isExistingMember
+    }
+  } catch (error) {
+    throw new DatabaseError(`Failed to accept invite: ${error}`)
+  }
+}
+
+/**
+ * Get workspace invite codes (admin only)
+ */
+export async function getWorkspaceInviteCodes(
+  workspaceId: WorkspaceId
+): Promise<InviteCodeWithDetails[]> {
+  try {
+    return await prisma.inviteCode.findMany({
+      where: { workspaceId },
+      include: {
+        workspace: true,
+        challenge: true,
+        creator: {
+          select: { id: true, email: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace invite codes: ${error}`)
+  }
+}
+
+/**
+ * Delete invite code (admin only, workspace-scoped)
+ */
+export async function deleteInviteCode(
+  inviteId: string,
+  workspaceId: WorkspaceId
+): Promise<void> {
+  // Verify invite belongs to workspace
+  const invite = await prisma.inviteCode.findFirst({
+    where: { id: inviteId, workspaceId }
+  })
+  
+  if (!invite) {
+    throw new ResourceNotFoundError('InviteCode', inviteId)
+  }
+  
+  try {
+    await prisma.inviteCode.delete({
+      where: { id: inviteId }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to delete invite code: ${error}`)
   }
 }
