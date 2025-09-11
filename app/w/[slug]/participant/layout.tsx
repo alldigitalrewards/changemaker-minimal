@@ -4,6 +4,8 @@ import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-conte
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import DashboardHeader from "@/components/layout/dashboard-header"
 import ParticipantSidebar from "@/components/navigation/participant-sidebar"
+import { WorkspaceProvider } from "@/providers/workspace-provider"
+import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
 import { ReactNode } from "react"
 
 interface ParticipantLayoutProps {
@@ -45,12 +47,21 @@ export default async function ParticipantLayout({
 
   const sidebar = <ParticipantSidebar workspace={workspace} />
 
+  // Get all user workspaces for the provider
+  const userWorkspaces = await getUserWorkspacesServer()
+
   return (
-    <DashboardLayout
-      header={header}
-      sidebar={sidebar}
+    <WorkspaceProvider 
+      initialWorkspace={workspace}
+      initialRole="PARTICIPANT"
+      initialWorkspaces={userWorkspaces}
     >
-      {children}
-    </DashboardLayout>
+      <DashboardLayout
+        header={header}
+        sidebar={sidebar}
+      >
+        {children}
+      </DashboardLayout>
+    </WorkspaceProvider>
   )
 }

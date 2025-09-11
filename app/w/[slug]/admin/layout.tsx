@@ -4,6 +4,8 @@ import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-conte
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import DashboardHeader from "@/components/layout/dashboard-header"
 import AdminSidebar from "@/components/navigation/admin-sidebar"
+import { WorkspaceProvider } from "@/providers/workspace-provider"
+import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
 import { ReactNode } from "react"
 
 interface AdminLayoutProps {
@@ -45,12 +47,21 @@ export default async function AdminLayout({
 
   const sidebar = <AdminSidebar workspace={workspace} />
 
+  // Get all user workspaces for the provider
+  const userWorkspaces = await getUserWorkspacesServer()
+
   return (
-    <DashboardLayout
-      header={header}
-      sidebar={sidebar}
+    <WorkspaceProvider 
+      initialWorkspace={workspace}
+      initialRole="ADMIN"
+      initialWorkspaces={userWorkspaces}
     >
-      {children}
-    </DashboardLayout>
+      <DashboardLayout
+        header={header}
+        sidebar={sidebar}
+      >
+        {children}
+      </DashboardLayout>
+    </WorkspaceProvider>
   )
 }
