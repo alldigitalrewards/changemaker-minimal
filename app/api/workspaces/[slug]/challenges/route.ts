@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
 import { 
   WorkspaceApiProps, 
   ChallengeCreateRequest, 
@@ -10,213 +10,111 @@ import {
   ApiError
 } from '@/lib/types';
 import { 
-  getWorkspaceBySlug,
   getWorkspaceChallenges, 
   createChallenge,
   createChallengeEnrollments,
   getWorkspaceUsers,
-  getUserBySupabaseId,
-  verifyWorkspaceAdmin,
   DatabaseError,
   ResourceNotFoundError,
-  WorkspaceAccessError
+  WorkspaceAccessError,
+  getWorkspaceBySlug,
+  getUserBySupabaseId
 } from '@/lib/db/queries';
+import { createClient } from '@/lib/supabase/server';
 
 // Remove the temporary function - will create in separate file
 
-export async function GET(
+export const GET = withErrorHandling(async (
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }
-): Promise<NextResponse<ChallengeListResponse | ApiError>> {
-  try {
-    const { slug } = await context.params;
-    
-    // Verify authentication
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+): Promise<NextResponse<ChallengeListResponse | ApiError>> => {
+  const { slug } = await context.params;
+  const { workspace, user } = await requireWorkspaceAccess(slug);
 
-    // Get workspace with validation
-    const workspace = await getWorkspaceBySlug(slug);
-    if (!workspace) {
-      return NextResponse.json(
-        { error: 'Workspace not found' },
-        { status: 404 }
-      );
-    }
+  // Get challenges with user-specific enrollment data
+  const challenges = await getWorkspaceChallenges(workspace.id);
+  
+  // Filter enrollments to only show current user's enrollment status
+  const challengesWithUserEnrollment = challenges.map(challenge => ({
+    ...challenge,
+    enrollments: challenge.enrollments?.filter(enrollment => 
+      enrollment.userId === user.dbUser.id
+    ) || []
+  }));
 
-    // Verify user belongs to workspace
-    const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
-      return NextResponse.json(
-        { error: 'Access denied to workspace' },
-        { status: 403 }
-      );
-    }
+  return NextResponse.json({ challenges: challengesWithUserEnrollment });
+})
 
-    // Get challenges with user-specific enrollment data
-    const challenges = await getWorkspaceChallenges(workspace.id);
-    
-    // Filter enrollments to only show current user's enrollment status
-    const challengesWithUserEnrollment = challenges.map(challenge => ({
-      ...challenge,
-      enrollments: challenge.enrollments?.filter(enrollment => 
-        enrollment.userId === dbUser.id
-      ) || []
-    }));
-
-    return NextResponse.json({ challenges: challengesWithUserEnrollment });
-  } catch (error) {
-    console.error('Error fetching challenges:', error);
-    
-    if (error instanceof DatabaseError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
-    
-    if (error instanceof WorkspaceAccessError) {
-      return NextResponse.json(
-        { error: 'Access denied' },
-        { status: 403 }
-      );
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to fetch challenges' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(
+export const POST = withErrorHandling(async (
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }
-): Promise<NextResponse<ChallengeCreateResponse | ApiError>> {
-  try {
-    const { slug } = await context.params;
-    const body = await request.json();
+): Promise<NextResponse<ChallengeCreateResponse | ApiError>> => {
+  const { slug } = await context.params;
+  const body = await request.json();
 
-    // Verify authentication
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    // Validate input with type safety
-    if (!validateChallengeData(body)) {
-      return NextResponse.json(
-        { error: 'Title and description are required and must be non-empty strings' },
-        { status: 400 }
-      );
-    }
-
-    const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
-
-    // Find workspace with validation
-    const workspace = await getWorkspaceBySlug(slug);
-    if (!workspace) {
-      return NextResponse.json(
-        { error: 'Workspace not found' },
-        { status: 404 }
-      );
-    }
-
-    // Verify user is admin of this workspace
-    const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
-      return NextResponse.json(
-        { error: 'Access denied to workspace' },
-        { status: 403 }
-      );
-    }
-
-    const isAdmin = await verifyWorkspaceAdmin(dbUser.id, workspace.id);
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin privileges required to create challenges' },
-        { status: 403 }
-      );
-    }
-
-    // Create challenge using standardized query
-    const challenge = await createChallenge(
-      { 
-        title, 
-        description,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined
-      },
-      workspace.id
-    );
-
-    // Handle participant enrollments
-    try {
-      // Create invitations for invited participants
-      if (invitedParticipantIds && invitedParticipantIds.length > 0) {
-        await createChallengeEnrollments(
-          challenge.id,
-          invitedParticipantIds,
-          workspace.id,
-          'INVITED'
-        );
-      }
-      
-      // Create enrollments for enrolled participants
-      if (enrolledParticipantIds && enrolledParticipantIds.length > 0) {
-        await createChallengeEnrollments(
-          challenge.id,
-          enrolledParticipantIds,
-          workspace.id,
-          'ENROLLED'
-        );
-      }
-      
-      // Legacy support: if only participantIds is provided, treat as invited
-      if (participantIds && participantIds.length > 0 && !invitedParticipantIds && !enrolledParticipantIds) {
-        await createChallengeEnrollments(
-          challenge.id,
-          participantIds,
-          workspace.id,
-          'INVITED'
-        );
-      }
-    } catch (error) {
-      console.error('Error creating participant enrollments:', error);
-      // Continue even if enrollments fail - challenge was created successfully
-    }
-
-    return NextResponse.json({ challenge }, { status: 201 });
-  } catch (error) {
-    console.error('Error creating challenge:', error);
-    
-    if (error instanceof DatabaseError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
-    
-    if (error instanceof WorkspaceAccessError) {
-      return NextResponse.json(
-        { error: 'Access denied' },
-        { status: 403 }
-      );
-    }
-    
+  // Validate input with type safety
+  if (!validateChallengeData(body)) {
     return NextResponse.json(
-      { error: 'Failed to create challenge' },
-      { status: 500 }
+      { error: 'Title and description are required and must be non-empty strings' },
+      { status: 400 }
     );
   }
-}
+
+  const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
+
+  // Require admin access for challenge creation
+  const { workspace, user } = await requireWorkspaceAdmin(slug);
+
+  // Create challenge using standardized query
+  const challenge = await createChallenge(
+    { 
+      title, 
+      description,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined
+    },
+    workspace.id
+  );
+
+  // Handle participant enrollments
+  try {
+    // Create invitations for invited participants
+    if (invitedParticipantIds && invitedParticipantIds.length > 0) {
+      await createChallengeEnrollments(
+        challenge.id,
+        invitedParticipantIds,
+        workspace.id,
+        'INVITED'
+      );
+    }
+    
+    // Create enrollments for enrolled participants
+    if (enrolledParticipantIds && enrolledParticipantIds.length > 0) {
+      await createChallengeEnrollments(
+        challenge.id,
+        enrolledParticipantIds,
+        workspace.id,
+        'ENROLLED'
+      );
+    }
+    
+    // Legacy support: if only participantIds is provided, treat as invited
+    if (participantIds && participantIds.length > 0 && !invitedParticipantIds && !enrolledParticipantIds) {
+      await createChallengeEnrollments(
+        challenge.id,
+        participantIds,
+        workspace.id,
+        'INVITED'
+      );
+    }
+  } catch (error) {
+    console.error('Error creating participant enrollments:', error);
+    // Continue even if enrollments fail - challenge was created successfully
+  }
+
+  return NextResponse.json({ challenge }, { status: 201 });
+})
 
 /* TEMPORARY PARTICIPANTS ENDPOINT - WILL MOVE TO OWN FILE */
 // This function has been moved to /app/api/workspaces/[slug]/participants/route.ts

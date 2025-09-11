@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWorkspaceAccess, withErrorHandling } from '@/lib/auth/api-auth';
+import { getWorkspaceUsers } from '@/lib/db/queries';
 import { prisma } from '@/lib/prisma';
 
 export const GET = withErrorHandling(async (
@@ -9,19 +10,8 @@ export const GET = withErrorHandling(async (
   const { slug } = await params;
   const { workspace } = await requireWorkspaceAccess(slug);
 
-  const users = await prisma.user.findMany({
-    where: {
-      workspaceId: workspace.id,
-    },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-    },
-    orderBy: {
-      email: 'asc',
-    },
-  });
+  // Use membership-aware query function
+  const users = await getWorkspaceUsers(workspace.id);
 
   const participants = users.map(user => ({
     id: user.id,

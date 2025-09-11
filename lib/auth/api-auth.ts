@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getUserBySupabaseId, getWorkspaceBySlug, verifyWorkspaceAdmin } from '@/lib/db/queries'
+import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
 import type { User } from '@supabase/supabase-js'
 import type { User as PrismaUser, Workspace } from '@prisma/client'
+import type { Role } from '@/lib/types'
 
 export interface AuthenticatedUser {
   supabaseUser: User
@@ -12,6 +14,7 @@ export interface AuthenticatedUser {
 export interface WorkspaceContext {
   workspace: Workspace
   user: AuthenticatedUser
+  userRole: Role
 }
 
 /**
@@ -41,7 +44,8 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
 
 /**
  * Requires authentication and workspace access
- * Returns workspace context with authenticated user
+ * Uses membership system with backward compatibility
+ * Returns workspace context with authenticated user and role
  */
 export async function requireWorkspaceAccess(slug: string): Promise<WorkspaceContext> {
   const user = await requireAuth()
@@ -51,22 +55,24 @@ export async function requireWorkspaceAccess(slug: string): Promise<WorkspaceCon
     throw NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
   }
 
-  if (user.dbUser.workspaceId !== workspace.id) {
+  // Use membership-aware compatibility layer
+  const userRole = await getUserWorkspaceRole(user.supabaseUser.id, workspace.slug)
+  if (!userRole) {
     throw NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 })
   }
 
-  return { workspace, user }
+  return { workspace, user, userRole }
 }
 
 /**
  * Requires authentication, workspace access, and admin privileges
+ * Uses membership-aware role checking
  * Returns workspace context with verified admin user
  */
 export async function requireWorkspaceAdmin(slug: string): Promise<WorkspaceContext> {
   const context = await requireWorkspaceAccess(slug)
   
-  const isAdmin = await verifyWorkspaceAdmin(context.user.dbUser.id, context.workspace.id)
-  if (!isAdmin) {
+  if (context.userRole !== 'ADMIN') {
     throw NextResponse.json({ 
       error: 'Admin privileges required for this operation' 
     }, { status: 403 })
