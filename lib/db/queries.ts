@@ -37,6 +37,8 @@ import { type Workspace, type User, type Challenge, type Enrollment, type Activi
 import { type Role, type ActivityType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { nanoid } from 'nanoid'
+// Import membership system for backward compatibility
+import { hasWorkspaceAccess, isWorkspaceAdmin } from './workspace-membership'
 
 // =============================================================================
 // ERROR TYPES
@@ -231,13 +233,35 @@ export async function getUserBySupabaseId(supabaseUserId: string): Promise<UserW
 
 /**
  * Get all users in a workspace (admin only)
+ * Uses both membership system and legacy User.workspaceId for complete coverage
  */
 export async function getWorkspaceUsers(workspaceId: WorkspaceId): Promise<User[]> {
   try {
-    return await prisma.user.findMany({
-      where: { workspaceId },
-      orderBy: { email: 'asc' }
-    })
+    // Get users from both membership system and legacy workspaceId
+    const [membershipUsers, legacyUsers] = await Promise.all([
+      // Users from membership system
+      prisma.user.findMany({
+        where: {
+          memberships: {
+            some: { workspaceId }
+          }
+        },
+        orderBy: { email: 'asc' }
+      }),
+      // Users from legacy workspaceId (that might not be in memberships yet)
+      prisma.user.findMany({
+        where: { workspaceId },
+        orderBy: { email: 'asc' }
+      })
+    ])
+
+    // Combine and deduplicate users by ID
+    const userMap = new Map()
+    for (const user of [...membershipUsers, ...legacyUsers]) {
+      userMap.set(user.id, user)
+    }
+    
+    return Array.from(userMap.values()).sort((a, b) => a.email.localeCompare(b.email))
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace users: ${error}`)
   }
@@ -727,12 +751,18 @@ export async function getAllWorkspaceEnrollments(
 
 /**
  * Verify user has access to workspace
+ * Uses membership system with backward compatibility
  */
 export async function verifyWorkspaceAccess(
   userId: UserId,
   workspaceId: WorkspaceId
 ): Promise<boolean> {
   try {
+    // First try new membership system
+    const membershipAccess = await hasWorkspaceAccess(userId, workspaceId)
+    if (membershipAccess) return true
+    
+    // Fall back to legacy User.workspaceId check
     const user = await prisma.user.findFirst({
       where: { id: userId, workspaceId }
     })
@@ -744,12 +774,18 @@ export async function verifyWorkspaceAccess(
 
 /**
  * Verify user is admin in workspace
+ * Uses membership system with backward compatibility
  */
 export async function verifyWorkspaceAdmin(
   userId: UserId,
   workspaceId: WorkspaceId
 ): Promise<boolean> {
   try {
+    // First try new membership system
+    const membershipAdmin = await isWorkspaceAdmin(userId, workspaceId)
+    if (membershipAdmin) return true
+    
+    // Fall back to legacy User.workspaceId + role check
     const user = await prisma.user.findFirst({
       where: { id: userId, workspaceId, role: 'ADMIN' }
     })
