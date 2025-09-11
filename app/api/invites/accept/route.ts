@@ -6,7 +6,7 @@ import type { InviteCodeAcceptRequest, InviteCodeAcceptResponse } from '@/lib/ty
 export const POST = withErrorHandling(async (
   request: NextRequest
 ) => {
-  const { user } = await requireAuth()
+  const user = await requireAuth()
   
   const body: InviteCodeAcceptRequest = await request.json()
   
