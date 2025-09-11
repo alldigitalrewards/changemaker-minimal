@@ -1,0 +1,64 @@
+name: Database Migration
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'prisma/schema.prisma'
+      - 'supabase/migrations/**'
+      - '.github/workflows/database-migration.yml'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Generate Prisma Client
+        run: pnpm prisma generate
+      
+      - name: Apply Prisma migrations to production
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+        run: |
+          echo "🚀 Applying database migrations to production..."
+          pnpm prisma migrate deploy
+      
+      - name: Apply custom SQL migrations
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+        run: |
+          echo "📋 Checking for custom SQL migrations..."
+          if [ -d "supabase/migrations" ]; then
+            for migration in supabase/migrations/*.sql; do
+              if [ -f "$migration" ]; then
+                echo "Applying migration: $(basename $migration)"
+                node scripts/apply-migration.js "$migration"
+              fi
+            done
+          fi
+      
+      - name: Verify database state
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          echo "🔍 Verifying database state..."
+          pnpm prisma db pull --print
