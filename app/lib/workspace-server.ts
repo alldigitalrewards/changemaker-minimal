@@ -102,7 +102,7 @@ export const getWorkspaceRole = cache(async (slug?: string): Promise<Role | null
     let workspaceSlug = slug
     if (!workspaceSlug) {
       const active = await getActiveWorkspace()
-      workspaceSlug = active.slug
+      workspaceSlug = active?.slug || undefined
     }
 
     if (!workspaceSlug) return null

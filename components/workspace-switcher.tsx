@@ -22,15 +22,13 @@ import { useWorkspace } from '@/providers/workspace-provider'
 import { type Workspace } from '@/lib/types'
 
 interface WorkspaceSwitcherProps {
-  currentWorkspace: Workspace | null
   className?: string
 }
 
 export default function WorkspaceSwitcher({ 
-  currentWorkspace, 
   className 
-}: WorkspaceSwitcherProps) {
-  const { availableWorkspaces, isSwitching, switchWorkspace } = useWorkspace()
+}: WorkspaceSwitcherProps = {}) {
+  const { currentWorkspace, availableWorkspaces, isSwitching, switchWorkspace } = useWorkspace()
   const [isOpen, setIsOpen] = useState(false)
 
   // Only show switcher if user has multiple workspaces
@@ -101,7 +99,7 @@ export default function WorkspaceSwitcher({
                         {workspace.name}
                       </span>
                       {isWorkspacePrimary && (
-                        <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" title="Primary Workspace" />
+                        <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />
                       )}
                     </div>
                     <p className="text-xs text-gray-500 truncate">

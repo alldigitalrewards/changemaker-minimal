@@ -79,10 +79,7 @@ export default function DashboardHeader({
           {/* Right side - Workspace switcher, role badge, user menu */}
           <div className="flex items-center space-x-4">
             {/* Workspace Switcher */}
-            <WorkspaceSwitcher 
-              currentWorkspace={workspace} 
-              className="hidden sm:block" 
-            />
+            <WorkspaceSwitcher />
 
             {/* Role badge */}
             <div className={`px-3 py-1 text-xs font-medium rounded-full ${
