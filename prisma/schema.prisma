@@ -42,16 +42,17 @@ enum SubmissionStatus {
 }
 
 model Workspace {
-  id                String             @id @default(uuid()) @db.Uuid
-  slug              String             @unique
+  id                String               @id @default(uuid()) @db.Uuid
+  slug              String               @unique
   name              String
   users             User[]
   challenges        Challenge[]
   activityTemplates ActivityTemplate[]
   pointsBalances    PointsBalance[]
   inviteCodes       InviteCode[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt @default(now())
+  memberships       WorkspaceMembership[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt @default(now())
 }
 
 model User {
@@ -61,6 +62,8 @@ model User {
   role                Role
   workspaceId         String?               @db.Uuid
   workspace           Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  primaryWorkspaceId  String?               @db.Uuid
+  memberships         WorkspaceMembership[]
   enrollments         Enrollment[]
   activitySubmissions ActivitySubmission[]
   pointsBalances      PointsBalance[]
@@ -203,4 +206,23 @@ model InviteCode {
   
   @@index([code])
   @@index([workspaceId])
+}
+
+model WorkspaceMembership {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  workspaceId String    @db.Uuid
+  role        Role
+  isPrimary   Boolean   @default(false)
+  joinedAt    DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([userId, isPrimary])
 }
