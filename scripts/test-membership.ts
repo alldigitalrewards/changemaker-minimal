@@ -123,15 +123,22 @@ async function main() {
       console.log('   ⚠️  Some users need membership migration!')
     }
 
-    // Check for orphaned memberships
-    const orphanedMemberships = await prisma.workspaceMembership.findMany({
-      where: {
-        OR: [
-          { user: null },
-          { workspace: null }
-        ]
+    // Check for orphaned memberships - this would require LEFT JOIN which Prisma doesn't support directly
+    // Instead, check for invalid references
+    const allMemberships = await prisma.workspaceMembership.findMany({
+      select: {
+        id: true,
+        userId: true,
+        workspaceId: true
       }
     })
+    
+    const userIds = new Set((await prisma.user.findMany({ select: { id: true } })).map(u => u.id))
+    const workspaceIds = new Set((await prisma.workspace.findMany({ select: { id: true } })).map(w => w.id))
+    
+    const orphanedMemberships = allMemberships.filter(m => 
+      !userIds.has(m.userId) || !workspaceIds.has(m.workspaceId)
+    )
     
     console.log(`   - Orphaned memberships: ${orphanedMemberships.length}`)
 
