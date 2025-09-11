@@ -162,6 +162,20 @@ export interface InviteCode {
   readonly createdAt: Date
 }
 
+/**
+ * WorkspaceMembership for multi-tenant access control
+ */
+export interface WorkspaceMembership {
+  readonly id: string
+  readonly userId: UserId
+  readonly workspaceId: WorkspaceId
+  readonly role: Role
+  readonly isPrimary: boolean
+  readonly joinedAt: Date
+  readonly createdAt: Date
+  readonly updatedAt: Date
+}
+
 // =============================================================================
 // AUTHENTICATION & AUTHORIZATION
 // =============================================================================
@@ -543,6 +557,11 @@ export interface InviteCodeWithDetails extends InviteCode {
   workspace: Workspace
   challenge?: Challenge | null
   creator: Pick<AppUser, 'id' | 'email'>
+}
+
+export interface WorkspaceMembershipWithDetails extends WorkspaceMembership {
+  user: AppUser
+  workspace: Workspace
 }
 
 // =============================================================================
