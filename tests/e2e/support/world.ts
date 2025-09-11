@@ -6,6 +6,8 @@ export class CustomWorld {
   context!: BrowserContext;
   page!: Page;
   baseURL: string;
+  lastWorkspaceSlug?: string;
+  lastSubmissionId?: string;
 
   constructor() {
     this.baseURL = process.env.BASE_URL || 'http://localhost:3000';
