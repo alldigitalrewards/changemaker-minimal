@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
-import { getWorkspaceBySlug, getUserBySupabaseId } from "@/lib/db/queries"
+import { getWorkspaceBySlug } from "@/lib/db/queries"
+import { getUserWorkspaceRole as getCompatibleWorkspaceRole } from "@/lib/db/workspace-compatibility"
 
 export async function getCurrentWorkspace(slug: string) {
   return await getWorkspaceBySlug(slug)
@@ -12,15 +13,8 @@ export async function getUserWorkspaceRole(slug: string) {
 
   if (!user) return null
 
-  // Get user with workspace info using standardized query
-  const dbUser = await getUserBySupabaseId(user.id)
-
-  // Check if user belongs to this workspace
-  if (!dbUser?.workspace || dbUser.workspace.slug !== slug) {
-    return null
-  }
-
-  return dbUser.role
+  // Use the new membership-aware compatibility function
+  return await getCompatibleWorkspaceRole(user.id, slug)
 }
 
 export async function setWorkspaceContext(slug: string) {
