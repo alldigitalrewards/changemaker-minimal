@@ -16,7 +16,7 @@ export async function loginWithCredentials(page: Page, email: string, password: 
 
 export async function logout(page: Page) {
   await page.request.post('/auth/logout')
-  await page.context.clearCookies()
+  await page.context().clearCookies()
   await page.goto('/')
 }
 
