@@ -149,6 +149,19 @@ export interface PointsBalance {
   readonly updatedAt: Date
 }
 
+export interface InviteCode {
+  readonly id: string
+  readonly code: string
+  readonly workspaceId: WorkspaceId
+  readonly challengeId: ChallengeId | null
+  readonly role: Role
+  readonly expiresAt: Date
+  readonly maxUses: number
+  readonly usedCount: number
+  readonly createdBy: UserId
+  readonly createdAt: Date
+}
+
 // =============================================================================
 // AUTHENTICATION & AUTHORIZATION
 // =============================================================================
@@ -501,6 +514,38 @@ export interface ActivitySubmissionReviewRequest {
 }
 
 // =============================================================================
+// INVITE API TYPES
+// =============================================================================
+
+export interface InviteCodeCreateRequest {
+  readonly challengeId?: ChallengeId
+  readonly role?: Role
+  readonly expiresIn?: number // hours
+  readonly maxUses?: number
+}
+
+export interface InviteCodeCreateResponse {
+  readonly inviteCode: InviteCode
+}
+
+export interface InviteCodeAcceptRequest {
+  readonly code: string
+}
+
+export interface InviteCodeAcceptResponse {
+  readonly success: boolean
+  readonly message: string
+  readonly workspace?: Workspace
+  readonly challenge?: Challenge
+}
+
+export interface InviteCodeWithDetails extends InviteCode {
+  workspace: Workspace
+  challenge?: Challenge | null
+  creator: Pick<AppUser, 'id' | 'email'>
+}
+
+// =============================================================================
 // VALIDATION SCHEMAS (for runtime type checking)
 // =============================================================================
 
@@ -604,4 +649,34 @@ export function validateEnrollmentData(data: unknown): data is EnrollmentCreateR
     typeof (data as any).challengeId === 'string' &&
     (data as any).challengeId.trim().length > 0
   )
+}
+
+/**
+ * Validation helper for invite code creation
+ */
+export function validateInviteCodeData(data: unknown): data is InviteCodeCreateRequest {
+  if (typeof data !== 'object' || data === null) {
+    return false
+  }
+
+  const d = data as any
+
+  // Optional fields validation
+  if ('role' in d && d.role !== undefined && !USER_ROLES.includes(d.role)) {
+    return false
+  }
+
+  if ('expiresIn' in d && d.expiresIn !== undefined && (typeof d.expiresIn !== 'number' || d.expiresIn < 1)) {
+    return false
+  }
+
+  if ('maxUses' in d && d.maxUses !== undefined && (typeof d.maxUses !== 'number' || d.maxUses < 1)) {
+    return false
+  }
+
+  if ('challengeId' in d && d.challengeId !== undefined && typeof d.challengeId !== 'string') {
+    return false
+  }
+
+  return true
 }

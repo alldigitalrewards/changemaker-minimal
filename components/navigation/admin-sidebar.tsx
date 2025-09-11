@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Building2,
   ClipboardList,
+  Link2,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Participants', href: '/admin/participants', icon: Users },
   { name: 'Challenges', href: '/admin/challenges', icon: Trophy },
   { name: 'Activity Templates', href: '/admin/activity-templates', icon: ClipboardList },
+  { name: 'Invites', href: '/admin/invites', icon: Link2 },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 

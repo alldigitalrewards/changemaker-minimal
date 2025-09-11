@@ -49,6 +49,7 @@ model Workspace {
   challenges        Challenge[]
   activityTemplates ActivityTemplate[]
   pointsBalances    PointsBalance[]
+  inviteCodes       InviteCode[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt @default(now())
 }
@@ -63,6 +64,7 @@ model User {
   enrollments         Enrollment[]
   activitySubmissions ActivitySubmission[]
   pointsBalances      PointsBalance[]
+  createdInvites      InviteCode[]          @relation("InviteCreator")
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt @default(now())
 
@@ -81,6 +83,7 @@ model Challenge {
   workspace          Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   enrollments        Enrollment[]
   activities         Activity[]
+  inviteCodes        InviteCode[]
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt @default(now())
 
@@ -179,5 +182,25 @@ model PointsBalance {
   updatedAt       DateTime  @updatedAt @default(now())
 
   @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model InviteCode {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique
+  workspaceId String    @db.Uuid
+  challengeId String?   @db.Uuid  
+  role        Role      @default(PARTICIPANT)
+  expiresAt   DateTime
+  maxUses     Int       @default(1)
+  usedCount   Int       @default(0)
+  createdBy   String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge   Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  creator     User       @relation("InviteCreator", fields: [createdBy], references: [id])
+  
+  @@index([code])
   @@index([workspaceId])
 }

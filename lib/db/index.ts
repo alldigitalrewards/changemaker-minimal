@@ -17,7 +17,8 @@ export type {
   WorkspaceWithDetails,
   UserWithWorkspace,
   ChallengeWithDetails,
-  EnrollmentWithDetails
+  EnrollmentWithDetails,
+  InviteCodeWithDetails
 } from './queries'
 
 export {
