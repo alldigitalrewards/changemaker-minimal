@@ -74,3 +74,11 @@ tasks/
 .serena
 .claude/settings.local.json
 .jack/
+
+playwright-report/
+
+test-results/
+test-results/.last-run.json
+playwright-report/index.html
+.gitignore
+button-issues-report.json
