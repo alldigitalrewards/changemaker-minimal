@@ -539,6 +539,12 @@ export interface InviteCodeAcceptResponse {
   readonly challenge?: Challenge
 }
 
+export interface InviteCodeWithDetails extends InviteCode {
+  workspace: Workspace
+  challenge?: Challenge | null
+  creator: Pick<AppUser, 'id' | 'email'>
+}
+
 // =============================================================================
 // VALIDATION SCHEMAS (for runtime type checking)
 // =============================================================================
