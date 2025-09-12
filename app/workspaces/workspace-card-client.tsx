@@ -13,6 +13,7 @@ interface WorkspaceCardProps {
     id: string
     name: string
     slug: string
+    ownerId?: string
     _count: {
       users: number
       challenges: number
@@ -33,6 +34,7 @@ export default function WorkspaceCard({
 }: WorkspaceCardProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const isOwner = workspace.ownerId === userId
   const dashboardPath = isUserWorkspace && userRole
     ? `/w/${workspace.slug}/${userRole.toLowerCase()}/dashboard`
     : null
@@ -69,7 +71,7 @@ export default function WorkspaceCard({
 
   const handleLeave = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!userId || isPrimary || isLoading) return
+    if (!userId || isPrimary || isLoading || isOwner) return
     
     if (!confirm(`Are you sure you want to leave "${workspace.name}"?`)) {
       return
@@ -80,6 +82,8 @@ export default function WorkspaceCard({
       const result = await leaveWorkspace(userId, workspace.id)
       if (result.success) {
         router.refresh()
+      } else {
+        alert(result.error || 'Failed to leave workspace')
       }
     } catch (error) {
       console.error('Error leaving workspace:', error)
@@ -105,6 +109,11 @@ export default function WorkspaceCard({
               {isPrimary && (
                 <span className="text-xs bg-coral-100 text-coral-700 px-2 py-1 rounded font-medium">
                   Primary
+                </span>
+              )}
+              {isOwner && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
+                  Owner
                 </span>
               )}
             </CardTitle>
@@ -134,7 +143,7 @@ export default function WorkspaceCard({
             </Button>
             
             <div className="flex gap-2">
-              {!isPrimary && (
+              {!isPrimary && !isOwner && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -146,7 +155,7 @@ export default function WorkspaceCard({
                 </Button>
               )}
               
-              {!isPrimary && (
+              {!isPrimary && !isOwner && (
                 <Button
                   variant="outline"
                   size="sm"
