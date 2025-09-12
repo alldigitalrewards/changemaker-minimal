@@ -37,7 +37,7 @@ export default async function AdminSettingsPage({
     include: {
       _count: {
         select: {
-          users: true,
+          memberships: true,
           challenges: true
         }
       }
@@ -100,7 +100,7 @@ export default async function AdminSettingsPage({
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold">{stats?._count.users || 0}</p>
+                <p className="text-2xl font-bold">{stats?._count.memberships || 0}</p>
                 <p className="text-sm text-gray-600">Total Members</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
