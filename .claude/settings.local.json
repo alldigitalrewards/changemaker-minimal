@@ -25,7 +25,8 @@
       "mcp__task-master-ai__parse_prd",
       "mcp__zen__planner",
       "mcp__zen__debug",
-      "mcp__serena__find_file"
+      "mcp__serena__find_file",
+      "Bash(curl:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1"
