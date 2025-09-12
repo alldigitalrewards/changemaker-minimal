@@ -49,29 +49,17 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
 
-    // Handle workspace role-based access
+    // Handle workspace slug extraction and pass to server components
     const slugMatch = pathname.match(/^\/w\/([^\/]+)/)
     if (slugMatch) {
       const slug = slugMatch[1]
       
-      // Get user's role in this workspace using membership system
-      const userRole = await getUserWorkspaceRole(user.id, slug)
-      
-      if (!userRole) {
-        // User has no access to this workspace
-        // Clear any stale workspace preferences
-        response.cookies.delete('lastWorkspaceId')
-        return NextResponse.redirect(new URL('/workspaces', request.url))
-      }
-
       // Set workspace context headers for server components
-      response.headers.set('x-workspace-role', userRole)
+      // Role checking will be done in server components that have access to Prisma
       response.headers.set('x-workspace-slug', slug)
+      response.headers.set('x-user-id', user.id)
       
-      // For admin routes, check admin access
-      if (pathname.includes('/admin/') && userRole !== 'ADMIN') {
-        return NextResponse.redirect(new URL(`/w/${slug}/participant/dashboard`, request.url))
-      }
+      // Server components will handle role-based redirects
     }
 
     return response
