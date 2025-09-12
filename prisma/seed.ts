@@ -1,6 +1,7 @@
 /**
  * Database Seed Script
  * Populates the database with default workspaces, users, and mock data
+ * Updated to support WorkspaceMembership for multi-workspace testing
  */
 
 import { PrismaClient, EnrollmentStatus } from '@prisma/client'
@@ -43,12 +44,40 @@ const workspaces = [
   }
 ]
 
-// Admin users (all from AllDigitalRewards)
+// Admin users with multi-workspace configuration
 const adminUsers = [
-  { email: 'krobinson@alldigitalrewards.com', name: 'Kim Robinson' },
-  { email: 'kfelke@alldigitalrewards.com', name: 'Kathryn Felke' },
-  { email: 'jfelke@alldigitalrewards.com', name: 'Jack Felke' },
-  { email: 'jhoughtelin@alldigitalrewards.com', name: 'Josh Houghtelin' }
+  { 
+    email: 'krobinson@alldigitalrewards.com', 
+    name: 'Kim Robinson',
+    workspaceMemberships: [
+      { workspace: 'alldigitalrewards', isPrimary: true },
+      { workspace: 'acme', isPrimary: false },
+      { workspace: 'sharecare', isPrimary: false }
+    ]
+  },
+  { 
+    email: 'kfelke@alldigitalrewards.com', 
+    name: 'Kathryn Felke',
+    workspaceMemberships: [
+      { workspace: 'alldigitalrewards', isPrimary: true }
+    ]
+  },
+  { 
+    email: 'jfelke@alldigitalrewards.com', 
+    name: 'Jack Felke',
+    workspaceMemberships: [
+      { workspace: 'alldigitalrewards', isPrimary: true },
+      { workspace: 'acme', isPrimary: false }
+    ]
+  },
+  { 
+    email: 'jhoughtelin@alldigitalrewards.com', 
+    name: 'Josh Houghtelin',
+    workspaceMemberships: [
+      { workspace: 'alldigitalrewards', isPrimary: true },
+      { workspace: 'sharecare', isPrimary: false }
+    ]
+  }
 ]
 
 // Participant users (domain-specific)
@@ -102,69 +131,70 @@ async function getOrCreateSupabaseUser(email: string, password: string, metadata
       email_confirm: true,
       user_metadata: metadata
     })
-    
+
     if (createData?.user) {
-      console.log(`✓ Created Supabase user: ${email}`)
       return createData.user
     }
-    
-    // If creation failed due to user already existing, try to retrieve existing user
-    if (createError?.message?.includes('already been registered') || createError?.message?.includes('already exists')) {
-      console.log(`📧 User already exists, retrieving: ${email}`)
+
+    // If user already exists (error code 'user_already_exists'), get the existing user
+    if (createError?.message?.includes('already been registered')) {
+      const { data: userData } = await supabaseAdmin.auth.admin.listUsers()
+      const existingUser = userData?.users?.find(u => u.email === email)
       
-      // Get existing user by email
-      const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-      
-      if (listError) {
-        console.error(`Error listing users to find ${email}:`, listError.message)
-        return null
-      }
-      
-      const existingUser = listData.users.find(user => user.email === email)
       if (existingUser) {
-        console.log(`✓ Found existing Supabase user: ${email}`)
-        return existingUser
+        // Update user metadata and password
+        const { data: updateData } = await supabaseAdmin.auth.admin.updateUserById(
+          existingUser.id,
+          {
+            password,
+            user_metadata: metadata
+          }
+        )
+        return updateData?.user || existingUser
       }
-      
-      console.error(`Could not find existing user: ${email}`)
-      return null
     }
-    
-    // Other creation errors
-    console.error(`Error creating Supabase user ${email}:`, createError?.message || 'Unknown error')
+
+    console.error(`Failed to create/get user ${email}:`, createError)
     return null
-    
   } catch (error) {
-    console.error(`Failed to get or create Supabase user ${email}:`, error)
+    console.error(`Error with user ${email}:`, error)
     return null
   }
 }
 
 async function seed() {
-  console.log('🌱 Starting database seed...\n')
-
   try {
-    // Clear existing data (in reverse order of dependencies)
-    console.log('🧹 Cleaning existing data...')
+    console.log('🌱 Starting seed...\n')
+
+    // Clear existing data (optional - comment out if you want to preserve data)
+    console.log('🗑️  Clearing existing data...')
     await prisma.enrollment.deleteMany()
+    await prisma.activitySubmission.deleteMany()
+    await prisma.activity.deleteMany()
+    await prisma.activityTemplate.deleteMany()
     await prisma.challenge.deleteMany()
+    await prisma.inviteCode.deleteMany()
+    await prisma.pointsBalance.deleteMany()
+    await prisma.workspaceMembership.deleteMany()
     await prisma.user.deleteMany()
     await prisma.workspace.deleteMany()
-    console.log('✓ Existing data cleared\n')
 
     // Create workspaces
     console.log('🏢 Creating workspaces...')
-    const createdWorkspaces = await Promise.all(
-      workspaces.map(workspace =>
-        prisma.workspace.create({
-          data: workspace
-        })
-      )
-    )
-    console.log(`✓ Created ${createdWorkspaces.length} workspaces\n`)
+    const createdWorkspaces = []
+    for (const workspace of workspaces) {
+      const created = await prisma.workspace.create({
+        data: {
+          slug: workspace.slug,
+          name: workspace.name
+        }
+      })
+      createdWorkspaces.push(created)
+      console.log(`✓ Created workspace: ${workspace.name}`)
+    }
 
-    // Create admin users
-    console.log('👤 Creating admin users...')
+    // Create admin users with WorkspaceMemberships
+    console.log('\n👤 Creating admin users with multi-workspace memberships...')
     for (const admin of adminUsers) {
       // Get or create Supabase auth user
       const supabaseUser = await getOrCreateSupabaseUser(
@@ -174,31 +204,60 @@ async function seed() {
       )
 
       if (supabaseUser) {
-        // Create or update Prisma user linked to AllDigitalRewards workspace
-        const workspace = createdWorkspaces.find(w => w.slug === 'alldigitalrewards')
-        
-        // Use upsert to handle existing Prisma users
-        await prisma.user.upsert({
+        // Create Prisma user
+        const user = await prisma.user.upsert({
           where: { email: admin.email },
           update: {
             supabaseUserId: supabaseUser.id,
             role: ROLE_ADMIN,
-            workspaceId: workspace?.id
+            // Set legacy workspaceId to primary workspace for backward compatibility
+            workspaceId: createdWorkspaces.find(w => 
+              w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
+            )?.id
           },
           create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_ADMIN,
-            workspaceId: workspace?.id
+            // Set legacy workspaceId to primary workspace for backward compatibility
+            workspaceId: createdWorkspaces.find(w => 
+              w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
+            )?.id
           }
         })
-        console.log(`✓ Created/updated admin: ${admin.email}`)
+        
+        // Create WorkspaceMemberships
+        for (const membership of admin.workspaceMemberships) {
+          const workspace = createdWorkspaces.find(w => w.slug === membership.workspace)
+          if (workspace) {
+            await prisma.workspaceMembership.upsert({
+              where: {
+                userId_workspaceId: {
+                  userId: user.id,
+                  workspaceId: workspace.id
+                }
+              },
+              update: {
+                role: ROLE_ADMIN,
+                isPrimary: membership.isPrimary
+              },
+              create: {
+                userId: user.id,
+                workspaceId: workspace.id,
+                role: ROLE_ADMIN,
+                isPrimary: membership.isPrimary
+              }
+            })
+            console.log(`  ✓ Added ${admin.email} to ${workspace.name}${membership.isPrimary ? ' (primary)' : ''}`)
+          }
+        }
+        console.log(`✓ Created admin: ${admin.email} with ${admin.workspaceMemberships.length} workspace(s)`)
       } else {
         console.error(`❌ Failed to create/retrieve admin user: ${admin.email}`)
       }
     }
 
-    // Create participant users
+    // Create participant users with single workspace membership
     console.log('\n👥 Creating participant users...')
     for (const participant of participantUsers) {
       // Get or create Supabase auth user
@@ -213,7 +272,7 @@ async function seed() {
         const workspace = createdWorkspaces.find(w => w.slug === participant.workspace)
         
         // Use upsert to handle existing Prisma users
-        await prisma.user.upsert({
+        const user = await prisma.user.upsert({
           where: { email: participant.email },
           update: {
             supabaseUserId: supabaseUser.id,
@@ -227,6 +286,28 @@ async function seed() {
             workspaceId: workspace?.id
           }
         })
+        
+        // Create WorkspaceMembership for participants too
+        if (workspace) {
+          await prisma.workspaceMembership.upsert({
+            where: {
+              userId_workspaceId: {
+                userId: user.id,
+                workspaceId: workspace.id
+              }
+            },
+            update: {
+              role: ROLE_PARTICIPANT,
+              isPrimary: true
+            },
+            create: {
+              userId: user.id,
+              workspaceId: workspace.id,
+              role: ROLE_PARTICIPANT,
+              isPrimary: true
+            }
+          })
+        }
         console.log(`✓ Created/updated participant: ${participant.email}`)
       } else {
         console.error(`❌ Failed to create/retrieve participant user: ${participant.email}`)
@@ -303,18 +384,22 @@ async function seed() {
     const finalUserCount = await prisma.user.count()
     const finalChallengeCount = await prisma.challenge.count()
     const finalEnrollmentCount = await prisma.enrollment.count()
+    const finalMembershipCount = await prisma.workspaceMembership.count()
     
     console.log(`  - Workspaces: ${finalWorkspaceCount}`)
     console.log(`  - Users: ${finalUserCount} (${adminUsers.length} admins, ${participantUsers.length} participants)`)
+    console.log(`  - Workspace Memberships: ${finalMembershipCount}`)
     console.log(`  - Challenges: ${finalChallengeCount}`)
     console.log(`  - Enrollments: ${finalEnrollmentCount}`)
     
     console.log('\n🔑 Login Credentials:')
     console.log(`  Password for all users: ${DEFAULT_PASSWORD}`)
-    console.log('\n  Admin accounts:')
-    adminUsers.forEach(admin => {
-      console.log(`    - ${admin.email}`)
-    })
+    console.log('\n  Multi-workspace admin accounts:')
+    console.log(`    - krobinson@alldigitalrewards.com (3 workspaces)`)
+    console.log(`    - jfelke@alldigitalrewards.com (2 workspaces)`)
+    console.log(`    - jhoughtelin@alldigitalrewards.com (2 workspaces)`)
+    console.log('\n  Single-workspace admin:')
+    console.log(`    - kfelke@alldigitalrewards.com (AllDigitalRewards only)`)
     console.log('\n  Sample participant accounts:')
     console.log(`    - john.doe@acme.com (ACME)`)
     console.log(`    - sarah.jones@alldigitalrewards.com (AllDigitalRewards)`)
