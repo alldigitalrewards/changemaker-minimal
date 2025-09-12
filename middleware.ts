@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -54,8 +53,28 @@ export async function middleware(request: NextRequest) {
     if (slugMatch) {
       const slug = slugMatch[1]
 
-      // Check membership (compat: membership first, fallback to legacy)
-      const role = await getUserWorkspaceRole(user.id, slug)
+      // Check membership using Edge-compatible Supabase queries
+      const { data: membership } = await supabase
+        .from('WorkspaceMembership')
+        .select('role, workspace:Workspace!inner(slug)')
+        .eq('userId', user.id)
+        .eq('workspace.slug', slug)
+        .single()
+      
+      let role = membership?.role
+
+      // Fallback to legacy User.workspaceId check if no membership
+      if (!role) {
+        const { data: userData } = await supabase
+          .from('User')
+          .select('role, workspace:Workspace!inner(slug)')
+          .eq('supabaseUserId', user.id)
+          .eq('workspace.slug', slug)
+          .single()
+        
+        role = userData?.role
+      }
+
       if (!role) {
         return NextResponse.redirect(new URL('/workspaces', request.url))
       }

@@ -67,7 +67,7 @@ export class ResourceNotFoundError extends DatabaseError {
 
 export type WorkspaceWithCounts = Workspace & {
   _count: {
-    users: number
+    memberships: number
     challenges: number
   }
 }
@@ -112,7 +112,7 @@ export async function getWorkspaceBySlug(slug: string): Promise<WorkspaceWithCou
       include: {
         _count: {
           select: {
-            users: true,
+            memberships: true,
             challenges: true
           }
         }

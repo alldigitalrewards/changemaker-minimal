@@ -561,7 +561,12 @@ export interface InviteCodeWithDetails extends InviteCode {
 
 export interface WorkspaceMembershipWithDetails extends WorkspaceMembership {
   user: AppUser
-  workspace: Workspace
+  workspace: Workspace & {
+    _count?: {
+      memberships: number
+      challenges: number
+    }
+  }
 }
 
 // =============================================================================

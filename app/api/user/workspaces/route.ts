@@ -31,15 +31,18 @@ export async function GET() {
       )
     }
 
-    // Get user's accessible workspaces
-    const workspaces = await getUserAccessibleWorkspaces(dbUser.id)
+    // Get user's memberships with workspace details
+    const { listMemberships } = await import('@/lib/db/workspace-membership')
+    const memberships = await listMemberships(dbUser.id)
 
     return NextResponse.json({
-      workspaces: workspaces.map(workspace => ({
-        id: workspace.id,
-        slug: workspace.slug,
-        name: workspace.name,
-        // Include any additional workspace metadata if needed
+      workspaces: memberships.map(membership => ({
+        id: membership.workspace.id,
+        slug: membership.workspace.slug,
+        name: membership.workspace.name,
+        role: membership.role,
+        isPrimary: membership.isPrimary,
+        joinedAt: membership.joinedAt,
       }))
     })
 

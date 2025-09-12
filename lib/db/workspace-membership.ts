@@ -43,7 +43,16 @@ export async function listMemberships(userId: string): Promise<WorkspaceMembersh
       },
       include: {
         user: true,
-        workspace: true
+        workspace: {
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                challenges: true
+              }
+            }
+          }
+        }
       },
       orderBy: [
         { isPrimary: 'desc' }, // Primary workspace first
@@ -69,7 +78,16 @@ export async function listWorkspaceMemberships(workspaceId: string): Promise<Wor
       },
       include: {
         user: true,
-        workspace: true
+        workspace: {
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                challenges: true
+              }
+            }
+          }
+        }
       },
       orderBy: [
         { role: 'asc' },      // Admins first
@@ -117,6 +135,22 @@ export async function hasWorkspaceAccess(
 }
 
 /**
+ * Check if a user is the owner of a workspace (primary admin)
+ */
+export async function isWorkspaceOwner(
+  userId: string, 
+  workspaceId: string
+): Promise<boolean> {
+  try {
+    const membership = await getMembership(userId, workspaceId)
+    return membership?.role === 'ADMIN' && membership?.isPrimary === true
+  } catch (error) {
+    console.error('Error checking workspace ownership:', error)
+    return false
+  }
+}
+
+/**
  * Get user's primary workspace membership
  */
 export async function getPrimaryMembership(userId: string): Promise<WorkspaceMembershipWithDetails | null> {
@@ -128,7 +162,16 @@ export async function getPrimaryMembership(userId: string): Promise<WorkspaceMem
       },
       include: {
         user: true,
-        workspace: true
+        workspace: {
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                challenges: true
+              }
+            }
+          }
+        }
       }
     })
 
@@ -298,5 +341,50 @@ export async function getWorkspaceMembershipCount(workspaceId: string): Promise<
   } catch (error) {
     console.error('Error getting workspace membership count:', error)
     return { total: 0, admins: 0, participants: 0 }
+  }
+}
+
+/**
+ * Ensure a workspace has a primary admin (owner)
+ * Used for migration from ownerId system to membership-based ownership
+ */
+export async function ensureWorkspaceOwnership(workspaceId: string): Promise<boolean> {
+  try {
+    // Check if workspace already has a primary admin (owner)
+    const existingOwner = await prisma.workspaceMembership.findFirst({
+      where: {
+        workspaceId,
+        role: 'ADMIN',
+        isPrimary: true
+      }
+    })
+
+    if (existingOwner) {
+      return true // Already has an owner
+    }
+
+    // Find the first admin to make primary
+    const firstAdmin = await prisma.workspaceMembership.findFirst({
+      where: {
+        workspaceId,
+        role: 'ADMIN'
+      },
+      orderBy: {
+        joinedAt: 'asc' // Oldest admin first
+      }
+    })
+
+    if (firstAdmin) {
+      // Make the first admin the primary owner
+      await setPrimaryMembership(firstAdmin.userId, workspaceId)
+      console.log(`✓ Set primary ownership for workspace ${workspaceId} to user ${firstAdmin.userId}`)
+      return true
+    }
+
+    console.warn(`⚠️ No admin found for workspace ${workspaceId}`)
+    return false
+  } catch (error) {
+    console.error('Error ensuring workspace ownership:', error)
+    return false
   }
 }
