@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { syncSupabaseUser } from '@/lib/auth/sync-user'
+import { syncLegacyMembership } from '@/lib/db/workspace-compatibility'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest) {
     }
 
     await syncSupabaseUser(user)
+    // Backfill legacy workspaceId into a membership if present (compat)
+    await syncLegacyMembership(user.id)
     
     return NextResponse.json({ 
       success: true, 

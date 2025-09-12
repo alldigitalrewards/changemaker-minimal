@@ -53,13 +53,17 @@ export async function middleware(request: NextRequest) {
     const slugMatch = pathname.match(/^\/w\/([^\/]+)/)
     if (slugMatch) {
       const slug = slugMatch[1]
-      
-      // Set workspace context headers for server components
-      // Role checking will be done in server components that have access to Prisma
+
+      // Check membership (compat: membership first, fallback to legacy)
+      const role = await getUserWorkspaceRole(user.id, slug)
+      if (!role) {
+        return NextResponse.redirect(new URL('/workspaces', request.url))
+      }
+
+      // Set workspace context headers
       response.headers.set('x-workspace-slug', slug)
       response.headers.set('x-user-id', user.id)
-      
-      // Server components will handle role-based redirects
+      response.headers.set('x-workspace-role', role)
     }
 
     return response

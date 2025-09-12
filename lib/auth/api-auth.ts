@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getUserBySupabaseId, getWorkspaceBySlug, verifyWorkspaceAdmin } from '@/lib/db/queries'
+import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
 import type { User } from '@supabase/supabase-js'
 import type { User as PrismaUser, Workspace } from '@prisma/client'
+import type { Role } from '@/lib/types'
 
 export interface AuthenticatedUser {
   supabaseUser: User
@@ -12,6 +14,7 @@ export interface AuthenticatedUser {
 export interface WorkspaceContext {
   workspace: Workspace
   user: AuthenticatedUser
+  role?: Role
 }
 
 /**
@@ -50,12 +53,14 @@ export async function requireWorkspaceAccess(slug: string): Promise<WorkspaceCon
   if (!workspace) {
     throw NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
   }
-
-  if (user.dbUser.workspaceId !== workspace.id) {
+  
+  // Membership-aware access check with legacy fallback
+  const role = await getUserWorkspaceRole(user.supabaseUser.id, slug)
+  if (!role) {
     throw NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 })
   }
 
-  return { workspace, user }
+  return { workspace, user, role }
 }
 
 /**
@@ -64,9 +69,11 @@ export async function requireWorkspaceAccess(slug: string): Promise<WorkspaceCon
  */
 export async function requireWorkspaceAdmin(slug: string): Promise<WorkspaceContext> {
   const context = await requireWorkspaceAccess(slug)
-  
-  const isAdmin = await verifyWorkspaceAdmin(context.user.dbUser.id, context.workspace.id)
-  if (!isAdmin) {
+
+  // Prefer membership-derived role if available; verify with DB helper as defense in depth
+  const roleIsAdmin = context.role === 'ADMIN'
+  const dbSaysAdmin = await verifyWorkspaceAdmin(context.user.dbUser.id, context.workspace.id)
+  if (!(roleIsAdmin || dbSaysAdmin)) {
     throw NextResponse.json({ 
       error: 'Admin privileges required for this operation' 
     }, { status: 403 })
