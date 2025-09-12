@@ -43,7 +43,16 @@ export async function listMemberships(userId: string): Promise<WorkspaceMembersh
       },
       include: {
         user: true,
-        workspace: true
+        workspace: {
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                challenges: true
+              }
+            }
+          }
+        }
       },
       orderBy: [
         { isPrimary: 'desc' }, // Primary workspace first
@@ -69,7 +78,16 @@ export async function listWorkspaceMemberships(workspaceId: string): Promise<Wor
       },
       include: {
         user: true,
-        workspace: true
+        workspace: {
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                challenges: true
+              }
+            }
+          }
+        }
       },
       orderBy: [
         { role: 'asc' },      // Admins first
@@ -128,7 +146,16 @@ export async function getPrimaryMembership(userId: string): Promise<WorkspaceMem
       },
       include: {
         user: true,
-        workspace: true
+        workspace: {
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                challenges: true
+              }
+            }
+          }
+        }
       }
     })
 
