@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
+import { createMembership } from "@/lib/db/workspace-membership"
 
 export async function createWorkspace(formData: FormData, userId: string) {
   const name = formData.get("name") as string
@@ -17,16 +18,20 @@ export async function createWorkspace(formData: FormData, userId: string) {
       throw new Error("Slug already taken")
     }
 
-    // Create workspace and update user
+    // Create workspace (without direct user connection)
     const workspace = await prisma.workspace.create({
       data: {
         name,
-        slug,
-        users: {
-          connect: { id: userId }
-        }
+        slug
       }
     })
+
+    // Create membership for creator as admin and set as primary
+    const membership = await createMembership(userId, workspace.id, 'ADMIN', true)
+    
+    if (!membership) {
+      throw new Error("Failed to create workspace membership")
+    }
 
     revalidatePath("/workspaces")
     return { success: true, slug: workspace.slug }
@@ -38,37 +43,76 @@ export async function createWorkspace(formData: FormData, userId: string) {
 
 export async function joinWorkspace(userId: string, workspaceId: string) {
   try {
-    // Update user's workspace
-    await prisma.user.update({
-      where: { id: userId },
-      data: { workspaceId }
-    })
-
-    // Get workspace slug for redirect
+    // Get workspace details
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { slug: true }
     })
 
+    if (!workspace) {
+      throw new Error("Workspace not found")
+    }
+
+    // Create membership as participant (not primary unless it's their first)
+    const existingMemberships = await prisma.workspaceMembership.count({
+      where: { userId }
+    })
+    
+    const isFirstWorkspace = existingMemberships === 0
+    const membership = await createMembership(userId, workspaceId, 'PARTICIPANT', isFirstWorkspace)
+    
+    if (!membership) {
+      throw new Error("Failed to create workspace membership")
+    }
+
     revalidatePath("/workspaces")
-    return { success: true, slug: workspace?.slug }
+    return { success: true, slug: workspace.slug }
   } catch (error) {
     console.error("Error joining workspace:", error)
     return { success: false, error: "Failed to join workspace" }
   }
 }
 
-export async function leaveWorkspace(userId: string) {
+export async function leaveWorkspace(userId: string, workspaceId: string) {
   try {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { workspaceId: null }
-    })
+    const { removeMembership, listMemberships, setPrimaryMembership } = await import("@/lib/db/workspace-membership")
+    
+    // Remove the membership
+    const removed = await removeMembership(userId, workspaceId)
+    
+    if (!removed) {
+      throw new Error("Failed to remove workspace membership")
+    }
+
+    // If this was the primary workspace, set another one as primary
+    const remainingMemberships = await listMemberships(userId)
+    if (remainingMemberships.length > 0) {
+      // Set the first remaining workspace as primary
+      await setPrimaryMembership(userId, remainingMemberships[0].workspaceId)
+    }
 
     revalidatePath("/workspaces")
     return { success: true }
   } catch (error) {
     console.error("Error leaving workspace:", error)
     return { success: false, error: "Failed to leave workspace" }
+  }
+}
+
+export async function setPrimaryWorkspace(userId: string, workspaceId: string) {
+  try {
+    const { setPrimaryMembership } = await import("@/lib/db/workspace-membership")
+    
+    const updated = await setPrimaryMembership(userId, workspaceId)
+    
+    if (!updated) {
+      throw new Error("Failed to set primary workspace")
+    }
+
+    revalidatePath("/workspaces")
+    return { success: true }
+  } catch (error) {
+    console.error("Error setting primary workspace:", error)
+    return { success: false, error: "Failed to set primary workspace" }
   }
 }
