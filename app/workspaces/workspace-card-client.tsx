@@ -13,7 +13,7 @@ interface WorkspaceCardProps {
     id: string
     name: string
     slug: string
-    ownerId?: string
+    ownerId: string | null
     _count: {
       users: number
       challenges: number

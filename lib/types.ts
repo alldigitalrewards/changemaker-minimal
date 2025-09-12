@@ -60,7 +60,7 @@ export interface Workspace {
   readonly id: WorkspaceId
   readonly slug: WorkspaceSlug
   readonly name: string
-  readonly ownerId?: UserId
+  readonly ownerId: UserId | null
   readonly userCount?: number
   readonly challengeCount?: number
   readonly createdAt: Date
