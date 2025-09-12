@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { LogOut, Settings, User, ChevronDown, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
+import WorkspaceSwitcher from '@/components/workspace-switcher';
 
 interface User {
   email?: string;
@@ -75,8 +76,11 @@ export default function DashboardHeader({
             </div>
           </div>
 
-          {/* Right side - User menu */}
+          {/* Right side - Workspace switcher, role badge, user menu */}
           <div className="flex items-center space-x-4">
+            {/* Workspace Switcher */}
+            <WorkspaceSwitcher />
+
             {/* Role badge */}
             <div className={`px-3 py-1 text-xs font-medium rounded-full ${
               role === 'ADMIN' 

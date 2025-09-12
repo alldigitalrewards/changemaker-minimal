@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -48,19 +49,21 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login', request.url))
     }
 
-    // Handle workspace role-based access
+    // Handle workspace slug extraction and pass to server components
     const slugMatch = pathname.match(/^\/w\/([^\/]+)/)
     if (slugMatch) {
       const slug = slugMatch[1]
-      
-      // For admin routes, defer role checking to the API layer
-      // This prevents the middleware from blocking legitimate admin access
-      // The actual role validation happens in the API routes using database queries
-      if (pathname.includes('/admin/')) {
-        // Let the API routes handle admin verification using database roles
-        // If user lacks admin access, they'll be redirected by the page component
-        return response
+
+      // Check membership (compat: membership first, fallback to legacy)
+      const role = await getUserWorkspaceRole(user.id, slug)
+      if (!role) {
+        return NextResponse.redirect(new URL('/workspaces', request.url))
       }
+
+      // Set workspace context headers
+      response.headers.set('x-workspace-slug', slug)
+      response.headers.set('x-user-id', user.id)
+      response.headers.set('x-workspace-role', role)
     }
 
     return response
