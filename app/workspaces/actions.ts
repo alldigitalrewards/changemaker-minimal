@@ -18,11 +18,12 @@ export async function createWorkspace(formData: FormData, userId: string) {
       throw new Error("Slug already taken")
     }
 
-    // Create workspace (without direct user connection)
+    // Create workspace with owner
     const workspace = await prisma.workspace.create({
       data: {
         name,
-        slug
+        slug,
+        ownerId: userId
       }
     })
 
@@ -77,6 +78,20 @@ export async function leaveWorkspace(userId: string, workspaceId: string) {
   try {
     const { removeMembership, listMemberships, setPrimaryMembership } = await import("@/lib/db/workspace-membership")
     
+    // Check if user is the workspace owner
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true }
+    })
+
+    if (!workspace) {
+      throw new Error("Workspace not found")
+    }
+
+    if (workspace.ownerId === userId) {
+      throw new Error("Workspace owner cannot leave. Please transfer ownership first.")
+    }
+
     // Remove the membership
     const removed = await removeMembership(userId, workspaceId)
     
@@ -95,7 +110,7 @@ export async function leaveWorkspace(userId: string, workspaceId: string) {
     return { success: true }
   } catch (error) {
     console.error("Error leaving workspace:", error)
-    return { success: false, error: "Failed to leave workspace" }
+    return { success: false, error: error instanceof Error ? error.message : "Failed to leave workspace" }
   }
 }
 
