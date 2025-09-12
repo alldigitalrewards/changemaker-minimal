@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { joinWorkspace } from "./actions"
 import { cn } from "@/lib/utils"
+import { Plus, UserPlus } from "lucide-react"
 
 interface JoinWorkspaceDialogProps {
   userId?: string
@@ -52,7 +53,8 @@ export default function JoinWorkspaceDialog({
 
   if (!userId) {
     return (
-      <Button variant="outline" disabled className={className}>
+      <Button variant="outline" disabled className={cn("w-full", className)}>
+        <UserPlus className="h-4 w-4 mr-2" />
         Login to Join
       </Button>
     )
@@ -61,13 +63,27 @@ export default function JoinWorkspaceDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className={cn("w-full", className)}>
+        <Button 
+          variant={workspaceName ? "outline" : "default"}
+          className={cn(
+            "w-full min-h-[40px] focus:ring-2 focus:ring-coral-500 focus:ring-offset-2", 
+            workspaceName 
+              ? "hover:bg-coral-50 hover:border-coral-300" 
+              : "bg-coral-500 hover:bg-coral-600 text-white",
+            className
+          )}
+          aria-label={workspaceName ? `Join ${workspaceName} workspace` : "Join an existing workspace"}
+        >
+          <UserPlus className="h-4 w-4 mr-2" />
           {workspaceName ? `Join ${workspaceName}` : "Join Workspace"}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Join {workspaceName || "Workspace"}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-coral-500" />
+            Join {workspaceName || "Workspace"}
+          </DialogTitle>
           <DialogDescription>
             You will join this workspace as a participant. You can browse and enroll in challenges.
           </DialogDescription>
@@ -76,7 +92,11 @@ export default function JoinWorkspaceDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleJoin} disabled={loading}>
+          <Button 
+            onClick={handleJoin} 
+            disabled={loading}
+            className="bg-coral-500 hover:bg-coral-600"
+          >
             {loading ? "Joining..." : "Join Workspace"}
           </Button>
         </DialogFooter>

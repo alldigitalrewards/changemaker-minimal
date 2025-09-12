@@ -1,12 +1,12 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { setPrimaryWorkspace, leaveWorkspace } from "./actions"
+import { setPrimaryWorkspace } from "./actions"
+import { Star, Users, Trophy, Crown } from "lucide-react"
 
 interface WorkspaceCardProps {
   workspace: {
@@ -44,16 +44,9 @@ export default function WorkspaceCard({
     }
   }
 
-  const handleButtonClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (dashboardPath && !isLoading) {
-      router.push(dashboardPath)
-    }
-  }
-
   const handleSetPrimary = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!userId || isPrimary || isLoading) return
+    if (!userId || isLoading) return
     
     setIsLoading(true)
     try {
@@ -68,113 +61,82 @@ export default function WorkspaceCard({
     }
   }
 
-  const handleLeave = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!userId || isPrimary || isLoading || isOwner) return
-    
-    if (!confirm(`Are you sure you want to leave "${workspace.name}"?`)) {
-      return
-    }
-    
-    setIsLoading(true)
-    try {
-      const result = await leaveWorkspace(userId, workspace.id)
-      if (result.success) {
-        router.refresh()
-      } else {
-        alert(result.error || 'Failed to leave workspace')
-      }
-    } catch (error) {
-      console.error('Error leaving workspace:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   return (
     <Card 
       className={cn(
-        "hover:shadow-md transition-shadow",
+        "hover:shadow-md transition-shadow min-h-[240px] flex flex-col relative",
         isUserWorkspace && "cursor-pointer hover:border-coral-500/50",
-        isPrimary && "ring-2 ring-coral-200"
+        isPrimary && "ring-2 ring-coral-200 shadow-lg"
       )}
       onClick={handleCardClick}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              {workspace.name}
-              {isPrimary && (
-                <span className="text-xs bg-coral-100 text-coral-700 px-2 py-1 rounded font-medium">
-                  Primary
-                </span>
-              )}
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg flex items-center gap-2 mb-1">
+              <span className="truncate">{workspace.name}</span>
               {isOwner && (
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
-                  Owner
-                </span>
+                <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" title="Owner" />
               )}
             </CardTitle>
-            <CardDescription>/{workspace.slug}</CardDescription>
+            <CardDescription className="flex items-center gap-1">
+              <span>/{workspace.slug}</span>
+              {isUserWorkspace && userRole === 'ADMIN' && !isOwner && (
+                <span className="text-xs text-coral-600 font-medium bg-coral-50 px-1.5 py-0.5 rounded ml-2">
+                  Admin
+                </span>
+              )}
+            </CardDescription>
           </div>
-          {isUserWorkspace && userRole === 'ADMIN' && (
-            <div className="text-xs text-coral-600 font-medium bg-coral-50 px-2 py-1 rounded">
-              Admin
-            </div>
+          
+          {/* Primary workspace star icon */}
+          {isUserWorkspace && userId && (
+            <button
+              onClick={handleSetPrimary}
+              disabled={isLoading}
+              className={cn(
+                "p-1.5 rounded-full transition-colors hover:bg-gray-100 flex-shrink-0",
+                isPrimary 
+                  ? "text-coral-500 hover:text-coral-600" 
+                  : "text-gray-300 hover:text-coral-400"
+              )}
+              title={isPrimary ? "Primary workspace" : "Set as primary"}
+              aria-label={isPrimary ? "Primary workspace" : "Set as primary workspace"}
+            >
+              <Star 
+                className={cn(
+                  "h-5 w-5 transition-colors",
+                  isPrimary && "fill-current"
+                )} 
+              />
+            </button>
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-sm space-y-1 text-gray-600">
-          <p>{workspace._count.users} members</p>
-          <p>{workspace._count.challenges} challenges</p>
-        </div>
-        {isUserWorkspace ? (
-          <div className="mt-3 space-y-2">
-            <Button 
-              variant="default" 
-              className="w-full"
-              onClick={handleButtonClick}
-              disabled={isLoading}
-            >
-              Go to Dashboard
-            </Button>
-            
-            <div className="flex gap-2">
-              {!isPrimary && !isOwner && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSetPrimary}
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  {isLoading ? 'Setting...' : 'Set as Primary'}
-                </Button>
-              )}
-              
-              {!isPrimary && !isOwner && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLeave}
-                  disabled={isLoading}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                >
-                  {isLoading ? 'Leaving...' : 'Leave'}
-                </Button>
-              )}
-            </div>
+      
+      <CardContent className="flex flex-col flex-1">
+        {/* Workspace stats with icons */}
+        <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+          <div className="flex items-center gap-1.5">
+            <Users className="h-4 w-4 text-gray-400" />
+            <span>{workspace._count.users} members</span>
           </div>
-        ) : (
-          <JoinWorkspaceDialog 
-            userId={userId} 
-            workspaceId={workspace.id}
-            workspaceName={workspace.name}
-            className="mt-3"
-          />
-        )}
+          <div className="flex items-center gap-1.5">
+            <Trophy className="h-4 w-4 text-gray-400" />
+            <span>{workspace._count.challenges} challenges</span>
+          </div>
+        </div>
+        
+        <div className="mt-auto">
+          {!isUserWorkspace && (
+            <JoinWorkspaceDialog 
+              userId={userId} 
+              workspaceId={workspace.id}
+              workspaceName={workspace.name}
+            />
+          )}
+        </div>
       </CardContent>
     </Card>
   )
