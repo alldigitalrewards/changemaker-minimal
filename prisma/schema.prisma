@@ -45,12 +45,14 @@ model Workspace {
   id                String               @id @default(uuid()) @db.Uuid
   slug              String               @unique
   name              String
+  ownerId           String?              @db.Uuid
   users             User[]
   challenges        Challenge[]
   activityTemplates ActivityTemplate[]
   pointsBalances    PointsBalance[]
   inviteCodes       InviteCode[]
   memberships       WorkspaceMembership[]
+  owner             User?                @relation("WorkspaceOwner", fields: [ownerId], references: [id])
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt @default(now())
 }
@@ -68,6 +70,7 @@ model User {
   activitySubmissions ActivitySubmission[]
   pointsBalances      PointsBalance[]
   createdInvites      InviteCode[]          @relation("InviteCreator")
+  ownedWorkspaces     Workspace[]           @relation("WorkspaceOwner")
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt @default(now())
 
