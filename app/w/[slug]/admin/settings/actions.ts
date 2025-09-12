@@ -70,3 +70,44 @@ export async function deleteWorkspace(formData: FormData) {
     throw error
   }
 }
+
+export async function leaveWorkspace(formData: FormData) {
+  const userId = formData.get("userId") as string
+  const workspaceId = formData.get("workspaceId") as string
+
+  try {
+    // Check if user is the workspace owner
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true }
+    })
+
+    if (!workspace) {
+      throw new Error("Workspace not found")
+    }
+
+    if (workspace.ownerId === userId) {
+      throw new Error("Workspace owner cannot leave. Please transfer ownership first.")
+    }
+
+    // Remove the membership using the existing function
+    const { removeMembership, listMemberships, setPrimaryMembership } = await import("@/lib/db/workspace-membership")
+    
+    const removed = await removeMembership(userId, workspaceId)
+    
+    if (!removed) {
+      throw new Error("Failed to remove workspace membership")
+    }
+
+    // If this was the primary workspace, set another one as primary
+    const remainingMemberships = await listMemberships(userId)
+    if (remainingMemberships.length > 0) {
+      await setPrimaryMembership(userId, remainingMemberships[0].workspaceId)
+    }
+
+    redirect("/workspaces")
+  } catch (error) {
+    console.error("Error leaving workspace:", error)
+    throw error
+  }
+}

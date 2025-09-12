@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { updateWorkspace, deleteWorkspace } from "./actions"
+import { updateWorkspace, deleteWorkspace, leaveWorkspace } from "./actions"
+import { getUserBySupabaseId } from "@/lib/db/queries"
 
 export default async function AdminSettingsPage({ 
   params 
@@ -21,6 +22,12 @@ export default async function AdminSettingsPage({
     redirect("/auth/login")
   }
 
+  // Get database user
+  const dbUser = await getUserBySupabaseId(user.id)
+  if (!dbUser) {
+    redirect("/auth/login")
+  }
+
   const role = await getUserWorkspaceRole(slug)
   if (!role || role !== "ADMIN") {
     redirect("/workspaces")
@@ -30,6 +37,19 @@ export default async function AdminSettingsPage({
   if (!workspace) {
     redirect("/workspaces")
   }
+
+  // Check if current user is workspace owner
+  const fullWorkspace = await prisma.workspace.findUnique({
+    where: { id: workspace.id },
+    select: { 
+      id: true,
+      name: true,
+      slug: true,
+      ownerId: true
+    }
+  })
+
+  const isOwner = fullWorkspace?.ownerId === dbUser.id
 
   // Get workspace statistics
   const stats = await prisma.workspace.findUnique({
@@ -111,27 +131,64 @@ export default async function AdminSettingsPage({
           </CardContent>
         </Card>
 
-        {/* Danger Zone */}
-        <Card className="border-red-200">
+        {/* Membership */}
+        <Card>
           <CardHeader>
-            <CardTitle className="text-red-600">Danger Zone</CardTitle>
-            <CardDescription>Irreversible actions for your workspace</CardDescription>
+            <CardTitle>Workspace Membership</CardTitle>
+            <CardDescription>Manage your membership in this workspace</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={deleteWorkspace}>
-              <input type="hidden" name="workspaceId" value={workspace.id} />
+            {isOwner ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800 font-medium">
+                    You are the owner of this workspace
+                  </p>
+                  <p className="text-sm text-blue-600 mt-1">
+                    As the workspace owner, you cannot leave this workspace. To leave, you must first transfer ownership to another admin.
+                  </p>
+                </div>
+              </div>
+            ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">
-                  Once you delete a workspace, there is no going back. This will permanently delete
-                  the workspace, all challenges, and remove all participant enrollments.
+                  You are an admin member of this workspace. You can leave this workspace at any time.
                 </p>
-                <Button type="submit" variant="destructive">
-                  Delete Workspace
-                </Button>
+                <form action={leaveWorkspace}>
+                  <input type="hidden" name="userId" value={dbUser.id} />
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <Button type="submit" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                    Leave Workspace
+                  </Button>
+                </form>
               </div>
-            </form>
+            )}
           </CardContent>
         </Card>
+
+        {/* Danger Zone - Only for owners */}
+        {isOwner && (
+          <Card className="border-red-200">
+            <CardHeader>
+              <CardTitle className="text-red-600">Danger Zone</CardTitle>
+              <CardDescription>Irreversible actions for your workspace</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={deleteWorkspace}>
+                <input type="hidden" name="workspaceId" value={workspace.id} />
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Once you delete a workspace, there is no going back. This will permanently delete
+                    the workspace, all challenges, and remove all participant enrollments.
+                  </p>
+                  <Button type="submit" variant="destructive">
+                    Delete Workspace
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
