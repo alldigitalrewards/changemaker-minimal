@@ -46,33 +46,40 @@ export default async function WorkspacesPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        {/* Enhanced Header with actions */}
-        <div className="flex flex-col lg:flex-row justify-between gap-6 mb-8">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-3">
-              <Building className="h-8 w-8 text-coral-500" />
-              <h1 className="text-3xl font-bold">Workspaces</h1>
-            </div>
-            <p className="text-gray-600 text-lg">
-              Manage your workspaces and discover new opportunities
-            </p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            {/* Action buttons */}
-            <div className="flex gap-3">
-              <CreateWorkspaceDialog 
-                userId={dbUser.id} 
-                currentWorkspace={null}
-              />
-              <JoinWorkspaceDialog userId={dbUser.id} />
+      {/* Professional Header */}
+      <div className="bg-white border-b border-gray-100 -mx-4 px-4 mb-8">
+        <div className="py-6">
+          <div className="flex flex-col lg:flex-row justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-coral-100 rounded-lg">
+                  <Building className="h-6 w-6 text-coral-600" />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900">Workspaces</h1>
+              </div>
+              <p className="text-gray-600">
+                Manage your workspaces and discover new opportunities
+              </p>
             </div>
             
-            {/* User info */}
-            <div className="flex items-center gap-3 pl-3 sm:border-l border-gray-200">
-              <span className="text-sm text-gray-500">{user.email}</span>
-              <LogoutButton />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                <CreateWorkspaceDialog 
+                  userId={dbUser.id} 
+                  currentWorkspace={null}
+                />
+                <JoinWorkspaceDialog userId={dbUser.id} />
+              </div>
+              
+              {/* User info */}
+              <div className="flex items-center gap-3 pl-0 sm:pl-4 sm:border-l border-gray-200">
+                <div className="text-right">
+                  <div className="text-sm font-medium text-gray-900">{user.email}</div>
+                  <div className="text-xs text-gray-500">Signed in</div>
+                </div>
+                <LogoutButton />
+              </div>
             </div>
           </div>
         </div>
@@ -81,13 +88,15 @@ export default async function WorkspacesPage() {
       <div className="grid gap-8">
         {/* User's Workspaces */}
         {memberships.length > 0 ? (
-          <Card className="border-coral-500/20 bg-coral-50/30">
-            <CardHeader>
+          <Card className="border-coral-200 bg-gradient-to-br from-coral-50/50 to-white shadow-sm">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <Building className="h-6 w-6 text-coral-600" />
+                <div className="p-2 bg-coral-100 rounded-lg">
+                  <Building className="h-5 w-5 text-coral-600" />
+                </div>
                 <div>
-                  <CardTitle className="text-coral-900">Your Workspaces</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-coral-900 text-xl">Your Workspaces</CardTitle>
+                  <CardDescription className="text-coral-700">
                     Workspaces you are a member of ({memberships.length} total)
                   </CardDescription>
                 </div>
@@ -138,12 +147,14 @@ export default async function WorkspacesPage() {
         )}
 
         {/* Available Workspaces */}
-        <Card>
-          <CardHeader>
+        <Card className="border-gray-200 shadow-sm">
+          <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <Search className="h-6 w-6 text-gray-600" />
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Search className="h-5 w-5 text-gray-600" />
+              </div>
               <div>
-                <CardTitle>Discover Workspaces</CardTitle>
+                <CardTitle className="text-xl">Discover Workspaces</CardTitle>
                 <CardDescription>Browse and join available workspaces</CardDescription>
               </div>
             </div>

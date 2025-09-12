@@ -65,9 +65,9 @@ export default function WorkspaceCard({
   return (
     <Card 
       className={cn(
-        "hover:shadow-md transition-shadow min-h-[240px] flex flex-col relative",
-        isUserWorkspace && "cursor-pointer hover:border-coral-500/50",
-        isPrimary && "ring-2 ring-coral-200 shadow-lg"
+        "hover:shadow-lg transition-all duration-200 min-h-[240px] flex flex-col relative border-gray-200",
+        isUserWorkspace && "cursor-pointer hover:border-coral-400 hover:-translate-y-1",
+        isPrimary && "ring-2 ring-coral-300 shadow-xl border-coral-200 bg-gradient-to-br from-white to-coral-50/30"
       )}
       onClick={handleCardClick}
     >
@@ -116,15 +116,17 @@ export default function WorkspaceCard({
       </CardHeader>
       
       <CardContent className="flex flex-col flex-1">
-        {/* Workspace stats with icons */}
-        <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-          <div className="flex items-center gap-1.5">
-            <Users className="h-4 w-4 text-gray-400" />
-            <span>{workspace._count.users} members</span>
+        {/* Workspace stats with enhanced styling */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 rounded-md">
+            <Users className="h-4 w-4 text-coral-500" />
+            <span className="text-sm font-medium text-gray-700">{workspace._count.users}</span>
+            <span className="text-xs text-gray-500">members</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Trophy className="h-4 w-4 text-gray-400" />
-            <span>{workspace._count.challenges} challenges</span>
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 rounded-md">
+            <Trophy className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-medium text-gray-700">{workspace._count.challenges}</span>
+            <span className="text-xs text-gray-500">challenges</span>
           </div>
         </div>
         

@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
-import { createMembership, isWorkspaceOwner } from "@/lib/db/workspace-membership"
+import { createMembership } from "@/lib/db/workspace-membership"
 
 export async function createWorkspace(formData: FormData, userId: string) {
   const name = formData.get("name") as string
@@ -73,38 +73,6 @@ export async function joinWorkspace(userId: string, workspaceId: string) {
   }
 }
 
-export async function leaveWorkspace(userId: string, workspaceId: string) {
-  try {
-    const { removeMembership, listMemberships, setPrimaryMembership } = await import("@/lib/db/workspace-membership")
-    
-    // Check if user is the workspace owner
-    const isOwner = await isWorkspaceOwner(userId, workspaceId)
-
-    if (isOwner) {
-      throw new Error("Workspace owner cannot leave. Please transfer ownership first.")
-    }
-
-    // Remove the membership
-    const removed = await removeMembership(userId, workspaceId)
-    
-    if (!removed) {
-      throw new Error("Failed to remove workspace membership")
-    }
-
-    // If this was the primary workspace, set another one as primary
-    const remainingMemberships = await listMemberships(userId)
-    if (remainingMemberships.length > 0) {
-      // Set the first remaining workspace as primary
-      await setPrimaryMembership(userId, remainingMemberships[0].workspaceId)
-    }
-
-    revalidatePath("/workspaces")
-    return { success: true }
-  } catch (error) {
-    console.error("Error leaving workspace:", error)
-    return { success: false, error: error instanceof Error ? error.message : "Failed to leave workspace" }
-  }
-}
 
 export async function setPrimaryWorkspace(userId: string, workspaceId: string) {
   try {
