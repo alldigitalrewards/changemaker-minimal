@@ -81,6 +81,25 @@ export function canAccessParticipantRoutes(userRole: Role): boolean {
   return isParticipant(userRole) || isAdmin(userRole);
 }
 
+// Workspace ownership checks
+export function isWorkspaceOwner(userRole: Role, userId: string, workspaceOwnerId?: string): boolean {
+  return isAdmin(userRole) && workspaceOwnerId === userId;
+}
+
+export function canLeaveWorkspace(userRole: Role, userId: string, workspaceOwnerId?: string): boolean {
+  // Admins can leave unless they're the owner
+  if (isAdmin(userRole)) {
+    return workspaceOwnerId !== userId;
+  }
+  // Participants can always leave
+  return isParticipant(userRole);
+}
+
+export function canDeleteWorkspace(userRole: Role, userId: string, workspaceOwnerId?: string): boolean {
+  // Only the workspace owner can delete the workspace
+  return isWorkspaceOwner(userRole, userId, workspaceOwnerId);
+}
+
 // Path-based access control for workspace routes
 export function getAccessiblePaths(userRole: Role, workspaceSlug: string) {
   const basePath = `/w/${workspaceSlug}`;
