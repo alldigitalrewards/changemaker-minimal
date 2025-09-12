@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
+import { isWorkspaceOwner } from "@/lib/db/workspace-membership"
 
 export async function updateWorkspace(formData: FormData) {
   const workspaceId = formData.get("workspaceId") as string
@@ -77,16 +78,9 @@ export async function leaveWorkspace(formData: FormData) {
 
   try {
     // Check if user is the workspace owner
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { ownerId: true }
-    })
+    const isOwner = await isWorkspaceOwner(userId, workspaceId)
 
-    if (!workspace) {
-      throw new Error("Workspace not found")
-    }
-
-    if (workspace.ownerId === userId) {
+    if (isOwner) {
       throw new Error("Workspace owner cannot leave. Please transfer ownership first.")
     }
 

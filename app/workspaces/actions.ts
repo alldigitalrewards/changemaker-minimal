@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
-import { createMembership } from "@/lib/db/workspace-membership"
+import { createMembership, isWorkspaceOwner } from "@/lib/db/workspace-membership"
 
 export async function createWorkspace(formData: FormData, userId: string) {
   const name = formData.get("name") as string
@@ -18,12 +18,11 @@ export async function createWorkspace(formData: FormData, userId: string) {
       throw new Error("Slug already taken")
     }
 
-    // Create workspace with owner
+    // Create workspace 
     const workspace = await prisma.workspace.create({
       data: {
         name,
-        slug,
-        ownerId: userId
+        slug
       }
     })
 
@@ -79,16 +78,9 @@ export async function leaveWorkspace(userId: string, workspaceId: string) {
     const { removeMembership, listMemberships, setPrimaryMembership } = await import("@/lib/db/workspace-membership")
     
     // Check if user is the workspace owner
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { ownerId: true }
-    })
+    const isOwner = await isWorkspaceOwner(userId, workspaceId)
 
-    if (!workspace) {
-      throw new Error("Workspace not found")
-    }
-
-    if (workspace.ownerId === userId) {
+    if (isOwner) {
       throw new Error("Workspace owner cannot leave. Please transfer ownership first.")
     }
 

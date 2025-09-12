@@ -13,7 +13,6 @@ interface WorkspaceCardProps {
     id: string
     name: string
     slug: string
-    ownerId: string | null
     _count: {
       users: number
       challenges: number
@@ -34,7 +33,7 @@ export default function WorkspaceCard({
 }: WorkspaceCardProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const isOwner = workspace.ownerId === userId
+  const isOwner = isPrimary && userRole === 'ADMIN'
   const dashboardPath = isUserWorkspace && userRole
     ? `/w/${workspace.slug}/${userRole.toLowerCase()}/dashboard`
     : null

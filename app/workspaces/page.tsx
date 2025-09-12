@@ -34,7 +34,6 @@ export default async function WorkspacesPage() {
       id: true,
       name: true,
       slug: true,
-      ownerId: true,
       _count: {
         select: {
           memberships: true,

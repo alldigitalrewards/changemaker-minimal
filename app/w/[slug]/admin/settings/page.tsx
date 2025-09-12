@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { updateWorkspace, deleteWorkspace, leaveWorkspace } from "./actions"
 import { getUserBySupabaseId } from "@/lib/db/queries"
+import { isWorkspaceOwner } from "@/lib/db/workspace-membership"
 
 export default async function AdminSettingsPage({ 
   params 
@@ -44,12 +45,11 @@ export default async function AdminSettingsPage({
     select: { 
       id: true,
       name: true,
-      slug: true,
-      ownerId: true
+      slug: true
     }
   })
 
-  const isOwner = fullWorkspace?.ownerId === dbUser.id
+  const isOwner = await isWorkspaceOwner(dbUser.id, workspace.id)
 
   // Get workspace statistics
   const stats = await prisma.workspace.findUnique({
