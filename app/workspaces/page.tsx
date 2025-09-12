@@ -8,6 +8,8 @@ import Link from "next/link"
 import CreateWorkspaceDialog from "./create-workspace-dialog"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
 import WorkspaceCard from "./workspace-card-client"
+import { getUserBySupabaseId } from "@/lib/db/queries"
+import { listMemberships } from "@/lib/db/workspace-membership"
 
 export default async function WorkspacesPage() {
   const supabase = await createClient()
@@ -17,11 +19,14 @@ export default async function WorkspacesPage() {
     redirect("/auth/login")
   }
 
-  // Get user's workspaces
-  const dbUser = await prisma.user.findUnique({
-    where: { supabaseUserId: user.id },
-    include: { workspace: true }
-  })
+  // Get database user
+  const dbUser = await getUserBySupabaseId(user.id)
+  if (!dbUser) {
+    redirect("/auth/login")
+  }
+
+  // Get user's workspace memberships (new system)
+  const memberships = await listMemberships(dbUser.id)
 
   // Get all workspaces for join functionality
   const allWorkspaces = await prisma.workspace.findMany({
@@ -31,7 +36,7 @@ export default async function WorkspacesPage() {
       slug: true,
       _count: {
         select: {
-          users: true,
+          memberships: true,
           challenges: true
         }
       }
@@ -52,50 +57,60 @@ export default async function WorkspacesPage() {
       </div>
 
       <div className="grid gap-6">
-        {/* User's Current Workspace */}
-        {dbUser?.workspace ? (
+        {/* User's Workspaces */}
+        {memberships.length > 0 ? (
           <Card className="border-coral-500/20">
             <CardHeader>
-              <CardTitle>Your Workspace</CardTitle>
-              <CardDescription>You are currently part of this workspace</CardDescription>
+              <CardTitle>Your Workspaces</CardTitle>
+              <CardDescription>
+                Workspaces you are a member of ({memberships.length} total)
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold">{dbUser.workspace.name}</h3>
-                  <p className="text-sm text-gray-500">/{dbUser.workspace.slug}</p>
-                </div>
-                <div className="flex gap-3">
-                  <Link href={`/w/${dbUser.workspace.slug}/${dbUser.role.toLowerCase()}/dashboard`}>
-                    <Button variant="default">
-                      Go to Dashboard
-                    </Button>
-                  </Link>
-                  {dbUser.role === "ADMIN" && (
-                    <CreateWorkspaceDialog 
-                      userId={dbUser.id} 
-                      currentWorkspace={dbUser.workspace} 
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {memberships.map((membership) => {
+                  const workspace = {
+                    ...membership.workspace,
+                    _count: {
+                      users: membership.workspace._count?.memberships || 0,
+                      challenges: membership.workspace._count?.challenges || 0
+                    }
+                  }
+                  
+                  return (
+                    <WorkspaceCard
+                      key={workspace.id}
+                      workspace={workspace}
+                      isUserWorkspace={true}
+                      userId={dbUser.id}
+                      userRole={membership.role}
+                      isPrimary={membership.isPrimary}
                     />
-                  )}
-                </div>
+                  )
+                })}
+              </div>
+              <div className="mt-4 flex gap-2">
+                <CreateWorkspaceDialog 
+                  userId={dbUser.id} 
+                  currentWorkspace={null}
+                />
+                <JoinWorkspaceDialog userId={dbUser.id} />
               </div>
             </CardContent>
           </Card>
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>No Workspace</CardTitle>
-              <CardDescription>You are not currently part of any workspace</CardDescription>
+              <CardTitle>No Workspaces</CardTitle>
+              <CardDescription>You are not currently a member of any workspace</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4">
-                {dbUser?.role === "ADMIN" && (
-                  <CreateWorkspaceDialog 
-                    userId={dbUser.id} 
-                    currentWorkspace={null} 
-                  />
-                )}
-                <JoinWorkspaceDialog userId={dbUser?.id} />
+                <CreateWorkspaceDialog 
+                  userId={dbUser.id} 
+                  currentWorkspace={null} 
+                />
+                <JoinWorkspaceDialog userId={dbUser.id} />
               </div>
             </CardContent>
           </Card>
@@ -104,21 +119,30 @@ export default async function WorkspacesPage() {
         {/* Available Workspaces */}
         <Card>
           <CardHeader>
-            <CardTitle>All Workspaces</CardTitle>
-            <CardDescription>Browse available workspaces</CardDescription>
+            <CardTitle>Discover Workspaces</CardTitle>
+            <CardDescription>Browse and join available workspaces</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {allWorkspaces.map((workspace) => {
-                const isUserWorkspace = dbUser?.workspaceId === workspace.id
+                // Check if user is already a member
+                const membership = memberships.find(m => m.workspaceId === workspace.id)
+                const isUserWorkspace = !!membership
                 
                 return (
                   <WorkspaceCard
                     key={workspace.id}
-                    workspace={workspace}
+                    workspace={{
+                      ...workspace,
+                      _count: {
+                        users: workspace._count.memberships,
+                        challenges: workspace._count.challenges
+                      }
+                    }}
                     isUserWorkspace={isUserWorkspace}
-                    userId={dbUser?.id}
-                    userRole={dbUser?.role}
+                    userId={dbUser.id}
+                    userRole={membership?.role}
+                    isPrimary={membership?.isPrimary}
                   />
                 )
               })}
