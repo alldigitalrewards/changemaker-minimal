@@ -27,7 +27,8 @@
       "mcp__zen__debug",
       "mcp__serena__find_file",
       "Bash(curl:*)",
-      "Bash(pnpm run:*)"
+      "Bash(pnpm run:*)",
+      "mcp__playwright__browser_wait_for"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1"
