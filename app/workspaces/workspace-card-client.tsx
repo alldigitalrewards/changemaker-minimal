@@ -46,16 +46,8 @@ export default function WorkspaceCard({
       return
     }
     
-    console.log('Card clicked:', { isUserWorkspace, dashboardPath, isLoading, userRole })
     if (isUserWorkspace && dashboardPath && !isLoading) {
-      console.log('Navigating to:', dashboardPath)
-      // Try router.push first, fallback to window.location if needed
-      try {
-        router.push(dashboardPath)
-      } catch (error) {
-        console.error('Router navigation failed:', error)
-        window.location.href = dashboardPath
-      }
+      router.push(dashboardPath)
     }
   }
 
