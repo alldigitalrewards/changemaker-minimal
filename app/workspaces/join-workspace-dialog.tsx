@@ -66,10 +66,10 @@ export default function JoinWorkspaceDialog({
         <Button 
           variant={workspaceName ? "outline" : "default"}
           className={cn(
-            "w-full min-h-[40px] focus:ring-2 focus:ring-coral-500 focus:ring-offset-2", 
+            "min-h-[40px] focus:ring-2 focus:ring-coral-500 focus:ring-offset-2", 
             workspaceName 
-              ? "hover:bg-coral-50 hover:border-coral-300" 
-              : "bg-coral-500 hover:bg-coral-600 text-white",
+              ? "w-full hover:bg-coral-50 hover:border-coral-300" 
+              : "bg-coral-500 hover:bg-coral-600 text-white font-medium",
             className
           )}
           aria-label={workspaceName ? `Join ${workspaceName} workspace` : "Join an existing workspace"}

@@ -78,7 +78,7 @@ export default async function WorkspacesPage() {
                   <div className="text-sm font-medium text-gray-900">{user.email}</div>
                   <div className="text-xs text-gray-500">Signed in</div>
                 </div>
-                <LogoutButton />
+                <LogoutButton variant="outline" className="text-gray-700 border-gray-300 hover:bg-gray-50" />
               </div>
             </div>
           </div>

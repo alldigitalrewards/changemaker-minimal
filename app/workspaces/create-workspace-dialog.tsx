@@ -49,7 +49,7 @@ export default function CreateWorkspaceDialog({
       <DialogTrigger asChild>
         <Button 
           variant="default" 
-          className="bg-coral-500 hover:bg-coral-600 focus:ring-2 focus:ring-coral-500 focus:ring-offset-2"
+          className="bg-coral-500 hover:bg-coral-600 text-white font-medium focus:ring-2 focus:ring-coral-500 focus:ring-offset-2"
           aria-label="Create a new workspace"
         >
           <Plus className="h-4 w-4 mr-2" />

@@ -54,10 +54,15 @@ export async function middleware(request: NextRequest) {
       const slug = slugMatch[1]
 
       // Check membership using Edge-compatible Supabase queries
+      // Join through User.supabaseUserId to match WorkspaceMembership.userId (Prisma User.id)
       const { data: membership } = await supabase
         .from('WorkspaceMembership')
-        .select('role, workspace:Workspace!inner(slug)')
-        .eq('userId', user.id)
+        .select(`
+          role,
+          workspace:Workspace!inner(slug),
+          user:User!inner(supabaseUserId)
+        `)
+        .eq('user.supabaseUserId', user.id)
         .eq('workspace.slug', slug)
         .single()
       

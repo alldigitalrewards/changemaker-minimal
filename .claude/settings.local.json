@@ -26,7 +26,8 @@
       "mcp__zen__planner",
       "mcp__zen__debug",
       "mcp__serena__find_file",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(pnpm run:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1"
