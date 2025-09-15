@@ -53,41 +53,9 @@ export async function middleware(request: NextRequest) {
     if (slugMatch) {
       const slug = slugMatch[1]
 
-      // Check membership using Edge-compatible Supabase queries
-      // Join through User.supabaseUserId to match WorkspaceMembership.userId (Prisma User.id)
-      const { data: membership } = await supabase
-        .from('WorkspaceMembership')
-        .select(`
-          role,
-          workspace:Workspace!inner(slug),
-          user:User!inner(supabaseUserId)
-        `)
-        .eq('user.supabaseUserId', user.id)
-        .eq('workspace.slug', slug)
-        .single()
-      
-      let role = membership?.role
-
-      // Fallback to legacy User.workspaceId check if no membership
-      if (!role) {
-        const { data: userData } = await supabase
-          .from('User')
-          .select('role, workspace:Workspace!inner(slug)')
-          .eq('supabaseUserId', user.id)
-          .eq('workspace.slug', slug)
-          .single()
-        
-        role = userData?.role
-      }
-
-      if (!role) {
-        return NextResponse.redirect(new URL('/workspaces', request.url))
-      }
-
-      // Set workspace context headers
+      // Set workspace context headers (let dashboard pages handle authorization)
       response.headers.set('x-workspace-slug', slug)
       response.headers.set('x-user-id', user.id)
-      response.headers.set('x-workspace-role', role)
     }
 
     return response
