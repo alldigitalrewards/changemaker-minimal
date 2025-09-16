@@ -147,7 +147,7 @@ export default function DashboardHeader({
                     onClick={() => setShowUserMenu(false)}
                   >
                     <User className="h-4 w-4 mr-3" />
-                    Switch Workspace
+                    My Workspaces
                   </Link>
 
                   <div className="border-t border-gray-100 mt-1 pt-1">

@@ -16,6 +16,46 @@ import { type Role, type Workspace } from '@/lib/types'
  * Get user's workspace role for a specific workspace slug (compatibility)
  * This function maintains the existing API while using the new membership system
  */
+/**
+ * Edge-compatible version for middleware that uses Supabase directly
+ */
+export async function getUserWorkspaceRoleEdge(
+  supabase: any,
+  supabaseUserId: string, 
+  workspaceSlug: string
+): Promise<Role | null> {
+  try {
+    // First try to get membership through the new system
+    const { data: membership, error: membershipError } = await supabase
+      .from('WorkspaceMembership')
+      .select('role')
+      .eq('userId', supabaseUserId)
+      .eq('workspace.slug', workspaceSlug)
+      .single()
+    
+    if (!membershipError && membership) {
+      return membership.role as Role
+    }
+
+    // Fall back to checking the User table for legacy workspaceId
+    const { data: userData, error: userError } = await supabase
+      .from('User')
+      .select('role, workspace:Workspace!inner(slug)')
+      .eq('supabaseUserId', supabaseUserId)
+      .eq('workspace.slug', workspaceSlug)
+      .single()
+    
+    if (!userError && userData) {
+      return userData.role as Role
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error getting user workspace role (Edge):', error)
+    return null
+  }
+}
+
 export async function getUserWorkspaceRole(supabaseUserId: string, workspaceSlug: string): Promise<Role | null> {
   try {
     // Get user from database

@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createWorkspace } from "./actions"
+import { Plus, Building } from "lucide-react"
 
 export default function CreateWorkspaceDialog({ 
   userId, 
@@ -46,11 +47,21 @@ export default function CreateWorkspaceDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default">Create Workspace</Button>
+        <Button 
+          variant="default" 
+          className="bg-coral-500 hover:bg-coral-600 text-white font-medium focus:ring-2 focus:ring-coral-500 focus:ring-offset-2"
+          aria-label="Create a new workspace"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Workspace
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Workspace</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Building className="h-5 w-5 text-coral-500" />
+            Create New Workspace
+          </DialogTitle>
           <DialogDescription>
             Create a new workspace to manage challenges and participants
             {currentWorkspace && (
@@ -89,7 +100,12 @@ export default function CreateWorkspaceDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-coral-500 hover:bg-coral-600"
+            >
+              <Building className="h-4 w-4 mr-2" />
               {loading ? "Creating..." : "Create Workspace"}
             </Button>
           </DialogFooter>

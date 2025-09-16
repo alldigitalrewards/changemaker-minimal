@@ -115,6 +115,19 @@ export default function WorkspaceSwitcher({
               </DropdownMenuItem>
             )
           })}
+
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem asChild>
+            <a href="/workspaces" className="flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50">
+              <div className="flex items-center gap-2 flex-1">
+                <Building className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-900">
+                  View All Workspaces
+                </span>
+              </div>
+            </a>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

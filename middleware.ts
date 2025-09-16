@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -54,16 +53,9 @@ export async function middleware(request: NextRequest) {
     if (slugMatch) {
       const slug = slugMatch[1]
 
-      // Check membership (compat: membership first, fallback to legacy)
-      const role = await getUserWorkspaceRole(user.id, slug)
-      if (!role) {
-        return NextResponse.redirect(new URL('/workspaces', request.url))
-      }
-
-      // Set workspace context headers
+      // Set workspace context headers (let dashboard pages handle authorization)
       response.headers.set('x-workspace-slug', slug)
       response.headers.set('x-user-id', user.id)
-      response.headers.set('x-workspace-role', role)
     }
 
     return response

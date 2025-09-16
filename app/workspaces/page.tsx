@@ -8,6 +8,9 @@ import Link from "next/link"
 import CreateWorkspaceDialog from "./create-workspace-dialog"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
 import WorkspaceCard from "./workspace-card-client"
+import { getUserBySupabaseId } from "@/lib/db/queries"
+import { listMemberships } from "@/lib/db/workspace-membership"
+import { Plus, Search, Building, Users } from "lucide-react"
 
 export default async function WorkspacesPage() {
   const supabase = await createClient()
@@ -17,11 +20,14 @@ export default async function WorkspacesPage() {
     redirect("/auth/login")
   }
 
-  // Get user's workspaces
-  const dbUser = await prisma.user.findUnique({
-    where: { supabaseUserId: user.id },
-    include: { workspace: true }
-  })
+  // Get database user
+  const dbUser = await getUserBySupabaseId(user.id)
+  if (!dbUser) {
+    redirect("/auth/login")
+  }
+
+  // Get user's workspace memberships (new system)
+  const memberships = await listMemberships(dbUser.id)
 
   // Get all workspaces for join functionality
   const allWorkspaces = await prisma.workspace.findMany({
@@ -31,7 +37,7 @@ export default async function WorkspacesPage() {
       slug: true,
       _count: {
         select: {
-          users: true,
+          memberships: true,
           challenges: true
         }
       }
@@ -40,85 +46,140 @@ export default async function WorkspacesPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <div className="mb-8 flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Workspaces</h1>
-          <p className="text-gray-600">Manage your workspaces and join new ones</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">{user.email}</span>
-          <LogoutButton />
+      {/* Professional Header */}
+      <div className="bg-white border-b border-gray-100 -mx-4 px-4 mb-8">
+        <div className="py-6">
+          <div className="flex flex-col lg:flex-row justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-coral-100 rounded-lg">
+                  <Building className="h-6 w-6 text-coral-600" />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900">Workspaces</h1>
+              </div>
+              <p className="text-gray-600">
+                Manage your workspaces and discover new opportunities
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {/* Action buttons */}
+              <div className="flex gap-3">
+                <CreateWorkspaceDialog 
+                  userId={dbUser.id} 
+                  currentWorkspace={null}
+                />
+                <JoinWorkspaceDialog userId={dbUser.id} />
+              </div>
+              
+              {/* User info */}
+              <div className="flex items-center gap-3 pl-0 sm:pl-4 sm:border-l border-gray-200">
+                <div className="text-right">
+                  <div className="text-sm font-medium text-gray-900">{user.email}</div>
+                  <div className="text-xs text-gray-500">Signed in</div>
+                </div>
+                <LogoutButton variant="outline" className="text-gray-700 border-gray-300 hover:bg-gray-50" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6">
-        {/* User's Current Workspace */}
-        {dbUser?.workspace ? (
-          <Card className="border-coral-500/20">
-            <CardHeader>
-              <CardTitle>Your Workspace</CardTitle>
-              <CardDescription>You are currently part of this workspace</CardDescription>
+      <div className="grid gap-8">
+        {/* User's Workspaces */}
+        {memberships.length > 0 ? (
+          <Card className="border-coral-200 bg-gradient-to-br from-coral-50/50 to-white shadow-sm">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-coral-100 rounded-lg">
+                  <Building className="h-5 w-5 text-coral-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-coral-900 text-xl">Your Workspaces</CardTitle>
+                  <CardDescription className="text-coral-700">
+                    Workspaces you are a member of ({memberships.length} total)
+                  </CardDescription>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold">{dbUser.workspace.name}</h3>
-                  <p className="text-sm text-gray-500">/{dbUser.workspace.slug}</p>
-                </div>
-                <div className="flex gap-3">
-                  <Link href={`/w/${dbUser.workspace.slug}/${dbUser.role.toLowerCase()}/dashboard`}>
-                    <Button variant="default">
-                      Go to Dashboard
-                    </Button>
-                  </Link>
-                  {dbUser.role === "ADMIN" && (
-                    <CreateWorkspaceDialog 
-                      userId={dbUser.id} 
-                      currentWorkspace={dbUser.workspace} 
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {memberships.map((membership) => {
+                  const workspace = {
+                    ...membership.workspace,
+                    _count: {
+                      users: membership.workspace._count?.memberships || 0,
+                      challenges: membership.workspace._count?.challenges || 0
+                    }
+                  }
+                  
+                  return (
+                    <WorkspaceCard
+                      key={workspace.id}
+                      workspace={workspace}
+                      isUserWorkspace={true}
+                      userId={dbUser.id}
+                      userRole={membership.role}
+                      isPrimary={membership.isPrimary}
                     />
-                  )}
-                </div>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>No Workspace</CardTitle>
-              <CardDescription>You are not currently part of any workspace</CardDescription>
-            </CardHeader>
+          <Card className="text-center py-12">
             <CardContent>
-              <div className="flex gap-4">
-                {dbUser?.role === "ADMIN" && (
-                  <CreateWorkspaceDialog 
-                    userId={dbUser.id} 
-                    currentWorkspace={null} 
-                  />
-                )}
-                <JoinWorkspaceDialog userId={dbUser?.id} />
+              <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <CardTitle className="mb-2">No Workspaces Yet</CardTitle>
+              <CardDescription className="mb-6">
+                Get started by creating your own workspace or joining an existing one.
+              </CardDescription>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <CreateWorkspaceDialog 
+                  userId={dbUser.id} 
+                  currentWorkspace={null}
+                />
+                <JoinWorkspaceDialog userId={dbUser.id} />
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Available Workspaces */}
-        <Card>
-          <CardHeader>
-            <CardTitle>All Workspaces</CardTitle>
-            <CardDescription>Browse available workspaces</CardDescription>
+        <Card className="border-gray-200 shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Search className="h-5 w-5 text-gray-600" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Discover Workspaces</CardTitle>
+                <CardDescription>Browse and join available workspaces</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {allWorkspaces.map((workspace) => {
-                const isUserWorkspace = dbUser?.workspaceId === workspace.id
+                // Check if user is already a member
+                const membership = memberships.find(m => m.workspaceId === workspace.id)
+                const isUserWorkspace = !!membership
                 
                 return (
                   <WorkspaceCard
                     key={workspace.id}
-                    workspace={workspace}
+                    workspace={{
+                      ...workspace,
+                      _count: {
+                        users: workspace._count.memberships,
+                        challenges: workspace._count.challenges
+                      }
+                    }}
                     isUserWorkspace={isUserWorkspace}
-                    userId={dbUser?.id}
-                    userRole={dbUser?.role}
+                    userId={dbUser.id}
+                    userRole={membership?.role}
+                    isPrimary={membership?.isPrimary}
                   />
                 )
               })}
