@@ -127,6 +127,19 @@ export const PUT = withErrorHandling(async (
   
   if (shouldUpdateParticipants) {
     try {
+      // Snapshot previous enrollments to compute diffs for event logs
+      const previousEnrollments = await prisma.enrollment.findMany({
+        where: { challengeId: id },
+        include: { user: true }
+      })
+
+      const prevByUserId = new Map(previousEnrollments.map(e => [e.userId, e]))
+
+      // Compute final target sets from payload
+      const targetInvited = new Set<string>(invitedParticipantIds || (participantIds && !enrolledParticipantIds ? participantIds : []))
+      const targetEnrolled = new Set<string>(enrolledParticipantIds || [])
+      const targetAll = new Set<string>([...targetInvited, ...targetEnrolled])
+
       // Remove all existing enrollments for this challenge (we'll recreate them)
       await prisma.enrollment.deleteMany({
         where: {
@@ -152,6 +165,18 @@ export const PUT = withErrorHandling(async (
             })),
             skipDuplicates: true,
           });
+
+          // Log INVITE_SENT for new invites
+          for (const p of validInvitedParticipants) {
+            await (await import('@/lib/db/queries')).logActivityEvent({
+              workspaceId: workspace.id,
+              challengeId: id,
+              userId: p.id,
+              actorUserId: user.dbUser.id,
+              type: 'INVITE_SENT' as any,
+              metadata: { method: 'admin_update' }
+            })
+          }
         }
       }
 
@@ -173,6 +198,18 @@ export const PUT = withErrorHandling(async (
             })),
             skipDuplicates: true,
           });
+
+          // Log ENROLLED for new enrollments
+          for (const p of validEnrolledParticipants) {
+            await (await import('@/lib/db/queries')).logActivityEvent({
+              workspaceId: workspace.id,
+              challengeId: id,
+              userId: p.id,
+              actorUserId: user.dbUser.id,
+              type: 'ENROLLED' as any,
+              metadata: { method: 'admin_update' }
+            })
+          }
         }
       }
 
@@ -194,6 +231,31 @@ export const PUT = withErrorHandling(async (
             })),
             skipDuplicates: true,
           });
+
+          for (const p of validParticipants) {
+            await (await import('@/lib/db/queries')).logActivityEvent({
+              workspaceId: workspace.id,
+              challengeId: id,
+              userId: p.id,
+              actorUserId: user.dbUser.id,
+              type: 'INVITE_SENT' as any,
+              metadata: { method: 'admin_update_legacy' }
+            })
+          }
+        }
+      }
+
+      // Log UNENROLLED for users removed by this update
+      for (const [userId, prev] of prevByUserId) {
+        if (!targetAll.has(userId)) {
+          await (await import('@/lib/db/queries')).logActivityEvent({
+            workspaceId: workspace.id,
+            challengeId: id,
+            userId,
+            actorUserId: user.dbUser.id,
+            type: 'UNENROLLED' as any,
+            metadata: { reason: 'removed_by_admin' }
+          })
         }
       }
     } catch (error) {
