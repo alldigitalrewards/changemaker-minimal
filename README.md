@@ -29,10 +29,30 @@ Access public honeypot pages at root (e.g., /, /about). Logged-in MVP at /w/[slu
 ## Refactor Notes
 Follow CLAUDE.md for guiding principles (minimalism, no bloat). Use consolidated agents if needed for tasks.
 
+## Current Development: Challenge Progression & Rewards System
+
+### Branch: SandboxNewFeatures
+Currently implementing comprehensive gamification features:
+- **Challenge Progression System**: Multi-state workflow (submitted → approved → completed)
+- **Mock Point System**: Wallet functionality with point allocation and transactions
+- **Admin Workspace Wallets**: Workspace-level point distribution and budget tracking
+- **Enhanced Participant Management**: Advanced filtering, sorting, and bulk actions
+- **Integration Preparation**: Adapter patterns for future RewardSTACK API integration
+
+See TODO.md for detailed task breakdown (9 main tasks, 40 subtasks).
+
+## Task Management
+This project uses Task Master AI for development workflow:
+- View tasks: `task-master list`
+- Next task: `task-master next`
+- Update status: `task-master set-status --id=<id> --status=<status>`
+- See `.taskmaster/` for full project planning
+
 ## Project Evolution Log (Discussion Summaries)
 - **Refactor Goals**: Stripping bloat from original repo, adapting Vercel template to path-based multi-tenancy (/w/[slug]), focusing on minimal MVP (Supabase auth, workspaces, challenges/enrollment, 4-model schema). No extras like analytics or Redis.
 - **Agent Overhaul**: Consolidated from 13 bloated agents to 5 essentials, with anti-creep rules. Considered full deletion; proposed fresh set of 4 (refactor-guardian, db-minimalist, auth-simplifier, type-enforcer) to prevent overengineering. Agents now tools, not systems.
 - **Public Pages Strategy**: Integrate landing pages (home, about, etc.) as static honeypots for lead gen/waitlist. Preserve UI/UX look, strip dynamic bloat, hardcode data, add comments for originals. Execution via refactor-guardian (analysis/refactor) and task-executor (integration).
-- **Key Decisions**: Prioritize static public facade for POC/showcase; keep MVP minimal behind login. Use tools like edit_file for precise changes; enforce CLAUDE.md rules to avoid scope creep.
+- **Challenge Progression & Points** (2025-01-17): Planned comprehensive gamification system with mock point wallets, activity templates, approval workflows, and preparation for RewardSTACK API integration. Focus on phased approach: mock system first, real integration later.
+- **Key Decisions**: Prioritize static public facade for POC/showcase; keep MVP minimal behind login. Use tools like edit_file for precise changes; enforce CLAUDE.md rules to avoid scope creep. Implement adapter patterns for future third-party integrations.
 
 This log tracks discussions for team alignment—update as needed.

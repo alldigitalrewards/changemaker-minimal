@@ -1,3 +1,135 @@
+# TODO - Changemaker Platform
+
+## Current Sprint: Challenge Progression and Rewards System
+
+### 🎯 Active Development (Branch: SandboxNewFeatures)
+
+#### Task #2: Extend Database Schema for Wallet and Transaction Models (HIGH PRIORITY)
+- [ ] 2.1 Define Wallet Model in Prisma schema
+- [ ] 2.2 Define Transaction Model with proper relationships
+- [ ] 2.3 Enhance Challenge Model with progression state field
+- [ ] 2.4 Generate and apply Prisma migrations
+- [ ] 2.5 Create seed data for testing wallet functionality
+
+#### Task #3: Implement Challenge Progression System (MEDIUM PRIORITY)
+Dependencies: Task #2
+- [ ] 3.1 Define challenge progression states and transitions
+- [ ] 3.2 Create submission tracking system
+- [ ] 3.3 Build approval workflow API
+- [ ] 3.4 Create state transition handlers
+- [ ] 3.5 Implement progression visualization
+
+#### Task #4: Develop Mock Point System and User Wallet Functionality (MEDIUM PRIORITY)
+Dependencies: Task #2
+- [ ] 4.1 Create wallet initialization service
+- [ ] 4.2 Implement point allocation system
+- [ ] 4.3 Build transaction recording mechanism
+- [ ] 4.4 Create wallet balance calculation logic
+- [ ] 4.5 Implement mock point award system
+
+#### Task #5: Implement Admin Workspace Wallet and Funding System (MEDIUM PRIORITY)
+Dependencies: Task #4
+- [ ] 5.1 Create workspace wallet entity
+- [ ] 5.2 Build funding mechanism
+- [ ] 5.3 Implement point distribution controls
+- [ ] 5.4 Create budget tracking system
+- [ ] 5.5 Build approval limits and authorization
+
+#### Task #6: Enhance Existing Participant Management Interface (LOW PRIORITY)
+Dependencies: Task #3
+- [ ] 6.1 Add advanced filtering options
+- [ ] 6.2 Implement sorting capabilities
+- [ ] 6.3 Create bulk action functionality
+- [ ] 6.4 Build participant quick view modal
+- [ ] 6.5 Add export functionality
+
+#### Task #7: Implement Integration Preparation Layer for RewardSTACK (MEDIUM PRIORITY)
+Dependencies: Task #4
+- [ ] 7.1 Design service interface architecture
+- [ ] 7.2 Create mock RewardSTACK service
+- [ ] 7.3 Implement configuration system
+- [ ] 7.4 Build error handling and retry logic
+- [ ] 7.5 Create webhook handlers
+
+#### Task #8: Develop UI Components for Wallet and Challenge Progression (LOW PRIORITY)
+Dependencies: Task #6
+- [ ] 8.1 Create PointBalance component
+- [ ] 8.2 Build WalletCard component
+- [ ] 8.3 Develop TransactionHistory component
+- [ ] 8.4 Create ProgressionTracker component
+- [ ] 8.5 Build ParticipantFilter component
+
+#### Task #9: Implement Security Measures and Performance Optimizations (HIGH PRIORITY)
+Dependencies: Task #8
+- [ ] 9.1 Add transaction validation
+- [ ] 9.2 Implement rate limiting
+- [ ] 9.3 Create audit logging system
+- [ ] 9.4 Add role-based access controls
+- [ ] 9.5 Optimize database queries and caching
+
+#### Task #10: Conduct Comprehensive Testing and Refinement (HIGH PRIORITY)
+Dependencies: Task #9
+- [ ] 10.1 Create unit tests for wallet operations
+- [ ] 10.2 Build integration tests for progression system
+- [ ] 10.3 Perform end-to-end user journey testing
+- [ ] 10.4 Execute security vulnerability assessment
+- [ ] 10.5 Conduct performance benchmarking
+
+## Feature Requirements Summary
+
+### Challenge Progression and Point System
+- **Status**: Planning/Development
+- **Key Features**:
+  - Challenge progression states (submitted → approved → in_development → in_production → verified → completed)
+  - Activity templates with point values
+  - Point awarding upon approval
+  - Mock wallet system for testing
+  - Future RewardSTACK API integration preparation
+
+### Admin Wallets and Funding System
+- **Status**: Planning
+- **Key Features**:
+  - Workspace-level wallets separate from user wallets
+  - Mock funding mechanisms
+  - Point distribution controls
+  - Budget tracking and analytics
+  - Preparation for R.A. (Reporting and Accounting) system integration
+
+### Participant Management Improvements
+- **Status**: Planning
+- **Key Features**:
+  - Advanced filtering and sorting
+  - Bulk actions (approve, reject, award points)
+  - Quick view modals
+  - Activity timeline views
+  - Export functionality
+
+## Technical Stack
+- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
+- **Database**: Supabase (PostgreSQL), Prisma ORM
+- **Styling**: Tailwind CSS, shadcn/ui components
+- **Deployment**: Vercel (changemaker.im production, preview.changemaker.im staging)
+- **Authentication**: Supabase Auth
+- **Architecture**: Multi-tenant via path-based workspaces (/w/[slug])
+
+## Development Guidelines
+- Follow DRY/YAGNI principles
+- Maintain MVP focus - no overengineering
+- Use adapter patterns for future integrations
+- Keep mock systems modular and replaceable
+- Ensure backward compatibility during development
+- Write tests for critical paths
+
+## Future Considerations
+- RewardSTACK API integration (post-MVP)
+- Stripe payment integration for reward fulfillment
+- Real wallet funding with actual points
+- Enterprise-ready multi-workspace support (see archived PR plan below)
+
+---
+
+## Archived: Multi-Workspace Support Implementation Plan
+
 ⏺ Detailed Pull Request Implementation Plan for Multi-Workspace Support
 
 The refactor-guardian has created a comprehensive 10-PR implementation plan to transform the
@@ -8,119 +140,6 @@ single-workspace architecture into a proper multi-tenant system. Here's the stra
 * Total PRs: 10 sequential pull requests
 * Timeline: 10-13 weeks
 * Risk Profile: Gradual increase from LOW to HIGH
-* Strategy: Maintain backward compatibility until PR [Fix-page-visibiltiy-on-public-pages-add-remote-supabase #7](https://github.com/alldigitalrewards/changemaker-minimal/pull/7)
+* Strategy: Maintain backward compatibility until PR #7
 
-🎯 Critical Path PRs
-
-Phase 1: Foundation (Weeks 1-4)
-
-PR [#1](https://github.com/alldigitalrewards/changemaker-minimal/pull/1): Database Schema Migration ⚡ LOW RISK
-
-* Add WorkspaceMembership join table
-* Keep existing workspaceId for backward compatibility
-* Migrate existing data to membership records
-* Time: 4-6 hours
-
-PR [#2](https://github.com/alldigitalrewards/changemaker-minimal/pull/2): Core Query Layer ⚠️ MEDIUM RISK
-
-* Add membership-based query functions
-* Create backward compatibility wrappers
-* Maintain existing API signatures
-* Time: 8-10 hours
-
-PR [#3](https://github.com/alldigitalrewards/changemaker-minimal/pull/3): Authentication Updates ⚠️ MEDIUM RISK
-
-* Update middleware for membership checks
-* Enhance workspace context providers
-* Support dual access patterns
-* Time: 6-8 hours
-
-Phase 2: Features (Weeks 5-8)
-
-PR [#4](https://github.com/alldigitalrewards/changemaker-minimal/pull/4): Workspace Management UI ✅ LOW RISK
-
-* Workspace switcher component
-* User workspace dashboard
-* Enhanced workspace cards
-* Time: 10-12 hours
-
-PR [#5](https://github.com/alldigitalrewards/changemaker-minimal/pull/5): Creation & Joining Flow ⚠️ MEDIUM RISK
-
-* Workspace creation dialog
-* Join via invite codes
-* Member management APIs
-* Time: 12-14 hours
-
-PR [#6](https://github.com/alldigitalrewards/changemaker-minimal/pull/6): Navigation & UX ✅ LOW RISK
-
-* Header workspace switcher
-* Breadcrumb navigation
-* Context persistence
-* Time: 8-10 hours
-
-Phase 3: Migration (Weeks 9-11)
-
-PR [#7](https://github.com/alldigitalrewards/changemaker-minimal/pull/7): Query Migration 🔴 HIGH RISK
-
-* Remove ALL legacy workspace queries
-* Update ~35 files to use memberships
-* Break backward compatibility
-* Time: 14-16 hours
-
-PR [#8](https://github.com/alldigitalrewards/changemaker-minimal/pull/8): Schema Cleanup 🔴 HIGH RISK
-
-* Remove User.workspaceId column
-* Final irreversible migration
-* Complete architecture transition
-* Time: 4-6 hours
-
-Phase 4: Polish (Weeks 12-13)
-
-PR [#9](https://github.com/alldigitalrewards/changemaker-minimal/pull/9): Settings & Administration ✅ LOW RISK
-
-* Workspace settings page
-* Member role management
-* Admin controls
-* Time: 10-12 hours
-
-PR [#10](https://github.com/alldigitalrewards/changemaker-minimal/pull/10): Performance & Documentation ✅ LOW RISK
-
-* Query optimizations
-* Add database indexes
-* Complete documentation
-* Time: 6-8 hours
-
-🛡️ Risk Mitigation Strategy
-
-High-Risk PRs ([#7](https://github.com/alldigitalrewards/changemaker-minimal/pull/7), [#8](https://github.com/alldigitalrewards/changemaker-minimal/pull/8)):
-
-* Deploy with feature flags
-* Extensive staging testing
-* Database backups before deployment
-* Gradual rollout with monitoring
-
-Medium-Risk PRs ([#2](https://github.com/alldigitalrewards/changemaker-minimal/pull/2), [#3](https://github.com/alldigitalrewards/changemaker-minimal/pull/3), [#5](https://github.com/alldigitalrewards/changemaker-minimal/pull/5)):
-
-* Maintain compatibility wrappers
-* Comprehensive test coverage
-* Staged deployment
-
-Low-Risk PRs ([#1](https://github.com/alldigitalrewards/changemaker-minimal/pull/1), [#4](https://github.com/alldigitalrewards/changemaker-minimal/pull/4), [#6](https://github.com/alldigitalrewards/changemaker-minimal/pull/6), [#9](https://github.com/alldigitalrewards/changemaker-minimal/pull/9), [#10](https://github.com/alldigitalrewards/changemaker-minimal/pull/10)):
-
-* Standard review and deployment
-
-📊 Success Metrics
-
-1. Backward Compatibility: Maintained through PR [Fix page visibiltiy on public pages #6](https://github.com/alldigitalrewards/changemaker-minimal/pull/6)
-2. Performance: Within 20% of original
-3. UX: <2 second workspace switching
-4. Data Integrity: Zero data loss
-5. Security: No cross-workspace leakage
-
-🚀 Key Benefits When Complete
-
-* ✅ Consultants can work across multiple clients
-* ✅ Employees can join multiple departments
-* ✅ Admins can manage multiple workspaces
-* ✅ Enterprise-ready multi-tenancy
-* ✅ Scalable to thousands of workspaces
+[Full PR implementation details archived - available upon request]
