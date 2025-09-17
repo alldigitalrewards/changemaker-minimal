@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/db"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import { Role } from "@/lib/types"
+import { logActivityEvent } from "@/lib/db/queries"
 
 export async function GET(
   request: Request,
@@ -141,10 +142,21 @@ export async function PUT(
     }
 
     // Update participant role
+    const previousRole = participant.role
     const updatedParticipant = await prisma.user.update({
       where: { id },
       data: { role: newRole as Role }
     })
+
+    if (previousRole !== newRole) {
+      await logActivityEvent({
+        workspaceId: workspace.id,
+        userId: updatedParticipant.id,
+        actorUserId: user.id as any,
+        type: 'RBAC_ROLE_CHANGED' as any,
+        metadata: { oldRole: previousRole, newRole }
+      })
+    }
 
     return NextResponse.json({ 
       participant: updatedParticipant,
@@ -225,6 +237,14 @@ export async function DELETE(
         workspaceId: null,
         role: "PARTICIPANT" 
       }
+    })
+
+    await logActivityEvent({
+      workspaceId: workspace.id,
+      userId: id,
+      actorUserId: user.id as any,
+      type: 'UNENROLLED' as any,
+      metadata: { reason: 'Removed from workspace' }
     })
 
     return NextResponse.json({ 
