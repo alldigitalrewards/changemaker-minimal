@@ -1313,6 +1313,18 @@ export async function logActivityEvent(data: {
   }
 }
 
+export async function getChallengeEvents(challengeId: string) {
+  return await prisma.activityEvent.findMany({
+    where: { challengeId },
+    include: {
+      user: { select: { email: true } },
+      actor: { select: { email: true } }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100
+  })
+}
+
 // =============================================================================
 // INVITE CODE QUERIES
 // =============================================================================
