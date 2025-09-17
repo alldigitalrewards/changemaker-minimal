@@ -1286,6 +1286,33 @@ export async function getChallengeLeaderboard(
   }
 }
 
+export async function logActivityEvent(data: {
+  workspaceId: string
+  type: 'INVITE_SENT' | 'EMAIL_RESENT' | 'ENROLLED' | 'UNENROLLED' | 'SUBMISSION_CREATED' | 'SUBMISSION_APPROVED' | 'SUBMISSION_REJECTED' | 'CHALLENGE_PUBLISHED' | 'CHALLENGE_UNPUBLISHED' | 'CHALLENGE_ARCHIVED' | 'ACTIVITY_CREATED' | 'ACTIVITY_UPDATED' | 'BULK_UNENROLL'
+  challengeId?: string | null
+  enrollmentId?: string | null
+  userId?: string | null
+  actorUserId?: string | null
+  metadata?: any
+}) {
+  try {
+    await prisma.activityEvent.create({
+      data: {
+        workspaceId: data.workspaceId,
+        type: data.type as any,
+        challengeId: data.challengeId || undefined,
+        enrollmentId: data.enrollmentId || undefined,
+        userId: data.userId || undefined,
+        actorUserId: data.actorUserId || undefined,
+        metadata: data.metadata as any
+      }
+    })
+  } catch (error) {
+    // Non-fatal: don't block main flow
+    console.warn('Failed to log activity event', error)
+  }
+}
+
 // =============================================================================
 // INVITE CODE QUERIES
 // =============================================================================

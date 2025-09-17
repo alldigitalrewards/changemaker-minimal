@@ -20,6 +20,7 @@ model Workspace {
   pointsBalances    PointsBalance[]
   users             User[]
   memberships       WorkspaceMembership[]
+  activityEvents    ActivityEvent[]
 }
 
 model User {
@@ -37,6 +38,8 @@ model User {
   pointsBalances      PointsBalance[]
   workspace           Workspace?            @relation(fields: [workspaceId], references: [id])
   memberships         WorkspaceMembership[]
+  activityEvents      ActivityEvent[]
+  actedEvents         ActivityEvent[]       @relation("EventActor")
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -57,6 +60,7 @@ model Challenge {
   workspace          Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   enrollments        Enrollment[]
   inviteCodes        InviteCode[]
+  activityEvents     ActivityEvent[]
 
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
@@ -74,6 +78,7 @@ model Enrollment {
   activitySubmissions ActivitySubmission[]
   challenge           Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityEvents      ActivityEvent[]
 
   @@unique([userId, challengeId])
   @@index([userId])
