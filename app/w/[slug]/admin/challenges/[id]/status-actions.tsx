@@ -43,19 +43,30 @@ export function StatusActions({ workspaceSlug, challengeId, status }: StatusActi
   return (
     <div className="flex flex-wrap gap-2">
       {(status !== 'PUBLISHED') && (
-        <Button variant="outline" onClick={() => call('PUBLISH')} disabled={loading !== null}>
+        <Button aria-label="Publish challenge" variant="outline" onClick={() => call('PUBLISH')} disabled={loading !== null}>
           <PlayCircle className="h-4 w-4 mr-2" />
           {loading === 'PUBLISH' ? 'Publishing…' : 'Publish'}
         </Button>
       )}
       {(status === 'PUBLISHED') && (
-        <Button variant="outline" onClick={() => call('UNPUBLISH')} disabled={loading !== null}>
+        <Button aria-label="Unpublish challenge" variant="outline" onClick={() => call('UNPUBLISH')} disabled={loading !== null}>
           <PauseCircle className="h-4 w-4 mr-2" />
           {loading === 'UNPUBLISH' ? 'Unpublishing…' : 'Unpublish'}
         </Button>
       )}
       {status !== 'ARCHIVED' && (
-        <Button variant="outline" onClick={() => call('ARCHIVE')} disabled={loading !== null}>
+        <Button
+          aria-label="Archive challenge"
+          variant="outline"
+          onClick={() => {
+            const confirmed = window.confirm(
+              'Archive challenge?\n\nArchiving makes this challenge read-only and hides it from participants. You can restore it later from Settings.'
+            )
+            if (!confirmed) return
+            void call('ARCHIVE')
+          }}
+          disabled={loading !== null}
+        >
           <Archive className="h-4 w-4 mr-2" />
           {loading === 'ARCHIVE' ? 'Archiving…' : 'Archive'}
         </Button>
