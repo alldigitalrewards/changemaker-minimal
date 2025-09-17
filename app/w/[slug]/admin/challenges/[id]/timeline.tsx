@@ -63,11 +63,13 @@ function iconFor(type: EventType) {
 }
 
 type FilterKey = 'ALL' | 'STATUS' | 'INVITES' | 'SUBMISSIONS' | 'REVIEWS'
+type RangeKey = '24H' | '7D' | '30D' | 'ALL'
 
 export function Timeline({ events }: { events: TimelineEvent[] }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const paramKey = 'timeline'
+  const rangeKey = 'range'
 
   const initialFilter = (() => {
     const q = (searchParams?.get(paramKey) || '').toUpperCase()
@@ -76,6 +78,12 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
   })()
 
   const [filter, setFilter] = useState<FilterKey>(initialFilter)
+  const initialRange = (() => {
+    const q = (searchParams?.get(rangeKey) || '24H').toUpperCase()
+    const allowed: RangeKey[] = ['24H','7D','30D','ALL']
+    return (allowed.includes(q as RangeKey) ? (q as RangeKey) : '24H')
+  })()
+  const [range, setRange] = useState<RangeKey>(initialRange)
   const [limit, setLimit] = useState(50)
 
   // Persist filter in URL without full navigation
@@ -83,10 +91,11 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
     try {
       const url = new URL(window.location.href)
       url.searchParams.set(paramKey, filter)
+      url.searchParams.set(rangeKey, range)
       // Keep history lighter with replace
       router.replace(url.pathname + '?' + url.searchParams.toString())
     } catch {}
-  }, [filter, router])
+  }, [filter, range, router])
 
   const filtered = useMemo(() => {
     let evs = events.slice()
@@ -108,8 +117,19 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
       evs = evs.filter(e => e.type === 'SUBMISSION_APPROVED' || e.type === 'SUBMISSION_REJECTED')
     }
 
+    // Apply time range
+    if (range !== 'ALL') {
+      const now = Date.now()
+      const threshold = (() => {
+        if (range === '24H') return now - 24 * 60 * 60 * 1000
+        if (range === '7D') return now - 7 * 24 * 60 * 60 * 1000
+        return now - 30 * 24 * 60 * 60 * 1000
+      })()
+      evs = evs.filter(e => new Date(e.createdAt).getTime() >= threshold)
+    }
+
     return evs
-  }, [events, filter])
+  }, [events, filter, range])
 
   const groupedByDay = useMemo(() => {
     const map = new Map<string, TimelineEvent[]>()
@@ -165,6 +185,17 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
     </Button>
   )
 
+  const rangeButton = (key: RangeKey, label: string) => (
+    <Button
+      key={key}
+      variant={range === key ? 'default' : 'outline'}
+      size="sm"
+      onClick={() => setRange(key)}
+    >
+      {label}
+    </Button>
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -174,6 +205,14 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
         {filterButton('INVITES', 'Invites/Enrollments')}
         {filterButton('SUBMISSIONS', 'Submissions')}
         {filterButton('REVIEWS', 'Reviews')}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-gray-500">Range:</span>
+        {rangeButton('24H', '24h')}
+        {rangeButton('7D', '7d')}
+        {rangeButton('30D', '30d')}
+        {rangeButton('ALL', 'All')}
       </div>
 
       {(() => {

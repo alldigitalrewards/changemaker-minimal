@@ -19,7 +19,9 @@ import {
   PlayCircle,
   Copy,
   Archive,
-  Info
+  Info,
+  AlertTriangle,
+  Bell
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -164,6 +166,12 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   })();
   const anySubmissions = (challenge.activities || []).some(a => (a.submissions || []).length > 0);
   const statusForActions = ((challenge as any).status as ('DRAFT'|'PUBLISHED'|'ARCHIVED'|undefined)) ?? 'DRAFT';
+
+  // Attention metrics
+  const pendingSubmissionCount = (challenge.activities || []).reduce((sum, a) => sum + ((a.submissions || []).filter(s => s.status === 'PENDING').length), 0)
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+  const stalledInvitesCount = enrolledUsers.filter(e => e.status === 'INVITED' && (now.getTime() - new Date((e as any).createdAt).getTime()) > sevenDaysMs).length
+  const isUnpublished = statusForActions !== 'PUBLISHED'
 
   // Fetch timeline events (server-side)
   const events = await getChallengeEvents(id);
@@ -389,6 +397,51 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
+          {((pendingSubmissionCount + stalledInvitesCount) > 0 || isUnpublished) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" /> Attention</CardTitle>
+                <CardDescription>Quick items that may need action</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {pendingSubmissionCount > 0 && (
+                    <div className="flex items-center justify-between p-3 border rounded-md bg-yellow-50">
+                      <div className="flex items-center gap-2 text-sm">
+                        <ClipboardList className="h-4 w-4 text-amber-600" />
+                        <span>{pendingSubmissionCount} submission{pendingSubmissionCount === 1 ? '' : 's'} awaiting review</span>
+                      </div>
+                      <Link href={`?tab=submissions&submissions=pending`}>
+                        <Button size="sm" variant="outline">Review now</Button>
+                      </Link>
+                    </div>
+                  )}
+                  {stalledInvitesCount > 0 && (
+                    <div className="flex items-center justify-between p-3 border rounded-md bg-blue-50">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Bell className="h-4 w-4 text-blue-600" />
+                        <span>{stalledInvitesCount} invite{stalledInvitesCount === 1 ? '' : 's'} inactive for 7+ days</span>
+                      </div>
+                      <Link href={`?tab=participants&participants=invited`}>
+                        <Button size="sm" variant="outline">Send reminders</Button>
+                      </Link>
+                    </div>
+                  )}
+                  {isUnpublished && (
+                    <div className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Info className="h-4 w-4 text-gray-600" />
+                        <span>Challenge is not published</span>
+                      </div>
+                      <Link href={`?tab=settings`}>
+                        <Button size="sm" variant="outline">Manage</Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader>
               <CardTitle>Challenge Description</CardTitle>
@@ -550,12 +603,33 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
               <CardDescription>
                 Review and approve participant submissions for activities in this challenge
               </CardDescription>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Link href={`?tab=submissions`}>
+                  <Button size="sm" variant={!submissionsFilterParam ? 'default' : 'outline'}>All</Button>
+                </Link>
+                <Link href={`?tab=submissions&submissions=pending`}>
+                  <Button size="sm" variant={submissionsFilterParam === 'pending' ? 'default' : 'outline'}>Pending</Button>
+                </Link>
+                <Link href={`?tab=submissions&submissions=approved`}>
+                  <Button size="sm" variant={submissionsFilterParam === 'approved' ? 'default' : 'outline'}>Approved</Button>
+                </Link>
+                <Link href={`?tab=submissions&submissions=rejected`}>
+                  <Button size="sm" variant={submissionsFilterParam === 'rejected' ? 'default' : 'outline'}>Rejected</Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
               {anySubmissions ? (
                 <div className="space-y-6">
                   {challenge.activities.map((activity) => {
-                    const submissions = activity.submissions || [];
+                    let submissions = activity.submissions || [];
+                    if (submissionsFilterParam === 'pending') {
+                      submissions = submissions.filter(s => s.status === 'PENDING')
+                    } else if (submissionsFilterParam === 'approved') {
+                      submissions = submissions.filter(s => s.status === 'APPROVED')
+                    } else if (submissionsFilterParam === 'rejected') {
+                      submissions = submissions.filter(s => s.status === 'REJECTED')
+                    }
                     const pendingSubmissions = submissions.filter(s => s.status === 'PENDING');
                     const approvedSubmissions = submissions.filter(s => s.status === 'APPROVED');
                     const rejectedSubmissions = submissions.filter(s => s.status === 'REJECTED');
@@ -689,13 +763,30 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                 <div>
                   <CardTitle>Challenge Participants</CardTitle>
                   <CardDescription>
-                    {enrolledUsers.length} participants enrolled in this challenge
+                    {enrolledUsers.length} total participants (invited + enrolled)
                   </CardDescription>
                 </div>
                 <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
                   <Button variant="outline">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Manage Participants
+                  </Button>
+                </Link>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Link href={`?tab=participants`}>
+                  <Button size="sm" variant={!participantsFilterParam ? 'default' : 'outline'}>
+                    All ({enrolledUsers.length})
+                  </Button>
+                </Link>
+                <Link href={`?tab=participants&participants=enrolled`}>
+                  <Button size="sm" variant={participantsFilterParam === 'enrolled' ? 'default' : 'outline'}>
+                    Enrolled ({enrolledCount})
+                  </Button>
+                </Link>
+                <Link href={`?tab=participants&participants=invited`}>
+                  <Button size="sm" variant={participantsFilterParam === 'invited' ? 'default' : 'outline'}>
+                    Invited ({invitedCount})
                   </Button>
                 </Link>
               </div>
@@ -719,7 +810,10 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                     challengeId={id}
                     enrollments={enrolledUsers as any}
                   />
-                  {enrolledUsers.map((enrollment) => (
+                  {(() => {
+                    const statusFilter = participantsFilterParam === 'enrolled' ? 'ENROLLED' : participantsFilterParam === 'invited' ? 'INVITED' : undefined
+                    const list = statusFilter ? enrolledUsers.filter(e => e.status === statusFilter) : enrolledUsers
+                    return list.map((enrollment) => (
                     <div key={enrollment.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <p className="font-medium">{enrollment.user.email}</p>
@@ -742,7 +836,8 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                         </Badge>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  })()}
                 </div>
               )}
             </CardContent>

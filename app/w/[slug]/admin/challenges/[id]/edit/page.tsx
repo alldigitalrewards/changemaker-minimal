@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ParticipantSelector } from '@/components/ui/participant-selector';
 import { StatusActions } from '../status-actions';
+import { ChallengeActivities } from '@/components/activities/challenge-activities';
 
 interface Challenge {
   id: string;
@@ -484,6 +485,16 @@ export default function EditChallengePage() {
               </div>
             </div>
           </form>
+        </CardContent>
+      </Card>
+      {/* Activities Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Activities</CardTitle>
+          <CardDescription>Assign and configure activities for this challenge</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChallengeActivities challengeId={params?.id || ''} workspaceSlug={params?.slug || ''} />
         </CardContent>
       </Card>
     </div>

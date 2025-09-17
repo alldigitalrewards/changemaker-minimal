@@ -24,12 +24,23 @@ interface ActivityTemplate {
 }
 
 interface ActivityTemplateSelectorProps {
-  challengeId: string;
+  // API mode (default) assigns directly to a challenge
+  challengeId?: string;
   workspaceSlug: string;
-  onAssigned: () => void;
+  onAssigned?: () => void;
+  // Local mode returns an activity config to caller without API
+  mode?: 'api' | 'local';
+  onAdd?: (activity: {
+    templateId: string;
+    pointsValue: number;
+    maxSubmissions: number;
+    deadline: string | null;
+    isRequired: boolean;
+    template?: ActivityTemplate;
+  }) => void;
 }
 
-export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigned }: ActivityTemplateSelectorProps) {
+export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigned, mode = 'api', onAdd }: ActivityTemplateSelectorProps) {
   const [templates, setTemplates] = useState<ActivityTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -69,6 +80,37 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
       return;
     }
 
+    // Basic client constraints
+    const template = templates.find(t => t.id === selectedTemplateId)
+    const finalPoints = (pointsValue ?? template?.basePoints ?? 1)
+    if (finalPoints < 1) {
+      setError('Points must be at least 1');
+      return;
+    }
+    if (maxSubmissions < 1) {
+      setError('Max submissions must be at least 1');
+      return;
+    }
+
+    // Local mode: send to parent and exit
+    if (mode === 'local' && onAdd) {
+      onAdd({
+        templateId: selectedTemplateId,
+        pointsValue: finalPoints,
+        maxSubmissions,
+        deadline: deadline || null,
+        isRequired,
+        template
+      })
+      onAssigned && onAssigned()
+      return
+    }
+
+    if (!challengeId) {
+      setError('Missing challenge context');
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -80,9 +122,9 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
         },
         body: JSON.stringify({
           templateId: selectedTemplateId,
-          pointsValue: pointsValue ?? selectedTemplate?.basePoints,
+          pointsValue: finalPoints,
           maxSubmissions,
-          deadline: deadline ? new Date(deadline).toISOString() : null,
+          deadline: deadline || null,
           isRequired,
         }),
       });
@@ -92,7 +134,7 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
         throw new Error(errorData.error || 'Failed to assign activity');
       }
 
-      onAssigned();
+      onAssigned && onAssigned();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to assign activity');
     } finally {
@@ -263,7 +305,7 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
 
       {/* Actions */}
       <div className="flex justify-end space-x-2 pt-4 border-t">
-        <Button variant="outline" onClick={() => onAssigned()} disabled={submitting}>
+        <Button variant="outline" onClick={() => onAssigned && onAssigned()} disabled={submitting}>
           Cancel
         </Button>
         <Button onClick={handleAssign} disabled={!selectedTemplateId || submitting}>
