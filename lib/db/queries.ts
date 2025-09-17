@@ -1122,7 +1122,7 @@ export async function reviewActivitySubmission(
     reviewedBy: UserId
   },
   workspaceId: WorkspaceId
-): Promise<ActivitySubmission> {
+): Promise<ActivitySubmission & { activity: Activity & { template: ActivityTemplate, challenge: Challenge } }> {
   try {
     return await prisma.activitySubmission.update({
       where: {
@@ -1137,6 +1137,14 @@ export async function reviewActivitySubmission(
         pointsAwarded: data.pointsAwarded,
         reviewedBy: data.reviewedBy,
         reviewedAt: new Date()
+      },
+      include: {
+        activity: {
+          include: {
+            template: true,
+            challenge: true
+          }
+        }
       }
     })
   } catch (error) {
