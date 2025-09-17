@@ -36,6 +36,7 @@ interface PageProps {
     slug: string;
     id: string;
   }>;
+  searchParams?: Promise<{ tab?: string }>
 }
 
 async function getChallenge(workspaceSlug: string, challengeId: string) {
@@ -99,8 +100,9 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
   }
 }
 
-export default async function ChallengeDetailPage({ params }: PageProps) {
+export default async function ChallengeDetailPage({ params, searchParams }: PageProps) {
   const { slug, id } = await params;
+  const sp = (await (searchParams || Promise.resolve({} as any))) as any
   const challenge = await getChallenge(slug, id);
 
   if (!challenge) {
@@ -162,6 +164,9 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
   // Fetch timeline events (server-side)
   const events = await getChallengeEvents(id);
 
+  const tabParam = typeof sp.tab === 'string' ? sp.tab : undefined
+  const defaultTab = tabParam && ['overview','activities','submissions','participants','settings'].includes(tabParam) ? tabParam : 'overview'
+
   return (
     <div className="space-y-6">
       {/* Header with status, countdowns and quick actions */}
@@ -196,7 +201,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
-            <Button variant="outline">
+            <Button variant="outline" disabled={statusForActions === 'ARCHIVED'} title={statusForActions === 'ARCHIVED' ? 'Archived challenges are read-only' : undefined}>
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
@@ -225,7 +230,8 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
 
       {/* Insights Strip */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card>
+        <Link href={`?tab=participants`}>
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Invited</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -235,8 +241,10 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
             <p className="text-xs text-muted-foreground">Pending</p>
           </CardContent>
         </Card>
+        </Link>
 
-        <Card>
+        <Link href={`?tab=participants`}>
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Enrolled</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
@@ -246,8 +254,10 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
             <p className="text-xs text-muted-foreground">Current</p>
           </CardContent>
         </Card>
+        </Link>
 
-        <Card>
+        <Link href={`?tab=submissions`}>
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Submissions</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -257,8 +267,10 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
             <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
+        </Link>
 
-        <Card>
+        <Link href={`?tab=submissions`}>
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completion</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
@@ -268,6 +280,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
             <p className="text-xs text-muted-foreground">Approved per enrolled</p>
           </CardContent>
         </Card>
+        </Link>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -295,7 +308,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue={defaultTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activities">Activities</TabsTrigger>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Download, Mail, UserMinus, UsersRound } from 'lucide-react'
+import { Download, Mail, UserMinus, UsersRound, Link as LinkIcon, Upload } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface ParticipantsBulkActionsProps {
@@ -57,8 +57,23 @@ export function ParticipantsBulkActions({ workspaceSlug, challengeId, enrollment
     URL.revokeObjectURL(url)
   }
 
+  const handleCopyInviteLink = async () => {
+    const url = `${window.location.origin}/w/${workspaceSlug}/admin/challenges/${challengeId}?tab=participants`
+    await navigator.clipboard.writeText(url)
+    toast({ title: 'Invite link copied', description: 'Share this link with teammates to manage invitations.' })
+  }
+
+  const handleImportCsv = async () => {
+    // Placeholder: open a file input to parse CSV later
+    toast({ title: 'Import CSV (coming soon)', description: 'We will parse a CSV of emails to invite/enroll.' })
+  }
+
   return (
     <div className="flex flex-wrap gap-2">
+      <Button variant="outline" onClick={handleCopyInviteLink}>
+        <LinkIcon className="h-4 w-4 mr-2" />
+        Invite Link
+      </Button>
       <Button variant="outline" onClick={handleResendInvites} disabled={invited.length === 0 || loadingAction !== null}>
         <Mail className="h-4 w-4 mr-2" />
         {loadingAction === 'resend' ? 'Resending…' : `Resend Invites (${invited.length})`}
@@ -70,6 +85,10 @@ export function ParticipantsBulkActions({ workspaceSlug, challengeId, enrollment
       <Button variant="outline" onClick={handleExportCsv}>
         <Download className="h-4 w-4 mr-2" />
         Export CSV
+      </Button>
+      <Button variant="outline" onClick={handleImportCsv}>
+        <Upload className="h-4 w-4 mr-2" />
+        Import CSV
       </Button>
     </div>
   )
