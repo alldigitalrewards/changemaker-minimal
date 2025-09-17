@@ -14,7 +14,11 @@ import {
   Target,
   CheckCircle,
   Activity,
-  ClipboardList
+  ClipboardList,
+  PauseCircle,
+  PlayCircle,
+  Copy,
+  Archive
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -22,6 +26,8 @@ import { prisma } from '@/lib/db';
 import { DeleteChallengeButton } from './delete-button';
 import { ChallengeActivities } from '@/components/activities/challenge-activities';
 import { SubmissionReviewButton } from './submission-review-button';
+import { DuplicateChallengeButton } from './duplicate-button';
+import { ParticipantsBulkActions } from './participants-bulk-actions';
 
 interface PageProps {
   params: Promise<{
@@ -122,26 +128,97 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
     statusVariant = "secondary";
   }
 
+  // Derived time info
+  const msUntilStart = startDate.getTime() - now.getTime();
+  const msUntilEnd = endDate.getTime() - now.getTime();
+  const daysUntilStart = Math.ceil(msUntilStart / (1000 * 60 * 60 * 24));
+  const daysUntilEnd = Math.ceil(msUntilEnd / (1000 * 60 * 60 * 24));
+  const enrollmentDeadline = challenge.enrollmentDeadline ? new Date(challenge.enrollmentDeadline) : null;
+  const enrollmentOpen = enrollmentDeadline ? now <= enrollmentDeadline : now <= startDate;
+
+  // Compute quick metrics for insights
+  const invitedCount = enrolledUsers.filter(e => e.status === 'INVITED').length;
+  const enrolledCount = enrolledUsers.filter(e => e.status === 'ENROLLED').length;
+  const totalSubmissions = (challenge.activities || []).reduce((sum, a) => sum + (a.submissions?.length || 0), 0);
+  const approvedSubmissions = (challenge.activities || []).reduce((sum, a) => sum + (a.submissions?.filter(s => s.status === 'APPROVED').length || 0), 0);
+  const completionPct = enrolledCount > 0 ? Math.round((approvedSubmissions / Math.max(enrolledCount, 1)) * 100) : 0;
+  const avgScore = (() => {
+    const approved = (challenge.activities || []).flatMap(a => (a.submissions || []).filter(s => s.status === 'APPROVED'));
+    const pts = approved.map(s => s.pointsAwarded || 0);
+    if (pts.length === 0) return 0;
+    return Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
+  })();
+  const lastActivityAt = (() => {
+    const all = (challenge.activities || []).flatMap(a => a.submissions || []);
+    if (all.length === 0) return null;
+    const latest = all.reduce((acc, s) => (acc && acc.submittedAt > s.submittedAt ? acc : s));
+    return latest.submittedAt;
+  })();
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href={`/w/${slug}/admin/challenges`}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Challenges
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-bold text-navy-900">{challenge.title}</h1>
+      {/* Header with status, countdowns and quick actions */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <Link href={`/w/${slug}/admin/challenges`}>
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Challenges
+              </Button>
+            </Link>
+            <Badge variant={statusVariant}>{challengeStatus}</Badge>
+            {enrollmentOpen ? (
+              <Badge variant="outline">Enrollment Open</Badge>
+            ) : (
+              <Badge variant="secondary">Enrollment Closed</Badge>
+            )}
+          </div>
+          <h1 className="text-3xl font-bold text-navy-900 mb-1">{challenge.title}</h1>
+          <div className="text-sm text-gray-600 flex flex-wrap gap-4">
+            {now < startDate && (
+              <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> Starts in {daysUntilStart} day{daysUntilStart === 1 ? '' : 's'}</span>
+            )}
+            {now >= startDate && now <= endDate && (
+              <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> Ends in {daysUntilEnd} day{daysUntilEnd === 1 ? '' : 's'}</span>
+            )}
+            {enrollmentDeadline && (
+              <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Enroll by {format(enrollmentDeadline, 'MMM d, yyyy')}</span>
+            )}
+          </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-2">
           <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
             <Button variant="outline">
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
           </Link>
+          <DuplicateChallengeButton
+            workspaceSlug={slug}
+            sourceChallenge={{
+              title: challenge.title,
+              description: challenge.description,
+              startDate: challenge.startDate,
+              endDate: challenge.endDate,
+              enrollmentDeadline: challenge.enrollmentDeadline || undefined
+            }}
+            invitedParticipantIds={enrolledUsers.filter(e => e.status === 'INVITED').map(e => e.user.id)}
+            enrolledParticipantIds={enrolledUsers.filter(e => e.status === 'ENROLLED').map(e => e.user.id)}
+          />
+          {/* Publish/Unpublish and Archive - placeholders until backend endpoints exist */}
+          <Button variant="outline">
+            <PlayCircle className="h-4 w-4 mr-2" />
+            Publish
+          </Button>
+          <Button variant="outline">
+            <PauseCircle className="h-4 w-4 mr-2" />
+            Unpublish
+          </Button>
+          <Button variant="outline">
+            <Archive className="h-4 w-4 mr-2" />
+            Archive
+          </Button>
           <DeleteChallengeButton 
             challengeId={id}
             challengeTitle={challenge.title}
@@ -150,50 +227,73 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Insights Strip */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Enrolled</CardTitle>
+            <CardTitle className="text-sm font-medium">Invited</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{challenge._count.enrollments}</div>
-            <p className="text-xs text-muted-foreground">Participants</p>
+            <div className="text-2xl font-bold">{invitedCount}</div>
+            <p className="text-xs text-muted-foreground">Pending</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <CardTitle className="text-sm font-medium">Enrolled</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeEnrollments}</div>
-            <p className="text-xs text-muted-foreground">In progress</p>
+            <div className="text-2xl font-bold">{enrolledCount}</div>
+            <p className="text-xs text-muted-foreground">Current</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">Submissions</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completedEnrollments}</div>
-            <p className="text-xs text-muted-foreground">Finished</p>
+            <div className="text-2xl font-bold">{totalSubmissions}</div>
+            <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Status</CardTitle>
+            <CardTitle className="text-sm font-medium">Completion</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Badge variant={statusVariant} className="text-lg">
-              {challengeStatus}
-            </Badge>
+            <div className="text-2xl font-bold">{completionPct}%</div>
+            <p className="text-xs text-muted-foreground">Approved per enrolled</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Score</CardTitle>
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{avgScore}</div>
+            <p className="text-xs text-muted-foreground">Points per approved</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Last Activity</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm font-medium">
+              {lastActivityAt ? format(new Date(lastActivityAt), 'MMM d, yyyy h:mm a') : '—'}
+            </div>
+            <p className="text-xs text-muted-foreground">Most recent submission</p>
           </CardContent>
         </Card>
       </div>
@@ -226,6 +326,101 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
               <p className="text-gray-700">{challenge.description}</p>
             </CardContent>
           </Card>
+
+          {/* Timeline + Mini Leaderboard */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Timeline</CardTitle>
+                <CardDescription>Chronological activity</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const events: Array<{ ts: Date; label: string }> = []
+                  events.push({ ts: startDate, label: 'Challenge start' })
+                  events.push({ ts: endDate, label: 'Challenge end' })
+                  if (enrollmentDeadline) events.push({ ts: enrollmentDeadline, label: 'Enrollment deadline' })
+                  enrolledUsers.forEach(e => {
+                    events.push({ ts: new Date(e.createdAt), label: `${e.user.email} ${e.status === 'INVITED' ? 'invited' : e.status === 'ENROLLED' ? 'enrolled' : 'withdrew'}` })
+                  })
+                  ;(challenge.activities || []).forEach(a => {
+                    (a.submissions || []).forEach(s => {
+                      events.push({ ts: new Date(s.submittedAt), label: `${s.user.email} submitted ${a.template.name}` })
+                      if (s.status === 'APPROVED' && s.reviewedAt) {
+                        events.push({ ts: new Date(s.reviewedAt), label: `${s.user.email} submission approved` })
+                      }
+                      if (s.status === 'REJECTED' && s.reviewedAt) {
+                        events.push({ ts: new Date(s.reviewedAt), label: `${s.user.email} submission rejected` })
+                      }
+                    })
+                  })
+                  events.sort((a, b) => a.ts.getTime() - b.ts.getTime())
+                  if (events.length === 0) {
+                    return (
+                      <div className="text-center py-8">
+                        <Clock className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                        <p className="text-gray-600">No activity yet</p>
+                      </div>
+                    )
+                  }
+                  return (
+                    <ol className="space-y-3">
+                      {events.map((ev, i) => (
+                        <li key={i} className="flex items-start gap-3">
+                          <div className="mt-1 h-2 w-2 rounded-full bg-coral-500" />
+                          <div>
+                            <div className="text-sm font-medium">{format(ev.ts, 'MMM d, yyyy h:mm a')}</div>
+                            <div className="text-sm text-gray-700">{ev.label}</div>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  )
+                })()}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Participants</CardTitle>
+                <CardDescription>Leaderboard snapshot</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  // compute points per user in this challenge similar to API util
+                  const byUser: Record<string, { email: string; points: number }> = {}
+                  ;(challenge.activities || []).forEach(a => {
+                    (a.submissions || []).filter(s => s.status === 'APPROVED').forEach(s => {
+                      const key = s.user.id
+                      const pts = s.pointsAwarded || a.pointsValue || 0
+                      if (!byUser[key]) byUser[key] = { email: s.user.email, points: 0 }
+                      byUser[key].points += pts
+                    })
+                  })
+                  const top = Object.entries(byUser)
+                    .map(([id, v]) => ({ id, ...v }))
+                    .sort((a, b) => b.points - a.points)
+                    .slice(0, 5)
+                  if (top.length === 0) {
+                    return <div className="text-sm text-gray-600">No leaderboard yet</div>
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {top.map((t, idx) => (
+                        <div key={t.id} className="flex items-center justify-between border rounded p-2">
+                          <div className="text-sm font-medium">#{idx + 1} {t.email.split('@')[0]}</div>
+                          <div className="text-sm">{t.points} pts</div>
+                        </div>
+                      ))}
+                      <Link href={`/w/${slug}/participant/leaderboard`} className="inline-block mt-2">
+                        <Button size="sm" variant="outline">View full leaderboard</Button>
+                      </Link>
+                    </div>
+                  )
+                })()}
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
@@ -272,10 +467,12 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                   <UserPlus className="h-4 w-4 mr-2" />
                   Invite Participants
                 </Button>
-                <Button className="w-full" variant="outline">
-                  <Trophy className="h-4 w-4 mr-2" />
-                  View Leaderboard
-                </Button>
+                <Link href={`/w/${slug}/participant/leaderboard`}>
+                  <Button className="w-full" variant="outline">
+                    <Trophy className="h-4 w-4 mr-2" />
+                    View Leaderboard
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>
@@ -455,6 +652,11 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  <ParticipantsBulkActions
+                    workspaceSlug={slug}
+                    challengeId={id}
+                    enrollments={enrolledUsers as any}
+                  />
                   {enrolledUsers.map((enrollment) => (
                     <div key={enrollment.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
@@ -505,7 +707,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                 </div>
                 <div>
                   <h3 className="font-medium mb-2">Enrollment</h3>
-                  <Badge variant="outline">Open</Badge>
+                  <Badge variant="outline">{enrollmentOpen ? 'Open' : 'Closed'}</Badge>
                   <p className="text-sm text-gray-500 mt-1">
                     Participants can freely join this challenge
                   </p>
