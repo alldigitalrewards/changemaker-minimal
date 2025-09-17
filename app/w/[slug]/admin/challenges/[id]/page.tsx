@@ -169,12 +169,14 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   const events = await getChallengeEvents(id);
 
   const tabParam = typeof sp.tab === 'string' ? sp.tab : undefined
+  const participantsFilterParam = typeof sp.participants === 'string' ? (sp.participants as string).toLowerCase() : undefined
+  const submissionsFilterParam = typeof sp.submissions === 'string' ? (sp.submissions as string).toLowerCase() : undefined
   const defaultTab = tabParam && ['overview','activities','submissions','participants','settings'].includes(tabParam) ? tabParam : 'overview'
 
   return (
     <div className="space-y-6">
       {/* Header with status, countdowns and quick actions */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 sticky top-0 z-30 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 py-3 -mx-4 px-4 border-b">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
             <Link href={`/w/${slug}/admin/challenges`}>
@@ -245,7 +247,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
 
       {/* Insights Strip */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Link href={`?tab=participants`}>
+        <Link href={`?tab=participants&participants=invited`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Invited participants metric" title="Total invited participants">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Invited</CardTitle>
@@ -267,7 +269,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
         </Card>
         </Link>
 
-        <Link href={`?tab=participants`}>
+        <Link href={`?tab=participants&participants=enrolled`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Enrolled participants metric" title="Current enrolled participants">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Enrolled</CardTitle>
@@ -289,7 +291,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
         </Card>
         </Link>
 
-        <Link href={`?tab=submissions`}>
+        <Link href={`?tab=submissions&submissions=pending`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Total submissions metric" title="Total submissions in this challenge">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Submissions</CardTitle>
@@ -311,7 +313,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
         </Card>
         </Link>
 
-        <Link href={`?tab=submissions`}>
+        <Link href={`?tab=submissions&submissions=approved`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Completion metric" title="Approved submissions per enrolled participant">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completion</CardTitle>
