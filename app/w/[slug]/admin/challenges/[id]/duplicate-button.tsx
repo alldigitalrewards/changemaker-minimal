@@ -15,6 +15,7 @@ interface DuplicateChallengeButtonProps {
     endDate: string | Date
     enrollmentDeadline?: string | Date | null
   }
+  sourceChallengeId?: string
   invitedParticipantIds: string[]
   enrolledParticipantIds: string[]
 }
@@ -22,6 +23,7 @@ interface DuplicateChallengeButtonProps {
 export function DuplicateChallengeButton({
   workspaceSlug,
   sourceChallenge,
+  sourceChallengeId,
   invitedParticipantIds,
   enrolledParticipantIds
 }: DuplicateChallengeButtonProps) {
@@ -41,6 +43,7 @@ export function DuplicateChallengeButton({
           startDate: sourceChallenge.startDate,
           endDate: sourceChallenge.endDate,
           enrollmentDeadline: sourceChallenge.enrollmentDeadline || undefined,
+          sourceChallengeId,
           invitedParticipantIds,
           enrolledParticipantIds
         })

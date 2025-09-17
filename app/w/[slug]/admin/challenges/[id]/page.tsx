@@ -206,6 +206,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
               endDate: challenge.endDate,
               enrollmentDeadline: challenge.enrollmentDeadline || undefined
             }}
+            sourceChallengeId={id}
             invitedParticipantIds={enrolledUsers.filter(e => e.status === 'INVITED').map(e => e.user.id)}
             enrolledParticipantIds={enrolledUsers.filter(e => e.status === 'ENROLLED').map(e => e.user.id)}
           />
