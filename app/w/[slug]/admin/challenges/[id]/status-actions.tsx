@@ -22,6 +22,22 @@ export function StatusActions({ workspaceSlug, challengeId, status }: StatusActi
   const call = async (action: 'PUBLISH' | 'UNPUBLISH' | 'ARCHIVE') => {
     setLoading(action)
     try {
+      // Guard: require at least one activity to publish
+      if (action === 'PUBLISH') {
+        try {
+          const res = await fetch(`/api/workspaces/${workspaceSlug}/challenges/${challengeId}/activities`)
+          if (res.ok) {
+            const data = await res.json()
+            if (!data.activities || data.activities.length === 0) {
+              throw new Error('Add at least one activity before publishing this challenge.')
+            }
+          }
+        } catch (e: any) {
+          toast({ title: 'Cannot publish', description: e.message || 'At least one activity is required.', variant: 'destructive' })
+          setLoading(null)
+          return
+        }
+      }
       const res = await fetch(`/api/workspaces/${workspaceSlug}/challenges/${challengeId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

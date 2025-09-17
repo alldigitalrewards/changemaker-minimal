@@ -25,9 +25,21 @@ export function ParticipantsBulkActions({ workspaceSlug, challengeId, enrollment
   const handleResendInvites = async () => {
     setLoadingAction('resend')
     try {
-      // Placeholder: integrate real email service later
-      await new Promise(r => setTimeout(r, 600))
+      // Call resend API for each invited participant sequentially to avoid rate limits
+      for (const e of invited) {
+        const response = await fetch(`/api/workspaces/${workspaceSlug}/participants/${e.user.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'resend_invite' })
+        })
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}))
+          throw new Error(err.message || 'Failed to resend invite')
+        }
+      }
       toast({ title: 'Invites resent', description: `Resent to ${invited.length} invited participants.` })
+    } catch (err) {
+      toast({ title: 'Failed to resend some invites', description: err instanceof Error ? err.message : String(err), variant: 'destructive' })
     } finally {
       setLoadingAction(null)
     }

@@ -14,6 +14,7 @@ import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ParticipantSelector } from '@/components/ui/participant-selector';
+import { ActivityTemplateSelector } from '@/components/activities/activity-template-selector';
 
 const formSchema = z
   .object({
@@ -43,6 +44,7 @@ export default function NewChallengePage() {
   const [participantData, setParticipantData] = useState<{ invited: string[]; enrolled: string[] }>({ invited: [], enrolled: [] });
   const [isSaving, setIsSaving] = useState(false);
   const [initialized, setInitialized] = useState(true);
+  const [draftActivities, setDraftActivities] = useState<Array<{ templateId: string; pointsValue: number; maxSubmissions: number; deadline: string | null; isRequired: boolean; template?: any }>>([])
 
   const { register, handleSubmit, watch, reset, formState: { errors, isValid, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -74,6 +76,22 @@ export default function NewChallengePage() {
 
       if (response.ok) {
         const data = await response.json();
+        // Assign any draft activities sequentially (best-effort)
+        try {
+          for (const a of draftActivities) {
+            await fetch(`/api/workspaces/${params.slug}/challenges/${data.challenge.id}/activities`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                templateId: a.templateId,
+                pointsValue: a.pointsValue,
+                maxSubmissions: a.maxSubmissions,
+                deadline: a.deadline,
+                isRequired: a.isRequired
+              })
+            })
+          }
+        } catch {}
         toast({ title: 'Challenge created', description: 'Your challenge has been created successfully.' });
         router.push(`/w/${params.slug}/admin/challenges/${data.challenge.id}`);
       } else {
@@ -249,6 +267,31 @@ export default function NewChallengePage() {
               onParticipantDataChange={setParticipantData}
               disabled={isSaving}
             />
+
+            {/* Activities before create (optional) */}
+            <div className="space-y-3">
+              <Label>Activities (optional)</Label>
+              {draftActivities.length === 0 ? (
+                <div className="text-sm text-gray-600">No activities added yet</div>
+              ) : (
+                <div className="space-y-2">
+                  {draftActivities.map((a, idx) => (
+                    <div key={idx} className="border rounded p-3 flex items-center justify-between">
+                      <div className="text-sm">
+                        <div className="font-medium">{a.template?.name || 'Template'}</div>
+                        <div className="text-gray-600">{a.pointsValue} pts • Max {a.maxSubmissions} • {a.isRequired ? 'Required' : 'Optional'}</div>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setDraftActivities(prev => prev.filter((_, i) => i !== idx))}>Remove</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <ActivityTemplateSelector
+                mode="local"
+                workspaceSlug={params?.slug || ''}
+                onAdd={(activity) => setDraftActivities(prev => [...prev, activity])}
+              />
+            </div>
 
             <div className="flex justify-end space-x-2">
               <Button

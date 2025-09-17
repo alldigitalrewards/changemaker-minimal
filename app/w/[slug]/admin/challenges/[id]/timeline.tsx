@@ -170,7 +170,7 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
       case 'CHALLENGE_UNPUBLISHED': return `${actor} unpublished the challenge`
       case 'CHALLENGE_ARCHIVED': return `${actor} archived the challenge`
       case 'RBAC_ROLE_CHANGED': return `${actor} changed a role`
-      default: return ev.type.replace('_', ' ').toLowerCase()
+      default: return String(ev.type).replace(/_/g, ' ').toLowerCase()
     }
   }
 

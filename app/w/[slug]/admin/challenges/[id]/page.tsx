@@ -253,8 +253,25 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
         </div>
       </div>
 
-      {/* Insights Strip */}
+      {/* Consolidated Status Strip + Insights */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <Card className="md:col-span-6">
+          <CardContent className="flex flex-wrap items-center gap-3 py-4">
+            <Badge variant={statusVariant}>{challengeStatus}</Badge>
+            {now < startDate && (
+              <span className="text-sm text-gray-700 flex items-center gap-1"><Clock className="h-4 w-4" /> Starts in {daysUntilStart} day{daysUntilStart === 1 ? '' : 's'}</span>
+            )}
+            {now >= startDate && now <= endDate && (
+              <span className="text-sm text-gray-700 flex items-center gap-1"><Clock className="h-4 w-4" /> Ends in {daysUntilEnd} day{daysUntilEnd === 1 ? '' : 's'}</span>
+            )}
+            <span className="text-sm text-gray-700 flex items-center gap-1">
+              <Calendar className="h-4 w-4" /> Enrollment {enrollmentOpen ? 'Open' : 'Closed'}{enrollmentDeadline ? ` — Enroll by ${format(enrollmentDeadline, 'MMM d, yyyy')}` : ''}
+            </span>
+            <span className="text-sm text-gray-700 flex items-center gap-1"><Info className="h-4 w-4" /> Visibility: Public</span>
+            <span className="text-sm text-gray-700 flex items-center gap-1"><Info className="h-4 w-4" /> {statusForActions === 'PUBLISHED' ? 'Published' : statusForActions === 'ARCHIVED' ? 'Archived' : 'Draft'}</span>
+          </CardContent>
+        </Card>
+
         <Link href={`?tab=participants&participants=invited`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Invited participants metric" title="Total invited participants">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -381,17 +398,20 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
       <Tabs defaultValue={defaultTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="activities">Activities</TabsTrigger>
+          <TabsTrigger value="activities">Enrollments</TabsTrigger>
           <TabsTrigger value="submissions">
             <ClipboardList className="h-4 w-4 mr-1" />
             Submissions
-            {challenge.activities && challenge.activities.some(a => a.submissions.some(s => s.status === 'PENDING')) && (
+            {pendingSubmissionCount > 0 && (
               <Badge className="ml-2 bg-red-500 text-white text-xs">
-                {challenge.activities.reduce((count, a) => count + a.submissions.filter(s => s.status === 'PENDING').length, 0)}
+                {pendingSubmissionCount}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="participants">Participants</TabsTrigger>
+          <TabsTrigger value="participants">
+            Participants
+            <Badge className="ml-2 text-xs">{enrolledUsers.length}</Badge>
+          </TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -447,7 +467,13 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
               <CardTitle>Challenge Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700">{challenge.description}</p>
+              <details>
+                <summary className="cursor-pointer text-sm text-gray-700 list-none">
+                  <span className="[&_span.truncate]:block max-w-full"><span className="truncate inline-block align-top max-w-full">{challenge.description}</span></span>
+                  <span className="text-coral-600 ml-1">Read more</span>
+                </summary>
+                <div className="mt-2 text-gray-700 whitespace-pre-line">{challenge.description}</div>
+              </details>
             </CardContent>
           </Card>
 
@@ -544,6 +570,13 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                   <Clock className="h-4 w-4 mr-2 text-gray-500" />
                   <span className="font-medium">Last Updated:</span>
                   <span className="ml-2">{format(new Date(challenge.updatedAt), 'MMM d, yyyy')}</span>
+                </div>
+                <div className="pt-2 border-t mt-2">
+                  <div className="text-sm font-medium mb-1">Audit</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
+                    <div>Published by: {(challenge as any).publishedBy?.email || '—'}</div>
+                    <div>Last editor: {(challenge as any).updatedBy?.email || '—'}</div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
