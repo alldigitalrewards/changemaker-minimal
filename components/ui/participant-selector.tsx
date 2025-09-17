@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
@@ -59,6 +59,7 @@ export function ParticipantSelector({
   const [selectValue, setSelectValue] = useState('');
   const [autoEnrollAll, setAutoEnrollAll] = useState(false);
   const { toast } = useToast();
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     if (workspaceSlug) {
@@ -66,8 +67,25 @@ export function ParticipantSelector({
     }
   }, [workspaceSlug]);
 
-  // Initialize from props
+  // Initialize from props only once when participants are loaded
   useEffect(() => {
+    // Skip if already initialized
+    if (hasInitialized.current) {
+      return;
+    }
+
+    // Skip if participants haven't loaded yet
+    if (participants.length === 0) {
+      return;
+    }
+
+    // Skip if there are no initial IDs to process
+    if (initialInvitedIds.length === 0 && initialEnrolledIds.length === 0) {
+      return;
+    }
+
+    hasInitialized.current = true;
+
     const initialSelected: SelectedParticipant[] = [];
 
     // Add invited participants
@@ -86,7 +104,7 @@ export function ParticipantSelector({
     // Add enrolled participants
     initialEnrolledIds.forEach(id => {
       const participant = participants.find(p => p.id === id);
-      if (participant) {
+      if (participant && !initialSelected.find(p => p.id === id)) {
         initialSelected.push({
           id: participant.id,
           email: participant.email,
@@ -99,7 +117,7 @@ export function ParticipantSelector({
     if (initialSelected.length > 0) {
       setSelectedParticipants(initialSelected);
     }
-  }, [initialInvitedIds, initialEnrolledIds, participants]);
+  }, [participants.length]); // Only depend on participants being loaded
 
   // Notify parent of changes
   useEffect(() => {
