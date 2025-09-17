@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
-import { getChallengeActivities } from '@/lib/db/queries';
+import { getChallengeActivities, logActivityEvent } from '@/lib/db/queries';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -214,7 +214,7 @@ export const PATCH = withErrorHandling(async (
   { params }: { params: Promise<{ slug: string; id: string }> }
 ) => {
   const { slug, id } = await params;
-  const { workspace } = await requireWorkspaceAdmin(slug);
+  const { workspace, user } = await requireWorkspaceAdmin(slug);
   const { action } = await request.json();
 
   if (!action || !['PUBLISH', 'UNPUBLISH', 'ARCHIVE'].includes(action)) {
@@ -238,6 +238,14 @@ export const PATCH = withErrorHandling(async (
     where: { id },
     data: { status: nextStatus }
   });
+
+  // Log event
+  await logActivityEvent({
+    workspaceId: workspace.id,
+    challengeId: id,
+    actorUserId: user.dbUser.id,
+    type: action === 'PUBLISH' ? 'CHALLENGE_PUBLISHED' : action === 'UNPUBLISH' ? 'CHALLENGE_UNPUBLISHED' : 'CHALLENGE_ARCHIVED'
+  })
 
   return NextResponse.json({ challenge: updated });
 });
