@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Users, X, UserPlus, UserCheck, Info } from 'lucide-react';
+import { Users, X, UserPlus, UserCheck, Info, Search, ArrowRightLeft, Trash2, CheckSquare, Square } from 'lucide-react';
 import type { WorkspaceParticipant, UserId } from '@/lib/types';
 import {
   Tooltip,
@@ -60,6 +61,11 @@ export function ParticipantSelector({
   const [autoEnrollAll, setAutoEnrollAll] = useState(false);
   const { toast } = useToast();
   const hasInitialized = useRef(false);
+  const [availableQuery, setAvailableQuery] = useState('');
+  const [invitedQuery, setInvitedQuery] = useState('');
+  const [enrolledQuery, setEnrolledQuery] = useState('');
+  const [invitedSelected, setInvitedSelected] = useState<Set<string>>(new Set());
+  const [enrolledSelected, setEnrolledSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (workspaceSlug) {
@@ -192,11 +198,60 @@ export function ParticipantSelector({
 
   const getAvailableParticipants = () => {
     const selectedIds = selectedParticipants.map(p => p.id);
-    return participants.filter(p => !selectedIds.includes(p.id));
+    const base = participants.filter(p => !selectedIds.includes(p.id));
+    if (!availableQuery.trim()) return base;
+    const q = availableQuery.toLowerCase();
+    return base.filter(p => p.email.toLowerCase().includes(q));
   };
 
-  const invitedCount = selectedParticipants.filter(p => !p.autoEnroll).length;
-  const enrolledCount = selectedParticipants.filter(p => p.autoEnroll).length;
+  const invited = selectedParticipants.filter(p => !p.autoEnroll);
+  const enrolled = selectedParticipants.filter(p => p.autoEnroll);
+  const invitedCount = invited.length;
+  const enrolledCount = enrolled.length;
+
+  const filteredInvited = invited.filter(p => !invitedQuery || p.email.toLowerCase().includes(invitedQuery.toLowerCase()));
+  const filteredEnrolled = enrolled.filter(p => !enrolledQuery || p.email.toLowerCase().includes(enrolledQuery.toLowerCase()));
+
+  const toggleInvitedSelection = (id: string) => {
+    setInvitedSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleEnrolledSelection = (id: string) => {
+    setEnrolledSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllInvited = () => setInvitedSelected(new Set(filteredInvited.map(p => p.id)));
+  const clearInvitedSelection = () => setInvitedSelected(new Set());
+  const selectAllEnrolled = () => setEnrolledSelected(new Set(filteredEnrolled.map(p => p.id)));
+  const clearEnrolledSelection = () => setEnrolledSelected(new Set());
+
+  const moveInvitedToEnrolled = () => {
+    if (invitedSelected.size === 0) return;
+    setSelectedParticipants(prev => prev.map(p => invitedSelected.has(p.id) ? { ...p, autoEnroll: true } : p));
+    clearInvitedSelection();
+  };
+  const moveEnrolledToInvited = () => {
+    if (enrolledSelected.size === 0) return;
+    setSelectedParticipants(prev => prev.map(p => enrolledSelected.has(p.id) ? { ...p, autoEnroll: false } : p));
+    clearEnrolledSelection();
+  };
+  const removeSelectedFromInvited = () => {
+    if (invitedSelected.size === 0) return;
+    setSelectedParticipants(prev => prev.filter(p => !invitedSelected.has(p.id)));
+    clearInvitedSelection();
+  };
+  const removeSelectedFromEnrolled = () => {
+    if (enrolledSelected.size === 0) return;
+    setSelectedParticipants(prev => prev.filter(p => !enrolledSelected.has(p.id)));
+    clearEnrolledSelection();
+  };
 
   return (
     <div className="space-y-4">
@@ -234,105 +289,138 @@ export function ParticipantSelector({
         )}
       </div>
 
-      <div className="flex space-x-2">
-        <div className="flex-1">
-          <Select
-            value={selectValue}
-            onValueChange={(value) => {
-              setSelectValue(value);
-              handleAddParticipant(value);
-            }}
-            disabled={disabled || isLoading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={
-                isLoading
-                  ? "Loading participants..."
-                  : getAvailableParticipants().length === 0
-                    ? "No participants available"
-                    : "Select participants to add"
-              } />
-            </SelectTrigger>
-            <SelectContent>
-              {getAvailableParticipants().map((participant) => (
-                <SelectItem key={participant.id} value={participant.id}>
-                  <div className="flex items-center space-x-2">
-                    <span>{participant.email}</span>
-                    <span className="text-xs text-gray-500">({participant.role})</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Input
+              value={availableQuery}
+              onChange={(e) => setAvailableQuery(e.target.value)}
+              placeholder="Search available participants"
+              disabled={disabled || isLoading}
+            />
+            <Search className="h-4 w-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+          </div>
+          <div className="flex-1">
+            <Select
+              value={selectValue}
+              onValueChange={(value) => {
+                setSelectValue(value);
+                handleAddParticipant(value);
+              }}
+              disabled={disabled || isLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  isLoading
+                    ? "Loading participants..."
+                    : getAvailableParticipants().length === 0
+                      ? "No participants available"
+                      : "Add participant"
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {getAvailableParticipants().map((participant) => (
+                  <SelectItem key={participant.id} value={participant.id}>
+                    <div className="flex items-center space-x-2">
+                      <span>{participant.email}</span>
+                      <span className="text-xs text-gray-500">({participant.role})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       {selectedParticipants.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm text-gray-600 flex items-center">
-            <Users className="h-4 w-4 mr-1" />
-            Selected participants ({selectedParticipants.length})
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Invited Column */}
+          <div className="border rounded-md p-3 bg-amber-50 border-amber-200">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-amber-600" /> Invited ({invitedCount})
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" type="button" onClick={selectAllInvited} disabled={filteredInvited.length === 0 || disabled}>
+                  <CheckSquare className="h-3 w-3 mr-1" /> All
+                </Button>
+                <Button variant="outline" size="sm" type="button" onClick={clearInvitedSelection} disabled={invitedSelected.size === 0 || disabled}>
+                  <Square className="h-3 w-3 mr-1" /> None
+                </Button>
+                <Button variant="outline" size="sm" type="button" onClick={moveInvitedToEnrolled} disabled={invitedSelected.size === 0 || disabled}>
+                  <ArrowRightLeft className="h-3 w-3 mr-1" /> Enroll
+                </Button>
+                <Button variant="ghost" size="sm" type="button" onClick={removeSelectedFromInvited} disabled={invitedSelected.size === 0 || disabled}>
+                  <Trash2 className="h-3 w-3 mr-1" /> Remove
+                </Button>
+              </div>
+            </div>
+            <div className="relative mb-2">
+              <Input value={invitedQuery} onChange={(e) => setInvitedQuery(e.target.value)} placeholder="Filter invited" disabled={disabled} />
+              <Search className="h-4 w-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+            </div>
+            <div className="space-y-2 max-h-64 overflow-auto pr-1">
+              {filteredInvited.map((p) => (
+                <label key={p.id} className="flex items-center justify-between p-2 rounded-md bg-white border">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" className="h-4 w-4" checked={invitedSelected.has(p.id)} onChange={() => toggleInvitedSelection(p.id)} disabled={disabled} />
+                    <span className="text-sm">{p.email}</span>
+                    <span className="text-xs text-gray-500">({p.role})</span>
+                  </div>
+                  <Button variant="ghost" size="sm" type="button" onClick={() => handleToggleAutoEnroll(p.id)} disabled={disabled}>
+                    <ArrowRightLeft className="h-3 w-3 mr-1" /> Enroll
+                  </Button>
+                </label>
+              ))}
+              {filteredInvited.length === 0 && (
+                <div className="text-xs text-gray-500">No invited participants</div>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            {selectedParticipants.map((participant) => (
-              <div
-                key={participant.id}
-                className={`flex items-center justify-between p-3 rounded-md border ${
-                  participant.autoEnroll
-                    ? 'bg-green-50 border-green-200'
-                    : 'bg-amber-50 border-amber-200'
-                }`}
-              >
-                <div className="flex items-center space-x-3 flex-1">
-                  <div className="flex items-center space-x-2">
-                    {participant.autoEnroll ? (
-                      <UserCheck className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <UserPlus className="h-4 w-4 text-amber-600" />
-                    )}
-                    <div>
-                      <span className="text-sm font-medium">{participant.email}</span>
-                      <span className="text-xs text-gray-500 ml-2">({participant.role})</span>
-                    </div>
-                  </div>
-
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    participant.autoEnroll
-                      ? 'text-green-700 bg-green-200'
-                      : 'text-amber-700 bg-amber-200'
-                  }`}>
-                    {participant.autoEnroll ? 'Will be enrolled' : 'Will be invited'}
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <Label
-                      className="text-xs text-gray-600 cursor-pointer"
-                    >
-                      Invite & Enroll
-                    </Label>
-                    <Switch
-                      checked={participant.autoEnroll}
-                      onCheckedChange={() => handleToggleAutoEnroll(participant.id)}
-                      disabled={disabled}
-                    />
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveParticipant(participant.id)}
-                    disabled={disabled}
-                    className="h-6 w-6 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
+          {/* Enrolled Column */}
+          <div className="border rounded-md p-3 bg-green-50 border-green-200">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-green-600" /> Enrolled ({enrolledCount})
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" type="button" onClick={selectAllEnrolled} disabled={filteredEnrolled.length === 0 || disabled}>
+                  <CheckSquare className="h-3 w-3 mr-1" /> All
+                </Button>
+                <Button variant="outline" size="sm" type="button" onClick={clearEnrolledSelection} disabled={enrolledSelected.size === 0 || disabled}>
+                  <Square className="h-3 w-3 mr-1" /> None
+                </Button>
+                <Button variant="outline" size="sm" type="button" onClick={moveEnrolledToInvited} disabled={enrolledSelected.size === 0 || disabled}>
+                  <ArrowRightLeft className="h-3 w-3 mr-1" /> Invite
+                </Button>
+                <Button variant="ghost" size="sm" type="button" onClick={removeSelectedFromEnrolled} disabled={enrolledSelected.size === 0 || disabled}>
+                  <Trash2 className="h-3 w-3 mr-1" /> Remove
+                </Button>
+              </div>
+            </div>
+            <div className="relative mb-2">
+              <Input value={enrolledQuery} onChange={(e) => setEnrolledQuery(e.target.value)} placeholder="Filter enrolled" disabled={disabled} />
+              <Search className="h-4 w-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+            </div>
+            <div className="space-y-2 max-h-64 overflow-auto pr-1">
+              {filteredEnrolled.map((p) => (
+                <label key={p.id} className="flex items-center justify-between p-2 rounded-md bg-white border">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" className="h-4 w-4" checked={enrolledSelected.has(p.id)} onChange={() => toggleEnrolledSelection(p.id)} disabled={disabled} />
+                    <span className="text-sm">{p.email}</span>
+                    <span className="text-xs text-gray-500">({p.role})</span>
+                  </div>
+                  <Button variant="ghost" size="sm" type="button" onClick={() => handleToggleAutoEnroll(p.id)} disabled={disabled}>
+                    <ArrowRightLeft className="h-3 w-3 mr-1" /> Invite
+                  </Button>
+                </label>
+              ))}
+              {filteredEnrolled.length === 0 && (
+                <div className="text-xs text-gray-500">No enrolled participants</div>
+              )}
+            </div>
           </div>
         </div>
       )}
