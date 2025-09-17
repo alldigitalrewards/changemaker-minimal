@@ -33,6 +33,7 @@ import { ParticipantsBulkActions } from './participants-bulk-actions';
 import { StatusActions } from './status-actions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CopyLinkButton } from './copy-link-button'
+import { Timeline } from './timeline'
 
 interface PageProps {
   params: Promise<{
@@ -409,39 +410,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                     <p className="text-gray-600">No activity yet</p>
                   </div>
                 ) : (
-                  <ol className="space-y-3">
-                    {events.map((ev: any) => (
-                      <li key={ev.id} className="flex items-start gap-3">
-                        <div className="mt-1 h-2 w-2 rounded-full bg-coral-500" />
-                        <div>
-                          <div className="text-sm font-medium">{format(new Date(ev.createdAt), 'MMM d, yyyy h:mm a')}</div>
-                          <div className="text-sm text-gray-700">
-                            {(() => {
-                              const actor = ev.actor?.email || 'system'
-                              const subject = ev.user?.email
-                              switch (ev.type) {
-                                case 'INVITE_SENT': return `${actor} sent an invite`;
-                                case 'INVITE_REDEEMED': return `${subject || 'user'} accepted an invite`;
-                                case 'ENROLLED': return `${subject || 'user'} enrolled (${ev.metadata?.method || 'system'})`;
-                                case 'UNENROLLED': return `${subject || 'user'} was unenrolled${ev.metadata?.reason ? ` (${ev.metadata.reason})` : ''}`;
-                                case 'SUBMISSION_CREATED': return `${subject || 'user'} submitted ${ev.metadata?.activityName || 'an activity'}`;
-                                case 'SUBMISSION_APPROVED': return `${actor} approved ${subject || 'a user'} (${ev.metadata?.pointsAwarded || 0} pts)`;
-                                case 'SUBMISSION_REJECTED': return `${actor} rejected ${subject || 'a user'}${ev.metadata?.reviewNotes ? ` – ${ev.metadata.reviewNotes}` : ''}`;
-                                case 'CHALLENGE_CREATED': return `${actor} created the challenge${ev.metadata?.title ? ` “${ev.metadata.title}”` : ''}`;
-                                case 'CHALLENGE_DUPLICATED': return `${actor} duplicated challenge${ev.metadata?.sourceChallengeId ? ` from ${ev.metadata.sourceChallengeId}` : ''}`;
-                                case 'CHALLENGE_UPDATED': return `${actor} updated the challenge${ev.metadata?.changed ? '' : ''}`;
-                                case 'CHALLENGE_PUBLISHED': return `${actor} published the challenge`;
-                                case 'CHALLENGE_UNPUBLISHED': return `${actor} unpublished the challenge`;
-                                case 'CHALLENGE_ARCHIVED': return `${actor} archived the challenge`;
-                                case 'RBAC_ROLE_CHANGED': return `${actor} changed a role to ${ev.metadata?.newRole || ''}`;
-                                default: return ev.type.replace('_', ' ').toLowerCase();
-                              }
-                            })()}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
+                  <Timeline events={events as any} />
                 )}
               </CardContent>
             </Card>
