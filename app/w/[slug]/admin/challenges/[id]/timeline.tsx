@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { format } from 'date-fns'
+import { useEffect, useMemo, useState } from 'react'
+import { format, formatDistanceToNow } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Activity, Calendar, CheckCircle, Clock, Mail, FileText, UserPlus, UserMinus, Filter, Loader2 } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 type EventType =
   | 'INVITE_SENT'
@@ -64,8 +65,28 @@ function iconFor(type: EventType) {
 type FilterKey = 'ALL' | 'STATUS' | 'INVITES' | 'SUBMISSIONS' | 'REVIEWS'
 
 export function Timeline({ events }: { events: TimelineEvent[] }) {
-  const [filter, setFilter] = useState<FilterKey>('ALL')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const paramKey = 'timeline'
+
+  const initialFilter = (() => {
+    const q = (searchParams?.get(paramKey) || '').toUpperCase()
+    const allowed: FilterKey[] = ['ALL','STATUS','INVITES','SUBMISSIONS','REVIEWS']
+    return (allowed.includes(q as FilterKey) ? (q as FilterKey) : 'ALL')
+  })()
+
+  const [filter, setFilter] = useState<FilterKey>(initialFilter)
   const [limit, setLimit] = useState(50)
+
+  // Persist filter in URL without full navigation
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set(paramKey, filter)
+      // Keep history lighter with replace
+      router.replace(url.pathname + '?' + url.searchParams.toString())
+    } catch {}
+  }, [filter, router])
 
   const filtered = useMemo(() => {
     let evs = events.slice()
@@ -155,24 +176,31 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
         {filterButton('REVIEWS', 'Reviews')}
       </div>
 
-      {Object.entries(visibleByDay).map(([day, evs]) => (
-        <div key={day} className="space-y-2">
-          <div className="text-xs font-semibold text-gray-500">{format(new Date(day), 'EEEE, MMM d')}</div>
-          <ol className="space-y-3">
-            {evs.map((ev) => (
-              <li key={ev.id} className="flex items-start gap-3">
-                <div className="mt-1">
-                  {iconFor(ev.type)}
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">{format(new Date(ev.createdAt), 'h:mm a')}</div>
-                  <div className="text-sm text-gray-700">{renderLabel(ev)}</div>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ))}
+      {(() => {
+        const dayEntries = Object.entries(visibleByDay)
+        return dayEntries.map(([day, evs], idx) => (
+          <div key={day} className={idx === 0 ? 'space-y-2' : 'space-y-2 pt-2 border-t'}>
+            <div className="text-xs font-semibold text-gray-500 sticky top-0 z-10 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 py-1">
+              {format(new Date(day), 'EEEE, MMM d')}
+            </div>
+            <ol className="space-y-3">
+              {evs.map((ev) => (
+                <li key={ev.id} className="flex items-start gap-3">
+                  <div className="mt-1">
+                    {iconFor(ev.type)}
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500" title={format(new Date(ev.createdAt), 'MMM d, yyyy h:mm a')}>
+                      {formatDistanceToNow(new Date(ev.createdAt), { addSuffix: true })}
+                    </div>
+                    <div className="text-sm text-gray-700">{renderLabel(ev)}</div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))
+      })()}
 
       {canLoadMore && (
         <div className="pt-2">
