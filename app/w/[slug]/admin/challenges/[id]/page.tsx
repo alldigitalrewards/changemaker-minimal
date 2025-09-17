@@ -327,27 +327,10 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                 <CardDescription>Chronological activity</CardDescription>
               </CardHeader>
               <CardContent>
+                {/* TODO: Replace with server-fetched ActivityEvent query for full fidelity */}
                 {(() => {
-                  const events: Array<{ ts: Date; label: string }> = []
-                  events.push({ ts: startDate, label: 'Challenge start' })
-                  events.push({ ts: endDate, label: 'Challenge end' })
-                  if (enrollmentDeadline) events.push({ ts: enrollmentDeadline, label: 'Enrollment deadline' })
-                  enrolledUsers.forEach(e => {
-                    events.push({ ts: new Date(e.createdAt), label: `${e.user.email} ${e.status === 'INVITED' ? 'invited' : e.status === 'ENROLLED' ? 'enrolled' : 'withdrew'}` })
-                  })
-                  ;(challenge.activities || []).forEach(a => {
-                    (a.submissions || []).forEach(s => {
-                      events.push({ ts: new Date(s.submittedAt), label: `${s.user.email} submitted ${a.template.name}` })
-                      if (s.status === 'APPROVED' && s.reviewedAt) {
-                        events.push({ ts: new Date(s.reviewedAt), label: `${s.user.email} submission approved` })
-                      }
-                      if (s.status === 'REJECTED' && s.reviewedAt) {
-                        events.push({ ts: new Date(s.reviewedAt), label: `${s.user.email} submission rejected` })
-                      }
-                    })
-                  })
-                  events.sort((a, b) => a.ts.getTime() - b.ts.getTime())
-                  if (events.length === 0) {
+                  const fallback = [] as any[]
+                  if (fallback.length === 0) {
                     return (
                       <div className="text-center py-8">
                         <Clock className="h-12 w-12 mx-auto text-gray-300 mb-2" />
@@ -355,19 +338,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                       </div>
                     )
                   }
-                  return (
-                    <ol className="space-y-3">
-                      {events.map((ev, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                          <div className="mt-1 h-2 w-2 rounded-full bg-coral-500" />
-                          <div>
-                            <div className="text-sm font-medium">{format(ev.ts, 'MMM d, yyyy h:mm a')}</div>
-                            <div className="text-sm text-gray-700">{ev.label}</div>
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
-                  )
+                  return null
                 })()}
               </CardContent>
             </Card>
