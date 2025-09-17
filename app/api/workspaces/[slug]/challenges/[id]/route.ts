@@ -208,3 +208,36 @@ export const DELETE = withErrorHandling(async (
 });
 
 // Participants endpoint has been moved to /app/api/workspaces/[slug]/participants/route.ts
+
+export const PATCH = withErrorHandling(async (
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string; id: string }> }
+) => {
+  const { slug, id } = await params;
+  const { workspace } = await requireWorkspaceAdmin(slug);
+  const { action } = await request.json();
+
+  if (!action || !['PUBLISH', 'UNPUBLISH', 'ARCHIVE'].includes(action)) {
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  }
+
+  const challenge = await prisma.challenge.findFirst({
+    where: { id, workspaceId: workspace.id }
+  });
+
+  if (!challenge) {
+    return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
+  }
+
+  let nextStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = challenge.status as any;
+  if (action === 'PUBLISH') nextStatus = 'PUBLISHED';
+  if (action === 'UNPUBLISH') nextStatus = 'DRAFT';
+  if (action === 'ARCHIVE') nextStatus = 'ARCHIVED';
+
+  const updated = await prisma.challenge.update({
+    where: { id },
+    data: { status: nextStatus }
+  });
+
+  return NextResponse.json({ challenge: updated });
+});

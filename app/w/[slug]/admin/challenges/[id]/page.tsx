@@ -28,6 +28,7 @@ import { ChallengeActivities } from '@/components/activities/challenge-activitie
 import { SubmissionReviewButton } from './submission-review-button';
 import { DuplicateChallengeButton } from './duplicate-button';
 import { ParticipantsBulkActions } from './participants-bulk-actions';
+import { StatusActions } from './status-actions';
 
 interface PageProps {
   params: Promise<{
@@ -155,6 +156,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
     return latest.submittedAt;
   })();
   const anySubmissions = (challenge.activities || []).some(a => (a.submissions || []).length > 0);
+  const statusForActions = ((challenge as any).status as ('DRAFT'|'PUBLISHED'|'ARCHIVED'|undefined)) ?? 'DRAFT';
 
   return (
     <div className="space-y-6">
@@ -207,19 +209,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
             invitedParticipantIds={enrolledUsers.filter(e => e.status === 'INVITED').map(e => e.user.id)}
             enrolledParticipantIds={enrolledUsers.filter(e => e.status === 'ENROLLED').map(e => e.user.id)}
           />
-          {/* Publish/Unpublish and Archive - placeholders until backend endpoints exist */}
-          <Button variant="outline">
-            <PlayCircle className="h-4 w-4 mr-2" />
-            Publish
-          </Button>
-          <Button variant="outline">
-            <PauseCircle className="h-4 w-4 mr-2" />
-            Unpublish
-          </Button>
-          <Button variant="outline">
-            <Archive className="h-4 w-4 mr-2" />
-            Archive
-          </Button>
+          <StatusActions workspaceSlug={slug} challengeId={id} status={statusForActions} />
           <DeleteChallengeButton 
             challengeId={id}
             challengeTitle={challenge.title}

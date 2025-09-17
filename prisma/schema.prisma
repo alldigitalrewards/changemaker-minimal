@@ -49,6 +49,7 @@ model Challenge {
   startDate          DateTime
   endDate            DateTime
   enrollmentDeadline DateTime?
+  status             ChallengeStatus @default(DRAFT)
   workspaceId        String       @db.Uuid
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @default(now()) @updatedAt
@@ -60,6 +61,7 @@ model Challenge {
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
   @@index([workspaceId, startDate])
+  @@index([workspaceId, status])
 }
 
 model Enrollment {
@@ -217,4 +219,10 @@ enum SubmissionStatus {
   APPROVED
   REJECTED
   DRAFT
+}
+
+enum ChallengeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
