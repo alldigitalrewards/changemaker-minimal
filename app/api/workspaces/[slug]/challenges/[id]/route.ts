@@ -105,11 +105,11 @@ export const PUT = withErrorHandling(async (
   try {
     const changed: Record<string, any> = {}
     if (before) {
-      if (before.title !== challenge.title) changed.title = [before.title, challenge.title]
-      if (before.description !== challenge.description) changed.description = true
-      if (+new Date(before.startDate) !== +new Date(challenge.startDate)) changed.startDate = [before.startDate, challenge.startDate]
-      if (+new Date(before.endDate) !== +new Date(challenge.endDate)) changed.endDate = [before.endDate, challenge.endDate]
-      if ((before.enrollmentDeadline || null) !== (challenge.enrollmentDeadline || null)) changed.enrollmentDeadline = [before.enrollmentDeadline, challenge.enrollmentDeadline]
+      if (before.title !== challenge.title) changed.title = { from: before.title, to: challenge.title }
+      if (before.description !== challenge.description) changed.description = { changed: true }
+      if (+new Date(before.startDate) !== +new Date(challenge.startDate)) changed.startDate = { from: before.startDate, to: challenge.startDate }
+      if (+new Date(before.endDate) !== +new Date(challenge.endDate)) changed.endDate = { from: before.endDate, to: challenge.endDate }
+      if ((before.enrollmentDeadline || null) !== (challenge.enrollmentDeadline || null)) changed.enrollmentDeadline = { from: before.enrollmentDeadline, to: challenge.enrollmentDeadline }
     }
     if (Object.keys(changed).length > 0) {
       await (await import('@/lib/db/queries')).logActivityEvent({

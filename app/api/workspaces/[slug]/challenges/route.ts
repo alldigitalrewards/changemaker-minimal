@@ -164,7 +164,7 @@ export async function POST(
       challengeId: challenge.id,
       actorUserId: dbUser.id,
       type: sourceChallengeId ? 'CHALLENGE_DUPLICATED' : 'CHALLENGE_CREATED',
-      metadata: sourceChallengeId ? { sourceChallengeId } : undefined
+      metadata: sourceChallengeId ? { sourceChallengeId, title } : { title }
     })
 
     // Handle participant enrollments
