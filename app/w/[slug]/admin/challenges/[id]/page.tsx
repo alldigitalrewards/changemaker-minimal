@@ -154,6 +154,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
     const latest = all.reduce((acc, s) => (acc && acc.submittedAt > s.submittedAt ? acc : s));
     return latest.submittedAt;
   })();
+  const anySubmissions = (challenge.activities || []).some(a => (a.submissions || []).length > 0);
 
   return (
     <div className="space-y-6">
@@ -480,7 +481,26 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
 
         {/* Activities Tab */}
         <TabsContent value="activities" className="space-y-4">
-          <ChallengeActivities challengeId={id} workspaceSlug={slug} />
+          {(challenge.activities && challenge.activities.length > 0) ? (
+            <ChallengeActivities challengeId={id} workspaceSlug={slug} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>No activities yet</CardTitle>
+                <CardDescription>
+                  Create activities to define tasks participants can complete for points.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
+                  <Button>
+                    <ClipboardList className="h-4 w-4 mr-2" />
+                    Add Activities
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Submissions Tab */}
@@ -496,7 +516,7 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {challenge.activities && challenge.activities.length > 0 ? (
+              {anySubmissions ? (
                 <div className="space-y-6">
                   {challenge.activities.map((activity) => {
                     const submissions = activity.submissions || [];
@@ -609,10 +629,16 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8">
+                <div className="text-center py-12">
                   <ClipboardList className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">No activities with submissions yet.</p>
-                  <p className="text-sm text-gray-400">Add activities to this challenge to see submissions here.</p>
+                  <h3 className="text-lg font-medium text-gray-700 mb-1">No submissions yet</h3>
+                  <p className="text-gray-500 mb-4">Once participants submit, they will appear here for review.</p>
+                  <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
+                    <Button variant="outline">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Invite Participants
+                    </Button>
+                  </Link>
                 </div>
               )}
             </CardContent>
@@ -711,6 +737,14 @@ export default async function ChallengeDetailPage({ params }: PageProps) {
                   <p className="text-sm text-gray-500 mt-1">
                     Participants can freely join this challenge
                   </p>
+                </div>
+                <div>
+                  <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
+                    <Button variant="outline">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Settings
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </CardContent>
