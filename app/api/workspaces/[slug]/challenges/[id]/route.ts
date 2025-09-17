@@ -93,12 +93,34 @@ export const PUT = withErrorHandling(async (
     }
   }
 
+  const before = await prisma.challenge.findUnique({ where: { id } })
   const challenge = await prisma.challenge.update({
     where: {
       id,
     },
     data: updateData,
   });
+
+  // Log challenge updated with minimal diff
+  try {
+    const changed: Record<string, any> = {}
+    if (before) {
+      if (before.title !== challenge.title) changed.title = [before.title, challenge.title]
+      if (before.description !== challenge.description) changed.description = true
+      if (+new Date(before.startDate) !== +new Date(challenge.startDate)) changed.startDate = [before.startDate, challenge.startDate]
+      if (+new Date(before.endDate) !== +new Date(challenge.endDate)) changed.endDate = [before.endDate, challenge.endDate]
+      if ((before.enrollmentDeadline || null) !== (challenge.enrollmentDeadline || null)) changed.enrollmentDeadline = [before.enrollmentDeadline, challenge.enrollmentDeadline]
+    }
+    if (Object.keys(changed).length > 0) {
+      await (await import('@/lib/db/queries')).logActivityEvent({
+        workspaceId: workspace.id,
+        challengeId: id,
+        actorUserId: user.dbUser.id,
+        type: 'CHALLENGE_UPDATED' as any,
+        metadata: { changed }
+      })
+    }
+  } catch {}
 
   // Handle participant updates
   const shouldUpdateParticipants = invitedParticipantIds !== undefined || enrolledParticipantIds !== undefined || participantIds !== undefined;

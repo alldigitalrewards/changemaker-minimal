@@ -87,6 +87,16 @@ export const POST = withErrorHandling(async (
         linkUrl
       })
 
+      // Log submission created
+      await logActivityEvent({
+        workspaceId: workspace.id,
+        challengeId: activity.challengeId,
+        userId: user.dbUser.id,
+        actorUserId: user.dbUser.id,
+        type: 'SUBMISSION_CREATED',
+        metadata: { submissionId: submission.id, activityId }
+      })
+
       // If auto-approved, award points immediately
       if (initialStatus === 'APPROVED') {
         await prisma.activitySubmission.update({
