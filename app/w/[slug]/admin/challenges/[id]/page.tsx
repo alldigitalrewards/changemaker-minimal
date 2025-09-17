@@ -18,7 +18,8 @@ import {
   PauseCircle,
   PlayCircle,
   Copy,
-  Archive
+  Archive,
+  Info
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -30,6 +31,8 @@ import { SubmissionReviewButton } from './submission-review-button';
 import { DuplicateChallengeButton } from './duplicate-button';
 import { ParticipantsBulkActions } from './participants-bulk-actions';
 import { StatusActions } from './status-actions';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { CopyLinkButton } from './copy-link-button'
 
 interface PageProps {
   params: Promise<{
@@ -179,12 +182,22 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                 Back to Challenges
               </Button>
             </Link>
-            <Badge variant={statusVariant}>{challengeStatus}</Badge>
-            {enrollmentOpen ? (
-              <Badge variant="outline">Enrollment Open</Badge>
-            ) : (
-              <Badge variant="secondary">Enrollment Closed</Badge>
-            )}
+            <Link href={`?tab=settings`}>
+              <Badge role="link" className="cursor-pointer" variant={statusVariant} title="Go to Settings">
+                {challengeStatus}
+              </Badge>
+            </Link>
+            <Link href={`?tab=participants`}>
+              {enrollmentOpen ? (
+                <Badge role="link" className="cursor-pointer" variant="outline" title="Manage enrollment settings">
+                  Enrollment Open
+                </Badge>
+              ) : (
+                <Badge role="link" className="cursor-pointer" variant="secondary" title="Manage enrollment settings">
+                  Enrollment Closed
+                </Badge>
+              )}
+            </Link>
           </div>
           <h1 className="text-3xl font-bold text-navy-900 mb-1">{challenge.title}</h1>
           <div className="text-sm text-gray-600 flex flex-wrap gap-4">
@@ -200,6 +213,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <CopyLinkButton href={`${process.env.NEXT_PUBLIC_APP_URL || ''}/w/${slug}/admin/challenges/${id}`} />
           <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
             <Button variant="outline" disabled={statusForActions === 'ARCHIVED'} title={statusForActions === 'ARCHIVED' ? 'Archived challenges are read-only' : undefined}>
               <Edit className="h-4 w-4 mr-2" />
@@ -231,69 +245,114 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
       {/* Insights Strip */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Link href={`?tab=participants`}>
-        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Invited participants metric" title="Total invited participants">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Invited</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{invitedCount}</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-2xl font-bold">{invitedCount}</div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Number of participants invited but not yet enrolled
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <p className="text-xs text-muted-foreground">Pending</p>
           </CardContent>
         </Card>
         </Link>
 
         <Link href={`?tab=participants`}>
-        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Enrolled participants metric" title="Current enrolled participants">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Enrolled</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{enrolledCount}</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-2xl font-bold">{enrolledCount}</div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Participants currently enrolled in this challenge
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <p className="text-xs text-muted-foreground">Current</p>
           </CardContent>
         </Card>
         </Link>
 
         <Link href={`?tab=submissions`}>
-        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Total submissions metric" title="Total submissions in this challenge">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Submissions</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalSubmissions}</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-2xl font-bold">{totalSubmissions}</div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Total submissions received across all activities
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
         </Link>
 
         <Link href={`?tab=submissions`}>
-        <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
+        <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Completion metric" title="Approved submissions per enrolled participant">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completion</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completionPct}%</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-2xl font-bold">{completionPct}%</div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Percentage of enrolled participants with at least one approved submission
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <p className="text-xs text-muted-foreground">Approved per enrolled</p>
           </CardContent>
         </Card>
         </Link>
 
-        <Card>
+        <Card aria-label="Average score metric" title="Average points per approved submission">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Score</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{avgScore}</div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="text-2xl font-bold">{avgScore}</div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Average points awarded per approved submission
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <p className="text-xs text-muted-foreground">Points per approved</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card aria-label="Last activity metric" title="Most recent submission time">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Last Activity</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
@@ -361,20 +420,20 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                               const actor = ev.actor?.email || 'system'
                               const subject = ev.user?.email
                               switch (ev.type) {
-                                case 'INVITE_SENT': return `${actor} sent invite`;
-                                case 'INVITE_REDEEMED': return `${subject || 'user'} redeemed invite`;
-                                case 'ENROLLED': return `${subject || 'user'} enrolled`;
-                                case 'UNENROLLED': return `${subject || 'user'} unenrolled`;
-                                case 'SUBMISSION_CREATED': return `${subject || 'user'} submitted an activity`;
-                                case 'SUBMISSION_APPROVED': return `${actor} approved a submission`;
-                                case 'SUBMISSION_REJECTED': return `${actor} rejected a submission`;
-                                case 'CHALLENGE_CREATED': return `${actor} created the challenge`;
-                                case 'CHALLENGE_DUPLICATED': return `${actor} duplicated a challenge`;
-                                case 'CHALLENGE_UPDATED': return `${actor} updated the challenge`;
+                                case 'INVITE_SENT': return `${actor} sent an invite`;
+                                case 'INVITE_REDEEMED': return `${subject || 'user'} accepted an invite`;
+                                case 'ENROLLED': return `${subject || 'user'} enrolled (${ev.metadata?.method || 'system'})`;
+                                case 'UNENROLLED': return `${subject || 'user'} was unenrolled${ev.metadata?.reason ? ` (${ev.metadata.reason})` : ''}`;
+                                case 'SUBMISSION_CREATED': return `${subject || 'user'} submitted ${ev.metadata?.activityName || 'an activity'}`;
+                                case 'SUBMISSION_APPROVED': return `${actor} approved ${subject || 'a user'} (${ev.metadata?.pointsAwarded || 0} pts)`;
+                                case 'SUBMISSION_REJECTED': return `${actor} rejected ${subject || 'a user'}${ev.metadata?.reviewNotes ? ` – ${ev.metadata.reviewNotes}` : ''}`;
+                                case 'CHALLENGE_CREATED': return `${actor} created the challenge${ev.metadata?.title ? ` “${ev.metadata.title}”` : ''}`;
+                                case 'CHALLENGE_DUPLICATED': return `${actor} duplicated challenge${ev.metadata?.sourceChallengeId ? ` from ${ev.metadata.sourceChallengeId}` : ''}`;
+                                case 'CHALLENGE_UPDATED': return `${actor} updated the challenge${ev.metadata?.changed ? '' : ''}`;
                                 case 'CHALLENGE_PUBLISHED': return `${actor} published the challenge`;
                                 case 'CHALLENGE_UNPUBLISHED': return `${actor} unpublished the challenge`;
                                 case 'CHALLENGE_ARCHIVED': return `${actor} archived the challenge`;
-                                case 'RBAC_ROLE_CHANGED': return `${actor} changed a role`;
+                                case 'RBAC_ROLE_CHANGED': return `${actor} changed a role to ${ev.metadata?.newRole || ''}`;
                                 default: return ev.type.replace('_', ' ').toLowerCase();
                               }
                             })()}
