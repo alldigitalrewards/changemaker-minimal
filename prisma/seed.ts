@@ -4,7 +4,7 @@
  * Updated to support WorkspaceMembership for multi-workspace testing
  */
 
-import { PrismaClient, EnrollmentStatus } from '@prisma/client'
+import { PrismaClient, EnrollmentStatus, ActivityEventType } from '@prisma/client'
 import { type Role, ROLE_ADMIN, ROLE_PARTICIPANT } from '../lib/types'
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
@@ -168,6 +168,7 @@ async function seed() {
 
     // Clear existing data (optional - comment out if you want to preserve data)
     console.log('🗑️  Clearing existing data...')
+    await prisma.activityEvent.deleteMany()
     await prisma.enrollment.deleteMany()
     await prisma.activitySubmission.deleteMany()
     await prisma.activity.deleteMany()
@@ -341,6 +342,15 @@ async function seed() {
         })
         allChallenges.push(challenge)
         console.log(`✓ Created challenge: ${challenge.title}`)
+
+        // Seed timeline: challenge created event
+        await prisma.activityEvent.create({
+          data: {
+            workspaceId: workspace.id,
+            challengeId: challenge.id,
+            type: ActivityEventType.CHALLENGE_CREATED
+          }
+        })
       }
     }
 
@@ -366,7 +376,7 @@ async function seed() {
         .slice(0, numEnrollments)
 
       for (const challenge of selectedChallenges) {
-        await prisma.enrollment.create({
+        const enrollment = await prisma.enrollment.create({
           data: {
             userId: participant.id,
             challengeId: challenge.id,
@@ -374,6 +384,18 @@ async function seed() {
           }
         })
         console.log(`✓ Enrolled ${participant.email} in challenge`)
+
+        if (enrollment.status === EnrollmentStatus.ENROLLED) {
+          await prisma.activityEvent.create({
+            data: {
+              workspaceId: challenge.workspaceId,
+              challengeId: challenge.id,
+              enrollmentId: enrollment.id,
+              userId: participant.id,
+              type: ActivityEventType.ENROLLED
+            }
+          })
+        }
       }
     }
 
