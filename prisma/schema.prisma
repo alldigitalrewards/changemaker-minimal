@@ -226,3 +226,42 @@ enum ChallengeStatus {
   PUBLISHED
   ARCHIVED
 }
+
+model ActivityEvent {
+  id           String            @id @default(uuid()) @db.Uuid
+  workspaceId  String            @db.Uuid
+  challengeId  String?           @db.Uuid
+  enrollmentId String?           @db.Uuid
+  userId       String?           @db.Uuid
+  actorUserId  String?           @db.Uuid
+  type         ActivityEventType
+  metadata     Json?
+  createdAt    DateTime          @default(now())
+
+  workspace    Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge    Challenge?        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  enrollment   Enrollment?       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor        User?             @relation("EventActor", fields: [actorUserId], references: [id])
+
+  @@index([workspaceId, createdAt])
+  @@index([challengeId, createdAt])
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+enum ActivityEventType {
+  INVITE_SENT
+  EMAIL_RESENT
+  ENROLLED
+  UNENROLLED
+  SUBMISSION_CREATED
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  CHALLENGE_PUBLISHED
+  CHALLENGE_UNPUBLISHED
+  CHALLENGE_ARCHIVED
+  ACTIVITY_CREATED
+  ACTIVITY_UPDATED
+  BULK_UNENROLL
+}
