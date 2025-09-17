@@ -155,13 +155,14 @@ export const POST = withErrorHandling(async (
   try {
     const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id, 'ENROLLED')
     // Log enrollment event
-    await logActivityEvent({
+      await logActivityEvent({
       workspaceId: workspace.id,
       challengeId,
       enrollmentId: enrollment.id,
       userId: user.dbUser.id,
       actorUserId: user.dbUser.id,
-      type: 'ENROLLED'
+        type: 'ENROLLED',
+        metadata: { method: 'self_enroll' }
     })
     return NextResponse.json(enrollment)
   } catch (error) {

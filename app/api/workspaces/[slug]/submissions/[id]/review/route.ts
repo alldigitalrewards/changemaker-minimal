@@ -60,7 +60,13 @@ export const POST = withErrorHandling(async (
       userId: submission.userId,
       actorUserId: user.dbUser.id,
       type: status === 'APPROVED' ? 'SUBMISSION_APPROVED' : 'SUBMISSION_REJECTED',
-      metadata: { submissionId: submission.id, pointsAwarded: pointsAwarded || 0, activityId: submission.activityId }
+      metadata: {
+        submissionId: submission.id,
+        pointsAwarded: pointsAwarded || 0,
+        activityId: submission.activityId,
+        activityName: submission.activity?.template?.name,
+        reviewNotes: reviewNotes || undefined
+      }
     })
 
     return NextResponse.json({ submission })
