@@ -21,7 +21,8 @@ import {
   Archive,
   Info,
   AlertTriangle,
-  Bell
+  Bell,
+  Settings
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -397,8 +398,14 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
       {/* Main Content Tabs */}
       <Tabs defaultValue={defaultTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="activities">Enrollments</TabsTrigger>
+          <TabsTrigger value="overview">
+            <Info className="h-4 w-4 mr-1" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="activities">
+            <Activity className="h-4 w-4 mr-1" />
+            Activities
+          </TabsTrigger>
           <TabsTrigger value="submissions">
             <ClipboardList className="h-4 w-4 mr-1" />
             Submissions
@@ -409,10 +416,14 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
             )}
           </TabsTrigger>
           <TabsTrigger value="participants">
+            <Users className="h-4 w-4 mr-1" />
             Participants
             <Badge className="ml-2 text-xs">{enrolledUsers.length}</Badge>
           </TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="settings">
+            <Settings className="h-4 w-4 mr-1" />
+            Settings
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}

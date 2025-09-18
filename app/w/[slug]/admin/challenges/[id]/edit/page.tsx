@@ -448,6 +448,11 @@ export default function EditChallengePage() {
               disabled={isSaving}
             />
 
+            {/* Activities Inline */}
+            <div className="pt-2">
+              <ChallengeActivities challengeId={params?.id || ''} workspaceSlug={params?.slug || ''} />
+            </div>
+
             <div className="flex items-center justify-between pt-4">
               <div className="text-xs text-gray-500">
                 {isAutoSaving ? 'Saving…' : lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : null}
@@ -485,16 +490,6 @@ export default function EditChallengePage() {
               </div>
             </div>
           </form>
-        </CardContent>
-      </Card>
-      {/* Activities Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Activities</CardTitle>
-          <CardDescription>Assign and configure activities for this challenge</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ChallengeActivities challengeId={params?.id || ''} workspaceSlug={params?.slug || ''} />
         </CardContent>
       </Card>
     </div>

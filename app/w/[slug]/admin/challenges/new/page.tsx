@@ -14,7 +14,7 @@ import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ParticipantSelector } from '@/components/ui/participant-selector';
-import { ActivityTemplateSelector } from '@/components/activities/activity-template-selector';
+import { ActivityAddDialog } from '@/components/activities/ActivityAddDialog';
 
 const formSchema = z
   .object({
@@ -286,10 +286,11 @@ export default function NewChallengePage() {
                   ))}
                 </div>
               )}
-              <ActivityTemplateSelector
+              <ActivityAddDialog
                 mode="local"
                 workspaceSlug={params?.slug || ''}
                 onAdd={(activity) => setDraftActivities(prev => [...prev, activity])}
+                trigger={<Button type="button" variant="outline">Add Activity</Button>}
               />
             </div>
 
