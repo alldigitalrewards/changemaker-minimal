@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Activity, Plus, Clock, Users, Trophy, Settings, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ActivityTemplateSelector } from './activity-template-selector';
+import { ActivityAddDialog } from './ActivityAddDialog';
+import ActivityAddInline from './ActivityAddInline';
 import { ActivityType } from '@/lib/types';
 import { format } from 'date-fns';
 
@@ -43,6 +46,13 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<Partial<ActivityWithTemplate> | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [bulkPoints, setBulkPoints] = useState<string>('')
+  const [bulkMax, setBulkMax] = useState<string>('')
+  const [bulkRequired, setBulkRequired] = useState<boolean | null>(null)
+  const [showInlineAdd, setShowInlineAdd] = useState(false)
+  const canApplyBulk = selectedIds.length > 0 && ((bulkPoints.trim() !== '') || (bulkMax.trim() !== '') || (bulkRequired !== null))
+  const clearBulk = () => { setSelectedIds([]); setBulkPoints(''); setBulkMax(''); setBulkRequired(null); }
 
   const fetchActivities = async () => {
     try {
@@ -132,6 +142,40 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
     }
   }
 
+  const patchActivity = async (id: string, body: any) => {
+    const res = await fetch(`/api/workspaces/${workspaceSlug}/challenges/${challengeId}/activities/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      throw new Error(j.error || 'Failed to save activity')
+    }
+  }
+
+  const applyBulkUpdates = async () => {
+    if (selectedIds.length === 0) return
+    try {
+      for (const id of selectedIds) {
+        const body: any = {}
+        if (bulkPoints.trim() !== '') body.pointsValue = Math.max(1, parseInt(bulkPoints) || 1)
+        if (bulkMax.trim() !== '') body.maxSubmissions = Math.max(1, parseInt(bulkMax) || 1)
+        if (bulkRequired !== null) body.isRequired = bulkRequired
+        if (Object.keys(body).length > 0) {
+          await patchActivity(id, body)
+        }
+      }
+      setSelectedIds([])
+      setBulkPoints('')
+      setBulkMax('')
+      setBulkRequired(null)
+      fetchActivities()
+    } catch (e: any) {
+      alert(e.message || 'Failed to apply bulk changes')
+    }
+  }
+
   const getActivityTypeLabel = (type: ActivityType) => {
     switch (type) {
       case 'TEXT_SUBMISSION': return 'Text';
@@ -190,30 +234,54 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
               }
             </CardDescription>
           </div>
-          <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Assign Activity
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Assign Activity to Challenge</DialogTitle>
-                <DialogDescription>
-                  Select an activity template and configure it for this challenge
-                </DialogDescription>
-              </DialogHeader>
-              <ActivityTemplateSelector
-                challengeId={challengeId}
-                workspaceSlug={workspaceSlug}
-                onAssigned={handleActivityAssigned}
-              />
-            </DialogContent>
-          </Dialog>
+          <Button onClick={(e) => { e.preventDefault(); setShowInlineAdd(true) }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Activity
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
+        {showInlineAdd && (
+          <div className="mb-4">
+            <ActivityAddInline
+              workspaceSlug={workspaceSlug}
+              challengeId={challengeId}
+              mode="api"
+              onAdd={() => handleActivityAssigned()}
+              onClose={() => setShowInlineAdd(false)}
+              onAssigned={() => handleActivityAssigned()}
+            />
+          </div>
+        )}
+        {(
+          <div className="mb-4 p-3 border rounded-lg bg-white/80 backdrop-blur sticky top-0 z-10 flex items-center gap-3 shadow-sm">
+            <div className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">{selectedIds.length} selected</div>
+            <Input
+              placeholder="Points"
+              value={bulkPoints}
+              onChange={(e) => setBulkPoints(e.target.value)}
+              className="w-24 h-8"
+              type="number"
+              min={1}
+            />
+            <Input
+              placeholder="Max"
+              value={bulkMax}
+              onChange={(e) => setBulkMax(e.target.value)}
+              className="w-20 h-8"
+              type="number"
+              min={1}
+            />
+            <div className="flex items-center gap-2 ml-2">
+              <Checkbox id="bulk-required" checked={bulkRequired === true} onCheckedChange={(v) => setBulkRequired(v ? true : null)} />
+              <label htmlFor="bulk-required" className="text-sm">Required</label>
+              <Button variant="outline" size="sm" onClick={() => setBulkRequired(false)}>Set Optional</Button>
+            </div>
+            <div className="flex-1" />
+            <Button size="sm" onClick={applyBulkUpdates} disabled={!canApplyBulk}>Apply</Button>
+            <Button size="sm" variant="outline" onClick={clearBulk}>Clear</Button>
+          </div>
+        )}
         {activities.length === 0 ? (
           <div className="text-center py-8">
             <Activity className="h-12 w-12 mx-auto text-gray-400 mb-4" />
@@ -221,35 +289,39 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
             <p className="text-sm text-gray-400 mb-6">
               Assign activities from your templates to give participants tasks to complete
             </p>
-            <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-              <DialogTrigger asChild>
+            <ActivityAddDialog
+              mode="api"
+              workspaceSlug={workspaceSlug}
+              challengeId={challengeId}
+              onAdd={() => handleActivityAssigned()}
+              trigger={
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Assign Your First Activity
+                  Add Your First Activity
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Assign Activity to Challenge</DialogTitle>
-                  <DialogDescription>
-                    Select an activity template and configure it for this challenge
-                  </DialogDescription>
-                </DialogHeader>
-                <ActivityTemplateSelector
-                  challengeId={challengeId}
-                  workspaceSlug={workspaceSlug}
-                  onAssigned={handleActivityAssigned}
-                />
-              </DialogContent>
-            </Dialog>
+              }
+            />
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Checkbox
+                id="select-all"
+                checked={selectedIds.length > 0 && selectedIds.length === activities.length}
+                onCheckedChange={(v) => setSelectedIds(v ? activities.map(a => a.id) : [])}
+              />
+              <label htmlFor="select-all">Select all</label>
+            </div>
             {activities.map((activity) => (
-              <div key={activity.id} className="border rounded-lg p-4">
+              <div key={activity.id} className={`border rounded-lg p-4 transition hover:bg-gray-50 ${selectedIds.includes(activity.id) ? 'ring-1 ring-amber-300' : ''}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
+                      <Checkbox
+                        checked={selectedIds.includes(activity.id)}
+                        onCheckedChange={(v) => setSelectedIds(prev => v ? Array.from(new Set([...prev, activity.id])) : prev.filter(id => id !== activity.id))}
+                        className="mr-1"
+                      />
                       <h3 className="font-semibold text-lg">{activity.template.name}</h3>
                       <Badge variant={getActivityTypeVariant(activity.template.type)}>
                         {getActivityTypeLabel(activity.template.type)}
