@@ -14,9 +14,13 @@ import { toast } from 'sonner'
 import { FileText, Image, Link, Video, CheckSquare, Upload } from 'lucide-react'
 
 interface ActivityTemplateFormProps {
-  children: React.ReactNode
+  children?: React.ReactNode
   workspace: { id: string, name: string, slug: string }
   template?: ActivityTemplate
+  initialTemplate?: Partial<ActivityTemplate> | null
+  forceCreate?: boolean
+  inline?: boolean
+  onSaved?: (template: ActivityTemplate) => void
 }
 
 const activityTypeIcons = {
@@ -46,18 +50,18 @@ const activityTypeDescriptions = {
   MULTIPLE_CHOICE: 'Participants answer multiple choice questions',
 }
 
-export default function ActivityTemplateForm({ children, workspace, template }: ActivityTemplateFormProps) {
+export default function ActivityTemplateForm({ children, workspace, template, initialTemplate = null, forceCreate = false, inline = false, onSaved }: ActivityTemplateFormProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   
   const [formData, setFormData] = useState({
-    name: template?.name || '',
-    description: template?.description || '',
-    type: template?.type || 'TEXT_SUBMISSION' as ActivityType,
-    basePoints: template?.basePoints || 10,
-    requiresApproval: template?.requiresApproval ?? true,
-    allowMultiple: template?.allowMultiple ?? false,
+    name: (initialTemplate?.name as string) || template?.name || '',
+    description: (initialTemplate?.description as string) || template?.description || '',
+    type: (initialTemplate?.type as ActivityType) || template?.type || 'TEXT_SUBMISSION' as ActivityType,
+    basePoints: (initialTemplate?.basePoints as number) || template?.basePoints || 10,
+    requiresApproval: (initialTemplate?.requiresApproval as boolean | undefined) ?? (template?.requiresApproval ?? true),
+    allowMultiple: (initialTemplate?.allowMultiple as boolean | undefined) ?? (template?.allowMultiple ?? false),
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,11 +69,11 @@ export default function ActivityTemplateForm({ children, workspace, template }: 
     setIsLoading(true)
 
     try {
-      const url = template 
+      const url = (template && !forceCreate)
         ? `/api/workspaces/${workspace.slug}/activity-templates/${template.id}`
         : `/api/workspaces/${workspace.slug}/activity-templates`
       
-      const method = template ? 'PUT' : 'POST'
+      const method = (template && !forceCreate) ? 'PUT' : 'POST'
 
       const response = await fetch(url, {
         method,
@@ -84,11 +88,14 @@ export default function ActivityTemplateForm({ children, workspace, template }: 
         throw new Error(errorData.error || 'Failed to save template')
       }
 
-      toast.success(template ? 'Template updated successfully' : 'Template created successfully')
+      const json = await response.json().catch(() => ({} as any))
+      const saved = (json && (json.template || json.data || json)) as any
+      toast.success((template && !forceCreate) ? 'Template updated successfully' : 'Template created successfully')
       setOpen(false)
+      onSaved && onSaved(saved?.template || saved)
       
       // Reset form if creating new template
-      if (!template) {
+      if (!template || forceCreate) {
         setFormData({
           name: '',
           description: '',
@@ -113,24 +120,7 @@ export default function ActivityTemplateForm({ children, workspace, template }: 
   const selectedTypeLabel = activityTypeLabels[formData.type]
   const selectedTypeDescription = activityTypeDescriptions[formData.type]
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>
-            {template ? 'Edit Activity Template' : 'Create Activity Template'}
-          </DialogTitle>
-          <DialogDescription>
-            {template 
-              ? 'Update the activity template details'
-              : 'Create a reusable activity template for your challenges'
-            }
-          </DialogDescription>
-        </DialogHeader>
-        
+  const form = (
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <div className="space-y-4">
@@ -238,14 +228,44 @@ export default function ActivityTemplateForm({ children, workspace, template }: 
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
+            {!inline && (
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+            )}
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : (template ? 'Update Template' : 'Create Template')}
+              {isLoading ? 'Saving...' : (template && !forceCreate ? 'Update Template' : 'Create Template')}
             </Button>
           </DialogFooter>
         </form>
+  )
+
+  if (inline) {
+    return (
+      <div className="space-y-4">
+        {form}
+      </div>
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {children}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>
+            {template ? 'Edit Activity Template' : 'Create Activity Template'}
+          </DialogTitle>
+          <DialogDescription>
+            {template 
+              ? 'Update the activity template details'
+              : 'Create a reusable activity template for your challenges'
+            }
+          </DialogDescription>
+        </DialogHeader>
+        {form}
       </DialogContent>
     </Dialog>
   )

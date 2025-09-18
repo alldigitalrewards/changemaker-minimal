@@ -38,14 +38,17 @@ interface ActivityTemplateSelectorProps {
     isRequired: boolean;
     template?: ActivityTemplate;
   }) => void;
+  initialSelectedTemplateId?: string;
 }
 
-export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigned, mode = 'api', onAdd }: ActivityTemplateSelectorProps) {
+export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigned, mode = 'api', onAdd, initialSelectedTemplateId }: ActivityTemplateSelectorProps) {
   const [templates, setTemplates] = useState<ActivityTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Activity configuration
   const [pointsValue, setPointsValue] = useState<number | null>(null);
@@ -72,7 +75,21 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
     fetchTemplates();
   }, [workspaceSlug]);
 
+  useEffect(() => {
+    if (initialSelectedTemplateId) {
+      setSelectedTemplateId(initialSelectedTemplateId)
+    }
+  }, [initialSelectedTemplateId])
+
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+  const filteredTemplates = templates.filter(t => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      t.name.toLowerCase().includes(q) ||
+      (t.description || '').toLowerCase().includes(q)
+    );
+  });
 
   const handleAssign = async () => {
     if (!selectedTemplateId) {
@@ -187,18 +204,25 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Template Selection */}
       <div>
-        <Label className="text-base font-medium mb-4 block">Select Activity Template</Label>
+        <Label className="text-base font-medium mb-5 block">Select Activity Template</Label>
+        <div className="mb-3">
+          <Input
+            placeholder="Search templates…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
         <RadioGroup value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-          <div className="space-y-3 max-h-60 overflow-y-auto">
-            {templates.map((template) => (
+          <div className="space-y-4 max-h-64 overflow-y-auto">
+            {filteredTemplates.map((template) => (
               <div key={template.id} className="flex items-start space-x-3">
                 <RadioGroupItem value={template.id} id={template.id} className="mt-1" />
                 <div className="flex-1 min-w-0">
                   <Label htmlFor={template.id} className="cursor-pointer">
-                    <div className="flex items-center space-x-2 mb-1">
+                    <div className="flex items-center space-x-3 mb-2">
                       <span className="font-medium">{template.name}</span>
                       <Badge variant={getActivityTypeVariant(template.type)} className="text-xs">
                         {getActivityTypeLabel(template.type)}
@@ -223,7 +247,7 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
           <div>
             <Label className="text-base font-medium mb-4 block">Configure for This Challenge</Label>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Points Value */}
               <div>
                 <Label htmlFor="points" className="flex items-center space-x-1">
@@ -263,34 +287,49 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
                 </p>
               </div>
 
-              {/* Deadline */}
-              <div>
-                <Label htmlFor="deadline" className="flex items-center space-x-1">
-                  <Calendar className="h-4 w-4 text-red-500" />
-                  <span>Deadline (Optional)</span>
-                </Label>
-                <Input
-                  id="deadline"
-                  type="datetime-local"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  When must participants complete this activity
-                </p>
+              {/* Advanced options toggle */}
+              <div className="md:col-span-2">
+                <button
+                  type="button"
+                  className="text-sm text-gray-700 underline"
+                  onClick={() => setShowAdvanced(v => !v)}
+                >
+                  {showAdvanced ? 'Hide advanced settings' : 'More settings'}
+                </button>
               </div>
 
-              {/* Required */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="required"
-                  checked={isRequired}
-                  onCheckedChange={(checked) => setIsRequired(checked as boolean)}
-                />
-                <Label htmlFor="required" className="text-sm">
-                  Mark as required for challenge completion
-                </Label>
-              </div>
+              {showAdvanced && (
+                <>
+                  {/* Deadline */}
+                  <div>
+                    <Label htmlFor="deadline" className="flex items-center space-x-1">
+                      <Calendar className="h-4 w-4 text-red-500" />
+                      <span>Deadline (Optional)</span>
+                    </Label>
+                    <Input
+                      id="deadline"
+                      type="datetime-local"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      When must participants complete this activity
+                    </p>
+                  </div>
+
+                  {/* Required */}
+                  <div className="flex items-center space-x-3">
+                    <Checkbox
+                      id="required"
+                      checked={isRequired}
+                      onCheckedChange={(checked) => setIsRequired(checked as boolean)}
+                    />
+                    <Label htmlFor="required" className="text-sm">
+                      Mark as required for challenge completion
+                    </Label>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </>
@@ -304,7 +343,7 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
       )}
 
       {/* Actions */}
-      <div className="flex justify-end space-x-2 pt-4 border-t">
+      <div className="flex justify-end space-x-3 pt-6 border-t mt-2 sticky bottom-0 bg-white">
         <Button variant="outline" onClick={() => onAssigned && onAssigned()} disabled={submitting}>
           Cancel
         </Button>
