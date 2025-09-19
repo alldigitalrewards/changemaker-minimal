@@ -1513,9 +1513,10 @@ export async function acceptInviteCode(
     throw new DatabaseError('Invite code has reached maximum uses')
   }
   
-  // Check if user is already in workspace
-  const existingUser = await prisma.user.findFirst({
-    where: { id: userId, workspaceId: invite.workspaceId }
+  // Fetch user and any existing membership
+  const dbUser = await prisma.user.findUnique({ where: { id: userId } })
+  const existingMembership = await prisma.workspaceMembership.findUnique({
+    where: { userId_workspaceId: { userId, workspaceId: invite.workspaceId } }
   })
   
   let enrollment: Enrollment | null = null
@@ -1524,26 +1525,33 @@ export async function acceptInviteCode(
   
   try {
     await prisma.$transaction(async (tx) => {
-      if (!existingUser) {
-        // Add user to workspace
-        await tx.user.update({
-          where: { id: userId },
+      // Ensure there is a single user row for this supabase user
+      if (!dbUser) {
+        throw new DatabaseError('User not found')
+      }
+
+      // Link placeholder rows by email if missing supabaseUserId
+      if (!dbUser.supabaseUserId) {
+        await tx.user.update({ where: { id: dbUser.id }, data: { supabaseUserId: dbUser.id } as any })
+      }
+
+      // Upsert membership (new system)
+      if (!existingMembership) {
+        await tx.workspaceMembership.create({
           data: {
+            userId,
             workspaceId: invite.workspaceId,
             role: invite.role,
-            isPending: false
+            isPrimary: false
           }
         })
         resultingRole = invite.role
       } else {
-        // Ensure pending flag is cleared for existing member
-        await tx.user.update({
-          where: { id: userId },
-          data: { isPending: false }
-        })
-        isExistingMember = true
-        resultingRole = existingUser.role as Role
+        resultingRole = existingMembership.role as Role
       }
+
+      // Clear pending flag on the user record
+      await tx.user.update({ where: { id: userId }, data: { isPending: false } })
       
       // If invite is for specific challenge, enroll user
       if (invite.challengeId) {
@@ -1564,6 +1572,25 @@ export async function acceptInviteCode(
         }
       }
       
+      // Promote or create enrollment based on invite
+      if (invite.challengeId) {
+        const existingEnrollment = await tx.enrollment.findFirst({
+          where: { userId, challengeId: invite.challengeId }
+        })
+        if (!existingEnrollment) {
+          enrollment = await tx.enrollment.create({
+            data: { userId, challengeId: invite.challengeId, status: 'ENROLLED' }
+          })
+        } else if (existingEnrollment.status !== 'ENROLLED') {
+          enrollment = await tx.enrollment.update({
+            where: { id: existingEnrollment.id },
+            data: { status: 'ENROLLED' }
+          })
+        } else {
+          enrollment = existingEnrollment
+        }
+      }
+
       // Increment used count
       await tx.inviteCode.update({
         where: { id: invite.id },

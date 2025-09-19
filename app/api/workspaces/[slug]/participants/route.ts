@@ -89,9 +89,21 @@ export const POST = withErrorHandling(async (
         data: {
           email: lowerEmail,
           role,
+          isPending: true,
           workspaceId: workspace.id,
         },
       });
+      // Create membership record (new system)
+      try {
+        await prisma.workspaceMembership.create({
+          data: {
+            userId: createdOrExistingUser.id,
+            workspaceId: workspace.id,
+            role,
+            isPrimary: false
+          }
+        })
+      } catch (_) {}
     }
 
     // Generate a workspace invite code limited to a single use
