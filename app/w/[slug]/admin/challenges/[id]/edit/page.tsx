@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +14,8 @@ import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ParticipantSelector } from '@/components/ui/participant-selector';
+import { StatusActions } from '../status-actions';
+import { ChallengeActivities } from '@/components/activities/challenge-activities';
 
 interface Challenge {
   id: string;
@@ -25,21 +30,85 @@ interface Challenge {
   workspaceId: string;
 }
 
+const formSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(3, 'Title must be at least 3 characters')
+      .max(100, 'Title must be at most 100 characters'),
+    description: z
+      .string()
+      .trim()
+      .min(10, 'Description must be at least 10 characters')
+      .max(500, 'Description must be at most 500 characters'),
+    startDate: z
+      .string()
+      .min(1, 'Start date is required')
+      .refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid start date'),
+    endDate: z
+      .string()
+      .min(1, 'End date is required')
+      .refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid end date'),
+    enrollmentDeadline: z
+      .string()
+      .optional()
+      .refine((s) => (s ? !Number.isNaN(Date.parse(s)) : true), 'Invalid enrollment deadline'),
+  })
+  .refine(
+    (data) => new Date(data.endDate).getTime() > new Date(data.startDate).getTime(),
+    {
+      message: 'End date must be after start date',
+      path: ['endDate'],
+    }
+  )
+  .refine(
+    (data) =>
+      !data.enrollmentDeadline ||
+      new Date(data.enrollmentDeadline).getTime() <= new Date(data.startDate).getTime(),
+    {
+      message: 'Enrollment deadline must be before or on start date',
+      path: ['enrollmentDeadline'],
+    }
+  );
+
+type FormValues = z.infer<typeof formSchema>;
+
 export default function EditChallengePage() {
   const router = useRouter();
   const params = useParams<{ slug: string; id: string }>();
   const { toast } = useToast();
   
   const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
   const [participantIds, setParticipantIds] = useState<string[]>([]);
   const [participantData, setParticipantData] = useState<{ invited: string[]; enrolled: string[] }>({ invited: [], enrolled: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isValid, isDirty },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    mode: 'onChange',
+    defaultValues: {
+      title: '',
+      description: '',
+      startDate: '',
+      endDate: '',
+      enrollmentDeadline: '',
+    },
+  });
+
+  const startDateValue = watch('startDate');
+  const endDateValue = watch('endDate');
+  const enrollmentDeadlineValue = watch('enrollmentDeadline');
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
     if (params?.slug && params?.id) {
@@ -57,11 +126,13 @@ export default function EditChallengePage() {
         const data = await response.json();
         const challengeData = data.challenge || data;
         setChallenge(challengeData);
-        setTitle(challengeData.title);
-        setDescription(challengeData.description);
-        setStartDate(challengeData.startDate ? new Date(challengeData.startDate).toISOString().split('T')[0] : '');
-        setEndDate(challengeData.endDate ? new Date(challengeData.endDate).toISOString().split('T')[0] : '');
-        setEnrollmentDeadline(challengeData.enrollmentDeadline ? new Date(challengeData.enrollmentDeadline).toISOString().split('T')[0] : '');
+        reset({
+          title: challengeData.title ?? '',
+          description: challengeData.description ?? '',
+          startDate: challengeData.startDate ? new Date(challengeData.startDate).toISOString().split('T')[0] : '',
+          endDate: challengeData.endDate ? new Date(challengeData.endDate).toISOString().split('T')[0] : '',
+          enrollmentDeadline: challengeData.enrollmentDeadline ? new Date(challengeData.enrollmentDeadline).toISOString().split('T')[0] : '',
+        });
         
         // Load current participants by status
         if (challengeData.enrollments) {
@@ -91,61 +162,25 @@ export default function EditChallengePage() {
       router.push(`/w/${params.slug}/admin/challenges`);
     } finally {
       setIsLoading(false);
+      setInitialized(true);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const onSubmit = async (values: FormValues) => {
     if (!params?.slug || !params?.id) return;
-
-    // Validation
-    if (!startDate || !endDate) {
-      toast({
-        title: 'Validation Error',
-        description: 'Start date and end date are required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (end <= start) {
-      toast({
-        title: 'Validation Error',
-        description: 'End date must be after start date',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (enrollmentDeadline) {
-      const enrollDeadline = new Date(enrollmentDeadline);
-      if (enrollDeadline > start) {
-        toast({
-          title: 'Validation Error',
-          description: 'Enrollment deadline must be before or on the start date',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-    
     setIsSaving(true);
     try {
       const response = await fetch(`/api/workspaces/${params.slug}/challenges/${params.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          title, 
-          description,
-          startDate,
-          endDate,
-          enrollmentDeadline: enrollmentDeadline || undefined,
+        body: JSON.stringify({
+          title: values.title.trim(),
+          description: values.description.trim(),
+          startDate: values.startDate,
+          endDate: values.endDate,
+          enrollmentDeadline: values.enrollmentDeadline || undefined,
           invitedParticipantIds: participantData.invited,
-          enrolledParticipantIds: participantData.enrolled
+          enrolledParticipantIds: participantData.enrolled,
         }),
       });
 
@@ -168,6 +203,93 @@ export default function EditChallengePage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Debounced autosave for DRAFT challenges
+  useEffect(() => {
+    if (!initialized) return;
+    if (!challenge) return;
+    if (challenge.status !== 'DRAFT') return;
+    if (!isValid) return;
+    if (!isDirty && participantData) {
+      // still allow autosave if participantData changed? we'll skip here
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setIsAutoSaving(true);
+        const response = await fetch(`/api/workspaces/${params.slug}/challenges/${params.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: watch('title').trim(),
+            description: watch('description').trim(),
+            startDate: startDateValue,
+            endDate: endDateValue,
+            enrollmentDeadline: enrollmentDeadlineValue || undefined,
+            invitedParticipantIds: participantData.invited,
+            enrolledParticipantIds: participantData.enrolled,
+          }),
+        });
+        if (response.ok) {
+          setLastSavedAt(Date.now());
+        }
+      } catch (_) {
+        // quiet fail; global toasts reserved for explicit actions
+      } finally {
+        setIsAutoSaving(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    initialized,
+    challenge?.status,
+    isValid,
+    isDirty,
+    startDateValue,
+    endDateValue,
+    enrollmentDeadlineValue,
+    participantData.invited.join(','),
+    participantData.enrolled.join(','),
+  ]);
+
+  // Warn on unsaved changes before navigation (hard refresh/close)
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  const formatDate = (d: Date) => d.toISOString().split('T')[0];
+  const setToday = () => {
+    const today = new Date();
+    const todayStr = formatDate(today);
+    reset({
+      title: watch('title'),
+      description: watch('description'),
+      startDate: todayStr,
+      endDate: endDateValue,
+      enrollmentDeadline: enrollmentDeadlineValue,
+    }, { keepErrors: true, keepDirty: true });
+  };
+  const addOneWeek = () => {
+    if (!startDateValue) return;
+    const d = new Date(startDateValue);
+    d.setDate(d.getDate() + 7);
+    reset({
+      title: watch('title'),
+      description: watch('description'),
+      startDate: startDateValue,
+      endDate: formatDate(d),
+      enrollmentDeadline: enrollmentDeadlineValue,
+    }, { keepErrors: true, keepDirty: true });
   };
 
   const handleCancel = () => {
@@ -214,6 +336,12 @@ export default function EditChallengePage() {
           </Link>
           <h1 className="text-3xl font-bold text-navy-900">Edit Challenge</h1>
         </div>
+        {challenge?.status && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-600">Status: {challenge.status}</span>
+            <StatusActions workspaceSlug={params?.slug || ''} challengeId={params?.id || ''} status={(challenge.status as any) || 'DRAFT'} />
+          </div>
+        )}
       </div>
 
       {/* Edit Form */}
@@ -225,30 +353,32 @@ export default function EditChallengePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pb-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                {...register('title')}
                 placeholder="Enter challenge title"
-                required
                 disabled={isSaving}
               />
+              {errors.title?.message && (
+                <span className="text-sm text-red-500">{errors.title.message}</span>
+              )}
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                {...register('description')}
                 placeholder="Describe the challenge"
                 rows={6}
-                required
                 disabled={isSaving}
               />
+              {errors.description?.message && (
+                <span className="text-sm text-red-500">{errors.description.message}</span>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -259,14 +389,16 @@ export default function EditChallengePage() {
                 <Input
                   id="startDate"
                   type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  required
+                  {...register('startDate')}
                   disabled={isSaving}
                 />
-                {!startDate && (
-                  <span className="text-sm text-red-500">Start date is required</span>
+                {errors.startDate?.message && (
+                  <span className="text-sm text-red-500">{errors.startDate.message}</span>
                 )}
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" type="button" size="sm" onClick={setToday} disabled={isSaving}>Today</Button>
+                  <Button variant="outline" type="button" size="sm" onClick={addOneWeek} disabled={isSaving || !startDateValue}>+1 week (end)</Button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -276,17 +408,12 @@ export default function EditChallengePage() {
                 <Input
                   id="endDate"
                   type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate}
-                  required
+                  {...register('endDate')}
+                  min={startDateValue}
                   disabled={isSaving}
                 />
-                {!endDate && (
-                  <span className="text-sm text-red-500">End date is required</span>
-                )}
-                {startDate && endDate && new Date(endDate) <= new Date(startDate) && (
-                  <span className="text-sm text-red-500">End date must be after start date</span>
+                {errors.endDate?.message && (
+                  <span className="text-sm text-red-500">{errors.endDate.message}</span>
                 )}
               </div>
             </div>
@@ -298,16 +425,15 @@ export default function EditChallengePage() {
               <Input
                 id="enrollmentDeadline"
                 type="date"
-                value={enrollmentDeadline}
-                onChange={(e) => setEnrollmentDeadline(e.target.value)}
-                max={startDate}
+                {...register('enrollmentDeadline')}
+                max={startDateValue}
                 disabled={isSaving}
               />
               <div className="text-sm text-gray-500">
-                If not set, participants can enroll until the challenge starts
+                If not set, participants can enroll until the challenge starts. Times use your timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).
               </div>
-              {enrollmentDeadline && startDate && new Date(enrollmentDeadline) > new Date(startDate) && (
-                <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
+              {errors.enrollmentDeadline?.message && (
+                <span className="text-sm text-red-500">{errors.enrollmentDeadline.message}</span>
               )}
             </div>
 
@@ -322,7 +448,19 @@ export default function EditChallengePage() {
               disabled={isSaving}
             />
 
-            <div className="flex justify-end space-x-2 pt-4">
+            {/* Activities Inline */}
+            <div className="pt-2">
+              <ChallengeActivities challengeId={params?.id || ''} workspaceSlug={params?.slug || ''} />
+            </div>
+
+            <div className="flex items-center justify-between pt-4">
+              <div className="text-xs text-gray-500">
+                {isAutoSaving ? 'Saving…' : lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : null}
+              </div>
+              <div className="flex gap-2">
+                <Link href={`/w/${params?.slug}/participant/challenges/${params?.id}?preview=1`} target="_blank">
+                  <Button type="button" variant="outline">Preview as participant</Button>
+                </Link>
               <Button
                 type="button"
                 variant="outline"
@@ -333,7 +471,7 @@ export default function EditChallengePage() {
               </Button>
               <Button 
                 type="submit" 
-                disabled={isSaving}
+                disabled={isSaving || !isValid}
                 style={{ backgroundColor: '#FF6B6B', color: 'white' }}
                 className="hover:opacity-90"
               >
@@ -349,6 +487,7 @@ export default function EditChallengePage() {
                   </>
                 )}
               </Button>
+              </div>
             </div>
           </form>
         </CardContent>

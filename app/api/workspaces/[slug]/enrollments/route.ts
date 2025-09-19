@@ -11,6 +11,7 @@ import {
   ResourceNotFoundError
 } from "@/lib/db/queries"
 import { prisma } from "@/lib/db"
+import { logActivityEvent } from "@/lib/db/queries"
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
@@ -86,6 +87,16 @@ export const POST = withErrorHandling(async (
         linkUrl
       })
 
+      // Log submission created
+      await logActivityEvent({
+        workspaceId: workspace.id,
+        challengeId: activity.challengeId,
+        userId: user.dbUser.id,
+        actorUserId: user.dbUser.id,
+        type: 'SUBMISSION_CREATED',
+        metadata: { submissionId: submission.id, activityId }
+      })
+
       // If auto-approved, award points immediately
       if (initialStatus === 'APPROVED') {
         await prisma.activitySubmission.update({
@@ -143,6 +154,16 @@ export const POST = withErrorHandling(async (
   // Create enrollment using standardized query (includes validation)
   try {
     const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id, 'ENROLLED')
+    // Log enrollment event
+      await logActivityEvent({
+      workspaceId: workspace.id,
+      challengeId,
+      enrollmentId: enrollment.id,
+      userId: user.dbUser.id,
+      actorUserId: user.dbUser.id,
+        type: 'ENROLLED',
+        metadata: { method: 'self_enroll' }
+    })
     return NextResponse.json(enrollment)
   } catch (error) {
     if (error instanceof DatabaseError) {

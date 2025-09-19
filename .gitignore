@@ -68,9 +68,6 @@ node_modules/
 .mcp.json
 .mcp.json
 
-# Task files
-tasks.json
-tasks/ 
 .serena
 .claude/settings.local.json
 .jack/
@@ -83,3 +80,17 @@ playwright-report/index.html
 .gitignore
 button-issues-report.json
 
+
+# Task files
+# tasks.json
+# tasks/ 
+.github/instructions
+opencode.json
+
+.kilo/
+AGENT.md
+GEMINI.md
+AGENTS.md
+.kiro/
+.gemini/settings.json
+.zed/settings.json

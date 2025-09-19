@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth"
 import { reviewActivitySubmission, DatabaseError, ResourceNotFoundError } from "@/lib/db/queries"
 import { prisma } from "@/lib/db"
+import { logActivityEvent } from "@/lib/db/queries"
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
@@ -51,6 +52,22 @@ export const POST = withErrorHandling(async (
         }
       })
     }
+
+    // Log review event
+    await logActivityEvent({
+      workspaceId: workspace.id,
+      challengeId: submission.activity.challengeId,
+      userId: submission.userId,
+      actorUserId: user.dbUser.id,
+      type: status === 'APPROVED' ? 'SUBMISSION_APPROVED' : 'SUBMISSION_REJECTED',
+      metadata: {
+        submissionId: submission.id,
+        pointsAwarded: pointsAwarded || 0,
+        activityId: submission.activityId,
+        activityName: submission.activity?.template?.name,
+        reviewNotes: reviewNotes || undefined
+      }
+    })
 
     return NextResponse.json({ submission })
   } catch (error) {

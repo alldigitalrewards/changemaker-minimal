@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,113 +14,61 @@ import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ParticipantSelector } from '@/components/ui/participant-selector';
+import { ActivityAddDialog } from '@/components/activities/ActivityAddDialog';
+
+const formSchema = z
+  .object({
+    title: z.string().trim().min(3, 'Title must be at least 3 characters').max(100, 'Title must be at most 100 characters'),
+    description: z.string().trim().min(10, 'Description must be at least 10 characters').max(500, 'Description must be at most 500 characters'),
+    startDate: z.string().min(1, 'Start date is required').refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid start date'),
+    endDate: z.string().min(1, 'End date is required').refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid end date'),
+    enrollmentDeadline: z.string().optional().refine((s) => (s ? !Number.isNaN(Date.parse(s)) : true), 'Invalid enrollment deadline'),
+  })
+  .refine((data) => new Date(data.endDate).getTime() >= new Date(data.startDate).getTime(), {
+    path: ['endDate'],
+    message: 'End date must be on or after start date',
+  })
+  .refine((data) => !data.enrollmentDeadline || new Date(data.enrollmentDeadline).getTime() <= new Date(data.startDate).getTime(), {
+    path: ['enrollmentDeadline'],
+    message: 'Enrollment deadline must be before or on start date',
+  });
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function NewChallengePage() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const { toast } = useToast();
   
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [enrollmentDeadline, setEnrollmentDeadline] = useState('');
   const [participantIds, setParticipantIds] = useState<string[]>([]);
   const [participantData, setParticipantData] = useState<{ invited: string[]; enrolled: string[] }>({ invited: [], enrolled: [] });
   const [isSaving, setIsSaving] = useState(false);
+  const [initialized, setInitialized] = useState(true);
+  const [draftActivities, setDraftActivities] = useState<Array<{ templateId: string; pointsValue: number; maxSubmissions: number; deadline: string | null; isRequired: boolean; template?: any }>>([])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validation
-    const trimmedTitle = title.trim();
-    const trimmedDescription = description.trim();
-    
-    if (trimmedTitle.length < 3) {
-      toast({
-        title: 'Validation Error',
-        description: 'Challenge title must be at least 3 characters long',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (trimmedDescription.length < 10) {
-      toast({
-        title: 'Validation Error',
-        description: 'Challenge description must be at least 10 characters long',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const { register, handleSubmit, watch, reset, formState: { errors, isValid, isDirty } } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    mode: 'onChange',
+    defaultValues: { title: '', description: '', startDate: '', endDate: '', enrollmentDeadline: '' },
+  });
 
-    if (!startDate) {
-      toast({
-        title: 'Validation Error',
-        description: 'Start date is required',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const startDateValue = watch('startDate');
+  const endDateValue = watch('endDate');
+  const enrollmentDeadlineValue = watch('enrollmentDeadline');
 
-    if (!endDate) {
-      toast({
-        title: 'Validation Error',
-        description: 'End date is required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    start.setHours(0, 0, 0, 0);
-
-    if (start < today) {
-      toast({
-        title: 'Validation Error',
-        description: 'Start date cannot be in the past',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (end < start) {
-      toast({
-        title: 'Validation Error',
-        description: 'End date must be on or after start date',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (enrollmentDeadline) {
-      const enrollDeadline = new Date(enrollmentDeadline);
-      if (enrollDeadline > start) {
-        toast({
-          title: 'Validation Error',
-          description: 'Enrollment deadline must be before or on the start date',
-          variant: 'destructive',
-        });
-        return;
-      }
-    }
-    
+  const onSubmit = async (values: FormValues) => {
     if (!params?.slug) return;
-    
     setIsSaving(true);
     try {
       const response = await fetch(`/api/workspaces/${params.slug}/challenges`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          title: trimmedTitle, 
-          description: trimmedDescription,
-          startDate,
-          endDate,
-          enrollmentDeadline: enrollmentDeadline || undefined,
+          title: values.title.trim(),
+          description: values.description.trim(),
+          startDate: values.startDate,
+          endDate: values.endDate,
+          enrollmentDeadline: values.enrollmentDeadline || undefined,
           invitedParticipantIds: participantData.invited.length > 0 ? participantData.invited : undefined,
           enrolledParticipantIds: participantData.enrolled.length > 0 ? participantData.enrolled : undefined
         }),
@@ -125,22 +76,30 @@ export default function NewChallengePage() {
 
       if (response.ok) {
         const data = await response.json();
-        toast({
-          title: 'Challenge created',
-          description: 'Your challenge has been created successfully.',
-        });
-        // Redirect to the challenge details page
+        // Assign any draft activities sequentially (best-effort)
+        try {
+          for (const a of draftActivities) {
+            await fetch(`/api/workspaces/${params.slug}/challenges/${data.challenge.id}/activities`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                templateId: a.templateId,
+                pointsValue: a.pointsValue,
+                maxSubmissions: a.maxSubmissions,
+                deadline: a.deadline,
+                isRequired: a.isRequired
+              })
+            })
+          }
+        } catch {}
+        toast({ title: 'Challenge created', description: 'Your challenge has been created successfully.' });
         router.push(`/w/${params.slug}/admin/challenges/${data.challenge.id}`);
       } else {
         const error = await response.json();
         throw new Error(error.error || 'Failed to create challenge');
       }
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create challenge',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message || 'Failed to create challenge', variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
@@ -150,14 +109,41 @@ export default function NewChallengePage() {
     router.push(`/w/${params?.slug}/admin/challenges`);
   };
 
-  const titleCharCount = title.length;
-  const descriptionCharCount = description.length;
-  const isTitleValid = title.trim().length >= 3;
-  const isDescriptionValid = description.trim().length >= 10;
-  const isStartDateValid = startDate.length > 0;
-  const isEndDateValid = endDate.length > 0;
-  const areDatesValid = isStartDateValid && isEndDateValid && new Date(endDate) >= new Date(startDate);
-  const isFormValid = isTitleValid && isDescriptionValid && areDatesValid;
+  // Warn on unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  const formatDate = (d: Date) => d.toISOString().split('T')[0];
+  const setToday = () => {
+    const todayStr = formatDate(new Date());
+    reset({
+      title: watch('title'),
+      description: watch('description'),
+      startDate: todayStr,
+      endDate: endDateValue,
+      enrollmentDeadline: enrollmentDeadlineValue,
+    }, { keepErrors: true, keepDirty: true });
+  };
+  const addOneWeek = () => {
+    if (!startDateValue) return;
+    const d = new Date(startDateValue);
+    d.setDate(d.getDate() + 7);
+    reset({
+      title: watch('title'),
+      description: watch('description'),
+      startDate: startDateValue,
+      endDate: formatDate(d),
+      enrollmentDeadline: enrollmentDeadlineValue,
+    }, { keepErrors: true, keepDirty: true });
+  };
 
   return (
     <div className="space-y-6">
@@ -183,32 +169,22 @@ export default function NewChallengePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">
                 Challenge Title <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                {...register('title')}
                 placeholder="Enter challenge title"
                 required
                 disabled={isSaving}
                 maxLength={100}
-                className={!isTitleValid && title.length > 0 ? 'border-red-300' : ''}
               />
               <div className="flex justify-between text-sm text-gray-500">
-                <span>
-                  {!isTitleValid && title.length > 0 ? (
-                    <span className="text-red-500">Minimum 3 characters required</span>
-                  ) : (
-                    <span>Minimum 3 characters</span>
-                  )}
-                </span>
-                <span className={titleCharCount > 90 ? 'text-amber-600' : ''}>
-                  {titleCharCount}/100
-                </span>
+                <span>{errors.title?.message ? (<span className="text-red-500">{errors.title.message}</span>) : 'Minimum 3 characters'}</span>
+                <span>{(watch('title') || '').length}/100</span>
               </div>
             </div>
             
@@ -218,26 +194,16 @@ export default function NewChallengePage() {
               </Label>
               <Textarea
                 id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                {...register('description')}
                 placeholder="Describe the challenge objectives, requirements, and expectations"
                 rows={6}
                 required
                 disabled={isSaving}
                 maxLength={500}
-                className={!isDescriptionValid && description.length > 0 ? 'border-red-300' : ''}
               />
               <div className="flex justify-between text-sm text-gray-500">
-                <span>
-                  {!isDescriptionValid && description.length > 0 ? (
-                    <span className="text-red-500">Minimum 10 characters required</span>
-                  ) : (
-                    <span>Minimum 10 characters</span>
-                  )}
-                </span>
-                <span className={descriptionCharCount > 450 ? 'text-amber-600' : ''}>
-                  {descriptionCharCount}/500
-                </span>
+                <span>{errors.description?.message ? (<span className="text-red-500">{errors.description.message}</span>) : 'Minimum 10 characters'}</span>
+                <span>{(watch('description') || '').length}/500</span>
               </div>
             </div>
 
@@ -249,16 +215,15 @@ export default function NewChallengePage() {
                 <Input
                   id="startDate"
                   type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
+                  {...register('startDate')}
                   required
                   disabled={isSaving}
-                  className={!isStartDateValid && startDate.length === 0 ? 'border-red-300' : ''}
                 />
-                {!isStartDateValid && startDate.length === 0 && (
-                  <span className="text-sm text-red-500">Start date is required</span>
-                )}
+                {errors.startDate?.message && (<span className="text-sm text-red-500">{errors.startDate.message}</span>)}
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" type="button" size="sm" onClick={setToday} disabled={isSaving}>Today</Button>
+                  <Button variant="outline" type="button" size="sm" onClick={addOneWeek} disabled={isSaving || !startDateValue}>+1 week (end)</Button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -268,19 +233,12 @@ export default function NewChallengePage() {
                 <Input
                   id="endDate"
                   type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  min={startDate || new Date().toISOString().split('T')[0]}
+                  {...register('endDate')}
+                  min={startDateValue || new Date().toISOString().split('T')[0]}
                   required
                   disabled={isSaving}
-                  className={!isEndDateValid && endDate.length === 0 ? 'border-red-300' : ''}
                 />
-                {!isEndDateValid && endDate.length === 0 && (
-                  <span className="text-sm text-red-500">End date is required</span>
-                )}
-                {startDate && endDate && new Date(endDate) < new Date(startDate) && (
-                  <span className="text-sm text-red-500">End date must be on or after start date</span>
-                )}
+                {errors.endDate?.message && (<span className="text-sm text-red-500">{errors.endDate.message}</span>)}
               </div>
             </div>
 
@@ -291,17 +249,14 @@ export default function NewChallengePage() {
               <Input
                 id="enrollmentDeadline"
                 type="date"
-                value={enrollmentDeadline}
-                onChange={(e) => setEnrollmentDeadline(e.target.value)}
-                max={startDate}
+                {...register('enrollmentDeadline')}
+                max={startDateValue}
                 disabled={isSaving}
               />
               <div className="text-sm text-gray-500">
-                If not set, participants can enroll until the challenge starts
+                If not set, participants can enroll until the challenge starts. Times use your timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).
               </div>
-              {enrollmentDeadline && startDate && new Date(enrollmentDeadline) > new Date(startDate) && (
-                <span className="text-sm text-red-500">Enrollment deadline must be before or on start date</span>
-              )}
+              {errors.enrollmentDeadline?.message && (<span className="text-sm text-red-500">{errors.enrollmentDeadline.message}</span>)}
             </div>
 
             {/* Participant Management */}
@@ -312,6 +267,32 @@ export default function NewChallengePage() {
               onParticipantDataChange={setParticipantData}
               disabled={isSaving}
             />
+
+            {/* Activities before create (optional) */}
+            <div className="space-y-3">
+              <Label>Activities (optional)</Label>
+              {draftActivities.length === 0 ? (
+                <div className="text-sm text-gray-600">No activities added yet</div>
+              ) : (
+                <div className="space-y-2">
+                  {draftActivities.map((a, idx) => (
+                    <div key={idx} className="border rounded p-3 flex items-center justify-between">
+                      <div className="text-sm">
+                        <div className="font-medium">{a.template?.name || 'Template'}</div>
+                        <div className="text-gray-600">{a.pointsValue} pts • Max {a.maxSubmissions} • {a.isRequired ? 'Required' : 'Optional'}</div>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setDraftActivities(prev => prev.filter((_, i) => i !== idx))}>Remove</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <ActivityAddDialog
+                mode="local"
+                workspaceSlug={params?.slug || ''}
+                onAdd={(activity) => setDraftActivities(prev => [...prev, activity])}
+                trigger={<Button type="button" variant="outline">Add Activity</Button>}
+              />
+            </div>
 
             <div className="flex justify-end space-x-2">
               <Button
@@ -324,13 +305,13 @@ export default function NewChallengePage() {
               </Button>
               <Button 
                 type="submit" 
-                disabled={isSaving || !isFormValid}
+                disabled={isSaving || !isValid}
                 className="px-4 py-2 font-medium rounded-md shadow-sm inline-flex items-center transition-all"
                 style={{
-                  backgroundColor: isSaving || !isFormValid ? '#d1d5db' : '#ff6b6b',
-                  color: isSaving || !isFormValid ? '#6b7280' : 'white',
-                  cursor: isSaving || !isFormValid ? 'not-allowed' : 'pointer',
-                  opacity: isSaving || !isFormValid ? 0.6 : 1
+                  backgroundColor: isSaving || !isValid ? '#d1d5db' : '#ff6b6b',
+                  color: isSaving || !isValid ? '#6b7280' : 'white',
+                  cursor: isSaving || !isValid ? 'not-allowed' : 'pointer',
+                  opacity: isSaving || !isValid ? 0.6 : 1
                 }}
               >
                 {isSaving ? (
@@ -340,8 +321,8 @@ export default function NewChallengePage() {
                   </>
                 ) : (
                   <>
-                    <Save className="h-4 w-4 mr-2" style={{ color: isSaving || !isFormValid ? '#6b7280' : 'white' }} />
-                    <span style={{ color: isSaving || !isFormValid ? '#6b7280' : 'white' }}>Create Challenge</span>
+                    <Save className="h-4 w-4 mr-2" style={{ color: isSaving || !isValid ? '#6b7280' : 'white' }} />
+                    <span style={{ color: isSaving || !isValid ? '#6b7280' : 'white' }}>Create Challenge</span>
                   </>
                 )}
               </Button>

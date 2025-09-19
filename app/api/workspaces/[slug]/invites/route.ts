@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth'
-import { createInviteCode, getWorkspaceInviteCodes } from '@/lib/db/queries'
+import { createInviteCode, getWorkspaceInviteCodes, logActivityEvent } from '@/lib/db/queries'
 import { validateInviteCodeData } from '@/lib/types'
 import type { InviteCodeCreateRequest, InviteCodeCreateResponse } from '@/lib/types'
 
@@ -39,6 +39,15 @@ export const POST = withErrorHandling(async (
     workspace.id,
     user.dbUser.id
   )
+
+  // Log invite created
+  await logActivityEvent({
+    workspaceId: workspace.id,
+    challengeId: body.challengeId || null,
+    actorUserId: user.dbUser.id,
+    type: 'INVITE_SENT',
+    metadata: { inviteCode: inviteCode.code, maxUses: inviteCode.maxUses }
+  })
 
   return NextResponse.json({ inviteCode }, { status: 201 })
 })

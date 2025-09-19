@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth, requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
-import { getChallengeActivities } from '@/lib/db/queries';
+import { getChallengeActivities, logActivityEvent } from '@/lib/db/queries';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -93,6 +93,7 @@ export const PUT = withErrorHandling(async (
     }
   }
 
+  const before = await prisma.challenge.findUnique({ where: { id } })
   const challenge = await prisma.challenge.update({
     where: {
       id,
@@ -100,11 +101,45 @@ export const PUT = withErrorHandling(async (
     data: updateData,
   });
 
+  // Log challenge updated with minimal diff
+  try {
+    const changed: Record<string, any> = {}
+    if (before) {
+      if (before.title !== challenge.title) changed.title = { from: before.title, to: challenge.title }
+      if (before.description !== challenge.description) changed.description = { changed: true }
+      if (+new Date(before.startDate) !== +new Date(challenge.startDate)) changed.startDate = { from: before.startDate, to: challenge.startDate }
+      if (+new Date(before.endDate) !== +new Date(challenge.endDate)) changed.endDate = { from: before.endDate, to: challenge.endDate }
+      if ((before.enrollmentDeadline || null) !== (challenge.enrollmentDeadline || null)) changed.enrollmentDeadline = { from: before.enrollmentDeadline, to: challenge.enrollmentDeadline }
+    }
+    if (Object.keys(changed).length > 0) {
+      await (await import('@/lib/db/queries')).logActivityEvent({
+        workspaceId: workspace.id,
+        challengeId: id,
+        actorUserId: user.dbUser.id,
+        type: 'CHALLENGE_UPDATED' as any,
+        metadata: { changed }
+      })
+    }
+  } catch {}
+
   // Handle participant updates
   const shouldUpdateParticipants = invitedParticipantIds !== undefined || enrolledParticipantIds !== undefined || participantIds !== undefined;
   
   if (shouldUpdateParticipants) {
     try {
+      // Snapshot previous enrollments to compute diffs for event logs
+      const previousEnrollments = await prisma.enrollment.findMany({
+        where: { challengeId: id },
+        include: { user: true }
+      })
+
+      const prevByUserId = new Map(previousEnrollments.map(e => [e.userId, e]))
+
+      // Compute final target sets from payload
+      const targetInvited = new Set<string>(invitedParticipantIds || (participantIds && !enrolledParticipantIds ? participantIds : []))
+      const targetEnrolled = new Set<string>(enrolledParticipantIds || [])
+      const targetAll = new Set<string>([...targetInvited, ...targetEnrolled])
+
       // Remove all existing enrollments for this challenge (we'll recreate them)
       await prisma.enrollment.deleteMany({
         where: {
@@ -130,6 +165,18 @@ export const PUT = withErrorHandling(async (
             })),
             skipDuplicates: true,
           });
+
+          // Log INVITE_SENT for new invites
+          for (const p of validInvitedParticipants) {
+            await (await import('@/lib/db/queries')).logActivityEvent({
+              workspaceId: workspace.id,
+              challengeId: id,
+              userId: p.id,
+              actorUserId: user.dbUser.id,
+              type: 'INVITE_SENT' as any,
+              metadata: { method: 'admin_update' }
+            })
+          }
         }
       }
 
@@ -151,6 +198,18 @@ export const PUT = withErrorHandling(async (
             })),
             skipDuplicates: true,
           });
+
+          // Log ENROLLED for new enrollments
+          for (const p of validEnrolledParticipants) {
+            await (await import('@/lib/db/queries')).logActivityEvent({
+              workspaceId: workspace.id,
+              challengeId: id,
+              userId: p.id,
+              actorUserId: user.dbUser.id,
+              type: 'ENROLLED' as any,
+              metadata: { method: 'admin_update' }
+            })
+          }
         }
       }
 
@@ -172,6 +231,31 @@ export const PUT = withErrorHandling(async (
             })),
             skipDuplicates: true,
           });
+
+          for (const p of validParticipants) {
+            await (await import('@/lib/db/queries')).logActivityEvent({
+              workspaceId: workspace.id,
+              challengeId: id,
+              userId: p.id,
+              actorUserId: user.dbUser.id,
+              type: 'INVITE_SENT' as any,
+              metadata: { method: 'admin_update_legacy' }
+            })
+          }
+        }
+      }
+
+      // Log UNENROLLED for users removed by this update
+      for (const [userId, prev] of prevByUserId) {
+        if (!targetAll.has(userId)) {
+          await (await import('@/lib/db/queries')).logActivityEvent({
+            workspaceId: workspace.id,
+            challengeId: id,
+            userId,
+            actorUserId: user.dbUser.id,
+            type: 'UNENROLLED' as any,
+            metadata: { reason: 'removed_by_admin' }
+          })
         }
       }
     } catch (error) {
@@ -208,3 +292,44 @@ export const DELETE = withErrorHandling(async (
 });
 
 // Participants endpoint has been moved to /app/api/workspaces/[slug]/participants/route.ts
+
+export const PATCH = withErrorHandling(async (
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string; id: string }> }
+) => {
+  const { slug, id } = await params;
+  const { workspace, user } = await requireWorkspaceAdmin(slug);
+  const { action } = await request.json();
+
+  if (!action || !['PUBLISH', 'UNPUBLISH', 'ARCHIVE'].includes(action)) {
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  }
+
+  const challenge = await prisma.challenge.findFirst({
+    where: { id, workspaceId: workspace.id }
+  });
+
+  if (!challenge) {
+    return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
+  }
+
+  let nextStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = challenge.status as any;
+  if (action === 'PUBLISH') nextStatus = 'PUBLISHED';
+  if (action === 'UNPUBLISH') nextStatus = 'DRAFT';
+  if (action === 'ARCHIVE') nextStatus = 'ARCHIVED';
+
+  const updated = await prisma.challenge.update({
+    where: { id },
+    data: { status: nextStatus }
+  });
+
+  // Log event
+  await logActivityEvent({
+    workspaceId: workspace.id,
+    challengeId: id,
+    actorUserId: user.dbUser.id,
+    type: action === 'PUBLISH' ? 'CHALLENGE_PUBLISHED' : action === 'UNPUBLISH' ? 'CHALLENGE_UNPUBLISHED' : 'CHALLENGE_ARCHIVED'
+  })
+
+  return NextResponse.json({ challenge: updated });
+});

@@ -21,6 +21,7 @@ import {
   ResourceNotFoundError,
   WorkspaceAccessError
 } from '@/lib/db/queries';
+import { logActivityEvent } from '@/lib/db/queries'
 
 // Remove the temporary function - will create in separate file
 
@@ -117,7 +118,7 @@ export async function POST(
       );
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -156,6 +157,15 @@ export async function POST(
       },
       workspace.id
     );
+
+    // Log challenge created / duplicated
+    await logActivityEvent({
+      workspaceId: workspace.id,
+      challengeId: challenge.id,
+      actorUserId: dbUser.id,
+      type: sourceChallengeId ? 'CHALLENGE_DUPLICATED' : 'CHALLENGE_CREATED',
+      metadata: sourceChallengeId ? { sourceChallengeId, title } : { title }
+    })
 
     // Handle participant enrollments
     try {

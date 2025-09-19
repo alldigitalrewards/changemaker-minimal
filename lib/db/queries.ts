@@ -977,6 +977,70 @@ export async function getChallengeActivities(
   }
 }
 
+/**
+ * Update an activity's per-challenge configuration (admin-only)
+ */
+export async function updateActivity(
+  activityId: string,
+  workspaceId: WorkspaceId,
+  data: Partial<{
+    pointsValue: number
+    maxSubmissions: number
+    deadline: Date | null
+    isRequired: boolean
+  }>
+): Promise<Activity & { template: ActivityTemplate, challenge: Challenge }> {
+  // Verify activity belongs to a challenge in this workspace
+  const activity = await prisma.activity.findFirst({
+    where: { id: activityId, challenge: { workspaceId } },
+    include: { challenge: true, template: true }
+  })
+
+  if (!activity) {
+    throw new ResourceNotFoundError('Activity', activityId)
+  }
+
+  try {
+    const updated = await prisma.activity.update({
+      where: { id: activityId },
+      data: {
+        pointsValue: data.pointsValue ?? activity.pointsValue,
+        maxSubmissions: data.maxSubmissions ?? activity.maxSubmissions,
+        deadline: data.deadline === undefined ? activity.deadline : data.deadline,
+        isRequired: data.isRequired ?? activity.isRequired
+      },
+      include: { template: true, challenge: true }
+    })
+
+    return updated
+  } catch (error) {
+    throw new DatabaseError(`Failed to update activity: ${error}`)
+  }
+}
+
+/**
+ * Delete an activity from a challenge (admin-only)
+ */
+export async function deleteActivity(
+  activityId: string,
+  workspaceId: WorkspaceId
+): Promise<void> {
+  // Verify activity belongs to a challenge in this workspace
+  const activity = await prisma.activity.findFirst({
+    where: { id: activityId, challenge: { workspaceId } }
+  })
+
+  if (!activity) {
+    throw new ResourceNotFoundError('Activity', activityId)
+  }
+
+  try {
+    await prisma.activity.delete({ where: { id: activityId } })
+  } catch (error) {
+    throw new DatabaseError(`Failed to delete activity: ${error}`)
+  }
+}
+
 // =============================================================================
 // ACTIVITY SUBMISSION QUERIES
 // =============================================================================
@@ -1058,7 +1122,7 @@ export async function reviewActivitySubmission(
     reviewedBy: UserId
   },
   workspaceId: WorkspaceId
-): Promise<ActivitySubmission> {
+): Promise<ActivitySubmission & { activity: Activity & { template: ActivityTemplate, challenge: Challenge } }> {
   try {
     return await prisma.activitySubmission.update({
       where: {
@@ -1073,6 +1137,14 @@ export async function reviewActivitySubmission(
         pointsAwarded: data.pointsAwarded,
         reviewedBy: data.reviewedBy,
         reviewedAt: new Date()
+      },
+      include: {
+        activity: {
+          include: {
+            template: true,
+            challenge: true
+          }
+        }
       }
     })
   } catch (error) {
@@ -1284,6 +1356,45 @@ export async function getChallengeLeaderboard(
   } catch (error) {
     throw new DatabaseError(`Failed to fetch challenge leaderboard: ${error}`)
   }
+}
+
+export async function logActivityEvent(data: {
+  workspaceId: string
+  type: 'INVITE_SENT' | 'INVITE_REDEEMED' | 'EMAIL_RESENT' | 'ENROLLED' | 'UNENROLLED' | 'RBAC_ROLE_CHANGED' | 'SUBMISSION_CREATED' | 'SUBMISSION_APPROVED' | 'SUBMISSION_REJECTED' | 'CHALLENGE_CREATED' | 'CHALLENGE_UPDATED' | 'CHALLENGE_DUPLICATED' | 'CHALLENGE_PUBLISHED' | 'CHALLENGE_UNPUBLISHED' | 'CHALLENGE_ARCHIVED' | 'ACTIVITY_CREATED' | 'ACTIVITY_UPDATED' | 'BULK_UNENROLL'
+  challengeId?: string | null
+  enrollmentId?: string | null
+  userId?: string | null
+  actorUserId?: string | null
+  metadata?: any
+}) {
+  try {
+    await prisma.activityEvent.create({
+      data: {
+        workspaceId: data.workspaceId,
+        type: data.type as any,
+        challengeId: data.challengeId || undefined,
+        enrollmentId: data.enrollmentId || undefined,
+        userId: data.userId || undefined,
+        actorUserId: data.actorUserId || undefined,
+        metadata: data.metadata as any
+      }
+    })
+  } catch (error) {
+    // Non-fatal: don't block main flow
+    console.warn('Failed to log activity event', error)
+  }
+}
+
+export async function getChallengeEvents(challengeId: string) {
+  return await prisma.activityEvent.findMany({
+    where: { challengeId },
+    include: {
+      user: { select: { email: true } },
+      actor: { select: { email: true } }
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100
+  })
 }
 
 // =============================================================================

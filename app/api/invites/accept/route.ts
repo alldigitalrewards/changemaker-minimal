@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, withErrorHandling } from '@/lib/auth/api-auth'
-import { acceptInviteCode } from '@/lib/db/queries'
+import { acceptInviteCode, logActivityEvent } from '@/lib/db/queries'
 import type { InviteCodeAcceptRequest, InviteCodeAcceptResponse } from '@/lib/types'
 
 export const POST = withErrorHandling(async (
@@ -24,6 +24,16 @@ export const POST = withErrorHandling(async (
     workspace: result.workspace,
     challenge: result.challenge || undefined
   }
+
+  // Log invite redemption
+  await logActivityEvent({
+    workspaceId: result.workspace.id,
+    challengeId: result.challenge?.id || null,
+    userId: user.dbUser.id,
+    actorUserId: user.dbUser.id,
+    type: 'INVITE_REDEEMED',
+    metadata: { code: body.code, enrolled: Boolean(result.enrollment) }
+  })
 
   return NextResponse.json(response, { status: 200 })
 })

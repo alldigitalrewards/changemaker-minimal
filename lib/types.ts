@@ -248,6 +248,7 @@ export interface ChallengeCreateRequest {
   readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment (legacy)
   readonly invitedParticipantIds?: UserId[] // Optional participant IDs to invite
   readonly enrolledParticipantIds?: UserId[] // Optional participant IDs to enroll automatically
+  readonly sourceChallengeId?: ChallengeId // Optional: present when duplicating a challenge
 }
 
 export interface ChallengeCreateResponse {
@@ -307,6 +308,7 @@ export interface ChallengeFormData {
   readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment (legacy)
   readonly invitedParticipantIds?: UserId[] // Optional participant IDs to invite
   readonly enrolledParticipantIds?: UserId[] // Optional participant IDs to enroll automatically
+  readonly sourceChallengeId?: ChallengeId // Optional: present when duplicating a challenge
 }
 
 // =============================================================================

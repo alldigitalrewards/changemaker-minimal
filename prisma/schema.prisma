@@ -20,6 +20,7 @@ model Workspace {
   pointsBalances    PointsBalance[]
   users             User[]
   memberships       WorkspaceMembership[]
+  activityEvents    ActivityEvent[]
 }
 
 model User {
@@ -37,6 +38,8 @@ model User {
   pointsBalances      PointsBalance[]
   workspace           Workspace?            @relation(fields: [workspaceId], references: [id])
   memberships         WorkspaceMembership[]
+  activityEvents      ActivityEvent[]
+  actedEvents         ActivityEvent[]       @relation("EventActor")
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -49,6 +52,7 @@ model Challenge {
   startDate          DateTime
   endDate            DateTime
   enrollmentDeadline DateTime?
+  status             ChallengeStatus @default(DRAFT)
   workspaceId        String       @db.Uuid
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @default(now()) @updatedAt
@@ -56,10 +60,12 @@ model Challenge {
   workspace          Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   enrollments        Enrollment[]
   inviteCodes        InviteCode[]
+  activityEvents     ActivityEvent[]
 
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
   @@index([workspaceId, startDate])
+  @@index([workspaceId, status])
 }
 
 model Enrollment {
@@ -72,6 +78,7 @@ model Enrollment {
   activitySubmissions ActivitySubmission[]
   challenge           Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityEvents      ActivityEvent[]
 
   @@unique([userId, challengeId])
   @@index([userId])
@@ -217,4 +224,54 @@ enum SubmissionStatus {
   APPROVED
   REJECTED
   DRAFT
+}
+
+enum ChallengeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model ActivityEvent {
+  id           String            @id @default(uuid()) @db.Uuid
+  workspaceId  String            @db.Uuid
+  challengeId  String?           @db.Uuid
+  enrollmentId String?           @db.Uuid
+  userId       String?           @db.Uuid
+  actorUserId  String?           @db.Uuid
+  type         ActivityEventType
+  metadata     Json?
+  createdAt    DateTime          @default(now())
+
+  workspace    Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge    Challenge?        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  enrollment   Enrollment?       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor        User?             @relation("EventActor", fields: [actorUserId], references: [id])
+
+  @@index([workspaceId, createdAt])
+  @@index([challengeId, createdAt])
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+enum ActivityEventType {
+  INVITE_SENT
+  INVITE_REDEEMED
+  EMAIL_RESENT
+  ENROLLED
+  UNENROLLED
+  RBAC_ROLE_CHANGED
+  SUBMISSION_CREATED
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  CHALLENGE_CREATED
+  CHALLENGE_UPDATED
+  CHALLENGE_DUPLICATED
+  CHALLENGE_PUBLISHED
+  CHALLENGE_UNPUBLISHED
+  CHALLENGE_ARCHIVED
+  ACTIVITY_CREATED
+  ACTIVITY_UPDATED
+  BULK_UNENROLL
 }
