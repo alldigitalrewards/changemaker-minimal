@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { type Role } from '@/lib/types'
 
-export default function SignupPage() {
+function SignupPageContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<Role>('PARTICIPANT')
@@ -37,12 +37,9 @@ export default function SignupPage() {
 
       if (error) throw error
 
-      // If the user is created immediately (local development), sync to Prisma
       if (data.user && !data.user.email_confirmed_at) {
-        // User needs to confirm email - redirect to login
         router.push('/auth/login?message=Please check your email to confirm your account')
       } else if (data.user) {
-        // User is immediately available (local setup) - sync and redirect
         await fetch('/api/auth/sync-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -127,5 +124,13 @@ export default function SignupPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageContent />
+    </Suspense>
   )
 }
