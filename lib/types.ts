@@ -553,6 +553,7 @@ export interface InviteCodeAcceptResponse {
   readonly message: string
   readonly workspace?: Workspace
   readonly challenge?: Challenge
+  readonly role?: Role
 }
 
 export interface InviteCodeWithDetails extends InviteCode {
