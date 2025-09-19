@@ -1496,6 +1496,7 @@ export async function acceptInviteCode(
   challenge?: Challenge | null
   enrollment?: Enrollment | null
   isExistingMember: boolean
+  role: Role
 }> {
   const invite = await getInviteByCode(code)
   
@@ -1519,6 +1520,7 @@ export async function acceptInviteCode(
   
   let enrollment: Enrollment | null = null
   let isExistingMember = false
+  let resultingRole: Role = invite.role
   
   try {
     await prisma.$transaction(async (tx) => {
@@ -1528,11 +1530,19 @@ export async function acceptInviteCode(
           where: { id: userId },
           data: {
             workspaceId: invite.workspaceId,
-            role: invite.role
+            role: invite.role,
+            isPending: false
           }
         })
+        resultingRole = invite.role
       } else {
+        // Ensure pending flag is cleared for existing member
+        await tx.user.update({
+          where: { id: userId },
+          data: { isPending: false }
+        })
         isExistingMember = true
+        resultingRole = existingUser.role as Role
       }
       
       // If invite is for specific challenge, enroll user
@@ -1565,7 +1575,8 @@ export async function acceptInviteCode(
       workspace: invite.workspace,
       challenge: invite.challenge,
       enrollment,
-      isExistingMember
+      isExistingMember,
+      role: resultingRole
     }
   } catch (error) {
     throw new DatabaseError(`Failed to accept invite: ${error}`)
