@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
 import { getInviteByCode } from "@/lib/db/queries"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,7 +16,8 @@ export default async function InvitePage({
   const { code } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const searchParams = new URLSearchParams((await import('next/headers')).headers().get('x-internal-search') || '')
+  const h = await headers()
+  const searchParams = new URL(h.get('x-internal-search') || '', 'http://localhost').searchParams
 
   // Get invite details
   const invite = await getInviteByCode(code)

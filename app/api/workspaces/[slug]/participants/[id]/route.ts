@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/db"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import { Role } from "@/lib/types"
-import { logActivityEvent } from "@/lib/db/queries"
+import { logActivityEvent, getUserBySupabaseId } from "@/lib/db/queries"
 
 export async function GET(
   request: Request,
@@ -143,6 +143,13 @@ export async function PUT(
 
     // Update participant role
     const previousRole = participant.role
+    const dbUser = await getUserBySupabaseId(user.id)
+    if (!dbUser) {
+      return NextResponse.json(
+        { message: "User record not found" },
+        { status: 401 }
+      )
+    }
     const updatedParticipant = await prisma.user.update({
       where: { id },
       data: { role: newRole as Role }
@@ -152,7 +159,7 @@ export async function PUT(
       await logActivityEvent({
         workspaceId: workspace.id,
         userId: updatedParticipant.id,
-        actorUserId: user.id as any,
+        actorUserId: dbUser.id as any,
         type: 'RBAC_ROLE_CHANGED' as any,
         metadata: { oldRole: previousRole, newRole }
       })
@@ -183,6 +190,13 @@ export async function DELETE(
     if (!user) {
       return NextResponse.json(
         { message: "Unauthorized" },
+        { status: 401 }
+      )
+    }
+    const dbUser = await getUserBySupabaseId(user.id)
+    if (!dbUser) {
+      return NextResponse.json(
+        { message: "User record not found" },
         { status: 401 }
       )
     }
@@ -242,7 +256,7 @@ export async function DELETE(
     await logActivityEvent({
       workspaceId: workspace.id,
       userId: id,
-      actorUserId: user.id as any,
+      actorUserId: dbUser.id as any,
       type: 'UNENROLLED' as any,
       metadata: { reason: 'Removed from workspace' }
     })
