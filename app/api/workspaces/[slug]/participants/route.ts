@@ -71,30 +71,28 @@ export const POST = withErrorHandling(async (
   }
 
   try {
-    // Check if user with this email already exists in this workspace
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        email: email.trim().toLowerCase(),
-        workspaceId: workspace.id,
-      },
-    });
+    const lowerEmail = email.trim().toLowerCase()
+    // If a user with this email exists anywhere, don't attempt to create another (email is globally unique)
+    const existingByEmail = await prisma.user.findUnique({ where: { email: lowerEmail } })
 
-    if (existingUser) {
+    let createdOrExistingUser = existingByEmail
+    if (existingByEmail && existingByEmail.workspaceId === workspace.id) {
       return NextResponse.json(
         { error: 'User with this email already exists in workspace' },
         { status: 409 }
       );
     }
 
-    // Create the user account (without Supabase connection initially)
-    const newUser = await prisma.user.create({
-      data: {
-        email: email.trim().toLowerCase(),
-        role,
-        workspaceId: workspace.id,
-        // Note: supabaseUserId will be set when they sign up via Supabase Auth
-      },
-    });
+    if (!existingByEmail) {
+      // Create the placeholder user (no Supabase id yet)
+      createdOrExistingUser = await prisma.user.create({
+        data: {
+          email: lowerEmail,
+          role,
+          workspaceId: workspace.id,
+        },
+      });
+    }
 
     // Generate a workspace invite code limited to a single use
     const invite = await createInviteCode({ role: 'PARTICIPANT', maxUses: 1 }, workspace.id, user.dbUser.id)
@@ -116,7 +114,7 @@ export const POST = withErrorHandling(async (
         challengeTitle: null
       })
       await sendInviteEmail({
-        to: email.trim().toLowerCase(),
+        to: lowerEmail,
         subject: `You're invited to join ${workspace.name}`,
         html
       })
@@ -125,7 +123,7 @@ export const POST = withErrorHandling(async (
         challengeId: null,
         actorUserId: user.dbUser.id,
         type: 'INVITE_SENT',
-        metadata: { inviteCode: invite.code, recipients: [email.trim().toLowerCase()], via: 'email' }
+        metadata: { inviteCode: invite.code, recipients: [lowerEmail], via: 'email' }
       })
     } catch (e) {
       console.error('Failed to send invite email:', e)
@@ -133,12 +131,14 @@ export const POST = withErrorHandling(async (
 
     return NextResponse.json(
       { 
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          role: newUser.role,
-          workspaceId: newUser.workspaceId,
-        },
+        user: createdOrExistingUser
+          ? {
+              id: createdOrExistingUser.id,
+              email: createdOrExistingUser.email,
+              role: createdOrExistingUser.role,
+              workspaceId: createdOrExistingUser.workspaceId,
+            }
+          : undefined,
         invite: { code: invite.code, url: inviteUrl }
       },
       { status: 201 }

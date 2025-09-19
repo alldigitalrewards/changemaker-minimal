@@ -1420,12 +1420,14 @@ export async function createInviteCode(
   workspaceId: WorkspaceId,
   createdBy: UserId
 ): Promise<InviteCode> {
-  // Verify creator is admin in workspace
-  const admin = await prisma.user.findFirst({
+  // Verify creator is admin in workspace (membership-aware; fallback to legacy User.workspaceId)
+  const membership = await prisma.workspaceMembership.findUnique({
+    where: { userId_workspaceId: { userId: createdBy, workspaceId } }
+  })
+  const legacyAdmin = await prisma.user.findFirst({
     where: { id: createdBy, workspaceId, role: 'ADMIN' }
   })
-  
-  if (!admin) {
+  if (!(membership?.role === 'ADMIN' || !!legacyAdmin)) {
     throw new WorkspaceAccessError(workspaceId)
   }
   
