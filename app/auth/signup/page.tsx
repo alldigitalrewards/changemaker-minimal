@@ -19,6 +19,13 @@ function SignupPageContent() {
   const supabase = createClient()
   const searchParams = useSearchParams()
 
+  // Prefill email from invite link if present
+  const inviteEmail = searchParams.get('email')
+  if (inviteEmail && !email) {
+    // note: simple guard to avoid re-renders loops
+    setEmail(inviteEmail)
+  }
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -26,11 +33,12 @@ function SignupPageContent() {
 
     try {
       const next = searchParams.get('redirectTo') || '/workspaces'
+      const lockedRole = (searchParams.get('role') as Role) || undefined
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { role },
+          data: { role: lockedRole || role },
           emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(next)}`
         }
       })
@@ -89,18 +97,22 @@ function SignupPageContent() {
               />
             </div>
 
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="PARTICIPANT">Participant</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-            </div>
+            {searchParams.get('role') ? (
+              <input type="hidden" value={searchParams.get('role')!} />
+            ) : (
+              <div>
+                <Label htmlFor="role">Role</Label>
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as Role)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="PARTICIPANT">Participant</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {error && (

@@ -1,20 +1,25 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { CoralButton } from "@/components/ui/coral-button"
 import { Loader2, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
+import { createClient } from "@/lib/supabase/client"
 
 interface AcceptInviteFormProps {
   code: string
+  role?: 'ADMIN' | 'PARTICIPANT'
 }
 
-export function AcceptInviteForm({ code }: AcceptInviteFormProps) {
+export function AcceptInviteForm({ code, role: inviteRole }: AcceptInviteFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [accepted, setAccepted] = useState(false)
+  const supabase = createClient()
+  const search = useSearchParams()
+  const inviteEmail = search.get('email') || ''
 
   const handleAcceptInvite = async () => {
     setLoading(true)
@@ -25,6 +30,15 @@ export function AcceptInviteForm({ code }: AcceptInviteFormProps) {
         body: JSON.stringify({ code }),
       })
 
+      // If not authenticated, send the user through signup and back to this invite
+      if (response.status === 401) {
+        toast.message("Create an account to join this workspace")
+        const roleQS = inviteRole ? `&role=${inviteRole}` : ''
+        const emailQS = inviteEmail ? `&email=${encodeURIComponent(inviteEmail)}` : ''
+        router.push(`/auth/signup?redirectTo=${encodeURIComponent(`/invite/${code}`)}${roleQS}${emailQS}`)
+        return
+      }
+
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || "Failed to accept invite")
@@ -34,10 +48,22 @@ export function AcceptInviteForm({ code }: AcceptInviteFormProps) {
       setAccepted(true)
       toast.success(result.message)
       
-      // Redirect to workspace after a brief delay
+      // Decide redirect target
+      const slug = result?.workspace?.slug
+      const role = (result?.role || 'PARTICIPANT') as 'ADMIN' | 'PARTICIPANT'
+      const dashboard = role === 'ADMIN' 
+        ? `/w/${slug}/admin/dashboard` 
+        : `/w/${slug}/participant/dashboard`
+
+      // Check if the user has completed onboarding
+      const { data: { user } } = await supabase.auth.getUser()
+      const profileComplete = Boolean(user?.user_metadata?.profileComplete)
+
+      const next = profileComplete ? dashboard : `/onboarding?next=${encodeURIComponent(dashboard)}`
+
       setTimeout(() => {
-        router.push(`/w/${result.workspace.slug}`)
-      }, 2000)
+        router.push(next)
+      }, 1200)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to accept invite")
     } finally {

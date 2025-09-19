@@ -15,6 +15,7 @@ export default async function InvitePage({
   const { code } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const searchParams = new URLSearchParams((await import('next/headers')).headers().get('x-internal-search') || '')
 
   // Get invite details
   const invite = await getInviteByCode(code)
@@ -61,10 +62,7 @@ export default async function InvitePage({
     )
   }
 
-  // If not authenticated, redirect to login with return URL
-  if (!user) {
-    redirect(`/auth/login?redirect=${encodeURIComponent(`/invite/${code}`)}`)
-  }
+  // Unauthenticated users can view the invite and will be routed to signup from the accept button
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -140,7 +138,7 @@ export default async function InvitePage({
           </div>
 
           {/* Accept Form */}
-          <AcceptInviteForm code={code} />
+          <AcceptInviteForm code={code} role={invite.role as any} />
 
           {/* Footer */}
           <div className="text-center text-sm text-gray-500">

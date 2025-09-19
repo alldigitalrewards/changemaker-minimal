@@ -113,7 +113,7 @@ export const POST = withErrorHandling(async (
     const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
     const host = request.headers.get('host') || process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
     const baseUrl = `${proto}://${host}`
-    const inviteUrl = `${baseUrl}/invite/${invite.code}`
+    const inviteUrl = `${baseUrl}/invite/${invite.code}?email=${encodeURIComponent(lowerEmail)}`
 
     // Send email (best-effort)
     try {
