@@ -174,6 +174,7 @@ async function seed() {
     await prisma.activity.deleteMany()
     await prisma.activityTemplate.deleteMany()
     await prisma.challenge.deleteMany()
+    await prisma.inviteRedemption.deleteMany()
     await prisma.inviteCode.deleteMany()
     await prisma.pointsBalance.deleteMany()
     await prisma.workspaceMembership.deleteMany()
@@ -211,8 +212,9 @@ async function seed() {
           update: {
             supabaseUserId: supabaseUser.id,
             role: ROLE_ADMIN,
+            isPending: false, // Admins are not pending
             // Set legacy workspaceId to primary workspace for backward compatibility
-            workspaceId: createdWorkspaces.find(w => 
+            workspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id
           },
@@ -220,8 +222,9 @@ async function seed() {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_ADMIN,
+            isPending: false, // Admins are not pending
             // Set legacy workspaceId to primary workspace for backward compatibility
-            workspaceId: createdWorkspaces.find(w => 
+            workspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id
           }
@@ -258,6 +261,49 @@ async function seed() {
       }
     }
 
+    // Create sample invite codes for each workspace (after we have admin users to be creators)
+    console.log('\n📨 Creating sample invite codes...')
+    const thirtyDaysFromNow = new Date()
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
+
+    // Get the first admin user to be the creator of invite codes
+    const firstAdmin = await prisma.user.findFirst({
+      where: { role: ROLE_ADMIN }
+    })
+
+    if (firstAdmin) {
+      for (const workspace of createdWorkspaces) {
+        // Create a general invite code
+        await prisma.inviteCode.create({
+          data: {
+            code: `${workspace.slug.toUpperCase()}-WELCOME-2025`,
+            workspaceId: workspace.id,
+            createdBy: firstAdmin.id,
+            role: ROLE_PARTICIPANT,
+            maxUses: 100,
+            usedCount: 0,
+            expiresAt: thirtyDaysFromNow
+          }
+        })
+        console.log(`✓ Created general invite code for ${workspace.name}: ${workspace.slug.toUpperCase()}-WELCOME-2025`)
+
+        // Create a targeted invite code for testing
+        await prisma.inviteCode.create({
+          data: {
+            code: `${workspace.slug.toUpperCase()}-VIP-2025`,
+            workspaceId: workspace.id,
+            createdBy: firstAdmin.id,
+            role: ROLE_PARTICIPANT,
+            maxUses: 1,
+            usedCount: 0,
+            expiresAt: thirtyDaysFromNow,
+            targetEmail: `vip@${workspace.slug}.com`
+          }
+        })
+        console.log(`✓ Created VIP invite code for ${workspace.name}: ${workspace.slug.toUpperCase()}-VIP-2025 (for vip@${workspace.slug}.com)`)
+      }
+    }
+
     // Create participant users with single workspace membership
     console.log('\n👥 Creating participant users...')
     for (const participant of participantUsers) {
@@ -278,12 +324,14 @@ async function seed() {
           update: {
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
+            isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id
           },
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
+            isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id
           }
         })
@@ -407,12 +455,14 @@ async function seed() {
     const finalChallengeCount = await prisma.challenge.count()
     const finalEnrollmentCount = await prisma.enrollment.count()
     const finalMembershipCount = await prisma.workspaceMembership.count()
-    
+    const finalInviteCount = await prisma.inviteCode.count()
+
     console.log(`  - Workspaces: ${finalWorkspaceCount}`)
     console.log(`  - Users: ${finalUserCount} (${adminUsers.length} admins, ${participantUsers.length} participants)`)
     console.log(`  - Workspace Memberships: ${finalMembershipCount}`)
     console.log(`  - Challenges: ${finalChallengeCount}`)
     console.log(`  - Enrollments: ${finalEnrollmentCount}`)
+    console.log(`  - Invite Codes: ${finalInviteCount}`)
     
     console.log('\n🔑 Login Credentials:')
     console.log(`  Password for all users: ${DEFAULT_PASSWORD}`)
@@ -426,6 +476,11 @@ async function seed() {
     console.log(`    - john.doe@acme.com (ACME)`)
     console.log(`    - sarah.jones@alldigitalrewards.com (AllDigitalRewards)`)
     console.log(`    - david.brown@sharecare.com (Sharecare)`)
+    console.log('\n📨 Sample Invite Codes:')
+    console.log(`    - ACME-WELCOME-2025 (general invite for ACME)`)
+    console.log(`    - ALLDIGITALREWARDS-WELCOME-2025 (general invite for AllDigitalRewards)`)
+    console.log(`    - SHARECARE-WELCOME-2025 (general invite for Sharecare)`)
+    console.log(`    - *-VIP-2025 codes are email-targeted (e.g., vip@acme.com)`)
 
   } catch (error) {
     console.error('❌ Seed failed:', error)
