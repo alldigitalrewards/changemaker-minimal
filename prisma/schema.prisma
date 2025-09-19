@@ -28,6 +28,7 @@ model User {
   email               String                @unique
   supabaseUserId      String?               @unique @db.Uuid
   role                Role
+  isPending           Boolean               @default(false)
   workspaceId         String?               @db.Uuid
   primaryWorkspaceId  String?               @db.Uuid
   createdAt           DateTime              @default(now())
