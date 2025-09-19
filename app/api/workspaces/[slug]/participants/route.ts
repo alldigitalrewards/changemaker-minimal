@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWorkspaceAccess, withErrorHandling } from '@/lib/auth/api-auth';
 import { prisma } from '@/lib/prisma';
+import { createInviteCode, logActivityEvent } from '@/lib/db/queries';
+import { sendInviteEmail } from '@/lib/email/smtp';
+import { renderInviteEmail } from '@/lib/email/templates/invite';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -37,10 +40,10 @@ export const POST = withErrorHandling(async (
   { params }: { params: Promise<{ slug: string }> }
 ) => {
   const { slug } = await params;
-  const { workspace } = await requireWorkspaceAccess(slug);
+  const { workspace, user } = await requireWorkspaceAccess(slug);
 
   const body = await request.json();
-  const { email, role } = body;
+  const { email, role, name } = body;
 
   // Basic validation
   if (!email || !role) {
@@ -93,6 +96,41 @@ export const POST = withErrorHandling(async (
       },
     });
 
+    // Generate a workspace invite code limited to a single use
+    const invite = await createInviteCode({ role: 'PARTICIPANT', maxUses: 1 }, workspace.id, user.dbUser.id)
+
+    // Build base URL that works in local/preview/prod
+    const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
+    const host = request.headers.get('host') || process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
+    const baseUrl = `${proto}://${host}`
+    const inviteUrl = `${baseUrl}/invite/${invite.code}`
+
+    // Send email (best-effort)
+    try {
+      const html = renderInviteEmail({
+        workspaceName: workspace.name,
+        inviterEmail: user.dbUser.email,
+        role,
+        inviteUrl,
+        expiresAt: invite.expiresAt,
+        challengeTitle: null
+      })
+      await sendInviteEmail({
+        to: email.trim().toLowerCase(),
+        subject: `You're invited to join ${workspace.name}`,
+        html
+      })
+      await logActivityEvent({
+        workspaceId: workspace.id,
+        challengeId: null,
+        actorUserId: user.dbUser.id,
+        type: 'INVITE_SENT',
+        metadata: { inviteCode: invite.code, recipients: [email.trim().toLowerCase()], via: 'email' }
+      })
+    } catch (e) {
+      console.error('Failed to send invite email:', e)
+    }
+
     return NextResponse.json(
       { 
         user: {
@@ -100,7 +138,8 @@ export const POST = withErrorHandling(async (
           email: newUser.email,
           role: newUser.role,
           workspaceId: newUser.workspaceId,
-        }
+        },
+        invite: { code: invite.code, url: inviteUrl }
       },
       { status: 201 }
     );
