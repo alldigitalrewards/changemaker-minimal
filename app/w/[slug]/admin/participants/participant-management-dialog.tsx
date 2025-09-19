@@ -56,6 +56,7 @@ export function ParticipantManagementDialog({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
   const [selectedRole, setSelectedRole] = useState<Role>(participantRole || "PARTICIPANT")
   const [loading, setLoading] = useState(false)
   const [showRemoveAlert, setShowRemoveAlert] = useState(false)
@@ -78,7 +79,7 @@ export function ParticipantManagementDialog({
       const response = await fetch(`/api/workspaces/${slug}/participants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, role: "PARTICIPANT" }),
+        body: JSON.stringify({ email, name, role: "PARTICIPANT" }),
       })
 
       if (!response.ok) {
@@ -88,6 +89,7 @@ export function ParticipantManagementDialog({
 
       toast.success("Participant added successfully")
       setEmail("")
+      setName("")
       setOpen(false)
       router.refresh()
     } catch (error) {
@@ -170,6 +172,17 @@ export function ParticipantManagementDialog({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Full Name (optional)</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Jane Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={loading}
+              />
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
