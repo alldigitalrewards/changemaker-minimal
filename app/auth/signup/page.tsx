@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const searchParams = useSearchParams()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,11 +25,13 @@ export default function SignupPage() {
     setError(null)
 
     try {
+      const next = searchParams.get('redirectTo') || '/workspaces'
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { role }
+          data: { role },
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(next)}`
         }
       })
 
