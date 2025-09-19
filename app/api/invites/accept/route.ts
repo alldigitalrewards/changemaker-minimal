@@ -22,7 +22,8 @@ export const POST = withErrorHandling(async (
       ? `You were already a member of ${result.workspace.name}${result.enrollment ? ' and have been enrolled in the challenge' : ''}` 
       : `Welcome to ${result.workspace.name}!${result.enrollment ? ' You have been enrolled in the challenge.' : ''}`,
     workspace: result.workspace,
-    challenge: result.challenge || undefined
+    challenge: result.challenge || undefined,
+    role: result.role as any
   }
 
   // Log invite redemption
