@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Mail, User, Calendar, Shield, UserCheck } from "lucide-react"
 import { Role } from "@/lib/types"
+import { InlineProfile } from "@/app/w/[slug]/admin/participants/[id]/inline-profile"
 
 interface ParticipantDetailCardProps {
   participant: {
@@ -11,9 +12,10 @@ interface ParticipantDetailCardProps {
     createdAt: Date
     enrollments: any[]
   }
+  slug?: string
 }
 
-export function ParticipantDetailCard({ participant }: ParticipantDetailCardProps) {
+export function ParticipantDetailCard({ participant, slug }: ParticipantDetailCardProps) {
   const getRoleBadgeProps = (role: Role) => {
     if (role === "ADMIN") {
       return {
@@ -39,19 +41,25 @@ export function ParticipantDetailCard({ participant }: ParticipantDetailCardProp
       </CardHeader>
       <CardContent>
         <div className="grid gap-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-gray-500" />
-              <div>
-                <p className="font-medium">{participant.email}</p>
-                <p className="text-sm text-gray-500">Email Address</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={badgeClassName}>
-                <RoleIcon className="h-3 w-3 mr-1" />
-                {participant.role}
-              </Badge>
+          <div className="flex items-center gap-3">
+            <Mail className="h-5 w-5 text-gray-500" />
+            <div className="flex-1">
+              {slug ? (
+                <InlineProfile slug={slug} participantId={participant.id} email={participant.email} role={participant.role} />
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{participant.email}</p>
+                    <p className="text-sm text-gray-500">Email Address</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className={badgeClassName}>
+                      <RoleIcon className="h-3 w-3 mr-1" />
+                      {participant.role}
+                    </Badge>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
