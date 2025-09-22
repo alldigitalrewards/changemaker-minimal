@@ -37,11 +37,15 @@ export default async function ParticipantDetailPage({
     redirect("/workspaces")
   }
 
-  // Get participant with full enrollment details
+  // Get participant with full enrollment details (membership-aware to include pending users)
   const participant = await prisma.user.findFirst({
     where: {
       id,
-      workspaceId: workspace.id
+      memberships: {
+        some: {
+          workspaceId: workspace.id
+        }
+      }
     },
     include: {
       enrollments: {

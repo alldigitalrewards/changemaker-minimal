@@ -41,6 +41,7 @@ model User {
   memberships         WorkspaceMembership[]
   activityEvents      ActivityEvent[]
   actedEvents         ActivityEvent[]       @relation("EventActor")
+  inviteRedemptions   InviteRedemption[]
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -174,12 +175,28 @@ model InviteCode {
   usedCount   Int        @default(0)
   createdBy   String     @db.Uuid
   createdAt   DateTime   @default(now())
+  targetEmail String?
   challenge   Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   creator     User       @relation("InviteCreator", fields: [createdBy], references: [id])
   workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  redemptions InviteRedemption[]
 
   @@index([code])
   @@index([workspaceId])
+  @@index([targetEmail])
+}
+
+model InviteRedemption {
+  id        String   @id @default(uuid()) @db.Uuid
+  inviteId  String   @db.Uuid
+  userId    String   @db.Uuid
+  redeemedAt DateTime @default(now())
+
+  invite    InviteCode @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([inviteId, userId])
+  @@index([userId])
 }
 
 model WorkspaceMembership {

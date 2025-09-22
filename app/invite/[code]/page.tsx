@@ -17,7 +17,6 @@ export default async function InvitePage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const h = await headers()
-  const searchParams = new URL(h.get('x-internal-search') || '', 'http://localhost').searchParams
 
   // Get invite details
   const invite = await getInviteByCode(code)

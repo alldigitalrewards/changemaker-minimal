@@ -10,13 +10,27 @@ export async function syncSupabaseUser(supabaseUser: User): Promise<void> {
   try {
     const role = (supabaseUser.user_metadata?.role as Role) || 'PARTICIPANT'
     
-    // Use transaction to handle race conditions
+    // Use transaction to handle race conditions and existing placeholder rows
     await prisma.$transaction(async (tx: any) => {
+      // If a placeholder user exists with this email, attach supabaseUserId to it
+      const placeholder = await tx.user.findUnique({ where: { email: supabaseUser.email! } })
+      if (placeholder && !placeholder.supabaseUserId) {
+        await tx.user.update({
+          where: { id: placeholder.id },
+          data: {
+            supabaseUserId: supabaseUser.id,
+            // keep existing role unless role metadata provided
+            ...(supabaseUser.user_metadata?.role && { role: supabaseUser.user_metadata.role as Role })
+          }
+        })
+        return
+      }
+
+      // Otherwise upsert by supabaseUserId
       await tx.user.upsert({
         where: { supabaseUserId: supabaseUser.id },
         update: {
           email: supabaseUser.email!,
-          // Update role if it changed
           ...(supabaseUser.user_metadata?.role && { role: supabaseUser.user_metadata.role as Role })
         },
         create: {
@@ -26,8 +40,8 @@ export async function syncSupabaseUser(supabaseUser: User): Promise<void> {
         }
       })
     }, {
-      maxWait: 5000, // 5 seconds
-      timeout: 10000, // 10 seconds
+      maxWait: 5000,
+      timeout: 10000,
     })
   } catch (error) {
     console.error('Failed to sync Supabase user to Prisma:', error)

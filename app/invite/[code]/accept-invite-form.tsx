@@ -19,7 +19,6 @@ export function AcceptInviteForm({ code, role: inviteRole }: AcceptInviteFormPro
   const [accepted, setAccepted] = useState(false)
   const supabase = createClient()
   const search = useSearchParams()
-  const inviteEmail = search.get('email') || ''
 
   const handleAcceptInvite = async () => {
     setLoading(true)
@@ -30,12 +29,11 @@ export function AcceptInviteForm({ code, role: inviteRole }: AcceptInviteFormPro
         body: JSON.stringify({ code }),
       })
 
-      // If not authenticated, send the user through signup and back to this invite
-      if (response.status === 401) {
+      // If not authenticated or user not yet synced in DB, send through signup
+      if (response.status === 401 || response.status === 404) {
         toast.message("Create an account to join this workspace")
         const roleQS = inviteRole ? `&role=${inviteRole}` : ''
-        const emailQS = inviteEmail ? `&email=${encodeURIComponent(inviteEmail)}` : ''
-        router.push(`/auth/signup?redirectTo=${encodeURIComponent(`/invite/${code}`)}${roleQS}${emailQS}`)
+        router.push(`/auth/signup?redirectTo=${encodeURIComponent(`/invite/${code}`)}${roleQS}`)
         return
       }
 
