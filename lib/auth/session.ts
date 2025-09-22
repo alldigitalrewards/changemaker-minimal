@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { type User } from '@prisma/client'
+import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
 
 export async function getSession() {
   try {
@@ -53,17 +54,25 @@ export async function requireAuth() {
 export async function requireWorkspaceAccess(workspaceSlug: string) {
   const user = await requireAuth()
   
-  if (!user.workspaceId) {
-    throw new Error('User not assigned to workspace')
-  }
-  
+  // Look up workspace by slug directly (do not rely on legacy user.workspaceId)
   const workspace = await prisma.workspace.findUnique({
-    where: { id: user.workspaceId }
+    where: { slug: workspaceSlug }
   })
-  
-  if (!workspace || workspace.slug !== workspaceSlug) {
+
+  if (!workspace) {
+    throw new Error('Workspace not found')
+  }
+
+  // Membership-aware access check using compatibility layer
+  // Uses Supabase user id stored on the Prisma User record
+  const supabaseUserId = user.supabaseUserId
+  const role = supabaseUserId
+    ? await getUserWorkspaceRole(supabaseUserId, workspaceSlug)
+    : null
+
+  if (!role) {
     throw new Error('Workspace access denied')
   }
-  
+
   return { user, workspace }
 }
