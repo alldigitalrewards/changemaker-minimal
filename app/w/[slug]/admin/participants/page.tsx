@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ParticipantManagementDialog } from "./participant-management-dialog"
+import { BulkInviteDialog } from "./bulk-invite-dialog"
 import { Eye, Shield, UserCheck } from "lucide-react"
 import Link from "next/link"
 
@@ -147,7 +148,10 @@ export default async function AdminParticipantsPage({
                 <CardTitle>All Participants</CardTitle>
                 <CardDescription>View and manage workspace participants</CardDescription>
               </div>
-              <ParticipantManagementDialog slug={slug} mode="add" />
+              <div className="flex items-center gap-2">
+                <BulkInviteDialog slug={slug} />
+                <ParticipantManagementDialog slug={slug} mode="add" />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
