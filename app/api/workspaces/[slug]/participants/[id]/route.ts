@@ -134,9 +134,17 @@ export async function PUT(
     })
     const participant = membership ? await prisma.user.findUnique({ where: { id } }) : null
 
-    if (!participant) {
+    if (!participant || !membership) {
       return NextResponse.json(
         { message: "Participant not found" },
+        { status: 404 }
+      )
+    }
+
+    // Defensive check to satisfy TypeScript narrowing and ensure membership exists
+    if (!membership) {
+      return NextResponse.json(
+        { message: "Membership not found" },
         { status: 404 }
       )
     }
@@ -324,8 +332,13 @@ export async function POST(
     const membership = await prisma.workspaceMembership.findUnique({
       where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } }
     })
-    const participant = membership ? await prisma.user.findUnique({ where: { id } }) : null
-
+    if (!membership) {
+      return NextResponse.json(
+        { message: "Participant not found" },
+        { status: 404 }
+      )
+    }
+    const participant = await prisma.user.findUnique({ where: { id } })
     if (!participant) {
       return NextResponse.json(
         { message: "Participant not found" },
