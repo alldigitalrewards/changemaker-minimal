@@ -31,7 +31,8 @@
       "mcp__playwright__browser_wait_for"
     ],
     "additionalDirectories": [
-      "/Users/jack/Projects/changemaker-project/changemaker-1"
+      "/Users/jack/Projects/changemaker-project/changemaker-1",
+      "/Users/jack/apps/openai-testing-agent-demo"
     ]
   },
   "enabledMcpjsonServers": [

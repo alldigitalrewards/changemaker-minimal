@@ -65,7 +65,6 @@ This project uses Task Master AI for development workflow:
 - **Challenge Progression & Points** (2025-01-17): Planned comprehensive gamification system with mock point wallets, activity templates, approval workflows, and preparation for RewardSTACK API integration. Focus on phased approach: mock system first, real integration later.
 - **Key Decisions**: Prioritize static public facade for POC/showcase; keep MVP minimal behind login. Use tools like edit_file for precise changes; enforce CLAUDE.md rules to avoid scope creep. Implement adapter patterns for future third-party integrations.
 
-
 Common Issues:
 
 npx prisma migrate status
@@ -74,5 +73,13 @@ npx prisma generate
 
 npx prisma migrate dev
 
-
 This log tracks discussions for team alignment—update as needed.
+
+
+
+Commands:
+
+
+`pnpm db:migrate:dev` - Applies migrations to local development database
+
+`pnpm db:migrate:prod` - Applies migrations to production database (reads from .env.production)
