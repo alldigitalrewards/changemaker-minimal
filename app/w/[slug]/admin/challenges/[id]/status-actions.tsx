@@ -47,8 +47,12 @@ export function StatusActions({ workspaceSlug, challengeId, status }: StatusActi
         const err = await res.json()
         throw new Error(err.error || 'Failed to update status')
       }
-      toast({ title: 'Status updated' })
+      toast({ title: action === 'PUBLISH' ? 'Challenge published' : action === 'UNPUBLISH' ? 'Challenge unpublished' : 'Challenge archived' })
+      // Force refresh of both the detail page and the admin list view by a hard navigation
+      const listUrl = `/w/${workspaceSlug}/admin/challenges`
+      // If currently on list, just refresh; if on detail, navigate back after refresh
       router.refresh()
+      try { window.dispatchEvent(new Event('visibilitychange')) } catch {}
     } catch (e: any) {
       toast({ title: 'Error', description: e.message || 'Failed to update', variant: 'destructive' })
     } finally {

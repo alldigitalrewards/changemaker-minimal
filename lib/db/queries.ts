@@ -547,9 +547,9 @@ export async function createEnrollment(
     throw new ResourceNotFoundError('Challenge', challengeId)
   }
 
-  // Enforce published status and enrollment deadline for enrollment
-  if ((challenge as any).status !== 'PUBLISHED') {
-    throw new DatabaseError('Enrollment is only allowed for published challenges')
+  // Enforce only that challenge is not archived; allow enrollment for inactive/unpublished challenges
+  if ((challenge as any).status === 'ARCHIVED') {
+    throw new DatabaseError('Enrollment is not allowed for archived challenges')
   }
   if ((challenge as any).enrollmentDeadline && new Date() > new Date((challenge as any).enrollmentDeadline)) {
     throw new DatabaseError('Enrollment deadline has passed')

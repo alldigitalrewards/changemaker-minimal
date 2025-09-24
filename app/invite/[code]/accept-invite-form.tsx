@@ -59,9 +59,9 @@ export function AcceptInviteForm({ code, role: inviteRole }: AcceptInviteFormPro
 
       const next = profileComplete ? dashboard : `/onboarding?next=${encodeURIComponent(dashboard)}`
 
-      setTimeout(() => {
-        router.push(next)
-      }, 1200)
+      // Immediate redirect to avoid cases where user remains on invite page
+      router.push(next)
+      router.refresh()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to accept invite")
     } finally {

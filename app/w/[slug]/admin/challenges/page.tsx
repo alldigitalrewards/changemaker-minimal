@@ -32,6 +32,9 @@ interface Challenge {
   id: string;
   title: string;
   description: string;
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  startDate?: string;
+  endDate?: string;
   createdAt: string;
   updatedAt: string;
   workspaceId: string;
@@ -58,7 +61,7 @@ export default function ChallengesPage() {
   const fetchChallenges = async () => {
     if (!params?.slug) return;
     try {
-      const response = await fetch(`/api/workspaces/${params.slug}/challenges`);
+      const response = await fetch(`/api/workspaces/${params.slug}/challenges`, { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
         setChallenges(data.challenges || []);
@@ -72,6 +75,19 @@ export default function ChallengesPage() {
       });
     }
   };
+  const getStatusChip = (c: Challenge) => {
+    const now = new Date()
+    const start = c.startDate ? new Date(c.startDate) : null
+    const end = c.endDate ? new Date(c.endDate) : null
+    const status = c.status || 'DRAFT'
+
+    if (status === 'ARCHIVED') return { label: 'ARCHIVED', variant: 'secondary' as const }
+    if (status !== 'PUBLISHED') return { label: 'DRAFT', variant: 'outline' as const }
+
+    if (start && now < start) return { label: 'UPCOMING', variant: 'outline' as const }
+    if (start && end && now >= start && now <= end) return { label: 'ACTIVE', variant: 'default' as const }
+    return { label: 'ENDED', variant: 'secondary' as const }
+  }
 
 
   const handleDeleteClick = (challenge: Challenge) => {
@@ -201,9 +217,14 @@ export default function ChallengesPage() {
                     <Users className="h-4 w-4 mr-1" />
                     <span>{challenge._count?.enrollments || 0} enrolled</span>
                   </div>
-                  <Badge variant="default">
-                    ACTIVE
-                  </Badge>
+                  {(() => {
+                    const chip = getStatusChip(challenge)
+                    return (
+                      <Badge variant={chip.variant}>
+                        {chip.label}
+                      </Badge>
+                    )
+                  })()}
                 </div>
               </CardContent>
               <CardFooter className="text-xs text-gray-500">

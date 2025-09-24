@@ -331,5 +331,49 @@ export const PATCH = withErrorHandling(async (
     type: action === 'PUBLISH' ? 'CHALLENGE_PUBLISHED' : action === 'UNPUBLISH' ? 'CHALLENGE_UNPUBLISHED' : 'CHALLENGE_ARCHIVED'
   })
 
+  // On publish: best-effort send invite emails to users with INVITED status for this challenge
+  if (action === 'PUBLISH') {
+    try {
+      const memberships = await prisma.enrollment.findMany({
+        where: { challengeId: id, status: 'INVITED' },
+        include: { user: true }
+      })
+      if (memberships.length > 0) {
+        const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
+        const host = request.headers.get('host') || process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
+        const baseUrl = `${proto}://${host}`
+        const inviteUrlBase = `${baseUrl}/invite/`
+        for (const m of memberships) {
+          try {
+            // Generate a targeted, single-use invite code for this participant and challenge
+            const { createInviteCode } = await import('@/lib/db/queries')
+            const invite = await createInviteCode({ challengeId: id, role: m.user.role as any, maxUses: 1, targetEmail: m.user.email }, workspace.id, user.dbUser.id)
+            const html = (await import('@/lib/email/templates/invite')).renderInviteEmail({
+              workspaceName: workspace.name,
+              inviterEmail: user.dbUser.email,
+              role: m.user.role,
+              inviteUrl: `${inviteUrlBase}${invite.code}`,
+              expiresAt: invite.expiresAt,
+              challengeTitle: (updated as any).title || null
+            })
+            await (await import('@/lib/email/smtp')).sendInviteEmail({ to: m.user.email, subject: `You're invited to join ${workspace.name}`, html })
+            await logActivityEvent({
+              workspaceId: workspace.id,
+              challengeId: id,
+              actorUserId: user.dbUser.id,
+              userId: m.user.id,
+              type: 'INVITE_SENT' as any,
+              metadata: { via: 'publish', inviteCode: invite.code }
+            })
+          } catch (e) {
+            console.error('Failed sending invite on publish for', m.user.email, e)
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Publish post-action failed (invite emails):', e)
+    }
+  }
+
   return NextResponse.json({ challenge: updated });
 });
