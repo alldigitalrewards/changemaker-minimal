@@ -6,7 +6,7 @@ import { Trophy, Users, Calendar, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { getCurrentUser, requireWorkspaceAccess } from '@/lib/auth/session';
+import { getCurrentUser, requireWorkspaceAccessCanonical } from '@/lib/auth/session';
 import EnrollButton from './enroll-button';
 
 interface PageProps {
@@ -24,7 +24,16 @@ async function getParticipantChallenges(workspaceSlug: string, userId: string) {
     }
 
     const challenges = await prisma.challenge.findMany({
-      where: { workspaceId: workspace.id },
+      where: {
+        workspaceId: workspace.id,
+        status: 'PUBLISHED',
+        enrollments: {
+          some: {
+            userId,
+            status: { in: ['INVITED', 'ENROLLED'] }
+          }
+        }
+      },
       include: {
         enrollments: {
           where: { userId },
@@ -46,7 +55,7 @@ async function getParticipantChallenges(workspaceSlug: string, userId: string) {
 export default async function ParticipantChallengesPage({ params }: PageProps) {
   try {
     const { slug } = await params;
-    const { user, workspace } = await requireWorkspaceAccess(slug);
+    const { user, workspace } = await requireWorkspaceAccessCanonical(slug);
     const challenges = await getParticipantChallenges(slug, user.id);
 
     if (!challenges) {
