@@ -166,7 +166,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
     return latest.submittedAt;
   })();
   const anySubmissions = (challenge.activities || []).some(a => (a.submissions || []).length > 0);
-  const statusForActions = ((challenge as any).status as ('DRAFT'|'PUBLISHED'|'ARCHIVED'|undefined)) ?? 'DRAFT';
+  const statusForActions = ((challenge as any).status as (import('@/lib/auth/types').ChallengeStatus | undefined)) ?? 'DRAFT';
 
   // Attention metrics
   const pendingSubmissionCount = (challenge.activities || []).reduce((sum, a) => sum + ((a.submissions || []).filter(s => s.status === 'PENDING').length), 0)

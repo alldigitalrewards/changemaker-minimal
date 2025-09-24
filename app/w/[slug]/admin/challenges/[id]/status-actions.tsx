@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { PauseCircle, PlayCircle, Archive } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
+import type { ChallengeStatus } from '@/lib/auth/types'
 
-type ChallengeStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 
 interface StatusActionsProps {
   workspaceSlug: string
