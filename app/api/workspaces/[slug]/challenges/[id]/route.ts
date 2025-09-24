@@ -313,7 +313,7 @@ export const PATCH = withErrorHandling(async (
     return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
   }
 
-  let nextStatus: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' = challenge.status as any;
+  let nextStatus: import('@/lib/auth/types').ChallengeStatus = challenge.status as any;
   if (action === 'PUBLISH') nextStatus = 'PUBLISHED';
   if (action === 'UNPUBLISH') nextStatus = 'DRAFT';
   if (action === 'ARCHIVE') nextStatus = 'ARCHIVED';
