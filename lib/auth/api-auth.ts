@@ -3,20 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserBySupabaseId, getWorkspaceBySlug, verifyWorkspaceAdmin } from '@/lib/db/queries'
 import { syncSupabaseUser } from '@/lib/auth/sync-user'
 import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
-import type { User } from '@supabase/supabase-js'
-import type { User as PrismaUser, Workspace } from '@prisma/client'
-import type { Role } from '@/lib/types'
-
-export interface AuthenticatedUser {
-  supabaseUser: User
-  dbUser: PrismaUser
-}
-
-export interface WorkspaceContext {
-  workspace: Workspace
-  user: AuthenticatedUser
-  role?: Role
-}
+import type { AuthenticatedUser, WorkspaceContext } from '@/lib/auth/types'
 
 /**
  * Standardized authentication helper for API routes
