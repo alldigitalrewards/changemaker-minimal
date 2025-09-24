@@ -95,7 +95,7 @@ export type ChallengeWithDetails = Challenge & {
 
 export type EnrollmentWithDetails = Enrollment & {
   user: Pick<User, 'id' | 'email'>
-  challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId'>
+  challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId' | 'status' | 'enrollmentDeadline'>
 }
 
 // =============================================================================
@@ -470,7 +470,8 @@ export async function getUserEnrollments(
       where: {
         userId,
         challenge: {
-          workspaceId // Enforce workspace isolation via challenge
+          workspaceId,
+          status: 'PUBLISHED'
         }
       },
       include: {
@@ -478,7 +479,7 @@ export async function getUserEnrollments(
           select: { id: true, email: true }
         },
         challenge: {
-          select: { id: true, title: true, description: true, workspaceId: true }
+          select: { id: true, title: true, description: true, workspaceId: true, status: true, enrollmentDeadline: true }
         }
       }
     }) as EnrollmentWithDetails[]
@@ -544,6 +545,14 @@ export async function createEnrollment(
 
   if (!challenge) {
     throw new ResourceNotFoundError('Challenge', challengeId)
+  }
+
+  // Enforce published status and enrollment deadline for enrollment
+  if ((challenge as any).status !== 'PUBLISHED') {
+    throw new DatabaseError('Enrollment is only allowed for published challenges')
+  }
+  if ((challenge as any).enrollmentDeadline && new Date() > new Date((challenge as any).enrollmentDeadline)) {
+    throw new DatabaseError('Enrollment deadline has passed')
   }
 
   const existing = await prisma.enrollment.findFirst({
