@@ -11,7 +11,7 @@ import { ParticipantRoleToggle } from "./participant-role-toggle"
 import { RemoveParticipantAction } from "./remove-participant-action"
 import { EmailActions } from "./email-actions"
 import { ParticipantManagementDialog } from "../participant-management-dialog"
-import { ArrowLeft, Calendar, Mail, User, Trophy, Edit } from "lucide-react"
+import { ArrowLeft, Calendar, Mail, User, Trophy, Edit, Coins, Activity as ActivityIcon } from "lucide-react"
 import Link from "next/link"
 import { ChallengeAssignment } from "./challenge-assignment"
 import { RemoveEnrollmentButton } from "./remove-enrollment-button"
@@ -83,6 +83,18 @@ export default async function ParticipantDetailPage({
     withdrawn: participant.enrollments.filter(e => e.status === 'WITHDRAWN').length,
     invited: participant.enrollments.filter(e => e.status === 'INVITED').length
   }
+
+  // Points balance in this workspace
+  const points = await prisma.pointsBalance.findUnique({
+    where: { userId_workspaceId: { userId: participant.id, workspaceId: workspace.id } }
+  })
+
+  // Recent activity events for this user in workspace (optional)
+  const recentEvents = await (prisma as any).activityEvent.findMany({
+    where: { workspaceId: workspace.id, userId: participant.id },
+    orderBy: { createdAt: 'desc' },
+    take: 10
+  })
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -219,6 +231,17 @@ export default async function ParticipantDetailPage({
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">Points</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Coins className="h-5 w-5 text-amber-500" />
+                <span className="text-2xl font-bold">{points?.totalPoints ?? 0}</span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Challenge Enrollments */}
@@ -302,6 +325,29 @@ export default async function ParticipantDetailPage({
             )}
           </CardContent>
         </Card>
+
+        {/* Recent Activity (optional) */}
+        {recentEvents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ActivityIcon className="h-5 w-5" />
+                Recent Activity
+              </CardTitle>
+              <CardDescription>Latest events for this user in {workspace.name}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {recentEvents.map((ev: any) => (
+                  <li key={ev.id} className="text-sm text-gray-700 flex items-center justify-between">
+                    <span>{ev.type}</span>
+                    <span className="text-gray-500">{new Date(ev.createdAt).toLocaleString()}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

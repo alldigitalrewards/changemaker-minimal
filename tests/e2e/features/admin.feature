@@ -16,5 +16,3 @@ Feature: Admin dashboard and access control
     Given I am logged in as a non-admin user
     When I visit "/admin/dashboard"
     Then I should see an access denied or be redirected away
-
-

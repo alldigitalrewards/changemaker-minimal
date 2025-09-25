@@ -149,8 +149,8 @@ export async function PUT(
       )
     }
 
-    // Update participant role
-    const previousRole = participant.role
+    // Update participant role with guardrails
+    const previousRole = (membership.role as Role) || participant.role
     const dbUser = await getUserBySupabaseId(user.id)
     if (!dbUser) {
       return NextResponse.json(
@@ -158,10 +158,34 @@ export async function PUT(
         { status: 401 }
       )
     }
-    const updatedParticipant = await prisma.user.update({
-      where: { id },
-      data: { role: newRole as Role }
-    })
+
+    // Prevent demoting the last admin in the workspace
+    if (previousRole === 'ADMIN' && newRole === 'PARTICIPANT') {
+      const adminCount = await prisma.workspaceMembership.count({
+        where: { workspaceId: workspace.id, role: 'ADMIN' as any }
+      })
+      if (adminCount <= 1) {
+        return NextResponse.json(
+          { message: "Cannot demote the last admin in this workspace" },
+          { status: 400 }
+        )
+      }
+      if (dbUser.id === id && adminCount <= 1) {
+        return NextResponse.json(
+          { message: "You cannot demote yourself as the last admin" },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Keep legacy user.role and membership.role in sync
+    const [updatedParticipant] = await prisma.$transaction([
+      prisma.user.update({ where: { id }, data: { role: newRole as Role } }),
+      prisma.workspaceMembership.update({
+        where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } },
+        data: { role: newRole as any }
+      })
+    ])
 
     if (previousRole !== newRole) {
       await logActivityEvent({
@@ -238,7 +262,8 @@ export async function DELETE(
       )
     }
 
-    if (membership.role !== 'PARTICIPANT') {
+    // Prevent removing admins; also prevent removing self if admin
+    if (membership.role === 'ADMIN') {
       return NextResponse.json(
         { message: "Cannot remove an admin from the workspace" },
         { status: 403 }

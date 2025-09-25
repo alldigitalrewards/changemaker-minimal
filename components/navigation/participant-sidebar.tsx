@@ -8,6 +8,7 @@ import {
   Building2,
   Activity,
   TrendingUp,
+  User as UserIcon,
 } from 'lucide-react';
 
 interface ParticipantSidebarProps {
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Challenges', href: '/participant/challenges', icon: Trophy },
   { name: 'My Activities', href: '/participant/activities', icon: Activity },
   { name: 'Leaderboard', href: '/participant/leaderboard', icon: TrendingUp },
+  { name: 'Profile', href: '/participant/profile', icon: UserIcon },
 ];
 
 export default function ParticipantSidebar({ workspace }: ParticipantSidebarProps) {
