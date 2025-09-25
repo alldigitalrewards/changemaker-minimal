@@ -21,6 +21,8 @@ model Workspace {
   users             User[]
   memberships       WorkspaceMembership[]
   activityEvents    ActivityEvent[]
+  emailSettings     WorkspaceEmailSettings?
+  emailTemplates    WorkspaceEmailTemplate[]
 }
 
 model User {
@@ -292,4 +294,49 @@ enum ActivityEventType {
   ACTIVITY_CREATED
   ACTIVITY_UPDATED
   BULK_UNENROLL
+}
+
+/// Workspace-scoped email template types
+enum EmailTemplateType {
+  INVITE
+  EMAIL_RESENT
+  ENROLLMENT_UPDATE
+  REMINDER
+  GENERIC
+}
+
+/// Per-workspace sender/brand defaults used by all emails
+model WorkspaceEmailSettings {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @unique @db.Uuid
+  fromName    String?
+  fromEmail   String?
+  replyTo     String?
+  footerHtml  String?  @db.Text
+  brandColor  String?
+  updatedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedByUser User?   @relation(fields: [updatedBy], references: [id])
+}
+
+/// Per-workspace overrides for specific email types
+model WorkspaceEmailTemplate {
+  id          String            @id @default(uuid()) @db.Uuid
+  workspaceId String            @db.Uuid
+  type        EmailTemplateType
+  subject     String?
+  html        String?           @db.Text
+  enabled     Boolean           @default(false)
+  updatedBy   String?           @db.Uuid
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now()) @updatedAt
+
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedByUser User?           @relation(fields: [updatedBy], references: [id])
+
+  @@unique([workspaceId, type])
+  @@index([workspaceId])
 }
