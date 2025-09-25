@@ -44,6 +44,9 @@ model User {
   activityEvents      ActivityEvent[]
   actedEvents         ActivityEvent[]       @relation("EventActor")
   inviteRedemptions   InviteRedemption[]
+  // Back-relations for workspace email settings/templates updatedBy
+  updatedWorkspaceEmailSettings WorkspaceEmailSettings[] @relation("SettingsUpdatedBy")
+  updatedWorkspaceEmailTemplates WorkspaceEmailTemplate[] @relation("TemplateUpdatedBy")
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -319,7 +322,7 @@ model WorkspaceEmailSettings {
   updatedAt   DateTime @default(now()) @updatedAt
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  updatedByUser User?   @relation(fields: [updatedBy], references: [id])
+  updatedByUser User?   @relation("SettingsUpdatedBy", fields: [updatedBy], references: [id])
 }
 
 /// Per-workspace overrides for specific email types
@@ -335,7 +338,7 @@ model WorkspaceEmailTemplate {
   updatedAt   DateTime          @default(now()) @updatedAt
 
   workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  updatedByUser User?           @relation(fields: [updatedBy], references: [id])
+  updatedByUser User?           @relation("TemplateUpdatedBy", fields: [updatedBy], references: [id])
 
   @@unique([workspaceId, type])
   @@index([workspaceId])

@@ -77,5 +77,3 @@ export async function ensurePendingSubmission(params: { slug: string; title: str
 
   return { challenge, enrollment, submission }
 }
-
-
