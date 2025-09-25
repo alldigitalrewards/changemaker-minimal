@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ParticipantSelector } from '@/components/ui/participant-selector';
 import { StatusActions } from '../status-actions';
 import { ChallengeActivities } from '@/components/activities/challenge-activities';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 interface Challenge {
   id: string;
@@ -451,6 +453,28 @@ export default function EditChallengePage() {
             {/* Activities Inline */}
             <div className="pt-2">
               <ChallengeActivities challengeId={params?.id || ''} workspaceSlug={params?.slug || ''} />
+            </div>
+
+            {/* Challenge Points Budget (admin) */}
+            <div className="space-y-2">
+              <Label htmlFor="challengeBudget">Challenge Points Budget (optional)</Label>
+              <div className="text-sm text-gray-500">Set a budget to deduct from when awarding points for this challenge. Leave blank to use workspace budget.</div>
+              <form
+                action={async (formData: FormData) => {
+                  "use server"
+                  const total = Number(formData.get('totalBudget') || '')
+                  if (!params?.id || !params?.slug) return
+                  const { getWorkspaceBySlug } = await import('@/lib/db/queries')
+                  const workspace = await getWorkspaceBySlug(params.slug)
+                  if (!workspace) return
+                  const { upsertChallengePointsBudget } = await import('@/lib/db/queries')
+                  await upsertChallengePointsBudget(params.id, workspace.id, isNaN(total) ? 0 : total)
+                }}
+                className="flex items-end gap-2"
+              >
+                <Input id="challengeBudget" name="totalBudget" type="number" min={0} step={1} placeholder="e.g., 1000" />
+                <Button type="submit" variant="outline">Save Challenge Budget</Button>
+              </form>
             </div>
 
             <div className="flex items-center justify-between pt-4">

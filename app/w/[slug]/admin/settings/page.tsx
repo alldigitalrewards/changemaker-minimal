@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { updateWorkspace, deleteWorkspace, leaveWorkspace } from "./actions"
-import { getUserBySupabaseId } from "@/lib/db/queries"
+import { setPointsBalance } from "./actions"
+import { getUserBySupabaseId, getWorkspacePointsBudget, upsertWorkspacePointsBudget } from "@/lib/db/queries"
 import { isWorkspaceOwner } from "@/lib/db/workspace-membership"
 import { getWorkspaceEmailSettings } from "@/lib/db/queries"
 
@@ -67,6 +68,7 @@ export default async function AdminSettingsPage({
   })
 
   const emailSettings = await getWorkspaceEmailSettings(workspace.id)
+  const budget = await getWorkspacePointsBudget(workspace.id)
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -202,6 +204,33 @@ export default async function AdminSettingsPage({
                 <p className="text-2xl font-bold">{stats?._count.challenges || 0}</p>
                 <p className="text-sm text-gray-600">Active Challenges</p>
               </div>
+            </div>
+            <div className="mt-6 border-t pt-4">
+              <div className="mb-4">
+                <h3 className="font-medium mb-1">Points Budget</h3>
+                <div className="text-sm text-gray-600 mb-2">Total: {budget?.totalBudget || 0} · Allocated: {budget?.allocated || 0} · Remaining: {Math.max(0, (budget?.totalBudget || 0) - (budget?.allocated || 0))}</div>
+                <form action={async (formData: FormData) => {
+                  "use server"
+                  const total = Number(formData.get('totalBudget') || 0)
+                  await upsertWorkspacePointsBudget(workspace.id, isNaN(total) ? 0 : total, dbUser.id)
+                }} className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Label htmlFor="totalBudget">Set Total Budget</Label>
+                    <Input id="totalBudget" name="totalBudget" type="number" min={0} step={1} defaultValue={budget?.totalBudget || 0} />
+                  </div>
+                  <Button type="submit">Save Budget</Button>
+                </form>
+              </div>
+              <form action={setPointsBalance} className="grid gap-3 max-w-md">
+                <input type="hidden" name="workspaceId" value={workspace.id} />
+                <input type="hidden" name="userId" value={dbUser.id} />
+                <Label htmlFor="totalPoints">Your Points (Total)</Label>
+                <Input id="totalPoints" name="totalPoints" type="number" min={0} step={1} defaultValue={0} />
+                <Label htmlFor="availablePoints">Your Points (Available)</Label>
+                <Input id="availablePoints" name="availablePoints" type="number" min={0} step={1} defaultValue={0} />
+                <Button type="submit">Update My Points</Button>
+              </form>
+              <p className="text-xs text-gray-500 mt-2">Admins and participants each have a per-workspace PointsBalance. This form updates your own allocation in this workspace.</p>
             </div>
           </CardContent>
         </Card>
