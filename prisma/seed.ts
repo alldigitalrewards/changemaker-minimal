@@ -178,6 +178,9 @@ async function seed() {
     await prisma.inviteCode.deleteMany()
     await prisma.pointsBalance.deleteMany()
     await prisma.workspaceMembership.deleteMany()
+    await prisma.workspaceEmailTemplate.deleteMany()
+    await prisma.workspaceEmailSettings.deleteMany()
+    await prisma.workspaceParticipantSegment.deleteMany()
     await prisma.user.deleteMany()
     await prisma.workspace.deleteMany()
 
@@ -243,13 +246,53 @@ async function seed() {
               },
               update: {
                 role: ROLE_ADMIN,
-                isPrimary: membership.isPrimary
+                isPrimary: membership.isPrimary,
+                preferences: membership.isPrimary ? {
+                  notifications: {
+                    frequency: 'daily',
+                    types: ['enrollment_updates', 'new_challenges', 'invite_sent'],
+                    quietHours: { start: '20:00', end: '08:00' }
+                  },
+                  privacy: {
+                    showInLeaderboard: true,
+                    allowAdminDM: true
+                  },
+                  participation: {
+                    defaultLandingView: 'dashboard',
+                    challengeInterests: ['innovation', 'wellness', 'sustainability']
+                  },
+                  locale: {
+                    timezone: 'America/New_York',
+                    weekStart: 'monday',
+                    timeFormat: '12h'
+                  }
+                } : null
               },
               create: {
                 userId: user.id,
                 workspaceId: workspace.id,
                 role: ROLE_ADMIN,
-                isPrimary: membership.isPrimary
+                isPrimary: membership.isPrimary,
+                preferences: membership.isPrimary ? {
+                  notifications: {
+                    frequency: 'daily',
+                    types: ['enrollment_updates', 'new_challenges', 'invite_sent'],
+                    quietHours: { start: '20:00', end: '08:00' }
+                  },
+                  privacy: {
+                    showInLeaderboard: true,
+                    allowAdminDM: true
+                  },
+                  participation: {
+                    defaultLandingView: 'dashboard',
+                    challengeInterests: ['innovation', 'wellness', 'sustainability']
+                  },
+                  locale: {
+                    timezone: 'America/New_York',
+                    weekStart: 'monday',
+                    timeFormat: '12h'
+                  }
+                } : null
               }
             })
             console.log(`  ✓ Added ${admin.email} to ${workspace.name}${membership.isPrimary ? ' (primary)' : ''}`)
@@ -272,6 +315,70 @@ async function seed() {
     })
 
     if (firstAdmin) {
+      // Create workspace email settings
+      console.log('\n📧 Creating workspace email settings...')
+      for (const workspace of createdWorkspaces) {
+        await prisma.workspaceEmailSettings.create({
+          data: {
+            workspaceId: workspace.id,
+            fromName: `${workspace.name} Team`,
+            fromEmail: `no-reply@${workspace.slug}.com`,
+            replyTo: `support@${workspace.slug}.com`,
+            footerHtml: `<p>© 2025 ${workspace.name}. All rights reserved.</p>`,
+            brandColor: '#FF6B6B', // Coral color from theme
+            updatedBy: firstAdmin.id
+          }
+        })
+        console.log(`✓ Created email settings for ${workspace.name}`)
+
+        // Create sample email templates
+        await prisma.workspaceEmailTemplate.create({
+          data: {
+            workspaceId: workspace.id,
+            type: 'INVITE',
+            subject: `Welcome to ${workspace.name} Challenges!`,
+            html: `<h1>Welcome!</h1><p>You've been invited to join {{challenge.title}}.</p>`,
+            enabled: true,
+            updatedBy: firstAdmin.id
+          }
+        })
+
+        await prisma.workspaceEmailTemplate.create({
+          data: {
+            workspaceId: workspace.id,
+            type: 'ENROLLMENT_UPDATE',
+            subject: `Your enrollment status has been updated`,
+            html: `<p>Your enrollment in {{challenge.title}} has been updated to {{enrollment.status}}.</p>`,
+            enabled: true,
+            updatedBy: firstAdmin.id
+          }
+        })
+        console.log(`✓ Created email templates for ${workspace.name}`)
+
+        // Create participant segments
+        await prisma.workspaceParticipantSegment.create({
+          data: {
+            workspaceId: workspace.id,
+            name: 'Active Participants',
+            description: 'Users enrolled in at least one challenge',
+            filterJson: { status: 'ENROLLED' },
+            createdBy: firstAdmin.id
+          }
+        })
+
+        await prisma.workspaceParticipantSegment.create({
+          data: {
+            workspaceId: workspace.id,
+            name: 'High Achievers',
+            description: 'Users with 100+ points',
+            filterJson: { points: { min: 100 } },
+            createdBy: firstAdmin.id
+          }
+        })
+        console.log(`✓ Created participant segments for ${workspace.name}`)
+      }
+
+      console.log('\n📨 Creating sample invite codes...')
       for (const workspace of createdWorkspaces) {
         // Create a general invite code
         await prisma.inviteCode.create({
@@ -402,6 +509,49 @@ async function seed() {
       }
     }
 
+    // Create activity templates for each workspace
+    console.log('\n📋 Creating activity templates and activities...')
+    const activityTemplates = [
+      { name: 'Weekly Check-in', description: 'Share your weekly progress', type: 'TEXT_SUBMISSION', points: 10 },
+      { name: 'Document Upload', description: 'Upload supporting documents', type: 'FILE_UPLOAD', points: 20 },
+      { name: 'Photo Evidence', description: 'Share a photo of your work', type: 'PHOTO_UPLOAD', points: 15 },
+      { name: 'Resource Sharing', description: 'Share helpful links', type: 'LINK_SUBMISSION', points: 5 },
+      { name: 'Video Submission', description: 'Record a video update', type: 'VIDEO_SUBMISSION', points: 25 },
+      { name: 'Quiz Response', description: 'Answer multiple choice questions', type: 'MULTIPLE_CHOICE', points: 8 }
+    ]
+
+    for (const workspace of createdWorkspaces) {
+      for (const template of activityTemplates) {
+        const activityTemplate = await prisma.activityTemplate.create({
+          data: {
+            name: template.name,
+            description: template.description,
+            type: template.type as any,
+            basePoints: template.points,
+            workspaceId: workspace.id,
+            requiresApproval: template.type !== 'MULTIPLE_CHOICE',
+            allowMultiple: template.type === 'TEXT_SUBMISSION'
+          }
+        })
+
+        // Add activities to first 2 challenges of this workspace
+        const workspaceChallenges = allChallenges.filter(c => c.workspaceId === workspace.id)
+        for (const challenge of workspaceChallenges.slice(0, 2)) {
+          await prisma.activity.create({
+            data: {
+              templateId: activityTemplate.id,
+              challengeId: challenge.id,
+              pointsValue: template.points,
+              maxSubmissions: template.type === 'TEXT_SUBMISSION' ? 5 : 1,
+              isRequired: false,
+              deadline: new Date(challenge.endDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 1 week before challenge end
+            }
+          })
+        }
+      }
+      console.log(`✓ Created ${activityTemplates.length} activity templates for ${workspace.name}`)
+    }
+
     // Create enrollments (participants in challenges)
     console.log('\n📝 Creating enrollments...')
     const participants = await prisma.user.findMany({
@@ -446,6 +596,29 @@ async function seed() {
         }
       }
     }
+
+    // Initialize points balances for all participants
+    console.log('\n💰 Creating points balances...')
+    for (const participant of participants) {
+      if (participant.workspaceId) {
+        await prisma.pointsBalance.upsert({
+          where: {
+            userId_workspaceId: {
+              userId: participant.id,
+              workspaceId: participant.workspaceId
+            }
+          },
+          update: {},
+          create: {
+            userId: participant.id,
+            workspaceId: participant.workspaceId,
+            totalPoints: Math.floor(Math.random() * 200), // Random 0-200 points
+            availablePoints: Math.floor(Math.random() * 100) // Random 0-100 available
+          }
+        })
+      }
+    }
+    console.log(`✓ Created points balances for ${participants.length} participants`)
 
     // Print summary
     console.log('\n✨ Seed completed successfully!\n')
