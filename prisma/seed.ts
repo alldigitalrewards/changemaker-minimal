@@ -6,6 +6,7 @@
 
 import { PrismaClient, EnrollmentStatus, ActivityEventType } from '@prisma/client'
 import { type Role, ROLE_ADMIN, ROLE_PARTICIPANT } from '../lib/types'
+import { awardPointsWithBudget } from '../lib/db/queries'
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
 
@@ -169,10 +170,12 @@ async function seed() {
     // Clear existing data (optional - comment out if you want to preserve data)
     console.log('🗑️  Clearing existing data...')
     await prisma.activityEvent.deleteMany()
+    await prisma.pointsLedger.deleteMany()
     await prisma.enrollment.deleteMany()
     await prisma.activitySubmission.deleteMany()
     await prisma.activity.deleteMany()
     await prisma.activityTemplate.deleteMany()
+    await prisma.challengePointsBudget.deleteMany()
     await prisma.challenge.deleteMany()
     await prisma.inviteRedemption.deleteMany()
     await prisma.inviteCode.deleteMany()
@@ -181,6 +184,7 @@ async function seed() {
     await prisma.workspaceEmailTemplate.deleteMany()
     await prisma.workspaceEmailSettings.deleteMany()
     await prisma.workspaceParticipantSegment.deleteMany()
+    await prisma.workspacePointsBudget.deleteMany()
     await prisma.user.deleteMany()
     await prisma.workspace.deleteMany()
 
@@ -378,6 +382,20 @@ async function seed() {
         console.log(`✓ Created participant segments for ${workspace.name}`)
       }
 
+      // Create workspace points budgets
+      console.log('\n💰 Creating workspace points budgets...')
+      for (const workspace of createdWorkspaces) {
+        await prisma.workspacePointsBudget.create({
+          data: {
+            workspaceId: workspace.id,
+            totalBudget: 10000, // 10,000 points per workspace
+            allocated: 0,
+            updatedBy: firstAdmin.id
+          }
+        })
+        console.log(`✓ Created points budget for ${workspace.name}: 10,000 points`)
+      }
+
       console.log('\n📨 Creating sample invite codes...')
       for (const workspace of createdWorkspaces) {
         // Create a general invite code
@@ -509,6 +527,24 @@ async function seed() {
       }
     }
 
+    // Create challenge points budgets for first 2 challenges per workspace
+    console.log('\n🎯 Creating challenge points budgets...')
+    for (const workspace of createdWorkspaces) {
+      const workspaceChallenges = allChallenges.filter(c => c.workspaceId === workspace.id)
+      for (const challenge of workspaceChallenges.slice(0, 2)) {
+        await prisma.challengePointsBudget.create({
+          data: {
+            challengeId: challenge.id,
+            workspaceId: workspace.id,
+            totalBudget: 2000, // 2,000 points per challenge
+            allocated: 0,
+            updatedBy: firstAdmin.id
+          }
+        })
+        console.log(`✓ Created points budget for challenge: ${challenge.title}`)
+      }
+    }
+
     // Create activity templates for each workspace
     console.log('\n📋 Creating activity templates and activities...')
     const activityTemplates = [
@@ -597,28 +633,80 @@ async function seed() {
       }
     }
 
-    // Initialize points balances for all participants
-    console.log('\n💰 Creating points balances...')
-    for (const participant of participants) {
-      if (participant.workspaceId) {
-        await prisma.pointsBalance.upsert({
-          where: {
-            userId_workspaceId: {
-              userId: participant.id,
-              workspaceId: participant.workspaceId
-            }
-          },
-          update: {},
-          create: {
-            userId: participant.id,
-            workspaceId: participant.workspaceId,
-            totalPoints: Math.floor(Math.random() * 200), // Random 0-200 points
-            availablePoints: Math.floor(Math.random() * 100) // Random 0-100 available
+    // Create some sample activity submissions with points awards
+    console.log('\n📝 Creating sample activity submissions with points...')
+    let submissionCount = 0
+    const enrolledEnrollments = await prisma.enrollment.findMany({
+      where: { status: EnrollmentStatus.ENROLLED },
+      include: { challenge: true },
+      take: 10 // Limit to 10 for sample data
+    })
+
+    for (const enrollment of enrolledEnrollments) {
+      // Find an activity for this challenge
+      const activity = await prisma.activity.findFirst({
+        where: { challengeId: enrollment.challengeId },
+        include: { template: true }
+      })
+
+      if (activity) {
+        // Create an approved submission
+        const submission = await prisma.activitySubmission.create({
+          data: {
+            activityId: activity.id,
+            userId: enrollment.userId,
+            enrollmentId: enrollment.id,
+            textContent: 'Sample submission content for testing',
+            status: 'APPROVED',
+            pointsAwarded: activity.pointsValue,
+            reviewedBy: firstAdmin.id,
+            reviewedAt: new Date(),
+            reviewNotes: 'Approved for testing'
           }
         })
+
+        // Award points through the budget system
+        try {
+          await awardPointsWithBudget({
+            workspaceId: enrollment.challenge.workspaceId,
+            challengeId: enrollment.challengeId,
+            toUserId: enrollment.userId,
+            amount: activity.pointsValue,
+            actorUserId: firstAdmin.id,
+            submissionId: submission.id
+          })
+          submissionCount++
+          console.log(`✓ Created submission and awarded ${activity.pointsValue} points`)
+        } catch (error) {
+          console.warn(`⚠️ Could not award points: ${error}`)
+        }
       }
     }
-    console.log(`✓ Created points balances for ${participants.length} participants`)
+    console.log(`✓ Created ${submissionCount} approved submissions with points awards`)
+
+    // Award some initial points to participants (not tied to submissions)
+    console.log('\n🏆 Awarding initial points to participants...')
+    for (const participant of participants) {
+      if (participant.workspaceId) {
+        const pointsToAward = Math.floor(Math.random() * 100) // Random 0-100 initial points
+        if (pointsToAward > 0) {
+          try {
+            await awardPointsWithBudget({
+              workspaceId: participant.workspaceId,
+              challengeId: null, // General award, not challenge-specific
+              toUserId: participant.id,
+              amount: pointsToAward,
+              actorUserId: firstAdmin.id,
+              submissionId: null
+            })
+            console.log(`✓ Awarded ${pointsToAward} initial points to participant`)
+          } catch (error) {
+            console.warn(`⚠️ Could not award initial points: ${error}`)
+          }
+        }
+      }
+    }
+    console.log(`✓ Completed initial points awards for participants`)
 
     // Print summary
     console.log('\n✨ Seed completed successfully!\n')
@@ -631,10 +719,14 @@ async function seed() {
     const finalInviteCount = await prisma.inviteCode.count()
     const finalActivityTemplateCount = await prisma.activityTemplate.count()
     const finalActivityCount = await prisma.activity.count()
+    const finalSubmissionCount = await prisma.activitySubmission.count()
     const finalEmailSettingsCount = await prisma.workspaceEmailSettings.count()
     const finalEmailTemplateCount = await prisma.workspaceEmailTemplate.count()
     const finalSegmentCount = await prisma.workspaceParticipantSegment.count()
     const finalPointsBalanceCount = await prisma.pointsBalance.count()
+    const finalWorkspaceBudgetCount = await prisma.workspacePointsBudget.count()
+    const finalChallengeBudgetCount = await prisma.challengePointsBudget.count()
+    const finalPointsLedgerCount = await prisma.pointsLedger.count()
 
     console.log(`  - Workspaces: ${finalWorkspaceCount}`)
     console.log(`  - Users: ${finalUserCount} (${adminUsers.length} admins, ${participantUsers.length} participants)`)
@@ -643,11 +735,28 @@ async function seed() {
     console.log(`  - Enrollments: ${finalEnrollmentCount}`)
     console.log(`  - Activity Templates: ${finalActivityTemplateCount}`)
     console.log(`  - Activities: ${finalActivityCount}`)
+    console.log(`  - Activity Submissions: ${finalSubmissionCount}`)
     console.log(`  - Invite Codes: ${finalInviteCount}`)
     console.log(`  - Email Settings: ${finalEmailSettingsCount}`)
     console.log(`  - Email Templates: ${finalEmailTemplateCount}`)
     console.log(`  - Participant Segments: ${finalSegmentCount}`)
     console.log(`  - Points Balances: ${finalPointsBalanceCount}`)
+    console.log(`  - Workspace Budgets: ${finalWorkspaceBudgetCount}`)
+    console.log(`  - Challenge Budgets: ${finalChallengeBudgetCount}`)
+    console.log(`  - Points Ledger Entries: ${finalPointsLedgerCount}`)
+
+    // Show budget utilization
+    console.log('\n💵 Budget Utilization:')
+    for (const workspace of createdWorkspaces) {
+      const budget = await prisma.workspacePointsBudget.findUnique({
+        where: { workspaceId: workspace.id }
+      })
+      if (budget) {
+        const remaining = budget.totalBudget - budget.allocated
+        const percentUsed = budget.totalBudget > 0 ? Math.round((budget.allocated / budget.totalBudget) * 100) : 0
+        console.log(`  ${workspace.name}: ${budget.allocated}/${budget.totalBudget} points used (${percentUsed}%), ${remaining} remaining`)
+      }
+    }
     
     console.log('\n🔑 Login Credentials:')
     console.log(`  Password for all users: ${DEFAULT_PASSWORD}`)
