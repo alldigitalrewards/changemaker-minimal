@@ -13,6 +13,7 @@ import {
   Building2,
   ClipboardList,
   Link2,
+  User as UserIcon,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Activity Templates', href: '/admin/activity-templates', icon: ClipboardList },
   { name: 'Invites', href: '/admin/invites', icon: Link2 },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
+  { name: 'Profile', href: '/admin/profile', icon: UserIcon },
 ];
 
 export default function AdminSidebar({ workspace }: AdminSidebarProps) {
