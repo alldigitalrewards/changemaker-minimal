@@ -33,7 +33,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType } from '@prisma/client'
+import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspaceParticipantSegment } from '@prisma/client'
 import { type Role, type ActivityType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { nanoid } from 'nanoid'
@@ -857,6 +857,142 @@ export async function upsertWorkspaceEmailTemplate(
     })
   } catch (error) {
     throw new DatabaseError(`Failed to upsert workspace email template: ${error}`)
+  }
+}
+
+// =============================================================================
+// PARTICIPANT SEGMENTS & MEMBERSHIP PREFERENCES
+// =============================================================================
+
+export async function listSegments(workspaceId: WorkspaceId): Promise<WorkspaceParticipantSegment[]> {
+  try {
+    return await prisma.workspaceParticipantSegment.findMany({
+      where: { workspaceId },
+      orderBy: { updatedAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to list segments: ${error}`)
+  }
+}
+
+export async function createSegment(
+  workspaceId: WorkspaceId,
+  data: { name: string; description?: string | null; filterJson?: any },
+  createdBy: string
+): Promise<WorkspaceParticipantSegment> {
+  try {
+    const seg = await prisma.workspaceParticipantSegment.create({
+      data: {
+        workspaceId,
+        name: data.name,
+        description: data.description || null,
+        filterJson: data.filterJson ?? null,
+        createdBy
+      }
+    })
+    return seg
+  } catch (error) {
+    throw new DatabaseError(`Failed to create segment: ${error}`)
+  }
+}
+
+export async function updateSegment(
+  id: string,
+  workspaceId: WorkspaceId,
+  data: { name?: string; description?: string | null; filterJson?: any }
+): Promise<WorkspaceParticipantSegment> {
+  const seg = await prisma.workspaceParticipantSegment.findFirst({ where: { id, workspaceId } })
+  if (!seg) throw new ResourceNotFoundError('WorkspaceParticipantSegment', id)
+  try {
+    return await prisma.workspaceParticipantSegment.update({
+      where: { id },
+      data: {
+        name: data.name ?? seg.name,
+        description: data.description === undefined ? seg.description : data.description,
+        filterJson: data.filterJson === undefined ? seg.filterJson : data.filterJson
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to update segment: ${error}`)
+  }
+}
+
+export async function deleteSegment(id: string, workspaceId: WorkspaceId): Promise<void> {
+  const seg = await prisma.workspaceParticipantSegment.findFirst({ where: { id, workspaceId } })
+  if (!seg) throw new ResourceNotFoundError('WorkspaceParticipantSegment', id)
+  try {
+    await prisma.workspaceParticipantSegment.delete({ where: { id } })
+  } catch (error) {
+    throw new DatabaseError(`Failed to delete segment: ${error}`)
+  }
+}
+
+export function resolveSegmentWhere(filterJson: any, workspaceId: WorkspaceId) {
+  // Very simple MVP resolver: handle enrollment status and points range
+  const where: any = {
+    workspaceId
+  }
+  if (filterJson?.status) {
+    where.user = {
+      enrollments: {
+        some: {
+          status: filterJson.status,
+          challenge: { workspaceId }
+        }
+      }
+    }
+  }
+  if (filterJson?.points) {
+    where.user = {
+      ...(where.user || {}),
+      pointsBalances: {
+        some: {
+          workspaceId,
+          totalPoints: {
+            gte: filterJson.points.min ?? 0,
+            lte: filterJson.points.max ?? 1_000_000
+          }
+        }
+      }
+    }
+  }
+  if (filterJson?.lastActivityDays) {
+    const since = new Date()
+    since.setDate(since.getDate() - Number(filterJson.lastActivityDays))
+    where.user = {
+      ...(where.user || {}),
+      activityEvents: {
+        some: {
+          workspaceId,
+          createdAt: { gte: since }
+        }
+      }
+    }
+  }
+  return where
+}
+
+export async function getMembershipPreferences(userId: string, workspaceId: WorkspaceId): Promise<any | null> {
+  try {
+    const membership = await prisma.workspaceMembership.findUnique({ where: { userId_workspaceId: { userId, workspaceId } } })
+    return membership?.preferences ?? null
+  } catch (error) {
+    throw new DatabaseError(`Failed to get membership preferences: ${error}`)
+  }
+}
+
+export async function updateMembershipPreferences(
+  userId: string,
+  workspaceId: WorkspaceId,
+  prefs: any
+): Promise<void> {
+  try {
+    await prisma.workspaceMembership.update({
+      where: { userId_workspaceId: { userId, workspaceId } },
+      data: { preferences: prefs }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to update membership preferences: ${error}`)
   }
 }
 
