@@ -1,4 +1,3 @@
-
 # Goals
 
 - Implement per-user profile pages for:
@@ -160,3 +159,129 @@
 - All actions authorized per role; unauthorized access redirects to `/workspaces`.
 - No breaking changes to existing participants list and actions.
 - Completed investigation of existing layouts and participant management components; produced a concrete, file-level plan with reuse points and minimal API additions.
+
+* Self profile (admin): make it feel useful
+* Add notification preferences: review queue updates, enrollment changes, invite events (toggle groups; store in Supabase user_metadata).
+* Default landing view: choose which admin page opens by default (Dashboard, Participants, Activities, Emails).
+* Default workspace selector: pick the workspace to land on when switching contexts.
+* Personal timezone and date format affecting all admin timestamps.
+* Quick security actions: “Send password reset”, “Sign out other sessions” (if available).
+* Accessibility: UI density, reduced motion, and keyboard hints toggle.
+* Workspace settings: actionable and contextual
+* Branding: name, slug, logo/brand color; preview of workspace header/sidebar.
+* Roles & permissions: show current admins; guardrails to prevent last-admin removal; invite admin flow shortcut.
+* Emails defaults: “from” name/email, reply-to, default footer, brand colors (used by all templates), test send.
+* Challenge defaults: activity approval policy, base points defaults, enrollment policy window.
+* Data export: downloadable CSVs for participants, enrollments, activities; schedule weekly exports.
+* Danger zone: archive workspace, transfer ownership; clear copy explaining effects.
+* Participant management: higher-signal management UX
+* Filtering and segments: status (invited/enrolled/withdrawn), challenge participation, last activity date, points range.
+* Bulk actions: enroll/unenroll across selected challenges; resend invites; role updates with guardrails.
+* Inline detail slide-over: quick view of profile, memberships, enrollments, recent events; perform quick actions without leaving the list.
+* Event feed per participant: RBAC changes, emails sent, enrollments; helps explain state.
+* Safeguards: confirm dialogs with context (“x active enrollments will be removed”), block last-admin demotion.
+* Activities: rename and add nested tabs
+* Rename “Activity Templates” to “Activities”.
+* Tabs:
+* Activities (default): list workspace activities (across challenges) with filters, status, points; link to challenge context.
+* Templates: current template list with inline create/edit.
+* Settings (TBD placeholder): defaults for activities, moderation rules.
+* Implementation:
+* Update components/navigation/admin-sidebar.tsx item: label to “Activities”, href stays /admin/activity-templates (or move route to /admin/activities now if you prefer).
+* In app/w/[slug]/admin/activity-templates/page.tsx, render a tabbed UI:
+* Tab 1 “Activities”: aggregate getChallengeActivities per workspace; filters and quick links.
+* Tab 2 “Templates”: reuse existing templates grid + form.
+* Tab 3 “Settings”: scaffold with TODO placeholders.
+* Emails: new sidebar entry with nested tabs
+* Sidebar: add “Emails” under Activities.
+* Tabs:
+* Default Emails: read-only preview of system default emails used by the workspace (invite, password reset info/redirects, enrollment updates). Show dynamic tokens like {{workspace.name}}, {{invite_url}}; test send.
+* Templates: optional overrides per email type stored at workspace level; inline editor (subject/body), token helper, preview, diff vs default, enable/disable override.
+* Settings: from-name/email, reply-to, footer, brand colors, DKIM/SPF guidance link; test domain verification checklist (doc link).
+* Data model:
+* Keep defaults in code; store overrides in a WorkspaceEmailTemplate table (workspaceId, type, subject, html, updatedBy, updatedAt).
+* Use existing SMTP sender; add API endpoints to fetch/update workspace email templates and to test-send.
+* Implementation plan:
+* New route app/w/[slug]/admin/emails/page.tsx with Tabs: Default | Templates | Settings.
+* APIs:
+* GET /api/workspaces/[slug]/emails/templates list overrides
+* GET /api/workspaces/[slug]/emails/templates/[type]
+* PUT /api/workspaces/[slug]/emails/templates/[type]
+* POST /api/workspaces/[slug]/emails/test-send (to user email)
+* Reuse renderInviteEmail pattern; add renderers for other types with brand variables.
+* Must-have Prisma additions for Emails
+* WorkspaceEmailSettings: per-workspace sender/brand defaults used by all emails
+* id, workspaceId (unique), fromName, fromEmail, replyTo, footerHtml (text), brandColor (string), updatedBy (User), createdAt/updatedAt
+* WorkspaceEmailTemplate: per-workspace overrides for specific email types
+* id, workspaceId, type (EmailTemplateType), subject, html (text), enabled (boolean), updatedBy (User), createdAt/updatedAt
+* enum EmailTemplateType: INVITE, EMAIL_RESENT, ENROLLMENT_UPDATE, REMINDER, GENERIC
+* Queries to add in lib/db/queries:
+* getWorkspaceEmailSettings, upsertWorkspaceEmailSettings
+* listWorkspaceEmailTemplates, getWorkspaceEmailTemplate(type), upsertWorkspaceEmailTemplate(type)
+* sendWorkspaceTestEmail(settings, template, to)
+* Nice-to-have Prisma changes (high value, low risk)
+* WorkspaceParticipantSegment (saved filters for participant management)
+* id, workspaceId, name, description, filterJson (JSONB), createdBy, createdAt/updatedAt
+* Queries: listSegments, create/update/delete, resolveSegment(filterJson) → where clause
+* WorkspaceMembership.preferences (JSONB) for per-workspace admin/user prefs (notification toggles, default landing for that workspace)
+* Keeps global identity in Supabase metadata, workspace-specific prefs in Prisma
+* Queries: get/updateMembershipPreferences(userId, workspaceId)
+* ActivityEvent audit extensions (optional but useful)
+* Add ActivityEventType: EMAIL_TEMPLATE_UPDATED, WORKSPACE_SETTINGS_UPDATED, PARTICIPANT_SEGMENT_CREATED/UPDATED/DELETED
+* Log on updates to email settings/templates and segment CRUD
+* Session/middleware impacts
+* Not required. Optional micro-optimization: include x-user-timezone header (derived from Supabase metadata) for server rendering date formatting; safe to skip initially.
+* Existing schema stays the source of truth for:
+* Identity (full name, avatar, email) in Supabase user_metadata (global across workspaces). No Prisma change needed there.
+* Points/Enrollments/Activities already workspace-scoped; no changes needed.
+* Why these changes
+* Emails require durable, workspace-scoped configuration and overrides → Prisma tables with clear audit and sharing.
+* Participant management benefits from saved segments without recomputing complex filters → JSONB-based segments with server-side resolution.
+* Per-workspace prefs belong with membership, not global identity.
+
+
+* Self profile (global identity)
+* Fields: full name, avatar, pronouns, short bio. Optional skills/interests to improve challenge recommendations.
+* Security: “Send password reset” shortcut; recent sessions list (if available) and “Sign out all other sessions.”
+* Accessibility: UI density, reduced motion, color-contrast toggle, date/number locale.
+* UX: inline autosave with optimistic updates, profile completeness meter, preview avatar crop.
+* Per-workspace participant settings (scoped to current workspace)
+* Notifications
+* Frequency: real-time, hourly, daily digest.
+* Types: new challenge published, enrollment changes, activity reminders, review outcomes, points changes.
+* Quiet hours window in workspace timezone.
+* Privacy & visibility
+* Show in leaderboards (opt-in), show department/title to peers, allow DM from admins only.
+* Participation preferences
+* Default landing view (Dashboard, Challenges, Activities).
+* Challenge topics of interest (to influence “Recommended for you”).
+* Reminder cadence for incomplete activities (e.g., 24h before deadline).
+* Time & locale
+* Workspace timezone override; week start day; 12/24h time.
+* Data controls
+* Export my submissions (CSV/JSON) for this workspace; leave workspace (with clear impact).
+* UX polish
+* Tabbed layout: Profile | Notifications | Privacy | Data.
+* Preview cards: “this is how your name/avatar appears to others” and “sample reminder email.”
+* Skeletons + empty states; undo snackbars for toggles.
+* Participant dashboard tie-ins
+* Inline nudges using profile completeness and interests (e.g., “Set your interests to get better challenge matches”).
+* Quiet-hours aware reminders and localized dates using the stored workspace timezone.
+* Leaderboard opt-in respected everywhere; explain impact before enabling.
+* Data model/queries (minimal, high value)
+* Add WorkspaceMembership.preferences JSONB (per-user, per-workspace) for: notifications, privacy flags, default view, timezone, quiet hours, interests.
+* Keep global identity in Supabase user_metadata; don’t duplicate in Prisma.
+* Queries: get/update membership preferences; helper to merge defaults + overrides; guard reads by workspaceId.
+* Optional ActivityEvent logs: PREFERENCES_UPDATED to audit changes.
+* API surface (participant)
+* GET /api/workspaces/[slug]/me/preferences returns merged prefs + defaults.
+* PUT /api/workspaces/[slug]/me/preferences partial updates with validation (e.g., quiet hours).
+* Reuse existing global PUT /api/account/profile for identity edits.
+* UI components to build
+* NotificationMatrix (type × frequency with digest preview).
+* QuietHoursPicker (timezone-aware).
+* VisibilityToggles with live preview (leaderboard/profile card).
+* InterestsTagInput (chips).
+* DataExportButton (streams signed URL/download).
+
+This keeps identity global, makes participant controls meaningfully workspace-scoped, and adds tangible UX value (notifications, privacy, reminders, localization) without straying into out-of-scope features.

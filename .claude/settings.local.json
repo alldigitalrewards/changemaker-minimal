@@ -33,7 +33,8 @@
       "Bash(task-master show:*)",
       "Bash(grep:*)",
       "mcp__zen__precommit",
-      "mcp__zen__codereview"
+      "mcp__zen__codereview",
+      "Bash(task-master list:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",
