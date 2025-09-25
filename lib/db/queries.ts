@@ -33,7 +33,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspaceParticipantSegment } from '@prisma/client'
+import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspaceParticipantSegment, type WorkspacePointsBudget, type ChallengePointsBudget } from '@prisma/client'
 import { type Role, type ActivityType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { nanoid } from 'nanoid'
@@ -1427,6 +1427,113 @@ export async function updatePointsBalance(
   } catch (error) {
     throw new DatabaseError(`Failed to update points balance: ${error}`)
   }
+}
+
+// =============================================================================
+// BUDGETS & LEDGER
+// =============================================================================
+
+export async function getWorkspacePointsBudget(workspaceId: WorkspaceId): Promise<WorkspacePointsBudget | null> {
+  try {
+    return await prisma.workspacePointsBudget.findUnique({ where: { workspaceId } })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace budget: ${error}`)
+  }
+}
+
+export async function upsertWorkspacePointsBudget(workspaceId: WorkspaceId, totalBudget: number, updatedBy?: string | null): Promise<WorkspacePointsBudget> {
+  try {
+    return await prisma.workspacePointsBudget.upsert({
+      where: { workspaceId },
+      create: { workspaceId, totalBudget: Math.max(0, totalBudget), allocated: 0, updatedBy: updatedBy || null },
+      update: { totalBudget: Math.max(0, totalBudget), updatedBy: updatedBy || null }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to upsert workspace budget: ${error}`)
+  }
+}
+
+export async function getChallengePointsBudget(challengeId: ChallengeId): Promise<ChallengePointsBudget | null> {
+  try {
+    return await prisma.challengePointsBudget.findUnique({ where: { challengeId } })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch challenge budget: ${error}`)
+  }
+}
+
+export async function upsertChallengePointsBudget(challengeId: ChallengeId, workspaceId: WorkspaceId, totalBudget: number, updatedBy?: string | null): Promise<ChallengePointsBudget> {
+  try {
+    return await prisma.challengePointsBudget.upsert({
+      where: { challengeId },
+      create: { challengeId, workspaceId, totalBudget: Math.max(0, totalBudget), allocated: 0, updatedBy: updatedBy || null },
+      update: { totalBudget: Math.max(0, totalBudget), updatedBy: updatedBy || null }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to upsert challenge budget: ${error}`)
+  }
+}
+
+export async function awardPointsWithBudget(params: {
+  workspaceId: WorkspaceId
+  challengeId?: ChallengeId | null
+  toUserId: UserId
+  amount: number
+  actorUserId?: string | null
+  submissionId?: string | null
+}) {
+  const { workspaceId, challengeId, toUserId, amount, actorUserId, submissionId } = params
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new DatabaseError('Invalid award amount')
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    // Decrement challenge budget if exists, else workspace budget
+    if (challengeId) {
+      const cb = await (tx as any).challengePointsBudget.findUnique({ where: { challengeId } })
+      if (cb) {
+        await (tx as any).challengePointsBudget.update({
+          where: { challengeId },
+          data: { allocated: cb.allocated + amount }
+        })
+      } else {
+        const wb = await (tx as any).workspacePointsBudget.findUnique({ where: { workspaceId } })
+        if (wb) {
+          await (tx as any).workspacePointsBudget.update({
+            where: { workspaceId },
+            data: { allocated: wb.allocated + amount }
+          })
+        }
+      }
+    } else {
+      const wb = await (tx as any).workspacePointsBudget.findUnique({ where: { workspaceId } })
+      if (wb) {
+        await (tx as any).workspacePointsBudget.update({
+          where: { workspaceId },
+          data: { allocated: wb.allocated + amount }
+        })
+      }
+    }
+
+    // Update recipient balance
+    await tx.pointsBalance.upsert({
+      where: { userId_workspaceId: { userId: toUserId, workspaceId } },
+      update: { totalPoints: { increment: amount }, availablePoints: { increment: amount } },
+      create: { userId: toUserId, workspaceId, totalPoints: amount, availablePoints: amount }
+    })
+
+    // Ledger entry
+    await (tx as any).pointsLedger.create({
+      data: {
+        workspaceId,
+        challengeId: challengeId || null,
+        toUserId,
+        amount,
+        submissionId: submissionId || null,
+        actorUserId: actorUserId || null,
+        reason: 'AWARD_APPROVED'
+      }
+    })
+  })
 }
 
 /**

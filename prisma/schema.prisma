@@ -24,6 +24,9 @@ model Workspace {
   emailSettings     WorkspaceEmailSettings?
   emailTemplates    WorkspaceEmailTemplate[]
   segments          WorkspaceParticipantSegment[]
+  pointsBudget      WorkspacePointsBudget?
+  challengeBudgets  ChallengePointsBudget[]
+  pointsLedger      PointsLedger[]
 }
 
 model User {
@@ -49,6 +52,10 @@ model User {
   updatedWorkspaceEmailSettings WorkspaceEmailSettings[] @relation("SettingsUpdatedBy")
   updatedWorkspaceEmailTemplates WorkspaceEmailTemplate[] @relation("TemplateUpdatedBy")
   createdParticipantSegments WorkspaceParticipantSegment[] @relation("SegmentCreator")
+  workspaceBudgetsUpdated WorkspacePointsBudget[] @relation("WorkspaceBudgetUpdatedBy")
+  challengeBudgetsUpdated ChallengePointsBudget[] @relation("ChallengeBudgetUpdatedBy")
+  pointsLedgerTo          PointsLedger[] @relation("PointsLedgerToUser")
+  pointsLedgerActor       PointsLedger[] @relation("PointsLedgerActor")
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -70,6 +77,8 @@ model Challenge {
   enrollments        Enrollment[]
   inviteCodes        InviteCode[]
   activityEvents     ActivityEvent[]
+  pointsBudget       ChallengePointsBudget?
+  pointsLedger       PointsLedger[]
 
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
@@ -169,6 +178,60 @@ model PointsBalance {
 
   @@unique([userId, workspaceId])
   @@index([workspaceId])
+}
+
+/// Workspace-level points budget for awarding
+model WorkspacePointsBudget {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @unique @db.Uuid
+  totalBudget Int      @default(0)
+  allocated   Int      @default(0)
+  updatedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedByUser User?   @relation("WorkspaceBudgetUpdatedBy", fields: [updatedBy], references: [id])
+}
+
+/// Per-challenge points budget for awarding
+model ChallengePointsBudget {
+  id          String   @id @default(uuid()) @db.Uuid
+  challengeId String   @unique @db.Uuid
+  workspaceId String   @db.Uuid
+  totalBudget Int      @default(0)
+  allocated   Int      @default(0)
+  updatedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedByUser User?   @relation("ChallengeBudgetUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@index([workspaceId])
+}
+
+/// Ledger of points awards for auditability
+model PointsLedger {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @db.Uuid
+  challengeId  String?  @db.Uuid
+  toUserId     String   @db.Uuid
+  amount       Int
+  reason       String?
+  submissionId String?  @db.Uuid
+  actorUserId  String?  @db.Uuid
+  createdAt    DateTime @default(now())
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge    Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  toUser       User      @relation("PointsLedgerToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  actor        User?     @relation("PointsLedgerActor", fields: [actorUserId], references: [id])
+
+  @@index([workspaceId, createdAt])
+  @@index([challengeId, createdAt])
+  @@index([toUserId, createdAt])
 }
 
 model InviteCode {
