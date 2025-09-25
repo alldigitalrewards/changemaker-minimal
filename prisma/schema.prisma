@@ -23,6 +23,7 @@ model Workspace {
   activityEvents    ActivityEvent[]
   emailSettings     WorkspaceEmailSettings?
   emailTemplates    WorkspaceEmailTemplate[]
+  segments          WorkspaceParticipantSegment[]
 }
 
 model User {
@@ -47,6 +48,7 @@ model User {
   // Back-relations for workspace email settings/templates updatedBy
   updatedWorkspaceEmailSettings WorkspaceEmailSettings[] @relation("SettingsUpdatedBy")
   updatedWorkspaceEmailTemplates WorkspaceEmailTemplate[] @relation("TemplateUpdatedBy")
+  createdParticipantSegments WorkspaceParticipantSegment[] @relation("SegmentCreator")
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -213,6 +215,7 @@ model WorkspaceMembership {
   joinedAt    DateTime  @default(now())
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  preferences Json?
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -297,6 +300,11 @@ enum ActivityEventType {
   ACTIVITY_CREATED
   ACTIVITY_UPDATED
   BULK_UNENROLL
+  EMAIL_TEMPLATE_UPDATED
+  WORKSPACE_SETTINGS_UPDATED
+  PARTICIPANT_SEGMENT_CREATED
+  PARTICIPANT_SEGMENT_UPDATED
+  PARTICIPANT_SEGMENT_DELETED
 }
 
 /// Workspace-scoped email template types
@@ -341,5 +349,22 @@ model WorkspaceEmailTemplate {
   updatedByUser User?           @relation("TemplateUpdatedBy", fields: [updatedBy], references: [id])
 
   @@unique([workspaceId, type])
+  @@index([workspaceId])
+}
+
+/// Saved participant filters for management
+model WorkspaceParticipantSegment {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  name        String
+  description String?
+  filterJson  Json?
+  createdBy   String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator     User      @relation("SegmentCreator", fields: [createdBy], references: [id])
+
   @@index([workspaceId])
 }

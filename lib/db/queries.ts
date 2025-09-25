@@ -33,7 +33,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode } from '@prisma/client'
+import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType } from '@prisma/client'
 import { type Role, type ActivityType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { nanoid } from 'nanoid'
@@ -97,6 +97,8 @@ export type EnrollmentWithDetails = Enrollment & {
   user: Pick<User, 'id' | 'email'>
   challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId' | 'status' | 'enrollmentDeadline'>
 }
+
+export type WorkspaceEmailTemplateDTO = Pick<WorkspaceEmailTemplate, 'type' | 'subject' | 'html' | 'enabled' | 'updatedAt'>
 
 // =============================================================================
 // WORKSPACE QUERIES
@@ -785,6 +787,76 @@ export async function getWorkspaceStats(workspaceId: WorkspaceId) {
     }
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace statistics: ${error}`)
+  }
+}
+
+// =============================================================================
+// WORKSPACE EMAIL SETTINGS / TEMPLATES
+// =============================================================================
+
+export async function getWorkspaceEmailSettings(workspaceId: WorkspaceId): Promise<WorkspaceEmailSettings | null> {
+  try {
+    return await prisma.workspaceEmailSettings.findUnique({ where: { workspaceId } })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace email settings: ${error}`)
+  }
+}
+
+export async function upsertWorkspaceEmailSettings(
+  workspaceId: WorkspaceId,
+  data: Partial<Pick<WorkspaceEmailSettings, 'fromName' | 'fromEmail' | 'replyTo' | 'footerHtml' | 'brandColor'>>,
+  updatedBy?: string | null
+): Promise<WorkspaceEmailSettings> {
+  try {
+    return await prisma.workspaceEmailSettings.upsert({
+      where: { workspaceId },
+      create: { workspaceId, ...data, updatedBy: updatedBy || null },
+      update: { ...data, updatedBy: updatedBy || null }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to upsert workspace email settings: ${error}`)
+  }
+}
+
+export async function listWorkspaceEmailTemplates(workspaceId: WorkspaceId): Promise<WorkspaceEmailTemplateDTO[]> {
+  try {
+    const rows = await prisma.workspaceEmailTemplate.findMany({
+      where: { workspaceId },
+      orderBy: { updatedAt: 'desc' }
+    })
+    return rows.map(r => ({ type: r.type, subject: r.subject || null as any, html: r.html || null as any, enabled: r.enabled, updatedAt: r.updatedAt }))
+  } catch (error) {
+    throw new DatabaseError(`Failed to list workspace email templates: ${error}`)
+  }
+}
+
+export async function getWorkspaceEmailTemplate(
+  workspaceId: WorkspaceId,
+  type: EmailTemplateType
+): Promise<WorkspaceEmailTemplate | null> {
+  try {
+    return await prisma.workspaceEmailTemplate.findUnique({
+      where: { workspaceId_type: { workspaceId, type } }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace email template: ${error}`)
+  }
+}
+
+export async function upsertWorkspaceEmailTemplate(
+  workspaceId: WorkspaceId,
+  type: EmailTemplateType,
+  data: Partial<Pick<WorkspaceEmailTemplate, 'subject' | 'html' | 'enabled'>>,
+  updatedBy?: string | null
+): Promise<WorkspaceEmailTemplate> {
+  try {
+    return await prisma.workspaceEmailTemplate.upsert({
+      where: { workspaceId_type: { workspaceId, type } },
+      create: { workspaceId, type, subject: data.subject || null, html: data.html || null, enabled: data.enabled ?? false, updatedBy: updatedBy || null },
+      update: { subject: data.subject ?? undefined, html: data.html ?? undefined, enabled: data.enabled ?? undefined, updatedBy: updatedBy || null }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to upsert workspace email template: ${error}`)
   }
 }
 
