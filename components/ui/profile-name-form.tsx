@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 
-export default function ProfileNameForm({ slug, initialName }: { slug: string; initialName: string }) {
+export default function ProfileNameForm({ initialName }: { initialName: string }) {
   const [name, setName] = useState(initialName || "")
   const [saving, setSaving] = useState(false)
 
   const onSave = async () => {
     setSaving(true)
     try {
-      const res = await fetch(`/api/workspaces/${slug}/profile`, {
+      const res = await fetch(`/api/account/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fullName: name })
