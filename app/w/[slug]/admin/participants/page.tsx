@@ -17,6 +17,8 @@ import { ParticipantManagementDialog } from "./participant-management-dialog"
 import { BulkInviteDialog } from "./bulk-invite-dialog"
 import { Eye, Shield, UserCheck } from "lucide-react"
 import Link from "next/link"
+import { Suspense } from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function AdminParticipantsPage({ 
   params 
@@ -140,7 +142,7 @@ export default async function AdminParticipantsPage({
           </Card>
         </div>
 
-        {/* Participants Table */}
+        {/* Participants Table with Filters & Segments */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -149,6 +151,18 @@ export default async function AdminParticipantsPage({
                 <CardDescription>View and manage workspace participants</CardDescription>
               </div>
               <div className="flex items-center gap-2">
+                {/* Filters (MVP) */}
+                <form className="hidden md:flex items-center gap-2" action={async () => {}}>
+                  <select name="status" className="border rounded px-2 py-1 text-sm">
+                    <option value="">All statuses</option>
+                    <option value="INVITED">Invited</option>
+                    <option value="ENROLLED">Enrolled</option>
+                    <option value="WITHDRAWN">Withdrawn</option>
+                  </select>
+                  <input type="text" name="email" placeholder="Filter by email" className="border rounded px-2 py-1 text-sm" />
+                </form>
+                {/* Segments (server-rendered simple list) */}
+                {/* In a follow-up we can fetch via client and enable create/edit inline */}
                 <BulkInviteDialog slug={slug} />
                 <ParticipantManagementDialog slug={slug} mode="add" />
               </div>
@@ -159,6 +173,7 @@ export default async function AdminParticipantsPage({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">{/* Bulk select placeholder */}</TableHead>
                     <TableHead>Participant</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Enrollments</TableHead>
@@ -172,6 +187,7 @@ export default async function AdminParticipantsPage({
                       key={participant.id} 
                       className="hover:bg-gray-50"
                     >
+                      <TableCell><input type="checkbox" /></TableCell>
                       <TableCell>
                         <Link href={`/w/${slug}/admin/participants/${participant.id}`} className="block">
                           <div>

@@ -6,9 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { updateWorkspace, deleteWorkspace, leaveWorkspace } from "./actions"
 import { getUserBySupabaseId } from "@/lib/db/queries"
 import { isWorkspaceOwner } from "@/lib/db/workspace-membership"
+import { getWorkspaceEmailSettings } from "@/lib/db/queries"
 
 export default async function AdminSettingsPage({ 
   params 
@@ -64,6 +66,8 @@ export default async function AdminSettingsPage({
     }
   })
 
+  const emailSettings = await getWorkspaceEmailSettings(workspace.id)
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
@@ -72,6 +76,77 @@ export default async function AdminSettingsPage({
       </div>
 
       <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Branding Preview</CardTitle>
+            <CardDescription>Preview header/sidebar branding for this workspace</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="border rounded-lg overflow-hidden">
+              <div className="h-12 flex items-center px-4" style={{ background: emailSettings?.brandColor || '#F97316' }}>
+                <span className="text-white font-semibold">{workspace.name}</span>
+              </div>
+              <div className="flex">
+                <div className="w-48 border-r p-4">Sidebar</div>
+                <div className="flex-1 p-4">
+                  <div className="h-24 bg-gray-50 rounded" />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Roles & Permissions</CardTitle>
+            <CardDescription>Guardrails to prevent last-admin removal</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">Admins cannot demote themselves if they are the last admin. Transfers of ownership are required to leave.</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Email Defaults</CardTitle>
+            <CardDescription>Sender details and brand color, used by all workspace emails</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={async (formData: FormData) => {
+              "use server"
+              const fromName = String(formData.get('fromName') || '')
+              const fromEmail = String(formData.get('fromEmail') || '')
+              const replyTo = String(formData.get('replyTo') || '')
+              const brandColor = String(formData.get('brandColor') || '')
+              const footerHtml = String(formData.get('footerHtml') || '')
+              const { upsertWorkspaceEmailSettings } = await import("@/lib/db/queries")
+              await upsertWorkspaceEmailSettings(workspace.id, { fromName, fromEmail, replyTo, brandColor, footerHtml }, dbUser.id)
+            }} className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="fromName">From name</Label>
+                <Input id="fromName" name="fromName" defaultValue={emailSettings?.fromName || ''} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="fromEmail">From email</Label>
+                <Input id="fromEmail" name="fromEmail" defaultValue={emailSettings?.fromEmail || ''} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="replyTo">Reply-to</Label>
+                <Input id="replyTo" name="replyTo" defaultValue={emailSettings?.replyTo || ''} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="brandColor">Brand color</Label>
+                <Input id="brandColor" name="brandColor" defaultValue={emailSettings?.brandColor || ''} placeholder="#F97316" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="footerHtml">Footer HTML</Label>
+                <Input id="footerHtml" name="footerHtml" defaultValue={emailSettings?.footerHtml || ''} />
+              </div>
+              <Button type="submit">Save Email Defaults</Button>
+            </form>
+          </CardContent>
+        </Card>
+
         {/* General Settings */}
         <Card>
           <CardHeader>
