@@ -23,6 +23,8 @@ interface DashboardHeaderProps {
   user: User;
   role: 'ADMIN' | 'PARTICIPANT';
   showRoleSwitcher?: boolean;
+  pointsBadge?: { label: string; value: string } | null;
+  budgetBadge?: { label: string; value: string } | null;
 }
 
 export default function DashboardHeader({
@@ -31,6 +33,8 @@ export default function DashboardHeader({
   user,
   role,
   showRoleSwitcher = false,
+  pointsBadge,
+  budgetBadge,
 }: DashboardHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -89,6 +93,18 @@ export default function DashboardHeader({
             }`}>
               {role === 'ADMIN' ? 'Admin' : 'Participant'}
             </div>
+
+            {/* Optional points/budget badges */}
+            {pointsBadge && (
+              <div className="px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-900">
+                {pointsBadge.label}: {pointsBadge.value}
+              </div>
+            )}
+            {budgetBadge && (
+              <div className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-900">
+                {budgetBadge.label}: {budgetBadge.value}
+              </div>
+            )}
 
             {/* User menu */}
             <div className="relative" ref={menuRef}>
