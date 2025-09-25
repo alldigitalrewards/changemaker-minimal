@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { ParticipantManagementDialog } from "./participant-management-dialog"
+import { BulkInviteDialog } from "./bulk-invite-dialog"
 import { Eye, Shield, UserCheck } from "lucide-react"
 import Link from "next/link"
 
@@ -40,29 +41,45 @@ export default async function AdminParticipantsPage({
     redirect("/workspaces")
   }
 
-  // Get all participants in workspace with their enrollments
-  const participants = await prisma.user.findMany({
+  // Get participants via membership system to include invited/existing users
+  const memberships = await prisma.workspaceMembership.findMany({
     where: {
       workspaceId: workspace.id
     },
     include: {
-      enrollments: {
-        where: {
-          challenge: {
-            workspaceId: workspace.id
-          }
-        },
+      user: {
         include: {
-          challenge: {
-            select: {
-              title: true
+          enrollments: {
+            where: {
+              challenge: {
+                workspaceId: workspace.id
+              }
+            },
+            include: {
+              challenge: {
+                select: {
+                  title: true
+                }
+              }
             }
           }
         }
       }
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: [
+      { role: 'asc' },
+      { joinedAt: 'asc' }
+    ]
   })
+
+  const participants = memberships.map(m => ({
+    id: m.user.id,
+    email: m.user.email,
+    role: m.role,
+    enrollments: m.user.enrollments,
+    createdAt: m.joinedAt,
+    isPending: m.user.isPending
+  }))
 
   // Get enrollment statistics
   const enrollmentStats = await prisma.enrollment.groupBy({
@@ -131,7 +148,10 @@ export default async function AdminParticipantsPage({
                 <CardTitle>All Participants</CardTitle>
                 <CardDescription>View and manage workspace participants</CardDescription>
               </div>
-              <ParticipantManagementDialog slug={slug} mode="add" />
+              <div className="flex items-center gap-2">
+                <BulkInviteDialog slug={slug} />
+                <ParticipantManagementDialog slug={slug} mode="add" />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -178,6 +198,9 @@ export default async function AdminParticipantsPage({
                             )}
                             {participant.role}
                           </Badge>
+                          {participant.isPending && (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-200">Pending</span>
+                          )}
                         </Link>
                       </TableCell>
                       <TableCell>
@@ -216,12 +239,14 @@ export default async function AdminParticipantsPage({
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <ParticipantManagementDialog
-                            slug={slug}
-                            mode="remove"
-                            participantId={participant.id}
-                            participantEmail={participant.email}
-                          />
+                          {participant.role === "PARTICIPANT" && (
+                            <ParticipantManagementDialog
+                              slug={slug}
+                              mode="remove"
+                              participantId={participant.id}
+                              participantEmail={participant.email}
+                            />
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

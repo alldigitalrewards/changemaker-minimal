@@ -24,7 +24,8 @@ import {
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { prisma } from '@/lib/db';
-import { getCurrentUser, requireWorkspaceAccess } from '@/lib/auth/session';
+import { getCurrentUser, requireWorkspaceAccessCanonical } from '@/lib/auth/session';
+import type { ChallengeStatus } from '@/lib/auth/types'
 import { getChallengeLeaderboard } from '@/lib/db/queries';
 import JoinButton, { SimpleSubmissionDialog } from './join-button';
 import { TabNavigationButtons } from './tab-navigation-buttons';
@@ -52,21 +53,51 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
           id: challengeId,
           workspaceId: workspace.id,
         },
-        include: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          createdAt: true,
+          status: true,
+          enrollmentDeadline: true,
           enrollments: {
             where: {
               userId: userId,
             },
+            select: {
+              id: true,
+              userId: true,
+              status: true,
+              createdAt: true,
+            },
           },
           activities: {
-            include: {
-              template: true,
+            select: {
+              id: true,
+              pointsValue: true,
+              maxSubmissions: true,
+              deadline: true,
+              isRequired: true,
+              template: {
+                select: {
+                  name: true,
+                  description: true,
+                  type: true,
+                  requiresApproval: true,
+                },
+              },
               submissions: {
                 where: {
                   userId: userId,
                 },
                 orderBy: {
                   submittedAt: 'desc',
+                },
+                select: {
+                  id: true,
+                  status: true,
+                  submittedAt: true,
+                  pointsAwarded: true,
                 },
               },
               _count: {
@@ -333,7 +364,7 @@ async function ChallengeLeaderboardContent({
 export default async function ParticipantChallengeDetailPage({ params }: PageProps) {
   try {
     const { slug, id } = await params;
-    const { user, workspace } = await requireWorkspaceAccess(slug);
+    const { user, workspace } = await requireWorkspaceAccessCanonical(slug);
     const result = await getChallengeForParticipant(slug, id, user.id);
 
     if (!result || !result.challenge) {
@@ -342,8 +373,17 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
 
     const { challenge, pointsBalance } = result;
 
-    // Define variables with explicit typing and null checks
+    // Gate visibility: require published status AND user is invited/enrolled
+    const status: ChallengeStatus | undefined = challenge?.status
     const isEnrolled = Boolean(challenge?.enrollments && challenge.enrollments.length > 0);
+    const enrollmentStatus = isEnrolled ? challenge!.enrollments![0]?.status : undefined
+    const hasAccess = (enrollmentStatus === 'INVITED' || enrollmentStatus === 'ENROLLED')
+    if ((status && status !== 'PUBLISHED') || !hasAccess) {
+      notFound();
+    }
+
+    // Define variables with explicit typing and null checks
+    // isEnrolled computed above for consistency
     const enrollment = challenge?.enrollments?.[0];
     const hasActivities = Boolean(challenge?.activities && challenge.activities.length > 0);
 

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireWorkspaceAccess, withErrorHandling } from '@/lib/auth/api-auth';
+import { requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
 import { prisma } from '@/lib/prisma';
+import { createInviteCode, logActivityEvent } from '@/lib/db/queries';
+import { sendInviteEmail } from '@/lib/email/smtp';
+import { renderInviteEmail } from '@/lib/email/templates/invite';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const GET = withErrorHandling(async (
   request: NextRequest,
@@ -9,24 +13,16 @@ export const GET = withErrorHandling(async (
   const { slug } = await params;
   const { workspace } = await requireWorkspaceAccess(slug);
 
-  const users = await prisma.user.findMany({
-    where: {
-      workspaceId: workspace.id,
-    },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-    },
-    orderBy: {
-      email: 'asc',
-    },
-  });
+  const memberships = await prisma.workspaceMembership.findMany({
+    where: { workspaceId: workspace.id },
+    include: { user: { select: { id: true, email: true } } },
+    orderBy: { createdAt: 'asc' }
+  })
 
-  const participants = users.map(user => ({
-    id: user.id,
-    email: user.email,
-    role: user.role,
+  const participants = memberships.map(m => ({
+    id: m.user.id,
+    email: m.user.email,
+    role: m.role,
   }));
 
   return NextResponse.json({ participants });
@@ -37,10 +33,20 @@ export const POST = withErrorHandling(async (
   { params }: { params: Promise<{ slug: string }> }
 ) => {
   const { slug } = await params;
-  const { workspace } = await requireWorkspaceAccess(slug);
+  const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { email, role } = body;
+  const { email, role, name } = body;
+
+  // Rate limit per admin+workspace to prevent abuse
+  const ip = request.headers.get('x-forwarded-for') || 'local'
+  const rl = rateLimit(`participants-add:${workspace.id}:${user.dbUser.id}:${ip}`, 10, 60_000)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many invites. Please wait a moment.', code: 'RATE_LIMITED', retryAfter: rl.retryAfter },
+      { status: 429 }
+    )
+  }
 
   // Basic validation
   if (!email || !role) {
@@ -68,39 +74,79 @@ export const POST = withErrorHandling(async (
   }
 
   try {
-    // Check if user with this email already exists in this workspace
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        email: email.trim().toLowerCase(),
-        workspaceId: workspace.id,
-      },
-    });
+    const lowerEmail = email.trim().toLowerCase()
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists in workspace' },
-        { status: 409 }
-      );
-    }
+    const result = await prisma.$transaction(async (tx) => {
+      const existingByEmail = await tx.user.findUnique({ where: { email: lowerEmail } })
 
-    // Create the user account (without Supabase connection initially)
-    const newUser = await prisma.user.create({
-      data: {
-        email: email.trim().toLowerCase(),
+      const userRecord = existingByEmail || await tx.user.create({
+        data: {
+          email: lowerEmail,
+          role,
+          isPending: true,
+        } as any,
+      })
+
+      const membership = await tx.workspaceMembership.findUnique({
+        where: { userId_workspaceId: { userId: userRecord.id, workspaceId: workspace.id } }
+      })
+      if (!membership) {
+        await tx.workspaceMembership.create({
+          data: {
+            userId: userRecord.id,
+            workspaceId: workspace.id,
+            role,
+            isPrimary: false
+          }
+        })
+      }
+
+      const invite = await createInviteCode({ role: role, maxUses: 1, targetEmail: lowerEmail }, workspace.id, user.dbUser.id)
+
+      return { userRecord, invite }
+    })
+
+    // Build base URL that works in local/preview/prod
+    const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
+    const host = request.headers.get('host') || process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
+    const baseUrl = `${proto}://${host}`
+    const inviteUrl = `${baseUrl}/invite/${result.invite.code}`
+
+    // Send email (best-effort)
+    try {
+      const html = renderInviteEmail({
+        workspaceName: workspace.name,
+        inviterEmail: user.dbUser.email,
         role,
+        inviteUrl,
+        expiresAt: result.invite.expiresAt,
+        challengeTitle: null
+      })
+      await sendInviteEmail({
+        to: lowerEmail,
+        subject: `You're invited to join ${workspace.name}`,
+        html
+      })
+      await logActivityEvent({
         workspaceId: workspace.id,
-        // Note: supabaseUserId will be set when they sign up via Supabase Auth
-      },
-    });
+        challengeId: null,
+        actorUserId: user.dbUser.id,
+        type: 'INVITE_SENT',
+        metadata: { inviteCode: result.invite.code, recipients: [lowerEmail], via: 'email' }
+      })
+    } catch (e) {
+      console.error('Failed to send invite email:', e)
+    }
 
     return NextResponse.json(
       { 
         user: {
-          id: newUser.id,
-          email: newUser.email,
-          role: newUser.role,
-          workspaceId: newUser.workspaceId,
-        }
+          id: result.userRecord.id,
+          email: result.userRecord.email,
+          role: result.userRecord.role,
+          workspaceId: result.userRecord.workspaceId,
+        },
+        invite: { code: result.invite.code, url: inviteUrl }
       },
       { status: 201 }
     );

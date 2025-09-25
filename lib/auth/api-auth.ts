@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getUserBySupabaseId, getWorkspaceBySlug, verifyWorkspaceAdmin } from '@/lib/db/queries'
+import { syncSupabaseUser } from '@/lib/auth/sync-user'
 import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
-import type { User } from '@supabase/supabase-js'
-import type { User as PrismaUser, Workspace } from '@prisma/client'
-import type { Role } from '@/lib/types'
-
-export interface AuthenticatedUser {
-  supabaseUser: User
-  dbUser: PrismaUser
-}
-
-export interface WorkspaceContext {
-  workspace: Workspace
-  user: AuthenticatedUser
-  role?: Role
-}
+import type { AuthenticatedUser, WorkspaceContext } from '@/lib/auth/types'
 
 /**
  * Standardized authentication helper for API routes
@@ -34,7 +22,14 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
     throw NextResponse.json({ error: 'Authentication required' }, { status: 401 })
   }
 
-  const dbUser = await getUserBySupabaseId(user.id)
+  let dbUser = await getUserBySupabaseId(user.id)
+  if (!dbUser) {
+    // Attempt to auto-sync user into Prisma on first encounter
+    try {
+      await syncSupabaseUser(user as any)
+      dbUser = await getUserBySupabaseId(user.id)
+    } catch (_) {}
+  }
   if (!dbUser) {
     throw NextResponse.json({ error: 'User not found in database' }, { status: 404 })
   }
@@ -97,10 +92,21 @@ export function withErrorHandling<T extends any[]>(
         return error
       }
       
+      // Map known DB errors to clearer codes/status
+      const anyErr = error as any
+      const code = anyErr?.code as string | undefined
+      const message = anyErr?.message || 'Internal server error'
+      const status =
+        code === 'WORKSPACE_ACCESS_DENIED' ? 403 :
+        code === 'RESOURCE_NOT_FOUND' ? 404 :
+        code === 'INVITE_EXPIRED' ? 410 :
+        code === 'INVITE_MAX_USES' ? 409 :
+        code === 'INVITE_EMAIL_MISMATCH' ? 403 :
+        500
       console.error('API error:', error)
       return NextResponse.json(
-        { error: 'Internal server error' },
-        { status: 500 }
+        { error: message, code: code || 'INTERNAL_SERVER_ERROR' },
+        { status }
       )
     }
   }

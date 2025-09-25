@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { type Role } from '@/lib/types'
 
-export default function SignupPage() {
+function SignupPageContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<Role>('PARTICIPANT')
@@ -17,6 +17,14 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const searchParams = useSearchParams()
+
+  // Prefill email from invite link if present
+  const inviteEmail = searchParams.get('email')
+  if (inviteEmail && !email) {
+    // note: simple guard to avoid re-renders loops
+    setEmail(inviteEmail)
+  }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,22 +32,22 @@ export default function SignupPage() {
     setError(null)
 
     try {
+      const next = searchParams.get('redirectTo') || '/workspaces'
+      const lockedRole = (searchParams.get('role') as Role) || undefined
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { role }
+          data: { role: lockedRole || role },
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(next)}`
         }
       })
 
       if (error) throw error
 
-      // If the user is created immediately (local development), sync to Prisma
       if (data.user && !data.user.email_confirmed_at) {
-        // User needs to confirm email - redirect to login
         router.push('/auth/login?message=Please check your email to confirm your account')
       } else if (data.user) {
-        // User is immediately available (local setup) - sync and redirect
         await fetch('/api/auth/sync-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -89,18 +97,22 @@ export default function SignupPage() {
               />
             </div>
 
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <select
-                id="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="PARTICIPANT">Participant</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-            </div>
+            {searchParams.get('role') ? (
+              <input type="hidden" value={searchParams.get('role')!} />
+            ) : (
+              <div>
+                <Label htmlFor="role">Role</Label>
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as Role)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="PARTICIPANT">Participant</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -124,5 +136,13 @@ export default function SignupPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageContent />
+    </Suspense>
   )
 }

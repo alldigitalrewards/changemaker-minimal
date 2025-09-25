@@ -120,23 +120,32 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   const activeEnrollments = enrolledUsers.filter(e => e.status === 'ENROLLED').length;
   const completedEnrollments = enrolledUsers.filter(e => e.status === 'WITHDRAWN').length;
   
-  // Calculate challenge status based on dates
+  // Calculate challenge status considering publish state first, then dates
   const now = new Date();
   const startDate = new Date(challenge.startDate);
   const endDate = new Date(challenge.endDate);
-  
+
+  const statusForActions = ((challenge as any).status as (import('@/lib/auth/types').ChallengeStatus | undefined)) ?? 'DRAFT';
+
   let challengeStatus: string;
   let statusVariant: "default" | "secondary" | "destructive" | "outline";
-  
-  if (now < startDate) {
-    challengeStatus = "UPCOMING";
-    statusVariant = "outline";
+
+  if (statusForActions === 'ARCHIVED') {
+    challengeStatus = 'ARCHIVED';
+    statusVariant = 'secondary';
+  } else if (statusForActions !== 'PUBLISHED') {
+    // Unpublished challenges should not show ACTIVE/UPCOMING/ENDED
+    challengeStatus = 'DRAFT';
+    statusVariant = 'outline';
+  } else if (now < startDate) {
+    challengeStatus = 'UPCOMING';
+    statusVariant = 'outline';
   } else if (now >= startDate && now <= endDate) {
-    challengeStatus = "ACTIVE";
-    statusVariant = "default";
+    challengeStatus = 'ACTIVE';
+    statusVariant = 'default';
   } else {
-    challengeStatus = "ENDED";
-    statusVariant = "secondary";
+    challengeStatus = 'ENDED';
+    statusVariant = 'secondary';
   }
 
   // Derived time info
@@ -166,7 +175,6 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
     return latest.submittedAt;
   })();
   const anySubmissions = (challenge.activities || []).some(a => (a.submissions || []).length > 0);
-  const statusForActions = ((challenge as any).status as ('DRAFT'|'PUBLISHED'|'ARCHIVED'|undefined)) ?? 'DRAFT';
 
   // Attention metrics
   const pendingSubmissionCount = (challenge.activities || []).reduce((sum, a) => sum + ((a.submissions || []).filter(s => s.status === 'PENDING').length), 0)

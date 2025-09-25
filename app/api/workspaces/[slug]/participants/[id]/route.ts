@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/db"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import { Role } from "@/lib/types"
-import { logActivityEvent } from "@/lib/db/queries"
+import { logActivityEvent, getUserBySupabaseId } from "@/lib/db/queries"
+import { sendInviteEmail } from "@/lib/email/smtp"
+import { renderInviteEmail } from "@/lib/email/templates/invite"
 
 export async function GET(
   request: Request,
@@ -38,11 +40,11 @@ export async function GET(
       )
     }
 
-    // Get participant with enrollments
+    // Get participant with enrollments (must be a member of this workspace to view)
     const participant = await prisma.user.findFirst({
-      where: {
+      where: { 
         id,
-        workspaceId: workspace.id
+        memberships: { some: { workspaceId: workspace.id } }
       },
       include: {
         enrollments: {
@@ -126,23 +128,36 @@ export async function PUT(
       )
     }
 
-    // Check if participant exists and belongs to this workspace
-    const participant = await prisma.user.findFirst({
-      where: {
-        id,
-        workspaceId: workspace.id
-      }
+    // Check if participant exists and belongs to this workspace (membership-aware)
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } }
     })
+    const participant = membership ? await prisma.user.findUnique({ where: { id } }) : null
 
-    if (!participant) {
+    if (!participant || !membership) {
       return NextResponse.json(
         { message: "Participant not found" },
         { status: 404 }
       )
     }
 
+    // Defensive check to satisfy TypeScript narrowing and ensure membership exists
+    if (!membership) {
+      return NextResponse.json(
+        { message: "Membership not found" },
+        { status: 404 }
+      )
+    }
+
     // Update participant role
     const previousRole = participant.role
+    const dbUser = await getUserBySupabaseId(user.id)
+    if (!dbUser) {
+      return NextResponse.json(
+        { message: "User record not found" },
+        { status: 401 }
+      )
+    }
     const updatedParticipant = await prisma.user.update({
       where: { id },
       data: { role: newRole as Role }
@@ -152,7 +167,7 @@ export async function PUT(
       await logActivityEvent({
         workspaceId: workspace.id,
         userId: updatedParticipant.id,
-        actorUserId: user.id as any,
+        actorUserId: dbUser.id as any,
         type: 'RBAC_ROLE_CHANGED' as any,
         metadata: { oldRole: previousRole, newRole }
       })
@@ -186,6 +201,13 @@ export async function DELETE(
         { status: 401 }
       )
     }
+    const dbUser = await getUserBySupabaseId(user.id)
+    if (!dbUser) {
+      return NextResponse.json(
+        { message: "User record not found" },
+        { status: 401 }
+      )
+    }
 
     // Check admin access
     const role = await getUserWorkspaceRole(slug)
@@ -204,19 +226,22 @@ export async function DELETE(
       )
     }
 
-    // Check if participant exists and belongs to this workspace
-    const participant = await prisma.user.findFirst({
-      where: {
-        id,
-        workspaceId: workspace.id,
-        role: "PARTICIPANT"
-      }
+    // Check membership in this workspace (membership-aware)
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } }
     })
 
-    if (!participant) {
+    if (!membership) {
       return NextResponse.json(
         { message: "Participant not found" },
         { status: 404 }
+      )
+    }
+
+    if (membership.role !== 'PARTICIPANT') {
+      return NextResponse.json(
+        { message: "Cannot remove an admin from the workspace" },
+        { status: 403 }
       )
     }
 
@@ -230,22 +255,31 @@ export async function DELETE(
       }
     })
 
-    // Remove participant from workspace (set workspaceId to null)
-    await prisma.user.update({
-      where: { id },
-      data: { 
-        workspaceId: null,
-        role: "PARTICIPANT" 
-      }
+    // Remove membership record for this workspace (new system)
+    await prisma.workspaceMembership.deleteMany({
+      where: { userId: id, workspaceId: workspace.id }
     })
+
+    // Legacy cleanup removed; rely on WorkspaceMembership only
 
     await logActivityEvent({
       workspaceId: workspace.id,
       userId: id,
-      actorUserId: user.id as any,
+      actorUserId: dbUser.id as any,
       type: 'UNENROLLED' as any,
       metadata: { reason: 'Removed from workspace' }
     })
+
+    // If this was a pending placeholder user with no other memberships, delete the user row
+    try {
+      const [userRecord, otherMemberships] = await Promise.all([
+        prisma.user.findUnique({ where: { id } }),
+        prisma.workspaceMembership.count({ where: { userId: id } })
+      ])
+      if (userRecord && userRecord.isPending && !userRecord.supabaseUserId && otherMemberships === 0) {
+        await prisma.user.delete({ where: { id } })
+      }
+    } catch (_) {}
 
     return NextResponse.json({ 
       message: "Participant removed successfully" 
@@ -294,14 +328,17 @@ export async function POST(
 
     const { action } = await request.json()
 
-    // Get participant
-    const participant = await prisma.user.findFirst({
-      where: {
-        id,
-        workspaceId: workspace.id
-      }
+    // Get participant (membership-aware)
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } }
     })
-
+    if (!membership) {
+      return NextResponse.json(
+        { message: "Participant not found" },
+        { status: 404 }
+      )
+    }
+    const participant = await prisma.user.findUnique({ where: { id } })
     if (!participant) {
       return NextResponse.json(
         { message: "Participant not found" },
@@ -329,51 +366,47 @@ export async function POST(
     }
 
     if (action === 'resend_invite') {
-      // Send invite email using Resend API
-      if (!process.env.RESEND_API_KEY) {
-        return NextResponse.json(
-          { message: "Email service not configured" },
-          { status: 500 }
-        )
+      // Use the canonical invite link format and send via internal sender
+      const invite = await prisma.inviteCode.findFirst({
+        where: { workspaceId: workspace.id },
+        orderBy: { createdAt: 'desc' }
+      })
+      if (!invite) {
+        return NextResponse.json({ message: 'No invite code available to resend' }, { status: 404 })
       }
 
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'team@updates.changemaker.im',
-          to: [participant.email],
+      const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
+      const host = request.headers.get('host') || process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
+      const baseUrl = `${proto}://${host}`
+      const inviteUrl = `${baseUrl}/invite/${invite.code}`
+
+      try {
+        const html = renderInviteEmail({
+          workspaceName: workspace.name,
+          inviterEmail: user.email ?? 'no-reply@changemaker.im',
+          role: membership.role,
+          inviteUrl,
+          expiresAt: invite.expiresAt,
+          challengeTitle: null
+        })
+        await sendInviteEmail({
+          to: participant.email,
           subject: `Invitation to join ${workspace.name}`,
-          html: `
-            <div>
-              <h2>You're invited to join ${workspace.name}</h2>
-              <p>Hello,</p>
-              <p>You've been invited to join the ${workspace.name} workspace as a ${participant.role.toLowerCase()}.</p>
-              <p>Click the link below to get started:</p>
-              <a href="${process.env.NEXT_PUBLIC_APP_URL}/w/${workspace.slug}" style="background-color: #1e7b8b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                Join Workspace
-              </a>
-              <p>If you don't have an account yet, you'll be prompted to create one.</p>
-              <p>Best regards,<br>The Changemaker Team</p>
-            </div>
-          `,
-        }),
-      })
-
-      if (!response.ok) {
-        console.error("Failed to send invite email:", await response.text())
-        return NextResponse.json(
-          { message: "Failed to send invite email" },
-          { status: 500 }
-        )
+          html
+        })
+      } catch (e) {
+        return NextResponse.json({ message: 'Failed to resend invite email' }, { status: 500 })
       }
 
-      return NextResponse.json({ 
-        message: "Invite email sent successfully" 
+      await logActivityEvent({
+        workspaceId: workspace.id,
+        userId: id,
+        actorUserId: (await getUserBySupabaseId(user.id))!.id as any,
+        type: 'EMAIL_RESENT' as any,
+        metadata: { inviteCode: invite.code }
       })
+
+      return NextResponse.json({ message: 'Invite email sent successfully' })
     }
 
     return NextResponse.json(

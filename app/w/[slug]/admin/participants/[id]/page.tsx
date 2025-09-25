@@ -13,6 +13,9 @@ import { EmailActions } from "./email-actions"
 import { ParticipantManagementDialog } from "../participant-management-dialog"
 import { ArrowLeft, Calendar, Mail, User, Trophy, Edit } from "lucide-react"
 import Link from "next/link"
+import { ChallengeAssignment } from "./challenge-assignment"
+import { RemoveEnrollmentButton } from "./remove-enrollment-button"
+import { BulkChallengeAssignment } from "./bulk-challenge-assignment"
 
 export default async function ParticipantDetailPage({ 
   params 
@@ -37,11 +40,15 @@ export default async function ParticipantDetailPage({
     redirect("/workspaces")
   }
 
-  // Get participant with full enrollment details
+  // Get participant with full enrollment details (membership-aware to include pending users)
   const participant = await prisma.user.findFirst({
     where: {
       id,
-      workspaceId: workspace.id
+      memberships: {
+        some: {
+          workspaceId: workspace.id
+        }
+      }
     },
     include: {
       enrollments: {
@@ -109,7 +116,7 @@ export default async function ParticipantDetailPage({
 
       <div className="grid gap-6">
         {/* Participant Info Card */}
-        <ParticipantDetailCard participant={participant} />
+        <ParticipantDetailCard participant={participant} slug={slug} />
 
         {/* Quick Actions */}
         <Card>
@@ -130,6 +137,22 @@ export default async function ParticipantDetailPage({
                 <p className="text-sm text-gray-500">
                   Send password reset or resend workspace invitation
                 </p>
+              </div>
+            </div>
+
+            {/* Challenge Assignment */}
+            <div className="border-t pt-6">
+              <h4 className="font-medium text-gray-900 mb-2">Add to Challenge</h4>
+              <div className="flex items-center gap-4">
+                <ChallengeAssignment slug={slug} participantId={participant.id} />
+                <p className="text-sm text-gray-500">Enroll this participant into an existing challenge</p>
+              </div>
+              <div className="mt-3">
+                <BulkChallengeAssignment
+                  slug={slug}
+                  participantId={participant.id}
+                  alreadyEnrolledIds={participant.enrollments.map((e: any) => e.challenge.id)}
+                />
               </div>
             </div>
 
@@ -257,6 +280,9 @@ export default async function ParticipantDetailPage({
                             View Challenge
                           </Button>
                         </Link>
+                <div className="mt-2 text-right">
+                  <RemoveEnrollmentButton slug={slug} participantId={participant.id} enrollmentId={enrollment.id} />
+                </div>
                       </div>
                     </div>
                   </div>

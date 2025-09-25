@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, Children } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 
 interface DashboardLayoutProps {
@@ -17,15 +17,15 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      {header}
+      {Children.toArray(header)}
 
       <div className="flex">
         {/* Sidebar */}
-        {sidebar}
+        {Children.toArray(sidebar)}
 
         {/* Main Content */}
         <main className="flex-1 p-6">
-          {children}
+          {Children.toArray(children)}
         </main>
       </div>
       <Toaster />

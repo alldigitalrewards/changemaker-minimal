@@ -28,10 +28,18 @@
       "mcp__serena__find_file",
       "Bash(curl:*)",
       "Bash(pnpm run:*)",
-      "mcp__playwright__browser_wait_for"
+      "mcp__playwright__browser_wait_for",
+      "WebFetch(domain:www.inngest.com)",
+      "Bash(task-master show:*)",
+      "Bash(grep:*)",
+      "mcp__zen__precommit",
+      "mcp__zen__codereview"
     ],
     "additionalDirectories": [
-      "/Users/jack/Projects/changemaker-project/changemaker-1"
+      "/Users/jack/Projects/changemaker-project/changemaker-1",
+      "/Users/jack/apps/openai-testing-agent-demo",
+      "/Users/jack/apps/qa-use",
+      "/Users/jack/Projects/qa-changemaker"
     ]
   },
   "enabledMcpjsonServers": [

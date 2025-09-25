@@ -5,7 +5,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   
   // Skip auth for public routes, API, and static assets
-  const isPublic = [
+  const publicExact = [
     '/', 
     '/about', 
     '/help', 
@@ -18,9 +18,13 @@ export async function middleware(request: NextRequest) {
     '/auth/login', 
     '/auth/signup'
   ].includes(pathname)
+  const publicPrefix = (
+    pathname.startsWith('/invite') ||
+    pathname.startsWith('/auth/callback')
+  )
   const isStatic = pathname.startsWith('/_next') || pathname.startsWith('/api/') || pathname.includes('.')
   
-  if (isPublic || isStatic) {
+  if (publicExact || publicPrefix || isStatic) {
     return NextResponse.next()
   }
   

@@ -95,7 +95,7 @@ export type ChallengeWithDetails = Challenge & {
 
 export type EnrollmentWithDetails = Enrollment & {
   user: Pick<User, 'id' | 'email'>
-  challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId'>
+  challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId' | 'status' | 'enrollmentDeadline'>
 }
 
 // =============================================================================
@@ -234,10 +234,12 @@ export async function getUserBySupabaseId(supabaseUserId: string): Promise<UserW
  */
 export async function getWorkspaceUsers(workspaceId: WorkspaceId): Promise<User[]> {
   try {
-    return await prisma.user.findMany({
+    const memberships = await prisma.workspaceMembership.findMany({
       where: { workspaceId },
-      orderBy: { email: 'asc' }
+      include: { user: true },
+      orderBy: { createdAt: 'asc' }
     })
+    return memberships.map(m => m.user)
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace users: ${error}`)
   }
@@ -253,20 +255,28 @@ export async function upsertUser(data: {
   workspaceId?: WorkspaceId
 }): Promise<User> {
   try {
-    return await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { supabaseUserId: data.supabaseUserId },
       update: {
         email: data.email,
-        ...(data.role && { role: data.role }),
-        ...(data.workspaceId && { workspaceId: data.workspaceId })
+        ...(data.role && { role: data.role })
       },
       create: {
         supabaseUserId: data.supabaseUserId,
         email: data.email,
-        role: data.role || 'PARTICIPANT',
-        workspaceId: data.workspaceId
+        role: data.role || 'PARTICIPANT'
       }
     })
+
+    if (data.workspaceId) {
+      await prisma.workspaceMembership.upsert({
+        where: { userId_workspaceId: { userId: user.id, workspaceId: data.workspaceId } },
+        update: {},
+        create: { userId: user.id, workspaceId: data.workspaceId, role: data.role || 'PARTICIPANT', isPrimary: false }
+      })
+    }
+
+    return user
   } catch (error) {
     throw new DatabaseError(`Failed to upsert user: ${error}`)
   }
@@ -280,12 +290,10 @@ export async function updateUserRole(
   role: Role,
   adminWorkspaceId: WorkspaceId
 ): Promise<User> {
-  // Verify user belongs to admin's workspace
-  const user = await prisma.user.findUnique({
-    where: { id: userId }
+  const membership = await prisma.workspaceMembership.findUnique({
+    where: { userId_workspaceId: { userId, workspaceId: adminWorkspaceId } }
   })
-  
-  if (!user || user.workspaceId !== adminWorkspaceId) {
+  if (!membership) {
     throw new WorkspaceAccessError(adminWorkspaceId)
   }
 
@@ -462,7 +470,8 @@ export async function getUserEnrollments(
       where: {
         userId,
         challenge: {
-          workspaceId // Enforce workspace isolation via challenge
+          workspaceId,
+          status: 'PUBLISHED'
         }
       },
       include: {
@@ -470,7 +479,7 @@ export async function getUserEnrollments(
           select: { id: true, email: true }
         },
         challenge: {
-          select: { id: true, title: true, description: true, workspaceId: true }
+          select: { id: true, title: true, description: true, workspaceId: true, status: true, enrollmentDeadline: true }
         }
       }
     }) as EnrollmentWithDetails[]
@@ -521,17 +530,16 @@ export async function createEnrollment(
   workspaceId: WorkspaceId,
   status: 'INVITED' | 'ENROLLED' = 'ENROLLED'
 ): Promise<Enrollment> {
-  // Verify user belongs to workspace and challenge exists in workspace
-  const [user, challenge] = await Promise.all([
-    prisma.user.findFirst({
-      where: { id: userId, workspaceId }
+  const [membership, challenge] = await Promise.all([
+    prisma.workspaceMembership.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } }
     }),
     prisma.challenge.findFirst({
       where: { id: challengeId, workspaceId }
     })
   ])
 
-  if (!user) {
+  if (!membership) {
     throw new WorkspaceAccessError(workspaceId)
   }
 
@@ -539,7 +547,14 @@ export async function createEnrollment(
     throw new ResourceNotFoundError('Challenge', challengeId)
   }
 
-  // Check for existing enrollment
+  // Enforce only that challenge is not archived; allow enrollment for inactive/unpublished challenges
+  if ((challenge as any).status === 'ARCHIVED') {
+    throw new DatabaseError('Enrollment is not allowed for archived challenges')
+  }
+  if ((challenge as any).enrollmentDeadline && new Date() > new Date((challenge as any).enrollmentDeadline)) {
+    throw new DatabaseError('Enrollment deadline has passed')
+  }
+
   const existing = await prisma.enrollment.findFirst({
     where: { userId, challengeId }
   })
@@ -570,7 +585,6 @@ export async function createChallengeEnrollments(
   workspaceId: WorkspaceId,
   status: 'INVITED' | 'ENROLLED' = 'INVITED'
 ): Promise<Enrollment[]> {
-  // Verify challenge exists in workspace
   const challenge = await prisma.challenge.findFirst({
     where: { id: challengeId, workspaceId }
   })
@@ -579,19 +593,14 @@ export async function createChallengeEnrollments(
     throw new ResourceNotFoundError('Challenge', challengeId)
   }
 
-  // Verify all users belong to workspace
-  const users = await prisma.user.findMany({
-    where: { 
-      id: { in: participantIds },
-      workspaceId 
-    }
+  const membershipCount = await prisma.workspaceMembership.count({
+    where: { userId: { in: participantIds }, workspaceId }
   })
 
-  if (users.length !== participantIds.length) {
+  if (membershipCount !== participantIds.length) {
     throw new WorkspaceAccessError(workspaceId)
   }
 
-  // Check for existing enrollments
   const existingEnrollments = await prisma.enrollment.findMany({
     where: {
       challengeId,
@@ -599,7 +608,6 @@ export async function createChallengeEnrollments(
     }
   })
 
-  // Filter out users who are already enrolled
   const existingUserIds = existingEnrollments.map(e => e.userId)
   const newParticipantIds = participantIds.filter(id => !existingUserIds.includes(id))
 
@@ -608,18 +616,14 @@ export async function createChallengeEnrollments(
   }
 
   try {
-    // Create enrollments in batch
     const enrollmentData = newParticipantIds.map(userId => ({
       userId,
       challengeId,
       status
     }))
 
-    const result = await prisma.enrollment.createMany({
-      data: enrollmentData
-    })
+    await prisma.enrollment.createMany({ data: enrollmentData })
 
-    // Return the created enrollments
     return await prisma.enrollment.findMany({
       where: {
         challengeId,
@@ -733,10 +737,10 @@ export async function verifyWorkspaceAccess(
   workspaceId: WorkspaceId
 ): Promise<boolean> {
   try {
-    const user = await prisma.user.findFirst({
-      where: { id: userId, workspaceId }
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } }
     })
-    return !!user
+    return !!membership
   } catch (error) {
     return false
   }
@@ -750,10 +754,10 @@ export async function verifyWorkspaceAdmin(
   workspaceId: WorkspaceId
 ): Promise<boolean> {
   try {
-    const user = await prisma.user.findFirst({
-      where: { id: userId, workspaceId, role: 'ADMIN' }
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } }
     })
-    return !!user
+    return membership?.role === 'ADMIN'
   } catch (error) {
     return false
   }
@@ -765,7 +769,7 @@ export async function verifyWorkspaceAdmin(
 export async function getWorkspaceStats(workspaceId: WorkspaceId) {
   try {
     const [userCount, challengeCount, enrollmentCount] = await Promise.all([
-      prisma.user.count({ where: { workspaceId } }),
+      prisma.workspaceMembership.count({ where: { workspaceId } }),
       prisma.challenge.count({ where: { workspaceId } }),
       prisma.enrollment.count({
         where: {
@@ -1368,7 +1372,7 @@ export async function logActivityEvent(data: {
   metadata?: any
 }) {
   try {
-    await prisma.activityEvent.create({
+    await (prisma as any).activityEvent.create({
       data: {
         workspaceId: data.workspaceId,
         type: data.type as any,
@@ -1386,7 +1390,7 @@ export async function logActivityEvent(data: {
 }
 
 export async function getChallengeEvents(challengeId: string) {
-  return await prisma.activityEvent.findMany({
+  return await (prisma as any).activityEvent.findMany({
     where: { challengeId },
     include: {
       user: { select: { email: true } },
@@ -1416,16 +1420,19 @@ export async function createInviteCode(
     role?: Role
     expiresIn?: number // hours, defaults to 168 (1 week)
     maxUses?: number
+    targetEmail?: string | null
   },
   workspaceId: WorkspaceId,
   createdBy: UserId
 ): Promise<InviteCode> {
-  // Verify creator is admin in workspace
-  const admin = await prisma.user.findFirst({
+  // Verify creator is admin in workspace (membership-aware; fallback to legacy User.workspaceId)
+  const membership = await prisma.workspaceMembership.findUnique({
+    where: { userId_workspaceId: { userId: createdBy, workspaceId } }
+  })
+  const legacyAdmin = await prisma.user.findFirst({
     where: { id: createdBy, workspaceId, role: 'ADMIN' }
   })
-  
-  if (!admin) {
+  if (!(membership?.role === 'ADMIN' || !!legacyAdmin)) {
     throw new WorkspaceAccessError(workspaceId)
   }
   
@@ -1454,8 +1461,10 @@ export async function createInviteCode(
         expiresAt,
         maxUses: data.maxUses || 1,
         usedCount: 0,
-        createdBy
-      }
+        createdBy,
+        // targetEmail is added via schema; cast to satisfy client prior to generate
+        ...(data.targetEmail ? { targetEmail: data.targetEmail.toLowerCase() } : {} as any)
+      } as any
     })
   } catch (error) {
     throw new DatabaseError(`Failed to create invite code: ${error}`)
@@ -1494,6 +1503,7 @@ export async function acceptInviteCode(
   challenge?: Challenge | null
   enrollment?: Enrollment | null
   isExistingMember: boolean
+  role: Role
 }> {
   const invite = await getInviteByCode(code)
   
@@ -1503,67 +1513,100 @@ export async function acceptInviteCode(
   
   // Check if invite is valid
   if (invite.expiresAt < new Date()) {
-    throw new DatabaseError('Invite code has expired')
+    throw new DatabaseError('Invite code has expired', 'INVITE_EXPIRED')
   }
   
   if (invite.usedCount >= invite.maxUses) {
-    throw new DatabaseError('Invite code has reached maximum uses')
+    throw new DatabaseError('Invite code has reached maximum uses', 'INVITE_MAX_USES')
+  }
+
+  // Enforce target email binding when present
+  if ((invite as any).targetEmail && (invite as any).targetEmail !== userEmail.toLowerCase()) {
+    throw new DatabaseError('Invite not valid for this email', 'INVITE_EMAIL_MISMATCH')
   }
   
-  // Check if user is already in workspace
-  const existingUser = await prisma.user.findFirst({
-    where: { id: userId, workspaceId: invite.workspaceId }
+  // Fetch user and any existing membership
+  const dbUser = await prisma.user.findUnique({ where: { id: userId } })
+  const existingMembership = await prisma.workspaceMembership.findUnique({
+    where: { userId_workspaceId: { userId, workspaceId: invite.workspaceId } }
   })
   
   let enrollment: Enrollment | null = null
-  let isExistingMember = false
+  let isExistingMember = !!existingMembership
+  let resultingRole: Role = invite.role
   
   try {
     await prisma.$transaction(async (tx) => {
-      if (!existingUser) {
-        // Add user to workspace
-        await tx.user.update({
-          where: { id: userId },
+      // Ensure there is a single user row for this supabase user
+      if (!dbUser) {
+        throw new DatabaseError('User not found')
+      }
+
+      // Upsert membership (new system)
+      if (!existingMembership) {
+        await tx.workspaceMembership.create({
           data: {
+            userId,
             workspaceId: invite.workspaceId,
-            role: invite.role
+            role: invite.role,
+            isPrimary: false
           }
         })
+        resultingRole = invite.role
       } else {
-        isExistingMember = true
+        resultingRole = existingMembership.role as Role
       }
+
+      // Clear pending flag on the user record
+      await tx.user.update({ where: { id: userId }, data: ({ isPending: false } as any) })
       
-      // If invite is for specific challenge, enroll user
       if (invite.challengeId) {
         const existingEnrollment = await tx.enrollment.findFirst({
           where: { userId, challengeId: invite.challengeId }
         })
-        
         if (!existingEnrollment) {
           enrollment = await tx.enrollment.create({
-            data: {
-              userId,
-              challengeId: invite.challengeId,
-              status: 'ENROLLED'
-            }
+            data: { userId, challengeId: invite.challengeId, status: 'ENROLLED' }
+          })
+        } else if (existingEnrollment.status !== 'ENROLLED') {
+          enrollment = await tx.enrollment.update({
+            where: { id: existingEnrollment.id },
+            data: { status: 'ENROLLED' }
           })
         } else {
           enrollment = existingEnrollment
         }
       }
-      
-      // Increment used count
-      await tx.inviteCode.update({
-        where: { id: invite.id },
-        data: { usedCount: { increment: 1 } }
+
+      // Idempotent redemption tracking per user
+      const priorRedemption = await (tx as any).inviteRedemption.findUnique({
+        where: { inviteId_userId: { inviteId: invite.id, userId } }
       })
+
+      if (!priorRedemption) {
+        // Re-check maxUses inside transaction to reduce race conditions
+        const freshInvite = await tx.inviteCode.findUnique({ where: { id: invite.id } })
+        if (!freshInvite) {
+          throw new ResourceNotFoundError('Invite', invite.id)
+        }
+        if (freshInvite.usedCount >= freshInvite.maxUses) {
+          throw new DatabaseError('Invite code has reached maximum uses', 'INVITE_MAX_USES')
+        }
+
+        await (tx as any).inviteRedemption.create({ data: { inviteId: invite.id, userId } })
+        await tx.inviteCode.update({
+          where: { id: invite.id },
+          data: { usedCount: { increment: 1 } }
+        })
+      }
     })
     
     return {
       workspace: invite.workspace,
       challenge: invite.challenge,
       enrollment,
-      isExistingMember
+      isExistingMember,
+      role: resultingRole
     }
   } catch (error) {
     throw new DatabaseError(`Failed to accept invite: ${error}`)

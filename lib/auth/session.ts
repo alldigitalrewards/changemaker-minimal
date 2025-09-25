@@ -1,17 +1,30 @@
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { type User } from '@prisma/client'
+import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
+import type { CanonicalWorkspaceAccess, UserSummary } from '@/lib/auth/types'
 
 export async function getSession() {
   try {
     const supabase = await createClient()
     // Use getUser for secure authentication
     const { data: { user }, error } = await supabase.auth.getUser()
-    
-    if (error || !user) {
+
+    if (error) {
+      // Suppress refresh token errors on initial page loads
+      if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token_not_found')) {
+        // This is expected when there's no active session
+        return null
+      }
+      // Log other auth errors
+      console.error('Auth error in getSession:', error)
       return null
     }
-    
+
+    if (!user) {
+      return null
+    }
+
     // Return user data in session-like format for compatibility
     return {
       user,
@@ -28,8 +41,17 @@ export async function getCurrentUser(): Promise<User | null> {
   try {
     const supabase = await createClient()
     const { data: { user: authUser }, error } = await supabase.auth.getUser()
-    
-    if (error || !authUser) return null
+
+    if (error) {
+      // Suppress refresh token errors
+      if (error.message?.includes('Refresh Token') || error.message?.includes('refresh_token_not_found')) {
+        return null
+      }
+      console.error('Auth error in getCurrentUser:', error)
+      return null
+    }
+
+    if (!authUser) return null
 
     const user = await prisma.user.findUnique({
       where: { supabaseUserId: authUser.id }
@@ -53,17 +75,45 @@ export async function requireAuth() {
 export async function requireWorkspaceAccess(workspaceSlug: string) {
   const user = await requireAuth()
   
-  if (!user.workspaceId) {
-    throw new Error('User not assigned to workspace')
-  }
-  
+  // Look up workspace by slug directly (do not rely on legacy user.workspaceId)
   const workspace = await prisma.workspace.findUnique({
-    where: { id: user.workspaceId }
+    where: { slug: workspaceSlug }
   })
-  
-  if (!workspace || workspace.slug !== workspaceSlug) {
+
+  if (!workspace) {
+    throw new Error('Workspace not found')
+  }
+
+  // Membership-aware access check using compatibility layer
+  // Uses Supabase user id stored on the Prisma User record
+  const supabaseUserId = user.supabaseUserId
+  const role = supabaseUserId
+    ? await getUserWorkspaceRole(supabaseUserId, workspaceSlug)
+    : null
+
+  if (!role) {
     throw new Error('Workspace access denied')
   }
-  
+
   return { user, workspace }
+}
+
+/**
+ * Canonical helper that returns a normalized shape for both API and UI consumers.
+ * Keeps the legacy requireWorkspaceAccess intact while allowing gradual migration.
+ */
+export async function requireWorkspaceAccessCanonical(workspaceSlug: string): Promise<CanonicalWorkspaceAccess> {
+  const { user, workspace } = await requireWorkspaceAccess(workspaceSlug)
+
+  const minimalUser: UserSummary = {
+    id: user.id,
+    email: user.email
+  }
+
+  // Retrieve role for completeness
+  const role = user.supabaseUserId
+    ? await getUserWorkspaceRole(user.supabaseUserId, workspaceSlug)
+    : null
+
+  return { user: minimalUser, workspace, role: role ?? undefined }
 }
