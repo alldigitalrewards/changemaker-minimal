@@ -1,145 +1,162 @@
-# TODO - Changemaker Platform
 
-## Current Sprint: Challenge Progression and Rewards System
+# Goals
 
-### 🎯 Active Development (Branch: SandboxNewFeatures)
+- Implement per-user profile pages for:
+  - Admin view: inspect/manage any workspace member.
+  - Participant view: inspect/update own profile within workspace context.
+- Reuse existing participant management patterns (`/admin/participants`) and utilities.
 
-#### Task #2: Extend Database Schema for Wallet and Transaction Models (HIGH PRIORITY)
-- [ ] 2.1 Define Wallet Model in Prisma schema
-- [ ] 2.2 Define Transaction Model with proper relationships
-- [ ] 2.3 Enhance Challenge Model with progression state field
-- [ ] 2.4 Generate and apply Prisma migrations
-- [ ] 2.5 Create seed data for testing wallet functionality
+### URLs and Routing
 
-#### Task #3: Implement Challenge Progression System (MEDIUM PRIORITY)
-Dependencies: Task #2
-- [ ] 3.1 Define challenge progression states and transitions
-- [ ] 3.2 Create submission tracking system
-- [ ] 3.3 Build approval workflow API
-- [ ] 3.4 Create state transition handlers
-- [ ] 3.5 Implement progression visualization
+- Admin profile detail:
+  - `app/w/[slug]/admin/participants/[id]/page.tsx`
+- Participant self profile:
+  - `app/w/[slug]/participant/profile/page.tsx`
+- Global account settings (already linked in header):
+  - `app/account/settings/page.tsx` (optional now, can defer if not needed)
 
-#### Task #4: Develop Mock Point System and User Wallet Functionality (MEDIUM PRIORITY)
-Dependencies: Task #2
-- [ ] 4.1 Create wallet initialization service
-- [ ] 4.2 Implement point allocation system
-- [ ] 4.3 Build transaction recording mechanism
-- [ ] 4.4 Create wallet balance calculation logic
-- [ ] 4.5 Implement mock point award system
+### Access Control
 
-#### Task #5: Implement Admin Workspace Wallet and Funding System (MEDIUM PRIORITY)
-Dependencies: Task #4
-- [ ] 5.1 Create workspace wallet entity
-- [ ] 5.2 Build funding mechanism
-- [ ] 5.3 Implement point distribution controls
-- [ ] 5.4 Create budget tracking system
-- [ ] 5.5 Build approval limits and authorization
+- Admin page:
+  - Use `getUserWorkspaceRole(slug)`; require `"ADMIN"`.
+  - Restrict destructive actions (remove, demote) with guardrails.
+- Participant page:
+  - Require authenticated user in workspace; allow both `"ADMIN"` and `"PARTICIPANT"`.
+  - Only allow editing own profile fields.
 
-#### Task #6: Enhance Existing Participant Management Interface (LOW PRIORITY)
-Dependencies: Task #3
-- [ ] 6.1 Add advanced filtering options
-- [ ] 6.2 Implement sorting capabilities
-- [ ] 6.3 Create bulk action functionality
-- [ ] 6.4 Build participant quick view modal
-- [ ] 6.5 Add export functionality
+### Data Model and Queries
 
-#### Task #7: Implement Integration Preparation Layer for RewardSTACK (MEDIUM PRIORITY)
-Dependencies: Task #4
-- [ ] 7.1 Design service interface architecture
-- [ ] 7.2 Create mock RewardSTACK service
-- [ ] 7.3 Implement configuration system
-- [ ] 7.4 Build error handling and retry logic
-- [ ] 7.5 Create webhook handlers
+- Prisma entities used: `User`, `WorkspaceMembership`, `Enrollment`, `PointsBalance`, `ActivitySubmission`, `ActivityEvent`.
+- Admin profile page query:
+  - Load `User` by `[id]`, membership in current `workspace`, enrollments in `workspace` challenges (include `Challenge.title/status`), points balance in `workspace`, last activity/events.
+- Participant profile page query:
+  - Load current `user` (Supabase) + matching `User` row, primary membership in `workspace`, own enrollments and points balance, latest submissions summary.
+- Prefer server components for data fetch in `page.tsx` files; reuse `createClient`, `getCurrentWorkspace`.
 
-#### Task #8: Develop UI Components for Wallet and Challenge Progression (LOW PRIORITY)
-Dependencies: Task #6
-- [ ] 8.1 Create PointBalance component
-- [ ] 8.2 Build WalletCard component
-- [ ] 8.3 Develop TransactionHistory component
-- [ ] 8.4 Create ProgressionTracker component
-- [ ] 8.5 Build ParticipantFilter component
+### Admin Profile Page (server page)
 
-#### Task #9: Implement Security Measures and Performance Optimizations (HIGH PRIORITY)
-Dependencies: Task #8
-- [ ] 9.1 Add transaction validation
-- [ ] 9.2 Implement rate limiting
-- [ ] 9.3 Create audit logging system
-- [ ] 9.4 Add role-based access controls
-- [ ] 9.5 Optimize database queries and caching
+- Location: `app/w/[slug]/admin/participants/[id]/page.tsx`
+- Layout:
+  - Header: user email + role + joined date using `components/ui/participant-detail-card.tsx` (pass `slug` to enable inline role editing via `InlineProfile`).
+  - Actions row:
+    - `EmailActions` (send password reset, resend invite).
+    - `ParticipantRoleToggle` (admin<->participant).
+    - `ChallengeAssignment` + `BulkChallengeAssignment`.
+    - `RemoveParticipantAction`.
+  - Stats:
+    - Total enrollments, active vs withdrawn counts.
+    - Points balance from `PointsBalance` in current workspace.
+  - Enrollments table:
+    - Challenge, status, joined date, quick “Remove” using `RemoveEnrollmentButton`.
+  - Activity timeline (optional v1):
+    - Recent `ActivityEvent` rows for this user in workspace.
+- Behavior:
+  - Use existing API routes used by current admin participants UI:
+    - PUT `/api/workspaces/[slug]/participants/[id]` for role changes.
+    - POST `/api/workspaces/[slug]/participants/[id]` for actions (resend invite/password reset).
+    - DELETE `/api/workspaces/[slug]/participants/[id]`.
+    - POST `/api/workspaces/[slug]/participants/[id]/enrollments` for enrollment adds.
+    - DELETE `/api/workspaces/[slug]/participants/[id]/enrollments/[enrollmentId]`.
+  - Show “Pending” label when `user.isPending` is true; disable password reset for pending if not provisioned.
 
-#### Task #10: Conduct Comprehensive Testing and Refinement (HIGH PRIORITY)
-Dependencies: Task #9
-- [ ] 10.1 Create unit tests for wallet operations
-- [ ] 10.2 Build integration tests for progression system
-- [ ] 10.3 Perform end-to-end user journey testing
-- [ ] 10.4 Execute security vulnerability assessment
-- [ ] 10.5 Conduct performance benchmarking
+### Participant Self Profile Page (server page)
 
-## Feature Requirements Summary
+- Location: `app/w/[slug]/participant/profile/page.tsx`
+- Layout:
+  - Header card: email, full name (from Supabase `user_metadata.full_name`), joined date for current workspace.
+  - Profile edit section:
+    - Editable full name field; write to Supabase `auth.user` metadata and reflect immediately in `DashboardHeader` (already derives name from metadata).
+    - Optional avatar (defer if no upload infra yet).
+  - Workspace stats:
+    - Points balance in current workspace.
+    - Enrollment summary with statuses.
+  - Security section:
+    - Link/button to trigger password reset to self via Supabase or direct portal (no server-side changes if using Supabase UI).
+- Behavior:
+  - API endpoint for profile updates:
+    - `app/api/account/profile/route.ts` or `app/api/workspaces/[slug]/profile/route.ts`:
+      - GET: current profile (email, name, metadata, workspace stats).
+      - PUT: update `full_name` in Supabase user metadata; update `User.updatedAt`.
+  - No email change flow in v1 (email change involves Supabase verification; defer).
 
-### Challenge Progression and Point System
-- **Status**: Planning/Development
-- **Key Features**:
-  - Challenge progression states (submitted → approved → in_development → in_production → verified → completed)
-  - Activity templates with point values
-  - Point awarding upon approval
-  - Mock wallet system for testing
-  - Future RewardSTACK API integration preparation
+### Sidebar and Navigation
 
-### Admin Wallets and Funding System
-- **Status**: Planning
-- **Key Features**:
-  - Workspace-level wallets separate from user wallets
-  - Mock funding mechanisms
-  - Point distribution controls
-  - Budget tracking and analytics
-  - Preparation for R.A. (Reporting and Accounting) system integration
+- Admin:
+  - No new sidebar item needed; admin reaches detail via existing `Participants` table links (`/w/[slug]/admin/participants/[id]` already used).
+- Participant:
+  - Add “Profile” entry in `components/navigation/participant-sidebar.tsx`:
+    - `{ name: 'Profile', href: '/participant/profile', icon: User }`
+  - Keep `DashboardHeader` “Account Settings” link; can route to workspace profile or global settings.
 
-### Participant Management Improvements
-- **Status**: Planning
-- **Key Features**:
-  - Advanced filtering and sorting
-  - Bulk actions (approve, reject, award points)
-  - Quick view modals
-  - Activity timeline views
-  - Export functionality
+### UI Components Reuse and Additions
 
-## Technical Stack
-- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
-- **Database**: Supabase (PostgreSQL), Prisma ORM
-- **Styling**: Tailwind CSS, shadcn/ui components
-- **Deployment**: Vercel (changemaker.im production, preview.changemaker.im staging)
-- **Authentication**: Supabase Auth
-- **Architecture**: Multi-tenant via path-based workspaces (/w/[slug])
+- Reuse:
+  - `components/ui/participant-detail-card.tsx` (admin context; pass `slug` for inline role edit).
+  - `InlineProfile`, `ParticipantRoleToggle`, `EmailActions`, `ChallengeAssignment`, `BulkChallengeAssignment`, `RemoveParticipantAction`, `RemoveEnrollmentButton`.
+- Add:
+  - `components/ui/profile-name-form.tsx` (client) for participant name update.
+  - `components/ui/profile-stats.tsx` to show points/enrollments compactly.
+  - Minimal `ProfileSection` wrappers for consistent layout.
 
-## Development Guidelines
-- Follow DRY/YAGNI principles
-- Maintain MVP focus - no overengineering
-- Use adapter patterns for future integrations
-- Keep mock systems modular and replaceable
-- Ensure backward compatibility during development
-- Write tests for critical paths
+### API Surface
 
-## Future Considerations
-- RewardSTACK API integration (post-MVP)
-- Stripe payment integration for reward fulfillment
-- Real wallet funding with actual points
-- Enterprise-ready multi-workspace support (see archived PR plan below)
+- Confirm/extend existing participant management handlers:
+  - `/api/workspaces/[slug]/participants` (POST bulk/add already exists).
+  - `/api/workspaces/[slug]/participants/[id]` supports:
+    - PUT role update.
+    - POST action: `send_password_reset`, `resend_invite`.
+    - DELETE removal.
+  - `/api/workspaces/[slug]/participants/[id]/enrollments`:
+    - POST create enrollment.
+  - `/api/workspaces/[slug]/participants/[id]/enrollments/[enrollmentId]`:
+    - DELETE unenroll.
+- New for self profile:
+  - `/api/account/profile` (workspace-agnostic) or `/api/workspaces/[slug]/profile` (workspace-scoped):
+    - PUT `{ fullName: string }` updates Supabase metadata and returns updated profile.
 
----
+### Permissions and Guardrails
 
-## Archived: Multi-Workspace Support Implementation Plan
+- Prevent:
+  - Demoting last `"ADMIN"` in a workspace.
+  - Removing self while currently admin (extra confirmation or block).
+- Validate:
+  - Membership presence for participant page; redirect otherwise.
+  - ID format using `isUserId`.
 
-⏺ Detailed Pull Request Implementation Plan for Multi-Workspace Support
+### Event Logging
 
-The refactor-guardian has created a comprehensive 10-PR implementation plan to transform the
-single-workspace architecture into a proper multi-tenant system. Here's the strategic breakdown:
+- On admin actions, create `ActivityEvent` rows:
+  - `RBAC_ROLE_CHANGED`, `EMAIL_RESENT`, `INVITE_SENT`, `ENROLLED`, `UNENROLLED`.
+- Show recent events in admin profile page (optional v1).
 
-📋 Implementation Overview
+### Error States and Edge Cases
 
-* Total PRs: 10 sequential pull requests
-* Timeline: 10-13 weeks
-* Risk Profile: Gradual increase from LOW to HIGH
-* Strategy: Maintain backward compatibility until PR #7
+- Pending users with `isPending = true`:
+  - Show invite status; prefer “Resend invite” over password reset.
+- Users without points/enrollments:
+  - Empty state cards.
+- Multi-workspace users:
+  - Stats limited to current `workspace` context.
 
-[Full PR implementation details archived - available upon request]
+### Testing
+
+- Add e2e to navigate:
+  - Admin: table -> participant detail, change role, resend invite, enroll/unenroll, remove.
+  - Participant: open profile, update name, see stats.
+- Unit tests for new profile API route (PUT guardrails).
+
+### Incremental Deliverables
+
+1. Admin participant detail page at `app/w/[slug]/admin/participants/[id]/page.tsx` using existing components.
+2. Participant profile page at `app/w/[slug]/participant/profile/page.tsx` with name edit and stats.
+3. Sidebar link for participant profile.
+4. New profile API route for name updates.
+5. Optional admin timeline block using `ActivityEvent`.
+
+### Acceptance Criteria
+
+- Admin can view a member’s profile, change role, resend emails, add/remove enrollments, and remove member, with guards.
+- Participant can view and edit own full name; header reflects changes; stats display correctly for current workspace.
+- All actions authorized per role; unauthorized access redirects to `/workspaces`.
+- No breaking changes to existing participants list and actions.
+- Completed investigation of existing layouts and participant management components; produced a concrete, file-level plan with reuse points and minimal API additions.
