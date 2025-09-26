@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Link2,
   User as UserIcon,
+  Coins,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Participants', href: '/admin/participants', icon: Users },
   { name: 'Challenges', href: '/admin/challenges', icon: Trophy },
+  { name: 'Points', href: '/admin/points', icon: Coins },
   { name: 'Activities', href: '/admin/activity-templates', icon: ClipboardList },
   { name: 'Emails', href: '/admin/emails', icon: Settings },
   { name: 'Invites', href: '/admin/invites', icon: Link2 },
