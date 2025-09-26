@@ -16,8 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ParticipantSelector } from '@/components/ui/participant-selector';
 import { StatusActions } from '../status-actions';
 import { ChallengeActivities } from '@/components/activities/challenge-activities';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { upsertChallengeBudgetAction } from './actions';
 
 interface Challenge {
   id: string;
@@ -82,6 +81,7 @@ export default function EditChallengePage() {
   const { toast } = useToast();
   
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  // participant management moved to Participants tab
   const [participantIds, setParticipantIds] = useState<string[]>([]);
   const [participantData, setParticipantData] = useState<{ invited: string[]; enrolled: string[] }>({ invited: [], enrolled: [] });
   const [isLoading, setIsLoading] = useState(true);
@@ -111,12 +111,27 @@ export default function EditChallengePage() {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [workspaceBudget, setWorkspaceBudget] = useState<{ totalBudget: number; allocated: number } | null>(null)
 
   useEffect(() => {
     if (params?.slug && params?.id) {
       fetchChallenge();
     }
   }, [params?.slug, params?.id]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!params?.slug) return
+      try {
+        const res = await fetch(`/api/workspaces/${params.slug}/points`)
+        if (res.ok) {
+          const j = await res.json()
+          setWorkspaceBudget(j.budget || { totalBudget: 0, allocated: 0 })
+        }
+      } catch {}
+    }
+    load()
+  }, [params?.slug])
 
   const fetchChallenge = async () => {
     if (!params?.slug || !params?.id) return;
@@ -136,21 +151,7 @@ export default function EditChallengePage() {
           enrollmentDeadline: challengeData.enrollmentDeadline ? new Date(challengeData.enrollmentDeadline).toISOString().split('T')[0] : '',
         });
         
-        // Load current participants by status
-        if (challengeData.enrollments) {
-          const invitedParticipants = challengeData.enrollments
-            .filter((e: any) => e.status === 'INVITED')
-            .map((e: any) => e.userId);
-          const enrolledParticipants = challengeData.enrollments
-            .filter((e: any) => e.status === 'ENROLLED')
-            .map((e: any) => e.userId);
-          
-          setParticipantIds(invitedParticipants); // Keep for legacy support
-          setParticipantData({ 
-            invited: invitedParticipants,
-            enrolled: enrolledParticipants 
-          });
-        }
+        // enrollment editing moved to Participants tab
       } else {
         throw new Error('Failed to fetch challenge');
       }
@@ -181,8 +182,6 @@ export default function EditChallengePage() {
           startDate: values.startDate,
           endDate: values.endDate,
           enrollmentDeadline: values.enrollmentDeadline || undefined,
-          invitedParticipantIds: participantData.invited,
-          enrolledParticipantIds: participantData.enrolled,
         }),
       });
 
@@ -439,39 +438,21 @@ export default function EditChallengePage() {
               )}
             </div>
 
-            {/* Participant Management */}
-            <ParticipantSelector
-              workspaceSlug={params?.slug || ''}
-              selectedParticipantIds={participantIds}
-              onParticipantsChange={setParticipantIds}
-              initialInvitedIds={participantData.invited}
-              initialEnrolledIds={participantData.enrolled}
-              onParticipantDataChange={setParticipantData}
-              disabled={isSaving}
-            />
-
-            {/* Activities Inline */}
-            <div className="pt-2">
-              <ChallengeActivities challengeId={params?.id || ''} workspaceSlug={params?.slug || ''} />
-            </div>
+            {/* Participant and Activity management moved to Participants/Activities tabs */}
 
             {/* Challenge Points Budget (admin) */}
             <div className="space-y-2">
               <Label htmlFor="challengeBudget">Challenge Points Budget (optional)</Label>
               <div className="text-sm text-gray-500">Set a budget to deduct from when awarding points for this challenge. Leave blank to use workspace budget.</div>
+              {workspaceBudget && (
+                <div className="text-xs text-gray-600">Workspace budget: total {workspaceBudget.totalBudget} · allocated {workspaceBudget.allocated} · remaining {Math.max(0, (workspaceBudget.totalBudget||0)-(workspaceBudget.allocated||0))}</div>
+              )}
               <form
-                action={async (formData: FormData) => {
-                  "use server"
-                  const total = Number(formData.get('totalBudget') || '')
-                  if (!params?.id || !params?.slug) return
-                  const { getWorkspaceBySlug } = await import('@/lib/db/queries')
-                  const workspace = await getWorkspaceBySlug(params.slug)
-                  if (!workspace) return
-                  const { upsertChallengePointsBudget } = await import('@/lib/db/queries')
-                  await upsertChallengePointsBudget(params.id, workspace.id, isNaN(total) ? 0 : total)
-                }}
+                action={upsertChallengeBudgetAction}
                 className="flex items-end gap-2"
               >
+                <input type="hidden" name="slug" value={params?.slug || ''} />
+                <input type="hidden" name="challengeId" value={params?.id || ''} />
                 <Input id="challengeBudget" name="totalBudget" type="number" min={0} step={1} placeholder="e.g., 1000" />
                 <Button type="submit" variant="outline">Save Challenge Budget</Button>
               </form>
