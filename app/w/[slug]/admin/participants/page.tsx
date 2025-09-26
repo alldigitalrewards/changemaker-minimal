@@ -21,11 +21,17 @@ import { Suspense } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default async function AdminParticipantsPage({ 
-  params 
+  params,
+  searchParams
 }: { 
-  params: Promise<{ slug: string }> 
+  params: Promise<{ slug: string }>,
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const { slug } = await params
+  const sp = (await (searchParams || Promise.resolve({} as any))) as any
+  const pointsFilter = typeof sp.points === 'string' ? sp.points : ''
+  const sort = typeof sp.sort === 'string' ? sp.sort : ''
+  const dir = sp.dir === 'desc' ? 'desc' : 'asc'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -82,6 +88,49 @@ export default async function AdminParticipantsPage({
     createdAt: m.joinedAt,
     isPending: m.user.isPending
   }))
+
+  // Fetch points balances for all listed participants in this workspace
+  const balances = await prisma.pointsBalance.findMany({
+    where: { workspaceId: workspace.id, userId: { in: participants.map(p => p.id) } },
+    select: { userId: true, totalPoints: true, availablePoints: true }
+  })
+  const balanceByUserId = Object.fromEntries(balances.map(b => [b.userId, b])) as Record<string, { userId: string; totalPoints: number; availablePoints: number }>
+
+  let rows = participants.map(p => {
+    const b = balanceByUserId[p.id]
+    return {
+      ...p,
+      totalPoints: b?.totalPoints ?? 0,
+      availablePoints: b?.availablePoints ?? 0,
+    }
+  })
+
+  // Filter by points
+  if (pointsFilter === 'has') {
+    rows = rows.filter(r => (r.totalPoints || r.availablePoints) > 0)
+  } else if (pointsFilter === 'none') {
+    rows = rows.filter(r => (r.totalPoints || r.availablePoints) === 0)
+  }
+
+  // Sort by points
+  if (sort === 'points-avail') {
+    rows = rows.sort((a, b) => dir === 'desc' ? b.availablePoints - a.availablePoints : a.availablePoints - b.availablePoints)
+  } else if (sort === 'points-total') {
+    rows = rows.sort((a, b) => dir === 'desc' ? b.totalPoints - a.totalPoints : a.totalPoints - b.totalPoints)
+  }
+
+  const qs = (overrides: Record<string, string | undefined>) => {
+    const p = new URLSearchParams()
+    if (pointsFilter) p.set('points', pointsFilter)
+    if (sort) p.set('sort', sort)
+    if (dir) p.set('dir', dir)
+    Object.entries(overrides).forEach(([k, v]) => {
+      if (v === undefined || v === '') p.delete(k)
+      else p.set(k, v)
+    })
+    const s = p.toString()
+    return s ? `?${s}` : ''
+  }
 
   // Get enrollment statistics
   const enrollmentStats = await prisma.enrollment.groupBy({
@@ -152,7 +201,7 @@ export default async function AdminParticipantsPage({
               </div>
               <div className="flex items-center gap-2">
                 {/* Filters (MVP) */}
-                <form className="hidden md:flex items-center gap-2" action={async () => {}}>
+                <form className="hidden md:flex items-center gap-2" method="GET">
                   <select name="status" className="border rounded px-2 py-1 text-sm">
                     <option value="">All statuses</option>
                     <option value="INVITED">Invited</option>
@@ -160,29 +209,38 @@ export default async function AdminParticipantsPage({
                     <option value="WITHDRAWN">Withdrawn</option>
                   </select>
                   <input type="text" name="email" placeholder="Filter by email" className="border rounded px-2 py-1 text-sm" />
+                  <select name="points" defaultValue={pointsFilter} className="border rounded px-2 py-1 text-sm">
+                    <option value="">All points</option>
+                    <option value="has">Has points</option>
+                    <option value="none">0 points</option>
+                  </select>
                 </form>
                 {/* Segments (server-rendered simple list) */}
                 {/* In a follow-up we can fetch via client and enable create/edit inline */}
+                <a href={`/api/workspaces/${slug}/participants/export`} className="border rounded px-2 py-1 text-sm">Export CSV</a>
                 <BulkInviteDialog slug={slug} />
                 <ParticipantManagementDialog slug={slug} mode="add" />
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {participants.length > 0 ? (
+            {rows.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-8">{/* Bulk select placeholder */}</TableHead>
                     <TableHead>Participant</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>
+                      <Link href={qs({ sort: 'points-avail', dir: sort === 'points-avail' && dir === 'asc' ? 'desc' : 'asc' })} className="underline-offset-2 hover:underline">Points</Link>
+                    </TableHead>
                     <TableHead>Enrollments</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {participants.map((participant) => (
+                  {rows.map((participant) => (
                     <TableRow 
                       key={participant.id} 
                       className="hover:bg-gray-50"
@@ -193,7 +251,7 @@ export default async function AdminParticipantsPage({
                           <div>
                             <p className="font-medium">{participant.email}</p>
                             <p className="text-sm text-gray-500">
-                              {participant.enrollments.length} enrollment{participant.enrollments.length !== 1 ? 's' : ''}
+                          {participant.enrollments.length} enrollment{participant.enrollments.length !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </Link>
@@ -217,6 +275,14 @@ export default async function AdminParticipantsPage({
                           {participant.isPending && (
                             <span className="ml-2 inline-flex items-center rounded-full bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-200">Pending</span>
                           )}
+                        </Link>
+                      </TableCell>
+                      {/* Points balance */}
+                      <TableCell>
+                        <Link href={`/w/${slug}/admin/participants/${participant.id}`} className="block">
+                      <span className="text-sm text-gray-700" title={`Available / Total`}>
+                        {participant.availablePoints}/{participant.totalPoints}
+                      </span>
                         </Link>
                       </TableCell>
                       <TableCell>
