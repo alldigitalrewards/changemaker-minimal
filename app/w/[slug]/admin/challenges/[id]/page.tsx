@@ -37,6 +37,9 @@ import { StatusActions } from './status-actions';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { CopyLinkButton } from './copy-link-button'
 import { Timeline } from './timeline'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { revalidatePath } from 'next/cache'
 
 interface PageProps {
   params: Promise<{
@@ -111,6 +114,8 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   const { slug, id } = await params;
   const sp = (await (searchParams || Promise.resolve({} as any))) as any
   const challenge = await getChallenge(slug, id);
+  const budget = await prisma.challengePointsBudget.findUnique({ where: { challengeId: id } });
+  const workspaceBudget = await prisma.workspacePointsBudget.findUnique({ where: { workspaceId: (await prisma.challenge.findUnique({ where: { id }, select: { workspaceId: true } }))?.workspaceId || '' } });
 
   if (!challenge) {
     notFound();
@@ -186,81 +191,17 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   const events = await getChallengeEvents(id);
 
   const tabParam = typeof sp.tab === 'string' ? sp.tab : undefined
-  const participantsFilterParam = typeof sp.participants === 'string' ? (sp.participants as string).toLowerCase() : undefined
-  const submissionsFilterParam = typeof sp.submissions === 'string' ? (sp.submissions as string).toLowerCase() : undefined
-  const defaultTab = tabParam && ['overview','activities','submissions','participants','settings'].includes(tabParam) ? tabParam : 'overview'
+  // Back-compat: redirect ?tab=... to subroutes
+  if (tabParam && ['activities','participants','settings','submissions','points','timeline'].includes(tabParam)) {
+    const next = tabParam === 'submissions' ? 'activities' : tabParam
+    // Prefer a server redirect to subroutes for back-compat with ?tab
+    const { redirect } = await import('next/navigation')
+    redirect(`/w/${slug}/admin/challenges/${id}/${next}`)
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header with status, countdowns and quick actions */}
-      <div className="flex items-start justify-between gap-4 sticky top-0 z-30 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 py-3 -mx-4 px-4 border-b">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <Link href={`/w/${slug}/admin/challenges`}>
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Challenges
-              </Button>
-            </Link>
-            <Link href={`?tab=settings`}>
-              <Badge role="link" className="cursor-pointer" variant={statusVariant} title="Go to Settings">
-                {challengeStatus}
-              </Badge>
-            </Link>
-            <Link href={`?tab=participants`}>
-              {enrollmentOpen ? (
-                <Badge role="link" className="cursor-pointer" variant="outline" title="Manage enrollment settings">
-                  Enrollment Open
-                </Badge>
-              ) : (
-                <Badge role="link" className="cursor-pointer" variant="secondary" title="Manage enrollment settings">
-                  Enrollment Closed
-                </Badge>
-              )}
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold text-navy-900 mb-1">{challenge.title}</h1>
-          <div className="text-sm text-gray-600 flex flex-wrap gap-4">
-            {now < startDate && (
-              <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> Starts in {daysUntilStart} day{daysUntilStart === 1 ? '' : 's'}</span>
-            )}
-            {now >= startDate && now <= endDate && (
-              <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> Ends in {daysUntilEnd} day{daysUntilEnd === 1 ? '' : 's'}</span>
-            )}
-            {enrollmentDeadline && (
-              <span className="flex items-center gap-1"><Calendar className="h-4 w-4" /> Enroll by {format(enrollmentDeadline, 'MMM d, yyyy')}</span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <CopyLinkButton href={`${process.env.NEXT_PUBLIC_APP_URL || ''}/w/${slug}/admin/challenges/${id}`} />
-          <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
-            <Button variant="outline" disabled={statusForActions === 'ARCHIVED'} title={statusForActions === 'ARCHIVED' ? 'Archived challenges are read-only' : undefined}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          </Link>
-          <DuplicateChallengeButton
-            workspaceSlug={slug}
-            sourceChallenge={{
-              title: challenge.title,
-              description: challenge.description,
-              startDate: challenge.startDate,
-              endDate: challenge.endDate,
-              enrollmentDeadline: challenge.enrollmentDeadline || undefined
-            }}
-            sourceChallengeId={id}
-            invitedParticipantIds={enrolledUsers.filter(e => e.status === 'INVITED').map(e => e.user.id)}
-            enrolledParticipantIds={enrolledUsers.filter(e => e.status === 'ENROLLED').map(e => e.user.id)}
-          />
-          <StatusActions workspaceSlug={slug} challengeId={id} status={statusForActions} />
-          <DeleteChallengeButton 
-            challengeId={id}
-            challengeTitle={challenge.title}
-            workspaceSlug={slug}
-          />
-        </div>
-      </div>
+      {/* Header moved to shared layout; remove duplicate here */}
 
       {/* Consolidated Status Strip + Insights */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
@@ -281,7 +222,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
           </CardContent>
         </Card>
 
-        <Link href={`?tab=participants&participants=invited`}>
+        <Link href={`/w/${slug}/admin/challenges/${id}/participants?participants=invited`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Invited participants metric" title="Total invited participants">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Invited</CardTitle>
@@ -303,7 +244,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
         </Card>
         </Link>
 
-        <Link href={`?tab=participants&participants=enrolled`}>
+        <Link href={`/w/${slug}/admin/challenges/${id}/participants?participants=enrolled`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Enrolled participants metric" title="Current enrolled participants">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Enrolled</CardTitle>
@@ -325,7 +266,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
         </Card>
         </Link>
 
-        <Link href={`?tab=submissions&submissions=pending`}>
+        <Link href={`/w/${slug}/admin/challenges/${id}/activities`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Total submissions metric" title="Total submissions in this challenge">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Submissions</CardTitle>
@@ -347,7 +288,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
         </Card>
         </Link>
 
-        <Link href={`?tab=submissions&submissions=approved`}>
+        <Link href={`/w/${slug}/admin/challenges/${id}/activities`}>
         <Card className="cursor-pointer hover:bg-muted/40 transition-colors" aria-label="Completion metric" title="Approved submissions per enrolled participant">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completion</CardTitle>
@@ -403,39 +344,8 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue={defaultTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">
-            <Info className="h-4 w-4 mr-1" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="activities">
-            <Activity className="h-4 w-4 mr-1" />
-            Activities
-          </TabsTrigger>
-          <TabsTrigger value="submissions">
-            <ClipboardList className="h-4 w-4 mr-1" />
-            Submissions
-            {pendingSubmissionCount > 0 && (
-              <Badge className="ml-2 bg-red-500 text-white text-xs">
-                {pendingSubmissionCount}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="participants">
-            <Users className="h-4 w-4 mr-1" />
-            Participants
-            <Badge className="ml-2 text-xs">{enrolledUsers.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="settings">
-            <Settings className="h-4 w-4 mr-1" />
-            Settings
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
+      {/* Overview-only content (tabs moved to layout links) */}
+      <div className="space-y-4">
           {((pendingSubmissionCount + stalledInvitesCount) > 0 || isUnpublished) && (
             <Card>
               <CardHeader>
@@ -618,322 +528,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        {/* Activities Tab */}
-        <TabsContent value="activities" className="space-y-4">
-          {(challenge.activities && challenge.activities.length > 0) ? (
-            <ChallengeActivities challengeId={id} workspaceSlug={slug} />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>No activities yet</CardTitle>
-                <CardDescription>
-                  Create activities to define tasks participants can complete for points.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
-                  <Button>
-                    <ClipboardList className="h-4 w-4 mr-2" />
-                    Add Activities
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Submissions Tab */}
-        <TabsContent value="submissions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ClipboardList className="h-5 w-5 text-coral-500" />
-                Activity Submissions
-              </CardTitle>
-              <CardDescription>
-                Review and approve participant submissions for activities in this challenge
-              </CardDescription>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Link href={`?tab=submissions`}>
-                  <Button size="sm" variant={!submissionsFilterParam ? 'default' : 'outline'}>All</Button>
-                </Link>
-                <Link href={`?tab=submissions&submissions=pending`}>
-                  <Button size="sm" variant={submissionsFilterParam === 'pending' ? 'default' : 'outline'}>Pending</Button>
-                </Link>
-                <Link href={`?tab=submissions&submissions=approved`}>
-                  <Button size="sm" variant={submissionsFilterParam === 'approved' ? 'default' : 'outline'}>Approved</Button>
-                </Link>
-                <Link href={`?tab=submissions&submissions=rejected`}>
-                  <Button size="sm" variant={submissionsFilterParam === 'rejected' ? 'default' : 'outline'}>Rejected</Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {anySubmissions ? (
-                <div className="space-y-6">
-                  {challenge.activities.map((activity) => {
-                    let submissions = activity.submissions || [];
-                    if (submissionsFilterParam === 'pending') {
-                      submissions = submissions.filter(s => s.status === 'PENDING')
-                    } else if (submissionsFilterParam === 'approved') {
-                      submissions = submissions.filter(s => s.status === 'APPROVED')
-                    } else if (submissionsFilterParam === 'rejected') {
-                      submissions = submissions.filter(s => s.status === 'REJECTED')
-                    }
-                    const pendingSubmissions = submissions.filter(s => s.status === 'PENDING');
-                    const approvedSubmissions = submissions.filter(s => s.status === 'APPROVED');
-                    const rejectedSubmissions = submissions.filter(s => s.status === 'REJECTED');
-
-                    if (submissions.length === 0) return null;
-
-                    return (
-                      <div key={activity.id} className="border rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h3 className="font-semibold text-lg">{activity.template.name}</h3>
-                            <p className="text-sm text-gray-600">{activity.template.description}</p>
-                            <div className="flex gap-4 text-xs text-gray-500 mt-1">
-                              <span>Points: {activity.pointsValue}</span>
-                              <span>Type: {activity.template.type.replace('_', ' ')}</span>
-                              <span>Max submissions: {activity.maxSubmissions}</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm text-gray-600">Submissions</div>
-                            <div className="flex gap-2 text-xs">
-                              {pendingSubmissions.length > 0 && (
-                                <Badge className="bg-yellow-500 text-white">
-                                  {pendingSubmissions.length} Pending
-                                </Badge>
-                              )}
-                              {approvedSubmissions.length > 0 && (
-                                <Badge className="bg-green-500 text-white">
-                                  {approvedSubmissions.length} Approved
-                                </Badge>
-                              )}
-                              {rejectedSubmissions.length > 0 && (
-                                <Badge className="bg-red-500 text-white">
-                                  {rejectedSubmissions.length} Rejected
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          {submissions.map((submission) => (
-                            <div 
-                              key={submission.id} 
-                              className={`border rounded-lg p-4 ${
-                                submission.status === 'PENDING' ? 'bg-yellow-50 border-yellow-200' :
-                                submission.status === 'APPROVED' ? 'bg-green-50 border-green-200' :
-                                'bg-red-50 border-red-200'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{submission.user.email}</span>
-                                    <Badge 
-                                      className={
-                                        submission.status === 'PENDING' ? 'bg-yellow-500 text-white' :
-                                        submission.status === 'APPROVED' ? 'bg-green-500 text-white' :
-                                        'bg-red-500 text-white'
-                                      }
-                                    >
-                                      {submission.status.toLowerCase()}
-                                    </Badge>
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    Submitted {format(new Date(submission.submittedAt), 'MMM d, yyyy h:mm a')}
-                                  </div>
-                                </div>
-                                {submission.status === 'PENDING' && (
-                                  <div className="flex gap-2">
-                                    <SubmissionReviewButton
-                                      submissionId={submission.id}
-                                      action="approve"
-                                      workspaceSlug={slug}
-                                      pointsValue={activity.pointsValue}
-                                    />
-                                    <SubmissionReviewButton
-                                      submissionId={submission.id}
-                                      action="reject"
-                                      workspaceSlug={slug}
-                                      pointsValue={activity.pointsValue}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="bg-white p-3 rounded border">
-                                <p className="text-sm">{submission.textContent}</p>
-                              </div>
-                              
-                              {submission.pointsAwarded && (
-                                <div className="mt-2 text-xs text-green-600">
-                                  Points awarded: {submission.pointsAwarded}
-                                </div>
-                              )}
-                              
-                              {submission.reviewNotes && (
-                                <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
-                                  <strong>Review notes:</strong> {submission.reviewNotes}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <ClipboardList className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-700 mb-1">No submissions yet</h3>
-                  <p className="text-gray-500 mb-4">Once participants submit, they will appear here for review.</p>
-                  <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
-                    <Button variant="outline">
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Invite Participants
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Participants Tab */}
-        <TabsContent value="participants" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Challenge Participants</CardTitle>
-                  <CardDescription>
-                    {enrolledUsers.length} total participants (invited + enrolled)
-                  </CardDescription>
-                </div>
-                <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
-                  <Button variant="outline">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Manage Participants
-                  </Button>
-                </Link>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Link href={`?tab=participants`}>
-                  <Button size="sm" variant={!participantsFilterParam ? 'default' : 'outline'}>
-                    All ({enrolledUsers.length})
-                  </Button>
-                </Link>
-                <Link href={`?tab=participants&participants=enrolled`}>
-                  <Button size="sm" variant={participantsFilterParam === 'enrolled' ? 'default' : 'outline'}>
-                    Enrolled ({enrolledCount})
-                  </Button>
-                </Link>
-                <Link href={`?tab=participants&participants=invited`}>
-                  <Button size="sm" variant={participantsFilterParam === 'invited' ? 'default' : 'outline'}>
-                    Invited ({invitedCount})
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {enrolledUsers.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500 mb-4">No participants enrolled yet</p>
-                  <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
-                    <Button>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Participants
-                    </Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <ParticipantsBulkActions
-                    workspaceSlug={slug}
-                    challengeId={id}
-                    enrollments={enrolledUsers as any}
-                  />
-                  {(() => {
-                    const statusFilter = participantsFilterParam === 'enrolled' ? 'ENROLLED' : participantsFilterParam === 'invited' ? 'INVITED' : undefined
-                    const list = statusFilter ? enrolledUsers.filter(e => e.status === statusFilter) : enrolledUsers
-                    return list.map((enrollment) => (
-                    <div key={enrollment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{enrollment.user.email}</p>
-                        <p className="text-sm text-gray-500">
-                          Role: {enrollment.user.role} | Status: {enrollment.status}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Joined: {new Date(enrollment.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge 
-                          variant={
-                            enrollment.status === 'ENROLLED' ? 'default' :
-                            enrollment.status === 'INVITED' ? 'secondary' :
-                            'outline'
-                          }
-                        >
-                          {enrollment.status}
-                        </Badge>
-                      </div>
-                    </div>
-                    ))
-                  })()}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Settings Tab */}
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Challenge Settings</CardTitle>
-              <CardDescription>
-                Manage challenge configuration and preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium mb-2">Visibility</h3>
-                  <Badge>Public</Badge>
-                  <p className="text-sm text-gray-500 mt-1">
-                    This challenge is visible to all workspace participants
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-medium mb-2">Enrollment</h3>
-                  <Badge variant="outline">{enrollmentOpen ? 'Open' : 'Closed'}</Badge>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Participants can freely join this challenge
-                  </p>
-                </div>
-                <div>
-                  <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
-                    <Button variant="outline">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Settings
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 }
