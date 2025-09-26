@@ -19,6 +19,7 @@ export const PUT = withErrorHandling(async (request: Request) => {
     fullName?: string; 
     department?: string; 
     bio?: string; 
+    organization?: string;
     timezone?: string;
     notificationPrefs?: {
       reviewQueue?: boolean;
@@ -37,6 +38,7 @@ export const PUT = withErrorHandling(async (request: Request) => {
   if (typeof body.fullName === 'string') updates.full_name = body.fullName.trim()
   if (typeof body.department === 'string') updates.department = body.department.trim()
   if (typeof body.bio === 'string') updates.bio = body.bio.trim()
+  if (typeof body.organization === 'string') updates.organization = body.organization.trim()
   if (typeof body.timezone === 'string') updates.timezone = body.timezone.trim()
   if (body.notificationPrefs && typeof body.notificationPrefs === 'object') {
     updates.notification_prefs = {

@@ -6,9 +6,7 @@ import { prisma } from "@/lib/db"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { User as UserIcon, Calendar, Trophy } from "lucide-react"
-import ProfileNameForm from "@/components/ui/profile-name-form"
-// Removed ProfileStats for admin self profile (not needed)
-import ProfileAdminForm from "@/components/ui/profile-admin-form"
+import AdminProfileForm from "@/components/ui/AdminProfileForm"
 
 export default async function AdminProfilePage({
   params
@@ -49,41 +47,25 @@ export default async function AdminProfilePage({
 
   const userMetadata = (user.user_metadata as any) || {}
   const fullName = userMetadata.full_name || ""
+  const organization = userMetadata.organization || workspace.name
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserIcon className="h-5 w-5" />
-            Admin Profile
-          </CardTitle>
-          <CardDescription>Manage your admin account details for this workspace</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="font-medium">{user.email}</p>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Calendar className="h-4 w-4" />
-                Joined {new Date(membership.joinedAt).toLocaleDateString()}
-              </div>
-              <div>
-                <Badge variant="outline">{role}</Badge>
-              </div>
-            </div>
-            <div className="space-y-6">
-              <ProfileNameForm initialName={fullName} />
-              <ProfileAdminForm initial={{ timezone: userMetadata.timezone }} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Admin-specific settings live below; stats intentionally omitted */}
+      <AdminProfileForm
+        initial={{
+          fullName,
+          email: user.email!,
+          joinedAtISO: membership.joinedAt.toISOString(),
+          roleLabel: role,
+          organization,
+          avatarUrl: (user.user_metadata as any)?.avatar_url || null,
+          timezone: userMetadata.timezone,
+          dateFormat: userMetadata.date_format,
+          reducedMotion: userMetadata.reduced_motion,
+          showKeyboardHints: userMetadata.show_keyboard_hints,
+          notificationPrefs: (userMetadata.notification_prefs as any) || undefined
+        }}
+      />
     </div>
   )
 }

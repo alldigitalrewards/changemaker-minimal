@@ -4,7 +4,7 @@
  * Updated to support WorkspaceMembership for multi-workspace testing
  */
 
-import { PrismaClient, EnrollmentStatus, ActivityEventType } from '@prisma/client'
+import { PrismaClient, EnrollmentStatus, ActivityEventType, Prisma } from '@prisma/client'
 import { type Role, ROLE_ADMIN, ROLE_PARTICIPANT } from '../lib/types'
 import { awardPointsWithBudget } from '../lib/db/queries'
 import { createClient } from '@supabase/supabase-js'
@@ -123,6 +123,15 @@ const challengeTemplates = [
   }
 ]
 
+/**
+ * Get or create a Supabase user for seeding purposes.
+ * Attempts to create the user; if the user already exists, updates password and metadata.
+ *
+ * @param email - Email address for the user
+ * @param password - Initial password to set
+ * @param metadata - Arbitrary user metadata to associate
+ * @returns The created or existing Supabase user, or null on failure
+ */
 async function getOrCreateSupabaseUser(email: string, password: string, metadata: any = {}) {
   try {
     // First, try to create the user
@@ -163,6 +172,11 @@ async function getOrCreateSupabaseUser(email: string, password: string, metadata
   }
 }
 
+/**
+ * Seed the database with realistic demo data for local development.
+ * The routine is largely idempotent via upserts, but it starts by clearing core tables
+ * to ensure a clean, deterministic dataset for testing.
+ */
 async function seed() {
   try {
     console.log('🌱 Starting seed...\n')
@@ -270,7 +284,7 @@ async function seed() {
                     weekStart: 'monday',
                     timeFormat: '12h'
                   }
-                } : null
+                } : Prisma.JsonNull
               },
               create: {
                 userId: user.id,
@@ -296,7 +310,7 @@ async function seed() {
                     weekStart: 'monday',
                     timeFormat: '12h'
                   }
-                } : null
+                } : Prisma.JsonNull
               }
             })
             console.log(`  ✓ Added ${admin.email} to ${workspace.name}${membership.isPrimary ? ' (primary)' : ''}`)
@@ -317,6 +331,8 @@ async function seed() {
     const firstAdmin = await prisma.user.findFirst({
       where: { role: ROLE_ADMIN }
     })
+    // Safe nullable admin ID used anywhere an actor/updatedBy/createdBy is optional
+    const adminUserId = firstAdmin?.id ?? null
 
     if (firstAdmin) {
       // Create workspace email settings
@@ -330,7 +346,7 @@ async function seed() {
             replyTo: `support@${workspace.slug}.com`,
             footerHtml: `<p>© 2025 ${workspace.name}. All rights reserved.</p>`,
             brandColor: '#FF6B6B', // Coral color from theme
-            updatedBy: firstAdmin.id
+            updatedBy: adminUserId
           }
         })
         console.log(`✓ Created email settings for ${workspace.name}`)
@@ -343,7 +359,7 @@ async function seed() {
             subject: `Welcome to ${workspace.name} Challenges!`,
             html: `<h1>Welcome!</h1><p>You've been invited to join {{challenge.title}}.</p>`,
             enabled: true,
-            updatedBy: firstAdmin.id
+            updatedBy: adminUserId
           }
         })
 
@@ -354,7 +370,7 @@ async function seed() {
             subject: `Your enrollment status has been updated`,
             html: `<p>Your enrollment in {{challenge.title}} has been updated to {{enrollment.status}}.</p>`,
             enabled: true,
-            updatedBy: firstAdmin.id
+            updatedBy: adminUserId
           }
         })
         console.log(`✓ Created email templates for ${workspace.name}`)
@@ -366,7 +382,7 @@ async function seed() {
             name: 'Active Participants',
             description: 'Users enrolled in at least one challenge',
             filterJson: { status: 'ENROLLED' },
-            createdBy: firstAdmin.id
+            createdBy: adminUserId!
           }
         })
 
@@ -376,7 +392,7 @@ async function seed() {
             name: 'High Achievers',
             description: 'Users with 100+ points',
             filterJson: { points: { min: 100 } },
-            createdBy: firstAdmin.id
+            createdBy: adminUserId!
           }
         })
         console.log(`✓ Created participant segments for ${workspace.name}`)
@@ -390,7 +406,7 @@ async function seed() {
             workspaceId: workspace.id,
             totalBudget: 10000, // 10,000 points per workspace
             allocated: 0,
-            updatedBy: firstAdmin.id
+            updatedBy: adminUserId
           }
         })
         console.log(`✓ Created points budget for ${workspace.name}: 10,000 points`)
@@ -403,7 +419,7 @@ async function seed() {
           data: {
             code: `${workspace.slug.toUpperCase()}-WELCOME-2025`,
             workspaceId: workspace.id,
-            createdBy: firstAdmin.id,
+            createdBy: adminUserId!,
             role: ROLE_PARTICIPANT,
             maxUses: 100,
             usedCount: 0,
@@ -417,7 +433,7 @@ async function seed() {
           data: {
             code: `${workspace.slug.toUpperCase()}-VIP-2025`,
             workspaceId: workspace.id,
-            createdBy: firstAdmin.id,
+            createdBy: adminUserId!,
             role: ROLE_PARTICIPANT,
             maxUses: 1,
             usedCount: 0,
@@ -538,7 +554,7 @@ async function seed() {
             workspaceId: workspace.id,
             totalBudget: 2000, // 2,000 points per challenge
             allocated: 0,
-            updatedBy: firstAdmin.id
+            updatedBy: adminUserId
           }
         })
         console.log(`✓ Created points budget for challenge: ${challenge.title}`)
@@ -659,7 +675,7 @@ async function seed() {
             textContent: 'Sample submission content for testing',
             status: 'APPROVED',
             pointsAwarded: activity.pointsValue,
-            reviewedBy: firstAdmin.id,
+            reviewedBy: adminUserId,
             reviewedAt: new Date(),
             reviewNotes: 'Approved for testing'
           }
@@ -672,7 +688,7 @@ async function seed() {
             challengeId: enrollment.challengeId,
             toUserId: enrollment.userId,
             amount: activity.pointsValue,
-            actorUserId: firstAdmin.id,
+            actorUserId: adminUserId,
             submissionId: submission.id
           })
           submissionCount++
@@ -696,7 +712,7 @@ async function seed() {
               challengeId: null, // General award, not challenge-specific
               toUserId: participant.id,
               amount: pointsToAward,
-              actorUserId: firstAdmin.id,
+              actorUserId: adminUserId,
               submissionId: null
             })
             console.log(`✓ Awarded ${pointsToAward} initial points to participant`)
