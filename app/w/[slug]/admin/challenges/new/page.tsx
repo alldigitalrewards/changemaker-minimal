@@ -45,6 +45,8 @@ export default function NewChallengePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [initialized, setInitialized] = useState(true);
   const [draftActivities, setDraftActivities] = useState<Array<{ templateId: string; pointsValue: number; maxSubmissions: number; deadline: string | null; isRequired: boolean; template?: any }>>([])
+  const [workspaceBudget, setWorkspaceBudget] = useState<{ totalBudget: number; allocated: number } | null>(null)
+  const [initialChallengeBudget, setInitialChallengeBudget] = useState<string>('')
 
   const { register, handleSubmit, watch, reset, formState: { errors, isValid, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -89,6 +91,17 @@ export default function NewChallengePage() {
                 deadline: a.deadline,
                 isRequired: a.isRequired
               })
+            })
+          }
+        } catch {}
+        // Optional: set initial challenge points budget
+        try {
+          const b = Number(initialChallengeBudget)
+          if (!Number.isNaN(b) && initialChallengeBudget.trim() !== '') {
+            await fetch(`/api/workspaces/${params.slug}/challenges/${data.challenge.id}/budget`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ totalBudget: Math.max(0, b) })
             })
           }
         } catch {}
@@ -144,6 +157,20 @@ export default function NewChallengePage() {
       enrollmentDeadline: enrollmentDeadlineValue,
     }, { keepErrors: true, keepDirty: true });
   };
+
+  useEffect(() => {
+    const load = async () => {
+      if (!params?.slug) return
+      try {
+        const res = await fetch(`/api/workspaces/${params.slug}/points`)
+        if (res.ok) {
+          const j = await res.json()
+          setWorkspaceBudget(j.budget || { totalBudget: 0, allocated: 0 })
+        }
+      } catch {}
+    }
+    load()
+  }, [params?.slug])
 
   return (
     <div className="space-y-6">
@@ -292,6 +319,27 @@ export default function NewChallengePage() {
                 onAdd={(activity) => setDraftActivities(prev => [...prev, activity])}
                 trigger={<Button type="button" variant="outline">Add Activity</Button>}
               />
+            </div>
+
+            {/* Initial Budget (optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="initialBudget">Challenge Points Budget (optional)</Label>
+              <div className="text-sm text-gray-500">Set an initial budget for this challenge. If left blank, the workspace budget will be used for awards.</div>
+              {workspaceBudget && (
+                <div className="text-xs text-gray-600">Workspace budget: total {workspaceBudget.totalBudget} · allocated {workspaceBudget.allocated} · remaining {Math.max(0, (workspaceBudget.totalBudget||0)-(workspaceBudget.allocated||0))}</div>
+              )}
+              <div className="flex items-end gap-2 max-w-md">
+                <Input
+                  id="initialBudget"
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="e.g., 2000"
+                  value={initialChallengeBudget}
+                  onChange={(e) => setInitialChallengeBudget(e.target.value)}
+                  disabled={isSaving}
+                />
+              </div>
             </div>
 
             <div className="flex justify-end space-x-2">

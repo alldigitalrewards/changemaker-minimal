@@ -105,3 +105,26 @@ export async function leaveWorkspace(formData: FormData) {
     throw error
   }
 }
+
+export async function setPointsBalance(formData: FormData) {
+  const workspaceId = String(formData.get('workspaceId') || '')
+  const userId = String(formData.get('userId') || '')
+  const totalPoints = Number(formData.get('totalPoints') || 0)
+  const availablePoints = Number(formData.get('availablePoints') || 0)
+
+  if (!workspaceId || !userId) {
+    throw new Error('workspaceId and userId are required')
+  }
+
+  const safeTotal = Number.isFinite(totalPoints) ? Math.max(0, Math.floor(totalPoints)) : 0
+  const safeAvailable = Number.isFinite(availablePoints) ? Math.max(0, Math.floor(availablePoints)) : 0
+
+  await prisma.pointsBalance.upsert({
+    where: { userId_workspaceId: { userId, workspaceId } },
+    update: { totalPoints: safeTotal, availablePoints: safeAvailable },
+    create: { userId, workspaceId, totalPoints: safeTotal, availablePoints: safeAvailable }
+  })
+
+  // Revalidate settings page path
+  await revalidatePath(`/w/${workspaceId}/admin/settings`)
+}

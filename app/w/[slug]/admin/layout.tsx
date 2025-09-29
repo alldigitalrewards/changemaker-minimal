@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import DashboardHeader from "@/components/layout/dashboard-header"
+import { getWorkspacePointsBudget } from "@/lib/db/queries"
 import AdminSidebar from "@/components/navigation/admin-sidebar"
 import { WorkspaceProvider } from "@/providers/workspace-provider"
 import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
@@ -35,6 +36,7 @@ export default async function AdminLayout({
     redirect("/workspaces")
   }
 
+  const budget = await getWorkspacePointsBudget(workspace.id)
   const header = (
     <DashboardHeader
       title="Admin Dashboard"
@@ -42,6 +44,7 @@ export default async function AdminLayout({
       user={user}
       role="ADMIN"
       showRoleSwitcher={true}
+      budgetBadge={budget ? { label: 'Budget', value: `${Math.max(0, (budget.totalBudget || 0) - (budget.allocated || 0))}/${budget.totalBudget || 0}` } : undefined}
     />
   )
 

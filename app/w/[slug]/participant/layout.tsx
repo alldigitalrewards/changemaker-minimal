@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import DashboardHeader from "@/components/layout/dashboard-header"
+import { getUserBySupabaseId, getOrCreatePointsBalance } from "@/lib/db/queries"
 import ParticipantSidebar from "@/components/navigation/participant-sidebar"
 import { WorkspaceProvider } from "@/providers/workspace-provider"
 import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
@@ -35,6 +36,13 @@ export default async function ParticipantLayout({
     redirect("/workspaces")
   }
 
+  // Points badge for participant
+  const dbUser = await (async () => {
+    const u = await getUserBySupabaseId(user.id)
+    return u
+  })()
+  const balance = dbUser && workspace ? await getOrCreatePointsBalance(dbUser.id as any, workspace.id as any) : { totalPoints: 0, availablePoints: 0 }
+
   const header = (
     <DashboardHeader
       title="Dashboard"
@@ -42,6 +50,7 @@ export default async function ParticipantLayout({
       user={user}
       role="PARTICIPANT"
       showRoleSwitcher={role === "ADMIN"}
+      pointsBadge={{ label: 'My Points', value: `${balance.totalPoints}/${balance.availablePoints}` }}
     />
   )
 

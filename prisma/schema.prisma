@@ -21,6 +21,12 @@ model Workspace {
   users             User[]
   memberships       WorkspaceMembership[]
   activityEvents    ActivityEvent[]
+  emailSettings     WorkspaceEmailSettings?
+  emailTemplates    WorkspaceEmailTemplate[]
+  segments          WorkspaceParticipantSegment[]
+  pointsBudget      WorkspacePointsBudget?
+  challengeBudgets  ChallengePointsBudget[]
+  pointsLedger      PointsLedger[]
 }
 
 model User {
@@ -42,6 +48,14 @@ model User {
   activityEvents      ActivityEvent[]
   actedEvents         ActivityEvent[]       @relation("EventActor")
   inviteRedemptions   InviteRedemption[]
+  // Back-relations for workspace email settings/templates updatedBy
+  updatedWorkspaceEmailSettings WorkspaceEmailSettings[] @relation("SettingsUpdatedBy")
+  updatedWorkspaceEmailTemplates WorkspaceEmailTemplate[] @relation("TemplateUpdatedBy")
+  createdParticipantSegments WorkspaceParticipantSegment[] @relation("SegmentCreator")
+  workspaceBudgetsUpdated WorkspacePointsBudget[] @relation("WorkspaceBudgetUpdatedBy")
+  challengeBudgetsUpdated ChallengePointsBudget[] @relation("ChallengeBudgetUpdatedBy")
+  pointsLedgerTo          PointsLedger[] @relation("PointsLedgerToUser")
+  pointsLedgerActor       PointsLedger[] @relation("PointsLedgerActor")
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -63,6 +77,8 @@ model Challenge {
   enrollments        Enrollment[]
   inviteCodes        InviteCode[]
   activityEvents     ActivityEvent[]
+  pointsBudget       ChallengePointsBudget?
+  pointsLedger       PointsLedger[]
 
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
@@ -164,6 +180,60 @@ model PointsBalance {
   @@index([workspaceId])
 }
 
+/// Workspace-level points budget for awarding
+model WorkspacePointsBudget {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @unique @db.Uuid
+  totalBudget Int      @default(0)
+  allocated   Int      @default(0)
+  updatedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedByUser User?   @relation("WorkspaceBudgetUpdatedBy", fields: [updatedBy], references: [id])
+}
+
+/// Per-challenge points budget for awarding
+model ChallengePointsBudget {
+  id          String   @id @default(uuid()) @db.Uuid
+  challengeId String   @unique @db.Uuid
+  workspaceId String   @db.Uuid
+  totalBudget Int      @default(0)
+  allocated   Int      @default(0)
+  updatedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedByUser User?   @relation("ChallengeBudgetUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@index([workspaceId])
+}
+
+/// Ledger of points awards for auditability
+model PointsLedger {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @db.Uuid
+  challengeId  String?  @db.Uuid
+  toUserId     String   @db.Uuid
+  amount       Int
+  reason       String?
+  submissionId String?  @db.Uuid
+  actorUserId  String?  @db.Uuid
+  createdAt    DateTime @default(now())
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge    Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  toUser       User      @relation("PointsLedgerToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  actor        User?     @relation("PointsLedgerActor", fields: [actorUserId], references: [id])
+
+  @@index([workspaceId, createdAt])
+  @@index([challengeId, createdAt])
+  @@index([toUserId, createdAt])
+}
+
 model InviteCode {
   id          String     @id @default(uuid()) @db.Uuid
   code        String     @unique
@@ -208,6 +278,7 @@ model WorkspaceMembership {
   joinedAt    DateTime  @default(now())
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  preferences Json?
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -292,4 +363,71 @@ enum ActivityEventType {
   ACTIVITY_CREATED
   ACTIVITY_UPDATED
   BULK_UNENROLL
+  EMAIL_TEMPLATE_UPDATED
+  WORKSPACE_SETTINGS_UPDATED
+  PARTICIPANT_SEGMENT_CREATED
+  PARTICIPANT_SEGMENT_UPDATED
+  PARTICIPANT_SEGMENT_DELETED
+}
+
+/// Workspace-scoped email template types
+enum EmailTemplateType {
+  INVITE
+  EMAIL_RESENT
+  ENROLLMENT_UPDATE
+  REMINDER
+  GENERIC
+}
+
+/// Per-workspace sender/brand defaults used by all emails
+model WorkspaceEmailSettings {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @unique @db.Uuid
+  fromName    String?
+  fromEmail   String?
+  replyTo     String?
+  footerHtml  String?  @db.Text
+  brandColor  String?
+  updatedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedByUser User?   @relation("SettingsUpdatedBy", fields: [updatedBy], references: [id])
+}
+
+/// Per-workspace overrides for specific email types
+model WorkspaceEmailTemplate {
+  id          String            @id @default(uuid()) @db.Uuid
+  workspaceId String            @db.Uuid
+  type        EmailTemplateType
+  subject     String?
+  html        String?           @db.Text
+  enabled     Boolean           @default(false)
+  updatedBy   String?           @db.Uuid
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now()) @updatedAt
+
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedByUser User?           @relation("TemplateUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@unique([workspaceId, type])
+  @@index([workspaceId])
+}
+
+/// Saved participant filters for management
+model WorkspaceParticipantSegment {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  name        String
+  description String?
+  filterJson  Json?
+  createdBy   String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator     User      @relation("SegmentCreator", fields: [createdBy], references: [id])
+
+  @@index([workspaceId])
 }

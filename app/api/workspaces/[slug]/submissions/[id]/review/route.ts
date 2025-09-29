@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth"
-import { reviewActivitySubmission, DatabaseError, ResourceNotFoundError } from "@/lib/db/queries"
+import { reviewActivitySubmission, DatabaseError, ResourceNotFoundError, awardPointsWithBudget } from "@/lib/db/queries"
 import { prisma } from "@/lib/db"
 import { logActivityEvent } from "@/lib/db/queries"
 
@@ -31,25 +31,15 @@ export const POST = withErrorHandling(async (
       workspace.id
     )
 
-    // If approved, update points balance
+    // If approved, update points via budgets + ledger
     if (status === 'APPROVED' && pointsAwarded > 0) {
-      await prisma.pointsBalance.upsert({
-        where: {
-          userId_workspaceId: {
-            userId: submission.userId,
-            workspaceId: workspace.id
-          }
-        },
-        update: {
-          totalPoints: { increment: pointsAwarded },
-          availablePoints: { increment: pointsAwarded }
-        },
-        create: {
-          userId: submission.userId,
-          workspaceId: workspace.id,
-          totalPoints: pointsAwarded,
-          availablePoints: pointsAwarded
-        }
+      await awardPointsWithBudget({
+        workspaceId: workspace.id,
+        challengeId: submission.activity.challengeId,
+        toUserId: submission.userId,
+        amount: pointsAwarded,
+        actorUserId: user.dbUser.id,
+        submissionId: submission.id
       })
     }
 
