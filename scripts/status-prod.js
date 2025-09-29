@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Apply Prisma migrations to production database
- * Usage: pnpm db:migrate:prod
+ * Show Prisma migration status for the production database
+ * Usage: pnpm db:status:prod
  */
 
 const { execSync } = require('child_process');
@@ -13,7 +13,7 @@ const path = require('path');
 const envPath = path.join(__dirname, '..', '.env.production');
 if (!fs.existsSync(envPath)) {
   console.error('Error: .env.production file not found');
-  console.error('Please create .env.production with DIRECT_URL (preferred) or DATABASE_URL for production database');
+  console.error('Please create .env.production with DIRECT_URL (preferred) or DATABASE_URL');
   process.exit(1);
 }
 
@@ -23,29 +23,23 @@ const databaseUrlMatch = envContent.match(/^DATABASE_URL=(.+)$/m);
 
 if (!directUrlMatch && !databaseUrlMatch) {
   console.error('Error: Neither DIRECT_URL nor DATABASE_URL found in .env.production');
-  console.error('Please add DIRECT_URL (preferred) or DATABASE_URL with production database connection string');
   process.exit(1);
 }
 
-// Remove quotes if present
 const parsedDirect = directUrlMatch ? directUrlMatch[1].replace(/^["']|["']$/g, '') : null;
 const parsedDatabase = databaseUrlMatch ? databaseUrlMatch[1].replace(/^["']|["']$/g, '') : null;
-
-// Prefer DIRECT_URL for migrate operations to bypass pgbouncer/transaction pooling
 const effectiveUrl = parsedDirect || parsedDatabase;
 
-console.log('🚀 Applying migrations to production database...');
-console.log('Using URL:', effectiveUrl.includes('supabase.com') ? 'Supabase (DIRECT_URL)' : 'Custom');
-
+console.log('🔍 Checking production migration status...');
 try {
-  // Run prisma migrate deploy with production URL
-  execSync(`DATABASE_URL="${effectiveUrl}" pnpm prisma migrate deploy`, {
+  execSync(`DATABASE_URL="${effectiveUrl}" pnpm prisma migrate status | cat`, {
     stdio: 'inherit',
     env: { ...process.env, DATABASE_URL: effectiveUrl }
   });
-
-  console.log('✅ Production migrations applied successfully!');
 } catch (error) {
-  console.error('❌ Failed to apply migrations:', error.message);
+  console.error('❌ Failed to get migration status:', error.message);
   process.exit(1);
 }
+
+
+

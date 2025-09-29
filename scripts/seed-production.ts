@@ -14,6 +14,10 @@ import { createClient } from "@supabase/supabase-js";
 
 // Load production environment variables
 dotenv.config({ path: ".env.production" });
+// Ensure Prisma has a DATABASE_URL; fall back to DIRECT_URL if necessary
+if (!process.env.DATABASE_URL && process.env.DIRECT_URL) {
+  process.env.DATABASE_URL = process.env.DIRECT_URL;
+}
 
 const prisma = new PrismaClient();
 
