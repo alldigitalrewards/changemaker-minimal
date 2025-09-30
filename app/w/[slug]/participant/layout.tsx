@@ -50,7 +50,7 @@ export default async function ParticipantLayout({
       user={user}
       role="PARTICIPANT"
       showRoleSwitcher={role === "ADMIN"}
-      pointsBadge={{ label: 'My Points', value: `${balance.totalPoints}/${balance.availablePoints}` }}
+      pointsBadge={{ label: 'Activities completed', value: `${balance.totalPoints}` }}
     />
   )
 
