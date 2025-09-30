@@ -32,6 +32,14 @@ export async function issueReward(params: {
     }
   })
 
+  // Link issuance to submission record (one-to-one via ActivitySubmission.rewardIssuanceId)
+  if (submissionId) {
+    await prisma.activitySubmission.update({
+      where: { id: submissionId },
+      data: { rewardIssuanceId: issuance.id, rewardIssued: true }
+    }).catch(() => undefined)
+  }
+
   try {
     if (type === 'points') {
       // Points issuance is already handled via awardPointsWithBudget; mark as ISSUED
