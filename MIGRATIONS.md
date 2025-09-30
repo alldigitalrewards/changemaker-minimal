@@ -72,27 +72,39 @@ This migration enables three critical features:
 
 ### Deploy Steps
 
-#### CI/Preview Environment
+#### Development (Local)
 ```bash
-pnpm prisma migrate deploy
+# Generate and apply migration
+pnpm prisma migrate dev --name descriptive_name
+
+# Seed test data
 pnpm prisma db seed
+
+# Test locally
+pnpm dev
 ```
 
-#### Production
+#### Production (Before Merge to Main)
 ```bash
-# 1. Backup database
-pg_dump $DATABASE_URL > backup_$(date +%Y%m%d_%H%M%S).sql
+# Use the interactive migration script
+./scripts/migrate-production.sh
 
-# 2. Apply migration
-pnpm prisma migrate deploy
+# OR manually:
+# 1. Backup via Supabase Dashboard → Database → Backups
+# 2. Load production env: export $(cat .env.production | xargs)
+# 3. Apply migration: pnpm prisma migrate deploy
+# 4. Verify: curl https://changemaker.im/api/health
+# 5. Test critical flows manually
+```
 
-# 3. Run seed if needed (only for new tenants)
-pnpm prisma db seed
-
-# 4. Verify
-psql $DATABASE_URL -c "SELECT COUNT(*) FROM \"RewardIssuance\";"
-psql $DATABASE_URL -c "SELECT COUNT(*) FROM \"TenantSku\";"
-psql $DATABASE_URL -c "SELECT DISTINCT \"tenantId\" FROM \"User\";"
+#### CI/CD (After Merge to Main)
+Workflow runs automatically on push to main:
+```bash
+# Automated steps in .github/workflows/database-migration.yml
+# 1. Backup (logged)
+# 2. prisma migrate deploy
+# 3. Health checks
+# 4. E2E smoke tests
 ```
 
 ### Rollback Strategy
