@@ -202,7 +202,7 @@ async function seed() {
     await prisma.user.deleteMany()
     await prisma.workspace.deleteMany()
 
-    // Create workspaces
+    // Create workspaces (default tenantId is set by schema default; override per slug if desired)
     console.log('🏢 Creating workspaces...')
     const createdWorkspaces = []
     for (const workspace of workspaces) {
@@ -237,7 +237,10 @@ async function seed() {
             // Set legacy workspaceId to primary workspace for backward compatibility
             workspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
-            )?.id
+            )?.id,
+            // Grant platform_super_admin to the first seeded admin for testing
+            permissions: admin.email === 'jfelke@alldigitalrewards.com' ? { set: ['platform_super_admin'] } : undefined,
+            tenantId: 'default'
           },
           create: {
             email: admin.email,
@@ -247,7 +250,9 @@ async function seed() {
             // Set legacy workspaceId to primary workspace for backward compatibility
             workspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
-            )?.id
+            )?.id,
+            permissions: admin.email === 'jfelke@alldigitalrewards.com' ? ['platform_super_admin'] : [],
+            tenantId: 'default'
           }
         })
         
@@ -466,14 +471,16 @@ async function seed() {
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
-            workspaceId: workspace?.id
+            workspaceId: workspace?.id,
+            tenantId: 'default'
           },
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
-            workspaceId: workspace?.id
+            workspaceId: workspace?.id,
+            tenantId: 'default'
           }
         })
         
@@ -760,6 +767,25 @@ async function seed() {
     console.log(`  - Workspace Budgets: ${finalWorkspaceBudgetCount}`)
     console.log(`  - Challenge Budgets: ${finalChallengeBudgetCount}`)
     console.log(`  - Points Ledger Entries: ${finalPointsLedgerCount}`)
+
+    // Seed tenant SKU catalog (exemplar; safe to hardcode per tenant)
+    console.log('\n🛍️  Seeding tenant SKU catalog...')
+    const uniqueTenantIds = Array.from(new Set(createdWorkspaces.map(w => (w as any).tenantId || 'default')))
+    for (const tenantId of uniqueTenantIds) {
+      const skus = [
+        { skuId: 'SKU-GIFT-10', label: '$10 Gift Card', provider: 'stub' },
+        { skuId: 'SKU-GIFT-25', label: '$25 Gift Card', provider: 'stub' },
+        { skuId: 'SKU-SWAG-TEE', label: 'Company Tee', provider: 'stub' }
+      ]
+      for (const sku of skus) {
+        await (prisma as any).tenantSku.upsert({
+          where: { tenantId_skuId: { tenantId, skuId: sku.skuId } },
+          update: { label: sku.label, provider: sku.provider },
+          create: { tenantId, skuId: sku.skuId, label: sku.label, provider: sku.provider }
+        })
+      }
+      console.log(`✓ Seeded ${skus.length} SKUs for tenant '${tenantId}'`)
+    }
 
     // Show budget utilization
     console.log('\n💵 Budget Utilization:')

@@ -12,6 +12,9 @@ model Workspace {
   id                String                @id @default(uuid()) @db.Uuid
   slug              String                @unique
   name              String
+  tenantId          String               @default("default")
+  published         Boolean               @default(true)
+  active            Boolean               @default(true)
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @default(now()) @updatedAt
   activityTemplates ActivityTemplate[]
@@ -27,6 +30,9 @@ model Workspace {
   pointsBudget      WorkspacePointsBudget?
   challengeBudgets  ChallengePointsBudget[]
   pointsLedger      PointsLedger[]
+  rewardIssuances   RewardIssuance[]
+
+  @@index([tenantId])
 }
 
 model User {
@@ -37,6 +43,10 @@ model User {
   isPending           Boolean               @default(false)
   workspaceId         String?               @db.Uuid
   primaryWorkspaceId  String?               @db.Uuid
+  permissions         String[]              @default([])
+  lastWorkspaceId     String?               @db.Uuid
+  tenantId            String                @default("default")
+  emailChangePending  Json?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @default(now()) @updatedAt
   activitySubmissions ActivitySubmission[]
@@ -56,9 +66,11 @@ model User {
   challengeBudgetsUpdated ChallengePointsBudget[] @relation("ChallengeBudgetUpdatedBy")
   pointsLedgerTo          PointsLedger[] @relation("PointsLedgerToUser")
   pointsLedgerActor       PointsLedger[] @relation("PointsLedgerActor")
+  rewardIssuances         RewardIssuance[]
 
   @@index([workspaceId])
   @@index([workspaceId, role])
+  @@index([tenantId])
 }
 
 model Challenge {
@@ -70,6 +82,9 @@ model Challenge {
   enrollmentDeadline DateTime?
   status             ChallengeStatus @default(DRAFT)
   workspaceId        String       @db.Uuid
+  rewardType         RewardType?
+  rewardConfig       Json?
+  emailEditAllowed   Boolean      @default(true)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @default(now()) @updatedAt
   activities         Activity[]
@@ -79,6 +94,7 @@ model Challenge {
   activityEvents     ActivityEvent[]
   pointsBudget       ChallengePointsBudget?
   pointsLedger       PointsLedger[]
+  rewardIssuances    RewardIssuance[]
 
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
@@ -130,6 +146,7 @@ model Activity {
   maxSubmissions Int                  @default(1)
   deadline       DateTime?
   isRequired     Boolean              @default(false)
+  rewardRules    Json[]                @default([])
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @default(now()) @updatedAt
   challenge      Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
@@ -155,14 +172,56 @@ model ActivitySubmission {
   reviewedAt    DateTime?
   submittedAt   DateTime         @default(now())
   updatedAt     DateTime         @default(now()) @updatedAt
+  rewardIssuanceId String?        @db.Uuid @unique
+  rewardIssued     Boolean        @default(false)
   activity      Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
   enrollment    Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rewardIssuance RewardIssuance? @relation("SubmissionReward", fields: [rewardIssuanceId], references: [id])
 
   @@index([activityId])
   @@index([userId])
   @@index([enrollmentId])
   @@index([status])
+}
+
+model RewardIssuance {
+  id           String       @id @default(uuid()) @db.Uuid
+  userId       String       @db.Uuid
+  workspaceId  String       @db.Uuid
+  challengeId  String?      @db.Uuid
+  type         RewardType
+  amount       Int?
+  currency     String?
+  skuId        String?
+  provider     String?
+  status       RewardStatus  @default(PENDING)
+  issuedAt     DateTime?
+  error        String?
+  metadata     Json?
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge    Challenge?   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  submission   ActivitySubmission? @relation("SubmissionReward")
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([challengeId])
+  @@index([status])
+}
+
+/// Tenant-scoped SKU catalog for exemplar integrations
+model TenantSku {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String
+  skuId     String
+  label     String
+  provider  String?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@unique([tenantId, skuId])
 }
 
 model PointsBalance {
@@ -319,6 +378,19 @@ enum ChallengeStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+enum RewardType {
+  points
+  sku
+  monetary
+}
+
+enum RewardStatus {
+  PENDING
+  ISSUED
+  FAILED
+  CANCELLED
 }
 
 model ActivityEvent {
