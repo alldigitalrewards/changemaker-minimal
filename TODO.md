@@ -1,4 +1,160 @@
-# Goals
+# Current Sprint: Global Account, Workspace Visibility, Leaderboard UX, Multi-Reward Model
+
+## PR: Changemaker - Global account, scoped workspace visibility, leaderboard UX, and multi-reward model (points/SKUs/monetary) with approvals
+
+### High-level scope
+- Redirect + header consistency + sign-out behavior
+- Tenancy-aware workspace visibility and removal of workspace "discovery"
+- Global `/account` page (password/email change)
+- Roles kept minimal with `platform_super_admin` permission
+- Leaderboard layout/copy fixes
+- Rewards model: points + SKU + monetary across challenge config and approvals
+- Copy replacement ("Points earned" → "Activities completed"), remove "My Points" entry
+- One set of DB migrations and seeds; strict scoping and auditability
+
+### Data model (single migration)
+**User table additions:**
+- `permissions: string[]` (add index on `GIN` if Postgres JSONB or text array)
+- `lastWorkspaceId: string | null`
+- `tenantId: string` (index)
+- `emailChangePending: { newEmail: string, token: string, expiresAt: Date } | null`
+
+**Workspace table additions:**
+- `tenantId: string` (index)
+- `published: boolean` (default true)
+- `active: boolean` (default true)
+
+**Challenge table additions:**
+- `rewardType: 'points' | 'sku' | 'monetary'`
+- `rewardConfig: json` (e.g., `{ skus: [{id,label}], minAmount, maxAmount, currency }`)
+- `emailEditAllowed: boolean` (default true; used as policy hook)
+
+**Activity table additions:**
+- `rewardRules: json[]` (per-activity defaults keyed by `submissionIndex`):
+  - `{ activityId, submissionIndex, type, amount?, currency?, skuId? }`
+
+**ActivitySubmission table additions:**
+- `rewardIssuanceId: string | null`
+- `rewardIssued: boolean` (default false)
+
+**New RewardIssuance table:**
+- `id, userId, workspaceId, challengeId, submissionId`
+- `type: 'points' | 'sku' | 'monetary'`
+- `amount?: number, currency?: string`
+- `skuId?: string, provider?: string`
+- `status: 'pending' | 'issued' | 'failed' | 'cancelled'`
+- `issuedAt?: Date`
+- `error?: string`
+- `metadata?: json`
+- Indices on `userId`, `workspaceId`, `challengeId`, `submissionId`, `status`
+
+**Seed data:**
+- Add tenant-scoped SKU catalog exemplar
+- Ensure at least one `platform_super_admin` for testing
+- Normalize `published/active` flags for existing workspaces
+
+### Backend changes
+**Workspace listing and visibility:**
+- Scope by `userId` membership for participants
+- Scope by `tenantId` for client admins; include all tenant workspaces that are `active && published`
+- `platform_super_admin` sees all tenants
+- Hide unpublished/inactive for all except workspace admins and platform super admins
+
+**AuthZ utilities:**
+- `isPlatformSuperAdmin(user)` helper (shared across routes/controllers/services)
+
+**Account endpoints:**
+- `POST /account/password/change`
+- `POST /account/email/start-change` (send verify link/code)
+- `POST /account/email/confirm` (swap email on proof)
+- Ensure session refresh on successful email update
+
+**Challenges:**
+- Extend create/update to accept `rewardType` and `rewardConfig`
+- Add/extend endpoint to set per-activity `rewardRules`
+
+**Approvals:**
+- `POST /submissions/:id/approve` body includes chosen reward:
+  - `{ type: 'points' | 'sku' | 'monetary', amount?, currency?, skuId? }`
+- Create `RewardIssuance` with status transitions (`pending` → `issued`/`failed`) and audit fields
+- Service abstraction: `rewardIssuanceService.issue()` (points/SKU/monetary handled via strategy classes)
+
+**Leaderboard:**
+- Default participant-facing metric = "activities completed"
+- Keep points support server-side but not surfaced in participant copy by default
+
+### Frontend changes
+**Routing and layout:**
+- After login, redirect:
+  - To `user.lastWorkspaceId` if accessible
+  - Else first `active && published` workspace where user is member
+  - Else `/workspaces` with left sidebar open and "invited workspaces only" empty state
+- `/account` global route; link from header everywhere (including preview)
+- Sign-out always redirects to sign-in
+
+**Header and sidebar:**
+- Single shared `Header` with account dropdown: "My Account Settings", "Log out"
+- Unify preview behavior to keep account settings visible
+- Default expanded left sidebar on first landing (`/workspaces` and workspace dashboard)
+
+**Workspace discovery UI:**
+- Remove "Discover other workspaces" for all non-super-admins
+
+**Leaderboard:**
+- Convert to compact 3×N tile grid
+- "Your ranking" as a compact tile aligned with other tiles
+- Remove "My activities" and "Browse challenges" buttons below full rankings
+- Ensure spacing/typography consistent across breakpoints (mobile parity)
+
+**Copy and nav:**
+- Remove "My Points" from participant top nav
+- Replace "Points earned" → "Activities completed" in:
+  - Participant `My activities`
+  - Challenge `Your challenge progress`
+  - Any dashboard tiles referencing points
+- Remove "Your points" tile (or repurpose to "Activities completed")
+
+**Challenge builder:**
+- Replace "Points to issue" with "Rewards"
+- `rewardType` selector: points/sku/monetary
+- If `sku`, show SKU dropdown from tenant catalog
+- Keep workspace budget separate
+
+**Approvals UI (admin):**
+- On each submission approval, show default reward from `rewardRules` and allow override
+- Submit selection to approval endpoint; show issuance status and errors
+
+**Misc UI:**
+- Fix "white button" styling inconsistencies
+
+### Implementation order (single PR; logical commits)
+1. Schema + migration + seeds
+2. AuthZ utilities and workspace scoping (API) + remove discovery for non-super-admin
+3. Redirect + header unification + sign-out redirect + sidebar default open
+4. Global `/account` page + password/email flows
+5. Copy and nav updates (remove "My Points"; "Activities completed" swaps)
+6. Leaderboard grid and tile refinement; remove buttons
+7. Challenge builder rewards model (type + SKU dropdown)
+8. Per-activity `rewardRules` config
+9. Approvals UI with per-submission reward issuing; issuance records and statuses
+10. Polish: fix white buttons, responsive tweaks, i18n copy keys updates
+11. Tests (API, unit, e2e) + docs
+
+### Acceptance criteria
+- Login lands on a workspace dashboard with left sidebar open; if none, `/workspaces` shows empty state with sidebar open
+- Unified header everywhere with "My Account Settings" + "Log out"; sign-out returns to sign-in
+- Participants see only invited workspaces; client admins see only their tenant; super admins see all
+- `/account` works globally; password and email change flows complete with verification
+- Leaderboard uses compact grid; "Your ranking" is a small aligned tile; extra buttons removed
+- "My Points" removed; all "Points earned" strings replaced with "Activities completed"
+- Challenge builder supports rewards (points/sku/monetary) with SKU dropdown
+- Approvals allow per-submission reward selection; issuance records captured with statuses
+
+---
+
+# Backlog: Profile Pages & Settings
+
+## Goals
 
 - Implement per-user profile pages for:
   - Admin view: inspect/manage any workspace member.
