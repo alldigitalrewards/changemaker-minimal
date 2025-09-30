@@ -249,6 +249,8 @@ export interface ChallengeCreateRequest {
   readonly startDate: string // ISO string format for API
   readonly endDate: string   // ISO string format for API
   readonly enrollmentDeadline?: string // Optional ISO string format for API
+  readonly rewardType?: 'points' | 'sku' | 'monetary'
+  readonly rewardConfig?: unknown
   readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment (legacy)
   readonly invitedParticipantIds?: UserId[] // Optional participant IDs to invite
   readonly enrolledParticipantIds?: UserId[] // Optional participant IDs to enroll automatically
@@ -621,6 +623,15 @@ export function validateChallengeData(data: unknown): data is ChallengeCreateReq
       return false
     }
   }
+
+  // Optional reward fields validation
+  if ('rewardType' in (data as any) && (data as any).rewardType !== undefined) {
+    const rt = (data as any).rewardType
+    if (rt !== 'points' && rt !== 'sku' && rt !== 'monetary') {
+      return false
+    }
+  }
+  // rewardConfig can be any JSON-serializable value; no strict validation here
 
   return true
 }
