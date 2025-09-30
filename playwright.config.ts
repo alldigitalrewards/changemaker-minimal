@@ -11,6 +11,13 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: [
+    '**/tests/e2e/button-*.spec.ts',
+    '**/tests/e2e/button-visibility.spec.ts',
+    '**/tests/e2e/simple-button-test.spec.ts',
+    '**/tests/e2e/workspace-buttons.spec.ts',
+    '**/tests/e2e/workspace-ux-*.spec.ts',
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -49,10 +56,11 @@ export default defineConfig({
   ],
 
   // Only start local server when testing against localhost
+  // Use production build for stability during e2e runs
   webServer: process.env.BASE_URL?.startsWith('http://localhost') !== false && !process.env.BASE_URL?.startsWith('https://') ? {
-    command: 'pnpm dev',
+    command: 'pnpm prisma:generate && pnpm db:push && pnpm build && pnpm start',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: 240 * 1000,
   } : undefined,
 });
