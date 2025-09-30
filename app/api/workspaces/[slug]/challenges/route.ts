@@ -118,7 +118,7 @@ export async function POST(
       );
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -153,7 +153,9 @@ export async function POST(
         description,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined
+        enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined,
+        rewardType,
+        rewardConfig
       },
       workspace.id
     );

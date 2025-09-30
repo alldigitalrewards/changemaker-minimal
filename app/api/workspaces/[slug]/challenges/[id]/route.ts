@@ -53,7 +53,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
 
   // Basic validation
   if (!title || !description) {
@@ -91,6 +91,17 @@ export const PUT = withErrorHandling(async (
         return NextResponse.json({ error: 'Enrollment deadline must be before or equal to start date' }, { status: 400 });
       }
     }
+  }
+
+  // Reward configuration (optional)
+  if (rewardType !== undefined) {
+    if (!['points', 'sku', 'monetary', null].includes(rewardType)) {
+      return NextResponse.json({ error: 'Invalid rewardType' }, { status: 400 });
+    }
+    updateData.rewardType = rewardType || null
+  }
+  if (rewardConfig !== undefined) {
+    updateData.rewardConfig = rewardConfig
   }
 
   const before = await prisma.challenge.findUnique({ where: { id } })
