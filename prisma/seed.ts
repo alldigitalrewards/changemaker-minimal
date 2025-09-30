@@ -238,10 +238,13 @@ async function seed() {
             workspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id,
-            // Grant platform_super_admin to the first seeded admin for testing
-            permissions: admin.email === 'jfelke@alldigitalrewards.com' ? { set: ['platform_super_admin'] } : undefined,
-            tenantId: 'default'
-          },
+            // Grant platform_super_admin to designated super admins for testing
+            permissions: (admin.email === 'jfelke@alldigitalrewards.com' || admin.email === 'krobinson@alldigitalrewards.com') ? { set: ['platform_super_admin'] } : undefined,
+            tenantId: 'default',
+            lastWorkspaceId: createdWorkspaces.find(w =>
+              w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
+            )?.id || null
+          } as any,
           create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
@@ -251,9 +254,12 @@ async function seed() {
             workspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id,
-            permissions: admin.email === 'jfelke@alldigitalrewards.com' ? ['platform_super_admin'] : [],
-            tenantId: 'default'
-          }
+            permissions: (admin.email === 'jfelke@alldigitalrewards.com' || admin.email === 'krobinson@alldigitalrewards.com') ? ['platform_super_admin'] : [],
+            tenantId: 'default',
+            lastWorkspaceId: createdWorkspaces.find(w =>
+              w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
+            )?.id || null
+          } as any
         })
         
         // Create WorkspaceMemberships
@@ -403,13 +409,18 @@ async function seed() {
         console.log(`✓ Created participant segments for ${workspace.name}`)
       }
 
-      // Create workspace points budgets
+      // Create workspace points budgets (ensure exists)
       console.log('\n💰 Creating workspace points budgets...')
       for (const workspace of createdWorkspaces) {
-        await prisma.workspacePointsBudget.create({
-          data: {
+        await prisma.workspacePointsBudget.upsert({
+          where: { workspaceId: workspace.id },
+          update: {
+            totalBudget: 10000,
+            updatedBy: adminUserId
+          },
+          create: {
             workspaceId: workspace.id,
-            totalBudget: 10000, // 10,000 points per workspace
+            totalBudget: 10000,
             allocated: 0,
             updatedBy: adminUserId
           }
@@ -473,7 +484,7 @@ async function seed() {
             isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id,
             tenantId: 'default'
-          },
+          } as any,
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
@@ -481,7 +492,7 @@ async function seed() {
             isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id,
             tenantId: 'default'
-          }
+          } as any
         })
         
         // Create WorkspaceMembership for participants too
@@ -785,6 +796,22 @@ async function seed() {
         })
       }
       console.log(`✓ Seeded ${skus.length} SKUs for tenant '${tenantId}'`)
+    }
+
+    // Seed sample reward issuances for demo
+    console.log('\n🎁 Seeding sample reward issuances...')
+    for (const workspace of createdWorkspaces) {
+      const anyParticipant = await prisma.user.findFirst({ where: { role: ROLE_PARTICIPANT, workspaceId: workspace.id } })
+      if (anyParticipant) {
+        await (prisma as any).rewardIssuance.createMany({
+          data: [
+            { userId: anyParticipant.id, workspaceId: workspace.id, type: 'points', amount: 15, status: 'ISSUED', issuedAt: new Date() } as any,
+            { userId: anyParticipant.id, workspaceId: workspace.id, type: 'sku', skuId: 'SKU-GIFT-10', status: 'ISSUED', issuedAt: new Date() } as any,
+            { userId: anyParticipant.id, workspaceId: workspace.id, type: 'monetary', amount: 5, currency: 'USD', status: 'PENDING' } as any,
+          ]
+        })
+        console.log(`✓ RewardIssuance samples created for ${workspace.name}`)
+      }
     }
 
     // Show budget utilization
