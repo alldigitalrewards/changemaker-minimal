@@ -379,6 +379,8 @@ export async function createChallenge(
     startDate: Date
     endDate: Date
     enrollmentDeadline?: Date
+    rewardType?: 'points' | 'sku' | 'monetary'
+    rewardConfig?: any
   },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {
@@ -390,6 +392,8 @@ export async function createChallenge(
         startDate: data.startDate,
         endDate: data.endDate,
         enrollmentDeadline: data.enrollmentDeadline || data.startDate,
+        rewardType: data.rewardType,
+        rewardConfig: data.rewardConfig,
         workspaceId
       }
     })
@@ -409,6 +413,8 @@ export async function updateChallenge(
     startDate?: Date;
     endDate?: Date;
     enrollmentDeadline?: Date;
+    rewardType?: 'points' | 'sku' | 'monetary';
+    rewardConfig?: any;
   },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {
@@ -1131,6 +1137,7 @@ export async function createActivity(
     maxSubmissions?: number
     deadline?: Date
     isRequired?: boolean
+    rewardRules?: any[]
   },
   workspaceId: WorkspaceId
 ): Promise<Activity> {
@@ -1160,7 +1167,8 @@ export async function createActivity(
         pointsValue: data.pointsValue ?? template.basePoints,
         maxSubmissions: data.maxSubmissions ?? 1,
         deadline: data.deadline,
-        isRequired: data.isRequired ?? false
+        isRequired: data.isRequired ?? false,
+        rewardRules: data.rewardRules ?? []
       }
     })
   } catch (error) {
@@ -1200,6 +1208,7 @@ export async function updateActivity(
     maxSubmissions: number
     deadline: Date | null
     isRequired: boolean
+    rewardRules: any[]
   }>
 ): Promise<Activity & { template: ActivityTemplate, challenge: Challenge }> {
   // Verify activity belongs to a challenge in this workspace
@@ -1219,7 +1228,8 @@ export async function updateActivity(
         pointsValue: data.pointsValue ?? activity.pointsValue,
         maxSubmissions: data.maxSubmissions ?? activity.maxSubmissions,
         deadline: data.deadline === undefined ? activity.deadline : data.deadline,
-        isRequired: data.isRequired ?? activity.isRequired
+        isRequired: data.isRequired ?? activity.isRequired,
+        rewardRules: data.rewardRules ?? activity.rewardRules
       },
       include: { template: true, challenge: true }
     })
