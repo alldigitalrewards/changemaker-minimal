@@ -10,11 +10,12 @@ export const PATCH = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug)
 
   const body = await request.json()
-  const { pointsValue, maxSubmissions, deadline, isRequired } = body as Partial<{
+  const { pointsValue, maxSubmissions, deadline, isRequired, rewardRules } = body as Partial<{
     pointsValue: number
     maxSubmissions: number
     deadline: string | null
     isRequired: boolean
+    rewardRules: any[]
   }>
 
   // Basic server-side validation
@@ -32,7 +33,8 @@ export const PATCH = withErrorHandling(async (
       pointsValue,
       maxSubmissions,
       deadline: deadline === undefined ? undefined : (deadline ? new Date(deadline) : null),
-      isRequired
+      isRequired,
+      rewardRules: Array.isArray(rewardRules) ? rewardRules : undefined
     }
   )
 
