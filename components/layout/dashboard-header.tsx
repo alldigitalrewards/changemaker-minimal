@@ -136,17 +136,17 @@ export default function DashboardHeader({
                   </div>
 
                   <div className="border-t border-gray-100 mt-2 pt-2">
-                    <Link href={`/w/${workspace.slug}/${role === 'ADMIN' ? 'admin' : 'participant'}/profile`}>
+                    <Link href="/account">
                       <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
                         <Settings className="h-4 w-4" />
-                        <span>Account Settings</span>
+                        <span>My Account Settings</span>
                       </button>
                     </Link>
 
-                    <form action={role === 'ADMIN' ? `/w/${workspace.slug}/admin/signout` : `/w/${workspace.slug}/participant/signout`} method="POST">
+                    <form action="/auth/logout" method="POST">
                       <button type="submit" className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
                         <LogOut className="h-4 w-4" />
-                        <span>Sign Out</span>
+                        <span>Log out</span>
                       </button>
                     </form>
                   </div>
