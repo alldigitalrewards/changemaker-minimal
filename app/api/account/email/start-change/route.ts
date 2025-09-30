@@ -1,43 +1,9 @@
 import { NextResponse } from 'next/server'
 import { requireAuth, withErrorHandling } from '@/lib/auth/api-auth'
 import { prisma } from '@/lib/prisma'
-import crypto from 'crypto'
 
-export const POST = withErrorHandling(async (request: Request) => {
-  const { dbUser } = await requireAuth()
-  const body = await request.json().catch(() => ({})) as { newEmail?: string }
-
-  const newEmail = body?.newEmail?.trim().toLowerCase()
-  if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-    return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
-  }
-
-  const token = crypto.randomUUID()
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 30) // 30 minutes
-
-  await prisma.user.update({
-    where: { id: dbUser.id },
-    data: {
-      emailChangePending: {
-        newEmail,
-        token,
-        expiresAt
-      } as any
-    }
-  })
-
-  // Send email (stub/log for non-prod)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[EmailChange] token for ${newEmail}: ${token}`)
-  }
-
-  return NextResponse.json({ success: true })
-})
-
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { requireAuth, withErrorHandling } from '@/lib/auth/api-auth'
-import { prisma } from '@/lib/db/prisma'
 import { randomBytes } from 'crypto'
 
 export const POST = withErrorHandling(async (request: NextRequest) => {
@@ -76,7 +42,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
   // Store pending email change in database
-  await prisma.user.update({
+  await (prisma as any).user.update({
     where: { id: dbUser.id },
     data: {
       emailChangePending: {
@@ -102,7 +68,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     console.error('Email change initiation error:', error)
 
     // Clean up pending state on error
-    await prisma.user.update({
+    await (prisma as any).user.update({
       where: { id: dbUser.id },
       data: { emailChangePending: null }
     })

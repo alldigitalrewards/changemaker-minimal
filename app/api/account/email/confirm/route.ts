@@ -28,7 +28,7 @@ export const POST = withErrorHandling(async (request: Request) => {
   }
 
   // Update Prisma user, clear pending, and refresh session
-  await prisma.user.update({
+  await (prisma as any).user.update({
     where: { id: dbUser.id },
     data: {
       email: newEmail,
@@ -40,9 +40,7 @@ export const POST = withErrorHandling(async (request: Request) => {
   return NextResponse.json({ success: true })
 })
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { prisma } from '@/lib/db/prisma'
+import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -80,7 +78,7 @@ export async function GET(request: NextRequest) {
     // Check if token has expired
     if (new Date(pending.expiresAt) < new Date()) {
       // Clean up expired token
-      await prisma.user.update({
+      await (prisma as any).user.update({
         where: { id: dbUser.id },
         data: { emailChangePending: null }
       })
@@ -89,7 +87,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Update email in database
-    await prisma.user.update({
+    await (prisma as any).user.update({
       where: { id: dbUser.id },
       data: {
         email: pending.newEmail,
