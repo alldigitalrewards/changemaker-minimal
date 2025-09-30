@@ -77,6 +77,9 @@ export interface Challenge {
   readonly endDate: Date
   readonly enrollmentDeadline: Date | null
   readonly workspaceId: WorkspaceId
+  readonly rewardType?: 'points' | 'sku' | 'monetary'
+  readonly rewardConfig?: unknown
+  readonly emailEditAllowed?: boolean
 }
 
 /**
@@ -118,6 +121,7 @@ export interface Activity {
   readonly maxSubmissions: number
   readonly deadline: Date | null
   readonly isRequired: boolean
+  readonly rewardRules?: any[]
   readonly createdAt: Date
   readonly updatedAt: Date
 }
