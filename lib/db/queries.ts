@@ -1732,7 +1732,7 @@ export async function getChallengeEvents(challengeId: string) {
 
 export type InviteCodeWithDetails = InviteCode & {
   workspace: Workspace
-  challenge?: Challenge | null
+  challenge?: import('../types').Challenge | null
   creator: Pick<User, 'id' | 'email'>
 }
 
@@ -1801,7 +1801,7 @@ export async function createInviteCode(
  */
 export async function getInviteByCode(code: string): Promise<InviteCodeWithDetails | null> {
   try {
-    return await prisma.inviteCode.findUnique({
+    const row = await prisma.inviteCode.findUnique({
       where: { code },
       include: {
         workspace: true,
@@ -1810,7 +1810,26 @@ export async function getInviteByCode(code: string): Promise<InviteCodeWithDetai
           select: { id: true, email: true }
         }
       }
-    })
+    }) as any
+    if (!row) return null
+    const normalizedChallenge = row.challenge
+      ? {
+          id: row.challenge.id,
+          title: row.challenge.title,
+          description: row.challenge.description,
+          startDate: row.challenge.startDate,
+          endDate: row.challenge.endDate,
+          enrollmentDeadline: row.challenge.enrollmentDeadline ?? null,
+          workspaceId: row.challenge.workspaceId,
+          rewardType: row.challenge.rewardType ?? undefined,
+          rewardConfig: row.challenge.rewardConfig,
+          emailEditAllowed: row.challenge.emailEditAllowed,
+        }
+      : row.challenge
+    return {
+      ...row,
+      challenge: normalizedChallenge,
+    }
   } catch (error) {
     throw new DatabaseError(`Failed to fetch invite code: ${error}`)
   }
@@ -1825,7 +1844,7 @@ export async function acceptInviteCode(
   userEmail: string
 ): Promise<{ 
   workspace: Workspace
-  challenge?: Challenge | null
+  challenge?: import('../types').Challenge | null
   enrollment?: Enrollment | null
   isExistingMember: boolean
   role: Role
@@ -1945,7 +1964,7 @@ export async function getWorkspaceInviteCodes(
   workspaceId: WorkspaceId
 ): Promise<InviteCodeWithDetails[]> {
   try {
-    return await prisma.inviteCode.findMany({
+    const rows = await prisma.inviteCode.findMany({
       where: { workspaceId },
       include: {
         workspace: true,
@@ -1955,7 +1974,11 @@ export async function getWorkspaceInviteCodes(
         }
       },
       orderBy: { createdAt: 'desc' }
-    })
+    }) as any
+    return rows.map((i: any) => ({
+      ...i,
+      challenge: i.challenge ? { ...i.challenge, rewardType: i.challenge.rewardType ?? undefined } : i.challenge
+    }))
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace invite codes: ${error}`)
   }

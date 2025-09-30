@@ -47,7 +47,7 @@ export default async function WorkspacesPage() {
   } else {
     // Non-super-admins: no global discovery; show only tenant-visible workspaces if user is admin of any tenant
     // Determine tenant from first membership (preferred) or legacy workspace
-    const userTenantId = memberships[0]?.workspace.tenantId || (await prisma.workspace.findUnique({ where: { id: dbUser.workspaceId || undefined as any }, select: { tenantId: true } }))?.tenantId
+    const userTenantId = (await prisma.workspace.findUnique({ where: { id: dbUser.workspaceId || undefined as any }, select: { tenantId: true } }))?.tenantId
     if (userTenantId) {
       // Client admins (role ADMIN in any workspace) see tenant workspaces
       const isClientAdmin = memberships.some(m => m.role === 'ADMIN')

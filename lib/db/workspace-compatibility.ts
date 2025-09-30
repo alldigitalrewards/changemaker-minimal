@@ -136,7 +136,7 @@ export async function getUserWorkspaces(supabaseUserId: string): Promise<Workspa
     if (!dbUser) return []
 
     const { isPlatformSuperAdmin } = await import('@/lib/auth/api-auth')
-    const { prisma } = await import('@/lib/db/prisma')
+    const { prisma } = await import('@/lib/prisma')
 
     // Platform super admins see all workspaces
     if (isPlatformSuperAdmin(dbUser)) {
