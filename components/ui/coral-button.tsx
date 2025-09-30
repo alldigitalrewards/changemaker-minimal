@@ -56,11 +56,8 @@ export function CoralButton({
       <Button
         size={size}
         asChild={asChild}
-        className={cn(baseStyles, "shadow-lg hover:shadow-xl transform hover:scale-105")}
-        style={{
-          backgroundColor: isHovered ? '#F5F5F5' : 'white',
-          color: '#FF6B6B'
-        }}
+        className={cn(baseStyles, "shadow-lg hover:shadow-xl transform hover:scale-105 text-coral-500")}
+        variant="white"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         {...props}
