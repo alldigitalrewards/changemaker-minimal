@@ -9,6 +9,7 @@ import CreateWorkspaceDialog from "./create-workspace-dialog"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
 import WorkspaceCard from "./workspace-card-client"
 import { getUserBySupabaseId } from "@/lib/db/queries"
+import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
 import { listMemberships } from "@/lib/db/workspace-membership"
 import { Plus, Search, Building, Users } from "lucide-react"
 
@@ -29,20 +30,46 @@ export default async function WorkspacesPage() {
   // Get user's workspace memberships (new system)
   const memberships = await listMemberships(dbUser.id)
 
-  // Get all workspaces for join functionality
-  const allWorkspaces = await prisma.workspace.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      _count: {
-        select: {
-          memberships: true,
-          challenges: true
-        }
+  // Tenancy-aware available workspaces list (hide discovery for non-super-admins)
+  let allWorkspaces: { id: string; name: string; slug: string; _count: { memberships: number; challenges: number } }[] = []
+  const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
+  if (userIsPlatformAdmin) {
+    // Super admin sees all tenants' active & published workspaces
+    allWorkspaces = await prisma.workspace.findMany({
+      where: { active: true, published: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: { select: { memberships: true, challenges: true } }
       }
+    })
+  } else {
+    // Non-super-admins: no global discovery; show only tenant-visible workspaces if user is admin of any tenant
+    // Determine tenant from first membership (preferred) or legacy workspace
+    const userTenantId = memberships[0]?.workspace.tenantId || (await prisma.workspace.findUnique({ where: { id: dbUser.workspaceId || undefined as any }, select: { tenantId: true } }))?.tenantId
+    if (userTenantId) {
+      // Client admins (role ADMIN in any workspace) see tenant workspaces
+      const isClientAdmin = memberships.some(m => m.role === 'ADMIN')
+      if (isClientAdmin) {
+        allWorkspaces = await prisma.workspace.findMany({
+          where: { tenantId: userTenantId, active: true, published: true },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            _count: { select: { memberships: true, challenges: true } }
+          }
+        })
+      } else {
+        // Participants: suppress discovery completely
+        allWorkspaces = []
+      }
+    } else {
+      // No tenant context resolvable, suppress discovery
+      allWorkspaces = []
     }
-  })
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -146,8 +173,8 @@ export default async function WorkspacesPage() {
           </Card>
         )}
 
-        {/* Available Workspaces */}
-        <Card className="border-gray-200 shadow-sm">
+        {/* Available Workspaces (hidden for participants) */}
+        <Card className="border-gray-200 shadow-sm" style={{ display: userIsPlatformAdmin || memberships.some(m => m.role === 'ADMIN') ? undefined : 'none' }}>
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gray-100 rounded-lg">

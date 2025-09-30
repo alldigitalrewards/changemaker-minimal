@@ -22,7 +22,9 @@ export async function createWorkspace(formData: FormData, userId: string) {
     const workspace = await prisma.workspace.create({
       data: {
         name,
-        slug
+        slug,
+        // Default tenant scoping (MVP single-tenant default)
+        tenantId: 'default'
       }
     })
 
