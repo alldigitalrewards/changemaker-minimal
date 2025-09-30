@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,6 +26,10 @@ export function SubmissionReviewButton({
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [rewardType, setRewardType] = useState<'points' | 'sku' | 'monetary'>('points')
+  const [amount, setAmount] = useState<string>('')
+  const [currency, setCurrency] = useState<string>('USD')
+  const [skuId, setSkuId] = useState<string>('')
   const router = useRouter();
   const { toast } = useToast();
 
@@ -36,7 +42,13 @@ export function SubmissionReviewButton({
         body: JSON.stringify({
           status: action === 'approve' ? 'APPROVED' : 'REJECTED',
           reviewNotes: reviewNotes.trim() || undefined,
-          pointsAwarded: action === 'approve' ? pointsValue : 0
+          pointsAwarded: action === 'approve' ? pointsValue : 0,
+          reward: action === 'approve' ? {
+            type: rewardType,
+            amount: rewardType === 'points' || rewardType === 'monetary' ? Number(amount || pointsValue) : undefined,
+            currency: rewardType === 'monetary' ? currency : undefined,
+            skuId: rewardType === 'sku' ? (skuId || undefined) : undefined
+          } : undefined
         }),
       });
 
@@ -117,6 +129,43 @@ export function SubmissionReviewButton({
               rows={3}
             />
           </div>
+          {action === 'approve' && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Reward Type</label>
+                <Select value={rewardType} onValueChange={(v) => setRewardType(v as any)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select reward type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="points">Points</SelectItem>
+                    <SelectItem value="sku">SKU</SelectItem>
+                    <SelectItem value="monetary">Monetary</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {(rewardType === 'points' || rewardType === 'monetary') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Amount</label>
+                    <Input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={String(pointsValue)} />
+                  </div>
+                  {rewardType === 'monetary' && (
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Currency</label>
+                      <Input value={currency} onChange={(e) => setCurrency(e.target.value)} placeholder="USD" />
+                    </div>
+                  )}
+                </div>
+              )}
+              {rewardType === 'sku' && (
+                <div>
+                  <label className="text-sm font-medium mb-1 block">SKU ID</label>
+                  <Input value={skuId} onChange={(e) => setSkuId(e.target.value)} placeholder="e.g. giftcard_25" />
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex gap-2">
             <Button 
               variant="outline" 
@@ -135,7 +184,7 @@ export function SubmissionReviewButton({
               onClick={handleReview}
               disabled={isLoading || (action === 'reject' && !reviewNotes.trim())}
             >
-              {isLoading ? 'Processing...' : action === 'approve' ? 'Approve & Award Points' : 'Reject Submission'}
+              {isLoading ? 'Processing...' : action === 'approve' ? 'Approve & Award' : 'Reject Submission'}
             </Button>
           </div>
         </div>
