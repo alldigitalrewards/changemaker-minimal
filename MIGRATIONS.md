@@ -72,40 +72,58 @@ This migration enables three critical features:
 
 ### Deploy Steps
 
+⚠️ **IMPORTANT**: Preview (preview.changemaker.im) and Production (changemaker.im) share the same Supabase database. Always test migrations before creating a PR.
+
 #### Development (Local)
 ```bash
-# Generate and apply migration
+# 1. Generate and apply migration to LOCAL database
 pnpm prisma migrate dev --name descriptive_name
 
-# Seed test data
+# 2. Seed test data
 pnpm prisma db seed
 
-# Test locally
+# 3. Test locally with local Supabase
 pnpm dev
+
+# 4. Verify everything works: http://localhost:3000
 ```
 
-#### Production (Before Merge to Main)
+#### Production Database (Before Merge to Main)
+⚠️ **Critical Step**: Test migration on production database before PR
+
 ```bash
 # Use the interactive migration script
 ./scripts/migrate-production.sh
 
-# OR manually:
-# 1. Backup via Supabase Dashboard → Database → Backups
-# 2. Load production env: export $(cat .env.production | xargs)
-# 3. Apply migration: pnpm prisma migrate deploy
-# 4. Verify: curl https://changemaker.im/api/health
-# 5. Test critical flows manually
+# This applies migration to production Supabase
+# Both preview.changemaker.im AND changemaker.im will use this migrated schema
+
+# After migration:
+# 1. Verify preview: https://preview.changemaker.im/api/health
+# 2. Verify production: https://changemaker.im/api/health
+# 3. Test critical flows on both domains
+# 4. If good → create PR and merge
 ```
 
 #### CI/CD (After Merge to Main)
-Workflow runs automatically on push to main:
+Workflow runs automatically as verification:
 ```bash
 # Automated steps in .github/workflows/database-migration.yml
 # 1. Backup (logged)
-# 2. prisma migrate deploy
+# 2. prisma migrate deploy (may be no-op if already applied)
 # 3. Health checks
 # 4. E2E smoke tests
+
+# Vercel auto-deploys changemaker.im
 ```
+
+#### Environment Clarification
+
+| Environment | Database | When Migrations Applied |
+|-------------|----------|------------------------|
+| Local (`localhost:3000`) | Local Supabase (127.0.0.1:54322) | During development with `prisma migrate dev` |
+| Preview (`preview.changemaker.im`) | **Production Supabase** | Before PR with `./scripts/migrate-production.sh` |
+| Production (`changemaker.im`) | **Production Supabase** | Same migration from preview step |
 
 ### Rollback Strategy
 
