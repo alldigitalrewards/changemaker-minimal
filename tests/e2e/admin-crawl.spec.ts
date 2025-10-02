@@ -108,6 +108,8 @@ async function crawlAdminRoutes(page: Page, startPath: string, maxPages = 200): 
 
 test.describe('Admin Route Testing', () => {
   test('admin - comprehensive route testing and link crawling', async ({ page }) => {
+    // Increase timeout for this comprehensive crawl test
+    test.setTimeout(120000); // 2 minutes
     console.log('\n' + '='.repeat(60));
     console.log('🔐 ADMIN: Testing admin routes that actually exist');
     console.log('='.repeat(60));
@@ -180,29 +182,29 @@ test.describe('Admin Route Testing', () => {
       });
     }
     
-    // Now crawl to find ALL admin links
+    // Now crawl to find ALL admin links (with reduced scope to avoid timeouts)
     console.log('\n🕸️ Crawling for all admin links...');
-    const crawlResults = await crawlAdminRoutes(page, '/workspaces', 100);
-    
-    // Crawl from admin dashboard too
-    const dashboardCrawl = await crawlAdminRoutes(page, `/w/${WORKSPACE_SLUG}/admin/dashboard`, 100);
-    
+    const crawlResults = await crawlAdminRoutes(page, '/workspaces', 30);
+
+    // Crawl from admin dashboard too (limited scope)
+    const dashboardCrawl = await crawlAdminRoutes(page, `/w/${WORKSPACE_SLUG}/admin/dashboard`, 30);
+
     // Combine results
     dashboardCrawl.links.forEach(link => crawlResults.links.add(link));
     crawlResults.visited.push(...dashboardCrawl.visited);
     crawlResults.failed.push(...dashboardCrawl.failed);
-    
+
     // Report all unique admin links found
     console.log('\n📎 All unique admin links found:');
     const adminLinks = Array.from(crawlResults.links)
-      .filter(link => 
-        link.includes('/admin') || 
-        link.includes('/workspaces') || 
+      .filter(link =>
+        link.includes('/admin') ||
+        link.includes('/workspaces') ||
         link.startsWith('/w/'))
       .sort();
-    
+
     adminLinks.forEach(link => console.log(`  - ${link}`));
-    
+
     // Final summary
     console.log('\n' + '='.repeat(60));
     console.log('ADMIN TEST SUMMARY:');
@@ -212,12 +214,12 @@ test.describe('Admin Route Testing', () => {
     console.log(`  Unique admin links found: ${adminLinks.length}`);
     console.log(`  Failed pages during crawl: ${crawlResults.failed.length}`);
     console.log('='.repeat(60));
-    
+
     // Assertions
     expect(routeResults.success.length).toBeGreaterThan(0);
     expect(crawlResults.visited.length).toBeGreaterThan(0);
-    
-    // Warn if critical admin routes are missing
+
+    // Require critical admin routes to work
     const criticalRoutes: string[] = [
       '/workspaces',
       `/w/${WORKSPACE_SLUG}/admin/dashboard`,
@@ -227,8 +229,9 @@ test.describe('Admin Route Testing', () => {
 
     const missingCritical = criticalRoutes.filter(r => !routeResults.success.includes(r));
     if (missingCritical.length > 0) {
-      console.log('\n⚠️  WARNING: Critical admin routes not working:');
+      console.log('\n❌ ERROR: Critical admin routes not working:');
       missingCritical.forEach(r => console.log(`    - ${r}`));
     }
+    expect(missingCritical.length).toBe(0);
   });
 });

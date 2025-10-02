@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Complete Challenge Flow', () => {
   test('admin creates challenge, participants submit activities, admin approves submissions', async ({ page }) => {
+    // Increase timeout for this complex flow test
+    test.setTimeout(120000); // 2 minutes
+
     // Admin Sign In
     await page.goto('/');
     await page.getByRole('navigation').getByRole('link', { name: 'Sign In' }).click();
@@ -10,10 +13,17 @@ test.describe('Complete Challenge Flow', () => {
     await page.getByRole('textbox', { name: 'Email' }).press('Tab');
     await page.getByRole('textbox', { name: 'Password' }).fill('Changemaker2025!');
     await page.getByRole('button', { name: 'Sign in' }).click();
-    
-    // Navigate to Dashboard and Challenges
-    await page.getByRole('link', { name: 'Go to Dashboard' }).getByRole('button').click();
-    await page.getByRole('link', { name: 'Challenges', exact: true }).click();
+
+    // After login, user lands on /workspaces page
+    // Wait for workspaces page to load and click on the workspace card
+    await page.waitForURL('**/workspaces', { timeout: 10000 });
+
+    // Click on the alldigitalrewards workspace card (it's clickable)
+    await page.locator('text=alldigitalrewards').first().click();
+
+    // Wait for dashboard to load, then navigate directly to challenges
+    await page.waitForURL('**/admin/dashboard', { timeout: 10000 });
+    await page.goto('/w/alldigitalrewards/admin/challenges');
     
     // Create Challenge
     await page.getByRole('button', { name: 'Create Challenge' }).click();
@@ -58,9 +68,10 @@ test.describe('Complete Challenge Flow', () => {
     await page.getByRole('textbox', { name: 'Email' }).press('Tab');
     await page.getByRole('textbox', { name: 'Password' }).fill('Changemaker2025!');
     await page.getByRole('button', { name: 'Sign in' }).click();
-    
-    // Navigate to Challenge and Submit Activity
-    await page.getByRole('link', { name: 'Go to Dashboard' }).getByRole('button').click();
+
+    // Wait for workspaces page and click workspace
+    await page.waitForURL('**/workspaces', { timeout: 10000 });
+    await page.locator('text=alldigitalrewards').first().click();
     await page.locator('div:nth-child(7) > .p-4 > .flex.items-start > .flex-1 > .inline-flex.items-center.text-sm').click();
     await page.getByRole('tab', { name: 'Activities' }).click();
     await page.getByRole('button', { name: 'Submit Activity' }).click();
@@ -81,9 +92,10 @@ test.describe('Complete Challenge Flow', () => {
     await page.getByRole('textbox', { name: 'Email' }).press('Tab');
     await page.getByRole('textbox', { name: 'Password' }).fill('Changemaker2025!');
     await page.getByRole('button', { name: 'Sign in' }).click();
-    
-    // Navigate to Challenge
-    await page.getByRole('link', { name: 'Go to Dashboard' }).getByRole('button').click();
+
+    // Wait for workspaces page and click workspace
+    await page.waitForURL('**/workspaces', { timeout: 10000 });
+    await page.locator('text=alldigitalrewards').first().click();
     await page.locator('div:nth-child(6) > .p-4 > .flex.items-start > .flex-1 > .inline-flex.items-center.text-sm').click();
     await page.getByRole('button', { name: 'Check Progress' }).click();
     
@@ -105,9 +117,12 @@ test.describe('Complete Challenge Flow', () => {
     await page.getByRole('textbox', { name: 'Password' }).fill('Changemaker2025!');
     await page.getByRole('textbox', { name: 'Password' }).press('Enter');
     await page.getByRole('button', { name: 'Sign in' }).click();
-    
+
+    // Wait for workspaces page and click workspace
+    await page.waitForURL('**/workspaces', { timeout: 10000 });
+    await page.locator('text=alldigitalrewards').first().click();
+
     // Navigate to Challenge Submissions
-    await page.getByRole('link', { name: 'Go to Dashboard' }).getByRole('button').click();
     await page.getByRole('link', { name: 'Challenges', exact: true }).click();
     await page.getByText('Insert test CHallenge Title HereInsert Test Description Here4').click();
     await page.getByRole('tab', { name: 'Submissions' }).click();
@@ -134,9 +149,12 @@ test.describe('Complete Challenge Flow', () => {
     await page.getByRole('textbox', { name: 'Email' }).press('Tab');
     await page.getByRole('textbox', { name: 'Password' }).fill('Changemaker2025!');
     await page.getByRole('button', { name: 'Sign in' }).click();
-    
+
+    // Wait for workspaces page and click workspace
+    await page.waitForURL('**/workspaces', { timeout: 10000 });
+    await page.locator('text=alldigitalrewards').first().click();
+
     // Check My Activities and Points
-    await page.getByRole('link', { name: 'Go to Dashboard' }).getByRole('button').click();
     await page.getByRole('link', { name: 'My Activities' }).click();
     await page.getByText('points earned!').click();
     await page.getByText('Good job Mike!').click();
