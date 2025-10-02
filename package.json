@@ -33,8 +33,12 @@
     "test:membership": "tsx scripts/test-membership.ts",
     "test": "playwright test",
     "test:e2e": "playwright test tests/e2e",
-    "test:e2e:local": "BASE_URL=http://localhost:3000 playwright test tests/e2e",
+    "test:e2e:dev": "ENV_FILE=.env.local BASE_URL=http://localhost:3000 playwright test tests/e2e",
     "test:e2e:prod": "BASE_URL=https://changemaker.im playwright test tests/e2e",
+    "test:e2e:preview": "BASE_URL=https://preview.changemaker.im playwright test tests/e2e",
+    "test:e2e:smoke:dev": "ENV_FILE=.env.local BASE_URL=http://localhost:3000 playwright test -g 'Approvals with multi-reward issuance'",
+    "test:e2e:smoke:prod": "BASE_URL=https://changemaker.im playwright test -g 'Approvals with multi-reward issuance'",
+    "test:e2e:smoke:preview": "BASE_URL=https://preview.changemaker.im playwright test -g 'Approvals with multi-reward issuance'",
     "test:ui": "playwright test --ui",
     "test:cucumber": "BASE_URL=${BASE_URL:-http://localhost:3000} cucumber-js -p default -c tests/e2e/cucumber.mjs"
   },

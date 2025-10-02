@@ -58,7 +58,8 @@ export default defineConfig({
   // Only start local server when testing against localhost
   // Use production build for stability during e2e runs
   webServer: process.env.BASE_URL?.startsWith('http://localhost') !== false && !process.env.BASE_URL?.startsWith('https://') ? {
-    command: 'pnpm prisma:generate && pnpm db:push && pnpm build && pnpm start',
+    // Allow swapping env files: ENV_FILE=.env (default .env.local)
+    command: `dotenv -e ${process.env.ENV_FILE || '.env.local'} -- sh -c "pnpm prisma:generate && pnpm db:push && pnpm build && pnpm start"`,
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 240 * 1000,
