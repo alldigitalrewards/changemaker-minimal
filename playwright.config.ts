@@ -1,16 +1,19 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright configuration for UI testing
+ * Playwright configuration for comprehensive testing
  * Supports multiple environments via BASE_URL environment variable
- * 
+ *
  * Usage:
- * - Local: pnpm test:e2e (uses http://localhost:3000)
+ * - All tests: pnpm test (runs e2e, api, integration)
+ * - E2E only: pnpm test:e2e
+ * - API only: pnpm test tests/api
+ * - Integration: pnpm test tests/integration
  * - Production: BASE_URL=https://changemaker.im pnpm test:e2e
  * - Custom: BASE_URL=https://your-domain.com pnpm test:e2e
  */
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './tests',
   testIgnore: [
     '**/tests/e2e/button-*.spec.ts',
     '**/tests/e2e/button-visibility.spec.ts',
