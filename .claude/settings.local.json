@@ -40,7 +40,8 @@
       "Bash(task-master add-dependency:*)",
       "Bash(task-master:*)",
       "mcp__playwright__browser_take_screenshot",
-      "Bash(pnpm tsc:*)"
+      "Bash(pnpm tsc:*)",
+      "Bash(pnpm playwright test:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

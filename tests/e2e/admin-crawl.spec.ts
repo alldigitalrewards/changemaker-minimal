@@ -109,71 +109,38 @@ async function crawlAdminRoutes(page: Page, startPath: string, maxPages = 200): 
 test.describe('Admin Route Testing', () => {
   test('admin - comprehensive route testing and link crawling', async ({ page }) => {
     console.log('\n' + '='.repeat(60));
-    console.log('🔐 ADMIN: Testing ALL admin routes and crawling ALL admin links');
+    console.log('🔐 ADMIN: Testing admin routes that actually exist');
     console.log('='.repeat(60));
-    
+
     // Login as admin (jfelke has access to alldigitalrewards and acme)
     await loginWithCredentials(page, ADMIN_EMAIL, DEFAULT_PASSWORD);
     const WORKSPACE_SLUG = 'alldigitalrewards'; // Admin's primary workspace
-    
-    // Define all admin routes to explicitly test
+
+    // Define only routes that actually exist (based on file structure)
     const adminRoutes = [
       // Workspace management
       '/workspaces',
-      '/workspaces/new',
-      
+
       // Workspace-specific admin routes
-      `/w/${WORKSPACE_SLUG}`,
-      `/w/${WORKSPACE_SLUG}/admin`,
       `/w/${WORKSPACE_SLUG}/admin/dashboard`,
-      
+
       // Challenge management
       `/w/${WORKSPACE_SLUG}/admin/challenges`,
       `/w/${WORKSPACE_SLUG}/admin/challenges/new`,
-      `/w/${WORKSPACE_SLUG}/admin/challenges/1`,
-      `/w/${WORKSPACE_SLUG}/admin/challenges/1/edit`,
-      `/w/${WORKSPACE_SLUG}/admin/challenges/1/submissions`,
-      
+
       // Participant management
       `/w/${WORKSPACE_SLUG}/admin/participants`,
-      `/w/${WORKSPACE_SLUG}/admin/participants/invite`,
-      `/w/${WORKSPACE_SLUG}/admin/participants/pending`,
-      `/w/${WORKSPACE_SLUG}/admin/participants/active`,
-      
-      // Settings
+
+      // Settings & other admin pages
       `/w/${WORKSPACE_SLUG}/admin/settings`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/general`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/members`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/roles`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/permissions`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/integrations`,
-      
-      // Analytics
-      `/w/${WORKSPACE_SLUG}/admin/analytics`,
-      `/w/${WORKSPACE_SLUG}/admin/analytics/overview`,
-      `/w/${WORKSPACE_SLUG}/admin/analytics/engagement`,
-      `/w/${WORKSPACE_SLUG}/admin/analytics/performance`,
-      
-      // Reports
-      `/w/${WORKSPACE_SLUG}/admin/reports`,
-      `/w/${WORKSPACE_SLUG}/admin/reports/generate`,
-      `/w/${WORKSPACE_SLUG}/admin/reports/history`,
-      
-      // Global admin routes
-      '/admin',
-      '/admin/dashboard',
-      '/admin/profile',
-      '/admin/account',
-      '/admin/settings',
-      '/admin/notifications',
-      '/admin/activity',
-      '/admin/security',
-      
-      // User management (global)
-      '/profile',
+      `/w/${WORKSPACE_SLUG}/admin/profile`,
+      `/w/${WORKSPACE_SLUG}/admin/emails`,
+      `/w/${WORKSPACE_SLUG}/admin/invites`,
+      `/w/${WORKSPACE_SLUG}/admin/points`,
+      `/w/${WORKSPACE_SLUG}/admin/activity-templates`,
+
+      // Global routes
       '/account',
-      '/settings',
-      '/notifications',
     ];
     
     console.log('\n📋 Testing all admin routes explicitly:');
