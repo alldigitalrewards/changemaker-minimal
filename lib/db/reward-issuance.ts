@@ -40,29 +40,9 @@ export async function issueReward(params: {
     }).catch(() => undefined)
   }
 
-  try {
-    if (type === 'points') {
-      // Points issuance is already handled via awardPointsWithBudget; mark as ISSUED
-      await prisma.rewardIssuance.update({
-        where: { id: issuance.id },
-        data: { status: 'ISSUED', issuedAt: new Date() }
-      })
-      return issuance
-    }
-
-    // For sku/monetary, integrate with provider here. This is a stub that marks issued.
-    await prisma.rewardIssuance.update({
-      where: { id: issuance.id },
-      data: { status: 'ISSUED', issuedAt: new Date() }
-    })
-    return issuance
-  } catch (error: any) {
-    await prisma.rewardIssuance.update({
-      where: { id: issuance.id },
-      data: { status: 'FAILED', error: String(error) }
-    })
-    throw error
-  }
+  // Return the issuance in PENDING status
+  // The reward will be processed by a background job or manual approval
+  return issuance
 }
 
 

@@ -5,11 +5,29 @@ import { prisma } from '@/lib/prisma'
 export const POST = withErrorHandling(async (request: NextRequest) => {
   const { dbUser } = await requireAuth()
 
-  // Clear pending email change
-  await (prisma as any).user.update({
+  // Check if there is a pending email change
+  const user = await prisma.user.findUnique({
     where: { id: dbUser.id },
-    data: { emailChangePending: null }
+    select: { emailChangePending: true }
   })
 
-  return NextResponse.json({ success: true })
+  if (!user?.emailChangePending) {
+    return NextResponse.json(
+      { error: 'No pending email change to cancel' },
+      { status: 400 }
+    )
+  }
+
+  // Clear pending email change
+  await prisma.user.update({
+    where: { id: dbUser.id },
+    data: {
+      emailChangePending: null as any
+    }
+  })
+
+  return NextResponse.json({
+    success: true,
+    message: 'Email change cancelled'
+  })
 })

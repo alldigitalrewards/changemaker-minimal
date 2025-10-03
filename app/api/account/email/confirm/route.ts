@@ -13,31 +13,55 @@ export const POST = withErrorHandling(async (request: Request) => {
   }
 
   const fresh = await prisma.user.findUnique({ where: { id: dbUser.id } })
-  const pending = (fresh as any)?.emailChangePending as any
-  if (!pending || pending.token !== token || new Date(pending.expiresAt) < new Date()) {
-    return NextResponse.json({ error: 'Invalid or expired token' }, { status: 400 })
+  const pending = fresh?.emailChangePending as any
+
+  if (!pending || pending.token !== token) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 400 })
+  }
+
+  if (new Date(pending.expiresAt) < new Date()) {
+    return NextResponse.json({ error: 'Token expired' }, { status: 400 })
   }
 
   const newEmail = pending.newEmail as string
 
-  // Update auth provider email
-  const supabase = await createClient()
-  const { error } = await supabase.auth.updateUser({ email: newEmail })
-  if (error) {
-    return NextResponse.json({ error: 'Failed to update auth email' }, { status: 400 })
-  }
-
-  // Update Prisma user, clear pending, and refresh session
-  await (prisma as any).user.update({
-    where: { id: dbUser.id },
-    data: {
+  // Check if email is already in use by another user
+  const existingUser = await prisma.user.findFirst({
+    where: {
       email: newEmail,
-      emailChangePending: null
+      id: { not: dbUser.id }
     }
   })
 
+  if (existingUser) {
+    return NextResponse.json(
+      { error: 'Email address is already in use' },
+      { status: 400 }
+    )
+  }
+
+  // Update Prisma user and clear pending
+  await prisma.user.update({
+    where: { id: dbUser.id },
+    data: {
+      email: newEmail,
+      emailChangePending: null as any
+    }
+  })
+
+  // Update Supabase auth email
+  const supabase = await createClient()
+  const { error } = await supabase.auth.updateUser({ email: newEmail })
+  if (error) {
+    console.error('Failed to update Supabase email (continuing anyway):', error)
+    // Continue even if Supabase update fails - database is source of truth
+  }
+
   // Supabase session cookies will reflect new email; returning success
-  return NextResponse.json({ success: true })
+  return NextResponse.json({
+    success: true,
+    message: 'Email successfully updated'
+  })
 })
 
 import { NextRequest } from 'next/server'

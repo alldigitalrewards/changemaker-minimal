@@ -122,6 +122,7 @@ export async function POST(
 
     // Validate input with type safety
     if (!validateChallengeData(body)) {
+      console.error('Challenge validation failed', { body })
       return NextResponse.json(
         { error: 'Title and description are required and must be non-empty strings' },
         { status: 400 }
@@ -156,15 +157,18 @@ export async function POST(
       );
     }
 
+    // Normalize rewardType to lowercase for Prisma enum
+    const normalizedRewardType = rewardType ? (rewardType.toLowerCase() as 'points' | 'sku' | 'monetary') : undefined;
+
     // Create challenge using standardized query
     const challenge = await createChallenge(
-      { 
-        title, 
+      {
+        title,
         description,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined,
-        rewardType,
+        rewardType: normalizedRewardType,
         rewardConfig
       },
       workspace.id
