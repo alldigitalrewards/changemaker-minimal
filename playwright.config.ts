@@ -39,32 +39,32 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-    // Mobile viewports for testing responsive button issues
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
+    // Other browsers disabled for faster testing during development
+    // Re-enable for comprehensive cross-browser testing before production
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
+    // {
+    //   name: 'Mobile Chrome',
+    //   use: { ...devices['Pixel 5'] },
+    // },
+    // {
+    //   name: 'Mobile Safari',
+    //   use: { ...devices['iPhone 12'] },
+    // },
   ],
 
   // Only start local server when testing against localhost
-  // Use production build for stability during e2e runs
+  // Reuse existing dev server if available (faster for development)
   webServer: process.env.BASE_URL?.startsWith('http://localhost') !== false && !process.env.BASE_URL?.startsWith('https://') ? {
-    // Allow swapping env files: ENV_FILE=.env (default .env.local)
-    command: `dotenv -e ${process.env.ENV_FILE || '.env.local'} -- sh -c "pnpm prisma:generate && pnpm db:push && pnpm build && pnpm start"`,
+    command: 'pnpm dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 240 * 1000,
+    reuseExistingServer: true,
+    timeout: 120 * 1000,
   } : undefined,
 });

@@ -42,7 +42,11 @@
       "mcp__playwright__browser_take_screenshot",
       "Bash(pnpm tsc:*)",
       "Bash(pnpm playwright test:*)",
-      "Bash(timeout 90 pnpm test:*)"
+      "Bash(timeout 90 pnpm test:*)",
+      "Bash(timeout 120 npx playwright test:*)",
+      "Bash(timeout 90 pnpm build)",
+      "Bash(pnpm test:*)",
+      "Bash(tee:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

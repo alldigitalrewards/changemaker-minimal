@@ -624,9 +624,11 @@ export function validateChallengeData(data: unknown): data is ChallengeCreateReq
     }
   }
 
-  // Optional reward fields validation
+  // Optional reward fields validation (case-insensitive)
   if ('rewardType' in (data as any) && (data as any).rewardType !== undefined) {
-    const rt = (data as any).rewardType
+    const rt = typeof (data as any).rewardType === 'string'
+      ? (data as any).rewardType.toLowerCase()
+      : (data as any).rewardType
     if (rt !== 'points' && rt !== 'sku' && rt !== 'monetary') {
       return false
     }

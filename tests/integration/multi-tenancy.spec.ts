@@ -398,7 +398,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
       data: {
         userId: tenant1UserId,
         workspaceId: tenant1WorkspaceId,
-        type: 'POINTS',
+        type: 'points',
         amount: 100,
         status: 'PENDING'
       }
@@ -408,7 +408,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
       data: {
         userId: tenant2UserId,
         workspaceId: tenant2WorkspaceId,
-        type: 'POINTS',
+        type: 'points',
         amount: 200,
         status: 'PENDING'
       }

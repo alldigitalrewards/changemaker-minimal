@@ -291,6 +291,8 @@ test.describe('Database Integration Tests', () => {
 
   test('JSON fields - verify JSON storage and retrieval', async () => {
     const workspace = await prisma.workspace.findFirst();
+    expect(workspace).not.toBeNull();
+    expect(workspace?.id).toBeDefined();
 
     // Test Challenge.rewardConfig JSON field
     const challenge = await prisma.challenge.create({
@@ -300,7 +302,7 @@ test.describe('Database Integration Tests', () => {
         startDate: new Date(),
         endDate: new Date(Date.now() + 86400000),
         workspaceId: workspace!.id,
-        rewardType: 'POINTS',
+        rewardType: 'points',
         rewardConfig: {
           pointsAmount: 100,
           bonusRules: [
@@ -354,6 +356,8 @@ test.describe('Database Integration Tests', () => {
 
   test('Timestamp updates - verify updatedAt is automatic', async () => {
     const workspace = await prisma.workspace.findFirst();
+    expect(workspace).not.toBeNull();
+    expect(workspace?.id).toBeDefined();
 
     const challenge = await prisma.challenge.create({
       data: {
