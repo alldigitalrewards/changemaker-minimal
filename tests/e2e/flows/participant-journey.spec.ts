@@ -126,7 +126,7 @@ test.describe('Participant Journey - End to End', () => {
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
         status: 'PUBLISHED',
-        rewardType: 'POINTS',
+        rewardType: 'points',
         rewardConfig: {
           pointsAmount: 100
         }
@@ -321,7 +321,7 @@ test.describe('Participant Journey - End to End', () => {
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
         status: 'PUBLISHED',
-        rewardType: 'POINTS',
+        rewardType: 'points',
         rewardConfig: {
           pointsAmount: 75,
           description: '75 points for completion'

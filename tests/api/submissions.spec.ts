@@ -43,7 +43,7 @@ test.describe('Submissions and Review API', () => {
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
         status: 'PUBLISHED',
-        rewardType: RewardType.POINTS,
+        rewardType: 'points',
         rewardConfig: {
           pointsAmount: 100
         }
@@ -194,7 +194,7 @@ test.describe('Submissions and Review API', () => {
       where: {
         userId: participantId,
         challengeId,
-        type: RewardType.POINTS
+        type: 'points'
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -240,7 +240,7 @@ test.describe('Submissions and Review API', () => {
     expect(updatedSubmission?.rewardIssued).toBe(true);
     expect(updatedSubmission?.rewardIssuanceId).toBeTruthy();
     expect(updatedSubmission?.rewardIssuance).toBeTruthy();
-    expect(updatedSubmission?.rewardIssuance?.type).toBe(RewardType.POINTS);
+    expect(updatedSubmission?.rewardIssuance?.type).toBe('points');
     expect(updatedSubmission?.rewardIssuance?.amount).toBe(50);
 
     // Cleanup
@@ -260,7 +260,7 @@ test.describe('Submissions and Review API', () => {
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
         status: 'PUBLISHED',
-        rewardType: RewardType.SKU,
+        rewardType: 'sku',
         rewardConfig: {
           skuId: 'TEST-SKU-001'
         }
@@ -306,7 +306,7 @@ test.describe('Submissions and Review API', () => {
       data: {
         status: 'APPROVED',
         reward: {
-          type: 'SKU',
+          type: 'sku',
           skuId: 'TEST-SKU-001'
         }
       }
@@ -319,7 +319,7 @@ test.describe('Submissions and Review API', () => {
       where: {
         userId: participantId,
         challengeId: skuChallenge.id,
-        type: RewardType.SKU
+        type: 'sku'
       }
     });
 
@@ -346,7 +346,7 @@ test.describe('Submissions and Review API', () => {
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
         status: 'PUBLISHED',
-        rewardType: RewardType.MONETARY,
+        rewardType: 'monetary',
         rewardConfig: {
           amount: 5000,
           currency: 'USD'
@@ -394,7 +394,7 @@ test.describe('Submissions and Review API', () => {
       data: {
         status: 'APPROVED',
         reward: {
-          type: 'MONETARY',
+          type: 'monetary',
           amount: 5000,
           currency: 'USD'
         }
@@ -408,7 +408,7 @@ test.describe('Submissions and Review API', () => {
       where: {
         userId: participantId,
         challengeId: monetaryChallenge.id,
-        type: RewardType.MONETARY
+        type: 'monetary'
       }
     });
 

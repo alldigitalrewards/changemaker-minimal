@@ -25,7 +25,7 @@ test.describe('Challenge CRUD API', () => {
       startDate: new Date(Date.now() + 86400000).toISOString(),
       endDate: new Date(Date.now() + 30 * 86400000).toISOString(),
       enrollmentDeadline: new Date(Date.now() + 7 * 86400000).toISOString(),
-      rewardType: 'POINTS',
+      rewardType: 'points',
       rewardConfig: {
         pointsAmount: 200,
         description: '200 points for completion',
@@ -46,7 +46,7 @@ test.describe('Challenge CRUD API', () => {
 
     expect(data.challenge.title).toBe(challengeData.title);
     expect(data.challenge.description).toBe(challengeData.description);
-    expect(data.challenge.rewardType).toBe('POINTS');
+    expect(data.challenge.rewardType).toBe('points');
     expect(data.challenge.rewardConfig.pointsAmount).toBe(200);
     expect(data.challenge.emailEditAllowed).toBe(false);
     expect(data.challenge.workspaceId).toBe(workspaceId);
@@ -219,7 +219,7 @@ test.describe('Challenge CRUD API', () => {
         startDate: new Date(Date.now() + 86400000),
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
-        rewardType: 'POINTS',
+        rewardType: 'points',
         rewardConfig: {
           pointsAmount: 100
         }
@@ -227,7 +227,7 @@ test.describe('Challenge CRUD API', () => {
     });
 
     const updateData = {
-      rewardType: 'SKU',
+      rewardType: 'sku',
       rewardConfig: {
         skuId: 'NEW-SKU-001',
         quantity: 1,
@@ -243,7 +243,7 @@ test.describe('Challenge CRUD API', () => {
     expect(response.status()).toBe(200);
     const data = await response.json();
 
-    expect(data.challenge.rewardType).toBe('SKU');
+    expect(data.challenge.rewardType).toBe('sku');
     expect(data.challenge.rewardConfig.skuId).toBe('NEW-SKU-001');
 
     // Cleanup

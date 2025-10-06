@@ -44,7 +44,7 @@ test.describe('Multi-Reward System API', () => {
       description: 'Test challenge with points reward',
       startDate: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
       endDate: new Date(Date.now() + 30 * 86400000).toISOString(), // 30 days
-      rewardType: 'POINTS',
+      rewardType: 'points',
       rewardConfig: {
         pointsAmount: 100,
         description: '100 points for completion'
@@ -58,7 +58,7 @@ test.describe('Multi-Reward System API', () => {
 
     expect(response.status()).toBe(200);
     const data = await response.json();
-    expect(data.challenge.rewardType).toBe('POINTS');
+    expect(data.challenge.rewardType).toBe('points');
     expect(data.challenge.rewardConfig).toBeTruthy();
     expect(data.challenge.rewardConfig.pointsAmount).toBe(100);
 
@@ -72,7 +72,7 @@ test.describe('Multi-Reward System API', () => {
       description: 'Test challenge with SKU reward',
       startDate: new Date(Date.now() + 86400000).toISOString(),
       endDate: new Date(Date.now() + 30 * 86400000).toISOString(),
-      rewardType: 'SKU',
+      rewardType: 'sku',
       rewardConfig: {
         skuId: 'TEST-SKU-001',
         quantity: 1,
@@ -87,7 +87,7 @@ test.describe('Multi-Reward System API', () => {
 
     expect(response.status()).toBe(200);
     const data = await response.json();
-    expect(data.challenge.rewardType).toBe('SKU');
+    expect(data.challenge.rewardType).toBe('sku');
     expect(data.challenge.rewardConfig).toBeTruthy();
     expect(data.challenge.rewardConfig.skuId).toBe('TEST-SKU-001');
 
@@ -101,7 +101,7 @@ test.describe('Multi-Reward System API', () => {
       description: 'Test challenge with monetary reward',
       startDate: new Date(Date.now() + 86400000).toISOString(),
       endDate: new Date(Date.now() + 30 * 86400000).toISOString(),
-      rewardType: 'MONETARY',
+      rewardType: 'monetary',
       rewardConfig: {
         amount: 5000, // $50.00
         currency: 'USD',
@@ -116,7 +116,7 @@ test.describe('Multi-Reward System API', () => {
 
     expect(response.status()).toBe(200);
     const data = await response.json();
-    expect(data.challenge.rewardType).toBe('MONETARY');
+    expect(data.challenge.rewardType).toBe('monetary');
     expect(data.challenge.rewardConfig).toBeTruthy();
     expect(data.challenge.rewardConfig.amount).toBe(5000);
     expect(data.challenge.rewardConfig.currency).toBe('USD');
@@ -134,7 +134,7 @@ test.describe('Multi-Reward System API', () => {
         startDate: new Date(Date.now() - 86400000), // Yesterday (active)
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
-        rewardType: RewardType.POINTS,
+        rewardType: 'points',
         rewardConfig: {
           pointsAmount: 50,
           description: '50 points reward'
@@ -202,7 +202,7 @@ test.describe('Multi-Reward System API', () => {
       where: {
         userId: participantId,
         challengeId: challenge.id,
-        type: RewardType.POINTS
+        type: 'points'
       }
     });
 
@@ -237,7 +237,7 @@ test.describe('Multi-Reward System API', () => {
         startDate: new Date(Date.now() - 86400000),
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
-        rewardType: RewardType.SKU,
+        rewardType: 'sku',
         rewardConfig: {
           skuId: 'TEST-SKU-002',
           quantity: 1
@@ -285,7 +285,7 @@ test.describe('Multi-Reward System API', () => {
       data: {
         status: 'APPROVED',
         reward: {
-          type: 'SKU',
+          type: 'sku',
           skuId: 'TEST-SKU-002'
         }
       }
@@ -298,7 +298,7 @@ test.describe('Multi-Reward System API', () => {
       where: {
         userId: participantId,
         challengeId: challenge.id,
-        type: RewardType.SKU
+        type: 'sku'
       }
     });
 
@@ -320,7 +320,7 @@ test.describe('Multi-Reward System API', () => {
       data: {
         userId: participantId,
         workspaceId,
-        type: RewardType.POINTS,
+        type: 'points',
         amount: 100,
         status: RewardStatus.PENDING
       }
@@ -350,26 +350,22 @@ test.describe('Multi-Reward System API', () => {
     const tenantSku = await prisma.tenantSku.create({
       data: {
         tenantId: 'default',
-        internalSkuCode: 'INTERNAL-001',
-        externalSkuCode: 'EXTERNAL-001',
-        provider: 'test-provider',
-        metadata: {
-          name: 'Test Product',
-          description: 'Test SKU mapping'
-        }
+        skuId: 'TEST-SKU-001',
+        label: 'Test Product',
+        provider: 'test-provider'
       }
     });
 
     expect(tenantSku.tenantId).toBe('default');
-    expect(tenantSku.internalSkuCode).toBe('INTERNAL-001');
-    expect(tenantSku.externalSkuCode).toBe('EXTERNAL-001');
+    expect(tenantSku.skuId).toBe('TEST-SKU-001');
+    expect(tenantSku.label).toBe('Test Product');
 
-    // Test unique constraint
+    // Test unique constraint (tenantId + skuId)
     const duplicateAttempt = prisma.tenantSku.create({
       data: {
         tenantId: 'default',
-        internalSkuCode: 'INTERNAL-001', // Same code
-        externalSkuCode: 'DIFFERENT-001',
+        skuId: 'TEST-SKU-001', // Same skuId for same tenant
+        label: 'Different Label',
         provider: 'test-provider'
       }
     });
