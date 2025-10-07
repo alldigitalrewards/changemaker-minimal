@@ -1,0 +1,160 @@
+# Product Requirements Document - Changemaker Platform Enhancement
+## Challenge Progression and Rewards System
+
+### Executive Summary
+Implement a comprehensive challenge progression system with point-based rewards, wallet management, and approval workflows. This enhancement will provide gamification elements to increase user engagement while preparing for future RewardSTACK API integration.
+
+### Feature Set 1: Challenge Progression System
+The challenge progression feature will track participant progress through multiple stages from initial submission to final verification and reward issuance.
+
+#### Requirements:
+- Implement challenge progression states: submitted, approved, in_development, in_production, verified, completed
+- Create activity templates that define point values for different challenge activities
+- Build submission tracking system for participant documentation
+- Implement approval workflow for admin review and validation
+- Add progression visualization for participants to track their status
+- Create notifications for state transitions
+- Implement rollback capability for rejected submissions
+
+### Feature Set 2: Mock Point System and Wallets
+Develop a mock point system with wallet functionality for testing reward mechanics before RewardSTACK integration.
+
+#### Requirements:
+- Design database schema for points, wallets, and transactions
+- Implement user wallet system with point balance tracking
+- Create admin workspace wallets for point distribution testing
+- Build point allocation system based on activity templates
+- Implement point awarding upon challenge approval
+- Create transaction history and audit trail
+- Add point balance display in participant dashboard
+- Implement mock point transfers between wallets
+- Build adapter pattern interface for future RewardSTACK API integration
+- Create configuration system for point values and multipliers
+
+### Feature Set 3: Admin Wallet and Funding System
+Implement workspace-level admin wallets for managing and distributing points within each workspace.
+
+#### Requirements:
+- Create workspace wallet entity separate from user wallets
+- Implement funding mechanism for workspace wallets
+- Build point distribution controls for admins
+- Add budget tracking and remaining balance displays
+- Create approval limits and authorization levels
+- Implement mock integration points for R.A. (Reporting and Accounting) system
+- Design abstraction layer for future Stripe payment integration
+- Add workspace wallet analytics and reporting
+
+### Feature Set 4: Enhanced Participant Management
+Upgrade the admin participant management interface with advanced filtering and bulk actions.
+
+#### Requirements:
+- Implement advanced filtering by status, points, enrollment date, activity level
+- Add sorting capabilities for all participant attributes
+- Create bulk action functionality (approve, reject, award points)
+- Implement participant search with autocomplete
+- Add participant profile quick view modal
+- Create participant activity timeline view
+- Implement export functionality for participant data
+- Add participant grouping and tagging system
+- Create participant invitation system with email templates
+- Build participant onboarding flow tracking
+
+### Feature Set 5: Integration Preparation Layer
+Build the foundation for future RewardSTACK and payment system integrations.
+
+#### Requirements:
+- Design service interface for reward fulfillment APIs
+- Create mock RewardSTACK service with simulated responses
+- Implement configuration system for API endpoints and credentials
+- Build error handling and retry logic for external services
+- Create mapping system between internal points and external reward values
+- Implement webhook handlers for async reward processing
+- Design queue system for reward fulfillment requests
+- Add monitoring and alerting for integration health
+- Create fallback mechanisms for service unavailability
+- Build integration testing framework
+
+### Technical Requirements
+
+#### Database Schema Updates:
+- Add Wallet model with userId, workspaceId, balance, type fields
+- Create Transaction model for point movements
+- Add ActivityTemplate model for point value definitions
+- Extend Challenge model with progression state fields
+- Create ChallengeSubmission model for participant documentation
+- Add ApprovalHistory model for audit trail
+
+#### API Endpoints:
+- POST /api/w/[slug]/wallets - Create wallet
+- GET /api/w/[slug]/wallets/[id] - Get wallet details
+- POST /api/w/[slug]/wallets/[id]/transactions - Create transaction
+- GET /api/w/[slug]/participants/[id]/points - Get participant points
+- POST /api/w/[slug]/challenges/[id]/submissions - Submit documentation
+- PUT /api/w/[slug]/challenges/[id]/submissions/[submissionId]/approve - Approve submission
+- GET /api/w/[slug]/admin/participants - Enhanced participant list with filters
+- POST /api/w/[slug]/admin/participants/bulk-action - Bulk operations
+- POST /api/w/[slug]/admin/workspace-wallet/fund - Fund workspace wallet
+- GET /api/w/[slug]/activity-templates - Get point value configurations
+
+#### UI Components:
+- PointBalance component for displaying user points
+- WalletCard component for wallet summary
+- TransactionHistory component for transaction list
+- ProgressionTracker component for challenge status
+- ParticipantFilter component for advanced filtering
+- BulkActionToolbar component for multi-select operations
+- ActivityTemplateEditor for configuring point values
+- ApprovalQueue component for pending submissions
+- WorkspaceWalletManager for admin wallet controls
+
+### Security Considerations
+- Implement transaction validation to prevent negative balances
+- Add rate limiting for point-related operations
+- Create audit logging for all wallet transactions
+- Implement role-based access for wallet management
+- Add encryption for sensitive wallet data
+- Implement idempotency keys for transaction creation
+- Create fraud detection rules for abnormal point movements
+
+### Performance Requirements
+- Wallet balance queries must respond within 200ms
+- Bulk participant operations should handle up to 100 records
+- Transaction history should paginate at 50 records
+- Point calculations must be atomic and consistent
+- Implement caching for frequently accessed wallet data
+
+### Migration Strategy
+- Phase 1: Deploy mock system with dummy data
+- Phase 2: Beta test with selected workspaces
+- Phase 3: Gradual rollout to all workspaces
+- Phase 4: RewardSTACK integration preparation
+- Phase 5: Production RewardSTACK integration
+
+### Success Metrics
+- User engagement increase of 30% through gamification
+- 90% of participants viewing their point balance weekly
+- Admin satisfaction score > 4.5/5 for participant management
+- Zero point calculation errors in production
+- Successful processing of 95% of reward fulfillments
+
+### Dependencies
+- Existing authentication and workspace system
+- Current challenge and enrollment infrastructure
+- Supabase database and Prisma ORM
+- Next.js API routes and server actions
+- shadcn/ui component library
+
+### Timeline Estimates
+- Mock Point System: 2-3 sprints
+- Wallet Implementation: 1-2 sprints
+- Participant Management: 1 sprint
+- Integration Prep: 2 sprints
+- Testing and Refinement: 1 sprint
+
+### Risk Mitigation
+- Design with clear abstraction boundaries to prevent lock-in
+- Implement comprehensive testing for point calculations
+- Create rollback procedures for failed transactions
+- Document all integration points thoroughly
+- Build monitoring dashboards for system health
+- Establish clear data migration paths

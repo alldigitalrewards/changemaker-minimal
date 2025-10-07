@@ -1,0 +1,1663 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": "2",
+        "title": "Add PointTransaction Model for Audit Trail",
+        "description": "Add PointTransaction model to the existing Prisma schema for comprehensive audit trail tracking, building on existing PointsBalance, ActivityTemplate, and ActivitySubmission models.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "details": "Extend the existing `schema.prisma` with PointTransaction model for audit trail: PointTransaction (id UUID, userId UUID FK, workspaceId UUID FK, amount Int, type enum EARNED/SPENT/ADJUSTED, description String, activitySubmissionId UUID nullable FK, challengeId UUID nullable FK, metadata Json nullable, createdAt). The existing PointsBalance model serves as the wallet, ActivityTemplate already has basePoints field, and ActivitySubmission has pointsAwarded field. Focus on transaction history and service layer orchestration.",
+        "testStrategy": "Run Prisma migrations, verify PointTransaction model integrates with existing PointsBalance, ActivityTemplate, and ActivitySubmission models. Test transaction recording, foreign key constraints, enum validations, and service layer orchestration via Prisma Studio.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Define PointTransaction Model for Audit Trail",
+            "description": "Add PointTransaction model to Prisma schema for comprehensive transaction history tracking",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Add PointTransaction model with: id (UUID), userId (UUID, foreign key), workspaceId (UUID, foreign key), amount (Int), type (enum: EARNED, SPENT, ADJUSTED), description (String), activitySubmissionId (UUID, nullable, foreign key), challengeId (UUID, nullable, foreign key), metadata (Json, nullable), createdAt. Ensure proper foreign key constraints to existing models.",
+            "testStrategy": "Verify schema changes with Prisma migrations and field constraints. Test creating point transactions linked to existing PointsBalance, ActivitySubmission, and Challenge records.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Enhance Existing Model Relationships",
+            "description": "Add necessary relationship fields to existing models for PointTransaction integration",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Add relationship fields to existing models: PointsBalance should have pointTransactions relation, ActivitySubmission should have pointTransactions relation, Challenge should have pointTransactions relation. Ensure proper cascade delete rules.",
+            "testStrategy": "Verify relationship mappings work correctly and foreign key constraints are properly enforced. Test querying transactions through related models.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Apply Schema Changes with Migration",
+            "description": "Run Prisma migrations to apply PointTransaction model and relationship changes",
+            "status": "pending",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Execute `pnpm prisma migrate dev` to update the database schema with PointTransaction model and enhanced relationships. Ensure no breaking changes to existing PointsBalance, ActivityTemplate, ActivitySubmission, Challenge, User, Workspace, and Enrollment models.",
+            "testStrategy": "Verify database schema updates and migration success. Confirm existing models remain unchanged and functional with new relationships.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Regenerate Prisma Client with New Types",
+            "description": "Regenerate Prisma Client to include PointTransaction model types and enums",
+            "status": "pending",
+            "dependencies": [
+              3
+            ],
+            "details": "Run `pnpm prisma generate` to regenerate Prisma Client with new types for PointTransaction model and TransactionType enums, ensuring integration with existing model types.",
+            "testStrategy": "Verify new PointTransaction types are available in TypeScript and can be imported in application code alongside existing model types.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Create Point Service Layer for Transaction Orchestration",
+            "description": "Develop service layer to orchestrate PointsBalance updates with PointTransaction audit trail",
+            "status": "pending",
+            "dependencies": [
+              4
+            ],
+            "details": "Create PointService class in /lib/services/points.ts that orchestrates: updating PointsBalance records, creating corresponding PointTransaction audit entries, handling ActivitySubmission point awards, managing Challenge completion rewards. Ensure atomic database transactions.",
+            "testStrategy": "Test service layer methods ensure PointsBalance and PointTransaction records are created/updated atomically. Verify rollback behavior on failures.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Test Schema Integration via Prisma Studio",
+            "description": "Create sample data and verify PointTransaction integration using Prisma Studio",
+            "status": "pending",
+            "dependencies": [
+              5
+            ],
+            "details": "Use Prisma Studio to test scenarios: Create PointTransaction for activity submission, Record challenge completion transaction, Test point adjustment transactions, Verify foreign key constraints to PointsBalance/ActivitySubmission/Challenge, Test enum validations, Verify audit trail completeness.",
+            "testStrategy": "Create comprehensive test data via Prisma Studio covering transaction history scenarios and verify all relationships, constraints, and service layer orchestration work correctly with existing models.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "title": "Implement Challenge Progression States",
+        "description": "Implement challenge progression state system with enum field and state machine service, integrating with existing PointsBalance for point awards.",
+        "status": "pending",
+        "dependencies": [
+          "2"
+        ],
+        "priority": "medium",
+        "details": "Add progressionState enum field to existing Challenge model with states: submitted, approved, in_development, in_production, verified, completed. Create ChallengeProgressionService class for managing state transitions without external libraries. Build API routes at /api/w/[slug]/challenges/[id]/progression for state updates. Integrate with existing PointsBalance system when progression triggers point awards. Simple implementation focused solely on challenge progression states.",
+        "testStrategy": "Test challenge progression state machine and API routes for state updates using unit tests and integration tests. Verify proper integration with existing PointsBalance system for automatic point awards.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Add ProgressionState Enum to Challenge Model",
+            "description": "Add progressionState enum field to existing Challenge model with defined states.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Add progressionState enum field to Challenge model with states: submitted, approved, in_development, in_production, verified, completed. Update database migration and model validation to support the new field. Ensure compatibility with existing Challenge model structure.",
+            "testStrategy": "Unit tests for model validation with new enum field and database migration tests.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Create ChallengeProgressionService for State Transitions",
+            "description": "Implement simple state machine service for managing challenge progression states without external libraries.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "details": "Create ChallengeProgressionService class with methods for state transitions: submitChallenge(), approveChallenge(), moveToInDevelopment(), moveToInProduction(), verifyChallenge(), completeChallenge(). Implement validation for allowed state transitions and define transition rules. Include error handling for invalid transitions and proper state validation.",
+            "testStrategy": "Unit tests for state machine logic, valid and invalid transitions, and state transition validation.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Integrate Challenge Progression with Existing PointsBalance System",
+            "description": "Connect challenge progression state changes with existing PointsBalance for automatic point awards.",
+            "status": "pending",
+            "dependencies": [
+              2
+            ],
+            "details": "Integrate ChallengeProgressionService with existing PointsBalance system to automatically award points on specific state transitions. Implement point award rules: Challenge submission = 10 points, Challenge approval = 50 points, Challenge completion = 100 points. Ensure proper error handling and transaction consistency when awarding points.",
+            "testStrategy": "Integration tests for automatic point awards on state changes and proper integration with existing PointsBalance system.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Build Challenge Progression API Routes",
+            "description": "Create API routes for challenge progression state updates at /api/w/[slug]/challenges/[id]/progression.",
+            "status": "pending",
+            "dependencies": [
+              3
+            ],
+            "details": "Implement API routes: PUT /api/w/[slug]/challenges/[id]/progression for updating challenge state, GET /api/w/[slug]/challenges/[id]/progression for retrieving current state. Include proper validation for state transitions, workspace isolation, and integration with automatic point awards through PointsBalance system.",
+            "testStrategy": "Integration tests for progression API routes, state transition validation, workspace isolation, and automatic point award integration.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Integrate Challenge Progression with Existing Challenge System",
+            "description": "Integrate the new progression state machine with existing challenge workflows.",
+            "status": "pending",
+            "dependencies": [
+              4
+            ],
+            "details": "Update existing challenge creation, submission, and management workflows to use the new progression states. Ensure seamless integration with current challenge functionality while maintaining backward compatibility. Update challenge display and management interfaces to show progression state.",
+            "testStrategy": "Integration tests for challenge workflow updates and backward compatibility verification.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Test Comprehensive Challenge Progression System",
+            "description": "Conduct comprehensive testing of challenge progression functionality and PointsBalance integration.",
+            "status": "pending",
+            "dependencies": [
+              5
+            ],
+            "details": "Use unit tests and integration tests to ensure proper challenge progression state machine functionality, API route operations, and PointsBalance integration. Test specific scenarios: challenge state transitions, automatic point awards (10 points for submission, 50 for approval, 100 for completion), invalid transition handling, and workspace isolation.",
+            "testStrategy": "Jest for unit and integration testing, focusing on challenge progression state machine, API functionality, PointsBalance integration, and comprehensive test scenarios including state transitions and point award verification.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "7",
+        "title": "Build Admin Dashboard for Points & Progression",
+        "description": "Build admin dashboard features for managing challenge progression states and points using existing models. Display PointsBalance (the wallet), PointTransaction history, and challenge progression controls. Add UI for funding workspace PointsBalance, distributing points to users, and managing challenge state transitions using existing /app/w/[slug]/admin structure.",
+        "status": "pending",
+        "dependencies": [
+          "4"
+        ],
+        "priority": "medium",
+        "details": "Create admin dashboard components in `/app/w/[slug]/admin` for managing workspace points and challenges. Build UI components using shadcn/ui to display PointsBalance wallets, PointTransaction history, and challenge progression controls. Implement forms for funding workspace PointsBalance, distributing points to users, and managing challenge state transitions. Integrate with existing models (PointsBalance, PointTransaction, ActivityTemplate, ActivitySubmission) and admin structure.",
+        "testStrategy": "Test admin dashboard components using Jest and React Testing Library, ensuring proper integration with existing models, form validation, state management, and UI responsiveness. Test admin permissions and data flow.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Admin Points Management Dashboard Layout",
+            "description": "Build the main admin dashboard layout for points and challenge management using existing admin structure.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Create admin dashboard page at `/app/w/[slug]/admin/points` using existing admin layout structure. Implement responsive layout with sections for workspace wallet overview, user points distribution, and challenge management. Use shadcn/ui components for consistent styling and navigation integration with existing admin sidebar.",
+            "testStrategy": "Test dashboard layout responsiveness, navigation integration, and proper rendering of admin sections using React Testing Library.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Build Workspace PointsBalance Wallet Display Component",
+            "description": "Create UI component to display and manage workspace PointsBalance wallet with funding capabilities.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "details": "Build WalletOverview component displaying current workspace PointsBalance, recent transactions, and funding controls. Include funding form with amount input, validation, and confirmation dialog. Use shadcn/ui Card, Input, Button, and Dialog components. Integrate with existing PointsBalance model and transaction recording.",
+            "testStrategy": "Test wallet display accuracy, funding form validation, transaction recording, and UI state management using Jest and React Testing Library.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement PointTransaction History Table Component",
+            "description": "Create comprehensive transaction history table with filtering and pagination using existing PointTransaction model.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Build TransactionHistory component with sortable table displaying PointTransaction records. Include filters for transaction type (EARNED/SPENT/ADJUSTED), date range, and user. Implement pagination and search functionality. Use shadcn/ui Table, Select, DatePicker, and Pagination components. Show transaction details including amount, type, description, and related activity/challenge.",
+            "testStrategy": "Test transaction table rendering, filtering logic, pagination, sorting, and search functionality with mock PointTransaction data.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Create User Points Distribution Interface",
+            "description": "Build UI for distributing points to individual users or groups with validation and confirmation.",
+            "status": "pending",
+            "dependencies": [
+              2
+            ],
+            "details": "Implement PointsDistribution component with user selection (individual or bulk), amount input, reason description, and distribution type selection. Include user search/autocomplete, validation for sufficient workspace balance, and confirmation dialog showing distribution summary. Use shadcn/ui Form, Select, Input, and Dialog components.",
+            "testStrategy": "Test user selection, amount validation, balance checking, distribution confirmation, and proper PointTransaction creation using React Testing Library.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Build Challenge Progression Management Controls",
+            "description": "Create admin interface for managing challenge states and progression using existing ActivityTemplate and ActivitySubmission models.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "details": "Build ChallengeManager component displaying active challenges (ActivityTemplates), participant progress (ActivitySubmissions), and state management controls. Include challenge activation/deactivation, progress monitoring, and manual progression controls. Use shadcn/ui components for challenge cards, progress indicators, and action buttons.",
+            "testStrategy": "Test challenge display, state transitions, progress tracking, and integration with existing ActivityTemplate and ActivitySubmission models.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Implement Admin Points Analytics Dashboard",
+            "description": "Create analytics dashboard showing points flow, user engagement metrics, and challenge performance using existing data models.",
+            "status": "pending",
+            "dependencies": [
+              3
+            ],
+            "details": "Build PointsAnalytics component with charts and metrics for points distribution, transaction trends, user engagement, and challenge completion rates. Use existing PointTransaction and ActivitySubmission data for analytics. Implement date range selection and metric filtering. Use shadcn/ui components and chart library integration.",
+            "testStrategy": "Test analytics calculations, chart rendering, date filtering, and data accuracy using mock transaction and submission data.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 7,
+            "title": "Add Admin Permission Guards and API Routes",
+            "description": "Implement admin-only access controls and API endpoints for points management operations.",
+            "status": "pending",
+            "dependencies": [
+              2,
+              4,
+              5
+            ],
+            "details": "Create API routes at `/api/admin/points/*` for wallet funding, points distribution, and challenge management. Implement admin permission middleware using existing role-based access control. Add proper error handling, validation, and audit logging for admin operations. Ensure integration with existing PointsBalance and PointTransaction models.",
+            "testStrategy": "Test admin permission enforcement, API endpoint functionality, error handling, and proper integration with existing authentication and authorization systems.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "8",
+        "title": "Build Participant Dashboard",
+        "description": "Build participant dashboard at /app/w/[slug]/participant showing their PointsBalance, PointTransaction history, challenge progression, and ActivitySubmission status. Display earned points from completed activities, available challenges with potential points, and submission progress using existing models and shadcn/ui components.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "details": "Create participant-focused dashboard components using existing models (PointsBalance, PointTransaction, Challenge, ActivityTemplate, ActivitySubmission) and shadcn/ui library. Build PointsBalance display with earned points from completed activities, PointTransaction history table, challenge progression tracker showing available challenges with potential points from ActivityTemplate.basePoints, and ActivitySubmission status indicators. Focus on participant experience with proper data filtering and user context.",
+        "testStrategy": "Test participant dashboard components using Cypress and Jest for functionality, data integration with existing models, and responsive behavior. Verify proper participant data isolation and user experience flows.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Participant Dashboard Route Structure",
+            "description": "Create the participant dashboard route at /app/w/[slug]/participant and establish the basic layout structure.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Set up Next.js route structure for /app/w/[slug]/participant, create main dashboard layout component, and establish data fetching patterns for participant-specific information using existing models.",
+            "testStrategy": "Verify route accessibility and basic layout rendering with Cypress.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement Participant PointsBalance Component",
+            "description": "Build PointsBalance display component showing participant's earned points from completed activities.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "details": "Create component to display participant's current PointsBalance with format '1,234 points' and coin icon. Show earned points from completed ActivitySubmissions and animate balance changes. Integrate with existing PointsBalance model.",
+            "testStrategy": "Test points display, animations, and data integration with existing PointsBalance model using Cypress.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement PointTransaction History Component",
+            "description": "Build transaction history table showing participant's point transaction records.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "details": "Create table component displaying PointTransaction history with columns: Date, Type, Description, Amount, Balance After. Filter transactions for current participant only and include basic filtering capabilities.",
+            "testStrategy": "Test transaction history rendering, participant data isolation, and filtering functionality.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement Challenge Progression Display",
+            "description": "Build component showing available challenges and their potential points from ActivityTemplate.basePoints.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "details": "Display available challenges with potential points from ActivityTemplate.basePoints, show challenge progression states, and highlight challenges the participant can engage with. Use existing Challenge and ActivityTemplate models.",
+            "testStrategy": "Test challenge display, points calculation from ActivityTemplate.basePoints, and progression state visualization.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement ActivitySubmission Status Component",
+            "description": "Build component showing participant's activity submission progress and status.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "details": "Display participant's ActivitySubmission records with status indicators, submission progress, and completion tracking. Show which activities are in progress, submitted, or completed.",
+            "testStrategy": "Test submission status display, progress tracking, and data integration with ActivitySubmission model.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Apply Changemaker Coral Theme to Dashboard",
+            "description": "Ensure all participant dashboard components use consistent Changemaker coral theme styling.",
+            "status": "pending",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5
+            ],
+            "details": "Apply coral theme colors, typography, and spacing to all dashboard components. Ensure consistency with existing design system and responsive behavior across devices.",
+            "testStrategy": "Use Cypress to test styling consistency and responsiveness across different viewport sizes.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 7,
+            "title": "Implement Data Integration and State Management",
+            "description": "Set up proper data fetching, caching, and state management for participant dashboard.",
+            "status": "pending",
+            "dependencies": [
+              6
+            ],
+            "details": "Implement efficient data fetching for PointsBalance, PointTransaction, Challenge, ActivityTemplate, and ActivitySubmission models. Set up proper error handling, loading states, and real-time updates where appropriate.",
+            "testStrategy": "Test data loading, error handling, and state management using Jest and Cypress integration tests.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 8,
+            "title": "Add Participant Authentication and Authorization",
+            "description": "Ensure proper participant authentication and data access controls for the dashboard.",
+            "status": "pending",
+            "dependencies": [
+              7
+            ],
+            "details": "Implement participant authentication checks, ensure users can only access their own data, and integrate with existing role-based access control system for proper data isolation.",
+            "testStrategy": "Test authentication flows and data access controls to ensure participants can only view their own information.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 9,
+            "title": "Implement Dashboard Interactivity and Navigation",
+            "description": "Add interactive features and navigation elements to enhance participant experience.",
+            "status": "pending",
+            "dependencies": [
+              8
+            ],
+            "details": "Add interactive elements like expandable transaction details, challenge engagement buttons, activity submission links, and smooth navigation between dashboard sections.",
+            "testStrategy": "Test interactive features, navigation flows, and user experience using Cypress end-to-end tests.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 10,
+            "title": "Final Testing and Deployment of Participant Dashboard",
+            "description": "Conduct comprehensive testing of the complete participant dashboard and deploy the changes.",
+            "status": "pending",
+            "dependencies": [
+              9
+            ],
+            "details": "Run full test suite including unit tests for component logic, integration tests for data flow with existing models, and end-to-end tests for participant workflows. Verify proper data isolation, performance, and user experience.",
+            "testStrategy": "Execute complete Jest and Cypress test suites, perform user acceptance testing with participant personas, and validate data security before deployment.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "9",
+        "title": "Enhance Admin Participant Management",
+        "description": "Enhance existing /app/w/[slug]/admin/participants page with advanced filtering, sorting, and bulk actions. Focus on comprehensive participant management features including filtering by enrollment status, points range, and activity level; sorting by name, points, and date; and bulk point distribution capabilities.",
+        "status": "pending",
+        "dependencies": [
+          "8"
+        ],
+        "priority": "high",
+        "details": "Complete rewrite and enhancement of the existing /app/w/[slug]/admin/participants page with comprehensive participant management features including filtering by enrollment status, points range, and activity level; sorting by name, points, and date; and bulk point distribution capabilities using existing User, PointsBalance, and ActivitySubmission models with shadcn/ui components.",
+        "testStrategy": "Test participant management features with various data sets and user scenarios, including filtering, sorting, and bulk operations. Verify performance and accuracy with large datasets and different user permissions.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Complete Rewrite of Participant Management Page with Advanced Filtering",
+            "description": "Completely rewrite the existing /app/w/[slug]/admin/participants page with comprehensive filtering capabilities including enrollment status, points range, and activity level filters.",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Perform a complete rewrite of the participants page using shadcn/ui components. Implement filtering by enrollment status, points balance ranges, and activity level using existing User, PointsBalance, and ActivitySubmission models. Create efficient database queries to support filtering and ensure optimal performance with large datasets.",
+            "testStrategy": "Test filtering functionality with various combinations of filters and large datasets. Verify performance and accuracy of filtered results using existing model data.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement Comprehensive Sorting and Enhanced Participant Display",
+            "description": "Add sorting capabilities by name, points, and date, and enhance participant display to show PointsBalance, recent ActivitySubmissions, and enrollment status.",
+            "status": "pending",
+            "dependencies": [
+              1
+            ],
+            "details": "Implement multi-column sorting functionality for participant lists (name, points, enrollment date). Create enhanced participant display components using shadcn/ui that show current PointsBalance, recent ActivitySubmissions, and enrollment status. Integrate with existing User, PointsBalance, and ActivitySubmission models for real-time data display.",
+            "testStrategy": "Test sorting functionality across different criteria and data sets. Verify that participant information displays correctly with real-time updates and proper integration with existing models.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement Bulk Point Distribution with Comprehensive Validation",
+            "description": "Add bulk point distribution feature with comprehensive validation and integration with existing transaction systems.",
+            "status": "pending",
+            "dependencies": [
+              2
+            ],
+            "details": "Create bulk point distribution interface using shadcn/ui components with participant selection capabilities. Implement comprehensive validation including point amount limits, participant eligibility checks, and workspace balance verification. Integrate with existing PointsBalance and transaction systems for secure bulk operations.",
+            "testStrategy": "Test bulk operations with various participant selections and point amounts. Verify all validation rules are enforced, transactions are properly processed, and integration with existing systems works correctly.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "10",
+        "title": "Integration Testing & Documentation",
+        "description": "Comprehensive testing of all new features and documentation.",
+        "status": "in-progress",
+        "dependencies": [
+          "9"
+        ],
+        "priority": "high",
+        "details": "Run full test suite for PointTransaction model, Challenge progression states, admin dashboard, participant dashboard, and participant management. Create API documentation, update README with new features, document point award rules and progression states. Verify integration with existing systems.",
+        "testStrategy": "Iterate on feedback from testing to refine the implementation, ensuring all new features work harmoniously with existing codebase.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Test PointTransaction Model Integration",
+            "description": "Run comprehensive tests for PointTransaction model with existing PointsBalance, ActivityTemplate, and ActivitySubmission models",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Test Challenge Progression State System",
+            "description": "Execute full test suite for challenge progression states, state transitions, and ChallengeProgressionService",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Test Admin Dashboard Functionality",
+            "description": "Verify admin dashboard features including point management, challenge oversight, and participant management",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Test Participant Dashboard Features",
+            "description": "Test participant dashboard including wallet display, challenge progression tracking, and point transaction history",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Verify System Integration Points",
+            "description": "Test integration between new features and existing challenge and enrollment systems",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Create API Documentation",
+            "description": "Document all new API endpoints for PointTransaction, challenge progression, and dashboard features",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-07T04:51:21.015Z"
+          },
+          {
+            "id": 7,
+            "title": "Update README with New Features",
+            "description": "Update project README to include documentation for wallet functionality, challenge progression, and point management",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 8,
+            "title": "Document Point Award Rules and Progression States",
+            "description": "Create comprehensive documentation for point award mechanisms and challenge progression state definitions",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-07T04:51:24.142Z"
+          }
+        ],
+        "updatedAt": "2025-10-07T04:51:24.142Z"
+      },
+      {
+        "id": "11",
+        "title": "Apply Database Migration for User.isPending Column Fix",
+        "description": "Apply the missing database migration 20250919223129_add_invite_email_targeting to the remote database to resolve the User.isPending column issue and ensure proper user invitation functionality.",
+        "details": "Execute the database migration 20250919223129_add_invite_email_targeting on the remote database environment to fix the User.isPending column issue. This involves: 1) Verify current database schema state and identify missing columns/indexes related to user invitation targeting, 2) Review the migration file contents to understand the changes being applied (likely adding isPending column and related invite_email_targeting functionality), 3) Create a database backup before applying the migration, 4) Execute the migration using the appropriate database migration tool (e.g., `npm run db:migrate` or similar command), 5) Verify the migration was applied successfully by checking the database schema and migration history table, 6) Test user invitation functionality to ensure isPending column is working correctly, 7) Monitor for any related errors in application logs post-migration. Pay special attention to any foreign key constraints or indexes that may be affected by this migration.",
+        "testStrategy": "Verify migration success by: 1) Confirming the User table now contains the isPending column with correct data type and constraints, 2) Checking migration history table shows 20250919223129_add_invite_email_targeting as completed, 3) Testing user invitation flow to ensure isPending status is properly set and updated, 4) Verifying existing user records maintain data integrity after migration, 5) Running application health checks to ensure no functionality is broken, 6) Testing user authentication and authorization flows that may depend on isPending status, 7) Monitoring application logs for any database-related errors for 24 hours post-migration.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "12",
+        "title": "Implement Admin Participant Detail Page",
+        "description": "Create comprehensive admin participant detail page with full management capabilities",
+        "details": "Create `app/w/[slug]/admin/participants/[id]/page.tsx` with server component that:\n1. Validates admin role using `getUserWorkspaceRole(slug)`\n2. Fetches participant data with User, WorkspaceMembership, Enrollments, PointsBalance, and ActivityEvents\n3. Renders participant-detail-card.tsx with email, role, joined date\n4. Includes action buttons: EmailActions, ParticipantRoleToggle, ChallengeAssignment, RemoveParticipantAction\n5. Shows statistics section with enrollment counts and points balance\n6. Displays enrollments table with RemoveEnrollmentButton for each\n7. Implements activity timeline showing recent ActivityEvents\n8. Handles unauthorized access with proper redirects\n9. Implements proper error boundaries and loading states",
+        "testStrategy": "Test admin role validation, participant data loading, all action buttons functionality, unauthorized access handling, and proper rendering of all sections. Verify activity timeline shows recent events correctly.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "in-progress",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Admin Role Validation and Unauthorized Access Handling",
+            "description": "Ensure only users with admin privileges can access the participant detail page, and handle unauthorized access with appropriate redirects.",
+            "dependencies": [],
+            "details": "Use `getUserWorkspaceRole(slug)` to validate the admin role at the server component level. If the user is not an admin, redirect to an unauthorized or error page. Integrate error boundaries and loading states for robust access control.",
+            "status": "pending",
+            "testStrategy": "Test with users of different roles to verify only admins can access the page. Confirm unauthorized users are redirected and error boundaries handle unexpected failures.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Fetch and Aggregate Participant Data",
+            "description": "Retrieve all necessary participant data including User, WorkspaceMembership, Enrollments, PointsBalance, and ActivityEvents for display and management.",
+            "dependencies": [
+              "12.1"
+            ],
+            "details": "Implement server-side data fetching logic to aggregate participant details. Ensure efficient queries and error handling for missing or malformed data.",
+            "status": "pending",
+            "testStrategy": "Test data loading for participants with varying data completeness. Simulate missing or malformed data to verify error handling and loading states.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Render Participant Detail Card and Statistics Section",
+            "description": "Display participant's core information and statistics, including email, role, joined date, enrollment counts, and points balance.",
+            "dependencies": [
+              "12.2"
+            ],
+            "details": "Render `participant-detail-card.tsx` with fetched data. Implement a statistics section summarizing enrollments and points. Ensure clear layout and responsive design.",
+            "status": "pending",
+            "testStrategy": "Verify correct rendering of participant details and statistics for various data scenarios. Test responsiveness and visual clarity across devices.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Integrate Action Buttons and Enrollment Management",
+            "description": "Add and wire up action buttons for EmailActions, ParticipantRoleToggle, ChallengeAssignment, RemoveParticipantAction, and manage enrollments with removal capability.",
+            "dependencies": [
+              "12.3"
+            ],
+            "details": "Integrate action components, ensuring each triggers the correct backend or UI updates. Implement enrollments table with RemoveEnrollmentButton for each enrollment.",
+            "status": "pending",
+            "testStrategy": "Test each action button for correct functionality, including role toggling, email actions, challenge assignment, participant removal, and enrollment removal. Verify UI updates and error handling.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement Activity Timeline and Final Page Assembly",
+            "description": "Display a chronological activity timeline of recent ActivityEvents and assemble all sections into the final participant detail page with robust error and loading states.",
+            "dependencies": [
+              "12.4"
+            ],
+            "details": "Integrate the activity timeline component, ensuring it displays recent events with proper formatting. Assemble all page sections, ensuring consistent error boundaries and loading skeletons.",
+            "status": "pending",
+            "testStrategy": "Test activity timeline rendering, event ordering, and integration with the rest of the page. Simulate loading and error states to verify user experience.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "13",
+        "title": "Create Participant Self Profile Page",
+        "description": "Implement participant self-profile page with editable name and workspace statistics",
+        "details": "Create `app/w/[slug]/participant/profile/page.tsx` with:\n1. Authentication check for workspace membership (ADMIN or PARTICIPANT)\n2. Server component fetching current user with workspace membership, enrollments, points\n3. Profile header showing email, full name, workspace joined date\n4. Editable name field component that updates Supabase user metadata\n5. Workspace-specific statistics display (points balance, enrollment summary)\n6. Security section with password reset link\n7. Real-time name updates reflected in header\n8. Proper error handling for metadata updates\n9. Loading states during name updates",
+        "testStrategy": "Test workspace membership validation, profile data loading, name editing functionality with immediate header reflection, statistics accuracy, and security section functionality.",
+        "priority": "high",
+        "dependencies": [
+          "12"
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Authentication and Workspace Membership Check",
+            "description": "Ensure only authenticated users with ADMIN or PARTICIPANT roles in the workspace can access the profile page.",
+            "dependencies": [],
+            "details": "Add logic to verify user authentication and workspace membership before rendering the profile page. Redirect unauthorized users appropriately.",
+            "status": "done",
+            "testStrategy": "Test with users of different roles and unauthenticated users to confirm correct access control and redirection.",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-07T04:50:13.312Z"
+          },
+          {
+            "id": 2,
+            "title": "Fetch and Display User Profile Data",
+            "description": "Create a server component to fetch current user data, including workspace membership, enrollments, and points.",
+            "dependencies": [
+              "13.1"
+            ],
+            "details": "Retrieve user profile information from Supabase and display email, full name, and workspace joined date in the profile header.",
+            "status": "done",
+            "testStrategy": "Verify correct data loading for various users and workspaces; test loading and error states.",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-07T04:50:18.302Z"
+          },
+          {
+            "id": 3,
+            "title": "Integrate Editable Name Field with Real-Time Updates",
+            "description": "Add an editable name field component that updates Supabase user metadata and reflects changes in the profile header in real time.",
+            "dependencies": [
+              "13.2"
+            ],
+            "details": "Implement inline editing, update logic, loading and error states, and ensure immediate header update upon successful name change.",
+            "status": "done",
+            "testStrategy": "Test name editing flow, metadata update, real-time header reflection, and error handling for failed updates.",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-07T04:50:20.915Z"
+          },
+          {
+            "id": 4,
+            "title": "Display Workspace-Specific Statistics",
+            "description": "Show workspace-specific statistics such as points balance and enrollment summary for the current user.",
+            "dependencies": [
+              "13.2"
+            ],
+            "details": "Fetch and render points balance and enrollment summary, ensuring data accuracy and proper formatting.",
+            "status": "done",
+            "testStrategy": "Validate statistics accuracy for users with different enrollments and points; test edge cases and error states.",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-07T04:50:26.836Z"
+          },
+          {
+            "id": 5,
+            "title": "Implement Security Section with Password Reset",
+            "description": "Add a security section to the profile page, including a password reset link and related functionality.",
+            "dependencies": [
+              "13.2"
+            ],
+            "details": "Integrate password reset link, ensure secure handling, and display relevant security information.",
+            "status": "done",
+            "testStrategy": "Test password reset flow, link visibility, and security section rendering for different user scenarios.",
+            "updatedAt": "2025-10-07T04:48:25.651Z",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2025-10-07T04:50:26.836Z"
+      },
+      {
+        "id": "14",
+        "title": "Implement Profile API Endpoints",
+        "description": "Create API routes for profile management including self-profile updates",
+        "details": "Create `/api/account/profile/route.ts` with:\n1. GET handler returning current profile data (email, name, metadata, workspace stats)\n2. PUT handler for updating full name in Supabase user metadata and User.updatedAt\n3. Proper authentication validation using Supabase auth\n4. Error handling for metadata update failures\n5. Response formatting with updated profile data\n6. Rate limiting for profile updates\n7. Validation of name field (non-empty, reasonable length)\n8. Extend existing `/api/workspaces/[slug]/participants/[id]` if needed\n9. Proper CORS and security headers",
+        "testStrategy": "Test GET/PUT operations, authentication validation, name validation, error handling, rate limiting, and integration with existing participant API endpoints.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Design and Implement GET Handler for Profile Data",
+            "description": "Create the GET endpoint in `/api/account/profile/route.ts` to return the authenticated user's profile data, including email, name, metadata, and workspace statistics.",
+            "dependencies": [],
+            "details": "Fetch user data from Supabase, aggregate workspace statistics, and format the response according to API requirements.",
+            "status": "pending",
+            "testStrategy": "Test with authenticated and unauthenticated requests. Verify correct data structure, field presence, and error handling for missing or malformed sessions.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Develop PUT Handler for Profile Updates",
+            "description": "Implement the PUT endpoint to update the user's full name in Supabase user metadata and update the User.updatedAt field.",
+            "dependencies": [
+              "14.1"
+            ],
+            "details": "Validate the input, perform the update in Supabase, and ensure the updated profile is returned in the response.",
+            "status": "pending",
+            "testStrategy": "Test with valid and invalid name inputs, verify metadata update, and check that User.updatedAt is refreshed.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Integrate Authentication and Authorization Checks",
+            "description": "Ensure all profile API routes require valid Supabase authentication and only allow access to the authenticated user's own profile.",
+            "dependencies": [
+              "14.1",
+              "14.2"
+            ],
+            "details": "Use Supabase auth session validation and enforce route-level security to prevent unauthorized access.",
+            "status": "pending",
+            "testStrategy": "Test with valid, expired, and missing tokens. Attempt access to other users' profiles and verify rejection.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement Input Validation, Error Handling, and Rate Limiting",
+            "description": "Add validation for the name field (non-empty, reasonable length), handle errors from metadata updates, and apply rate limiting to profile update requests.",
+            "dependencies": [
+              "14.2",
+              "14.3"
+            ],
+            "details": "Return appropriate error messages for invalid input or failed updates, and enforce rate limits to prevent abuse.",
+            "status": "pending",
+            "testStrategy": "Test with invalid names, simulate Supabase update failures, and verify rate limiting triggers after threshold is exceeded.",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Apply Security, CORS Headers, and Extend Participant API if Needed",
+            "description": "Set proper CORS and security headers for the profile endpoints, and extend `/api/workspaces/[slug]/participants/[id]` if additional integration is required.",
+            "dependencies": [
+              "14.1",
+              "14.2",
+              "14.3",
+              "14.4"
+            ],
+            "details": "Ensure all responses include necessary headers and update related participant APIs to reflect profile changes if required.",
+            "status": "pending",
+            "testStrategy": "Test CORS preflight requests, verify security headers, and check participant API integration for profile updates.",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "15",
+        "title": "Create Profile Name Form Component",
+        "description": "Build reusable profile name editing component with inline editing capabilities",
+        "details": "Create `components/profile-name-form.tsx` with:\n1. Inline editing functionality with edit/save/cancel states\n2. Form validation using react-hook-form or similar\n3. API integration with profile update endpoint\n4. Loading states during save operations\n5. Error handling and user feedback\n6. Optimistic updates with rollback on failure\n7. Keyboard shortcuts (Enter to save, Escape to cancel)\n8. Accessibility features (proper ARIA labels, focus management)\n9. TypeScript interfaces for props and form data\n10. Integration with existing design system components",
+        "testStrategy": "Test inline editing flow, form validation, API integration, error handling, optimistic updates, keyboard shortcuts, and accessibility compliance.",
+        "priority": "medium",
+        "dependencies": [
+          "14"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "16",
+        "title": "Implement Profile Statistics Component",
+        "description": "Create reusable component for displaying workspace-specific user statistics",
+        "details": "Create `components/profile-stats.tsx` with:\n1. Display points balance with proper formatting\n2. Show enrollment counts (active, completed, total)\n3. Recent activity summary\n4. Responsive design for different screen sizes\n5. Loading skeleton states\n6. Error states for failed data loading\n7. Proper TypeScript interfaces for statistics data\n8. Integration with existing UI components and styling\n9. Optional admin vs participant view differences\n10. Caching considerations for frequently accessed stats",
+        "testStrategy": "Test statistics accuracy, responsive design, loading states, error handling, and proper rendering across different user roles and screen sizes.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "17",
+        "title": "Integrate Navigation for Profile Pages",
+        "description": "Add profile navigation entries and update existing navigation patterns",
+        "details": "Update navigation components:\n1. Add 'Profile' entry to participant sidebar with User icon\n2. Update admin participants table to link to detail pages\n3. Maintain existing 'Account Settings' link behavior in header\n4. Ensure proper active state highlighting for profile pages\n5. Update navigation TypeScript types and route definitions\n6. Test navigation accessibility and keyboard navigation\n7. Ensure consistent styling with existing navigation patterns\n8. Handle navigation permissions based on user roles\n9. Update breadcrumb components if applicable\n10. Test deep linking and browser back/forward functionality",
+        "testStrategy": "Test navigation functionality, active states, role-based access, accessibility, and integration with existing navigation patterns across all user roles.",
+        "priority": "medium",
+        "dependencies": [
+          "12",
+          "13"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "18",
+        "title": "Implement Activity Timeline Component",
+        "description": "Create activity timeline component for admin participant detail pages",
+        "status": "pending",
+        "dependencies": [
+          "12"
+        ],
+        "priority": "medium",
+        "details": "Create activity timeline component with:\n1. Query ActivityEvents for specific participant\n2. Display events chronologically with timestamps\n3. Event type icons and descriptions (RBAC_ROLE_CHANGED, EMAIL_RESENT, etc.)\n4. Pagination or infinite scroll for large event lists\n5. Filtering by event type and date range\n6. Proper formatting of event details and metadata\n7. Loading states and error handling\n8. Responsive design for mobile and desktop\n9. Integration with existing ActivityEvent model\n10. Performance optimization for large datasets\n\nNote: The Activities tab structure has been reorganized with tabbed UI (Activities/Templates/Settings). The timeline component should integrate with this new structure.",
+        "testStrategy": "Test event loading, chronological ordering, filtering functionality, pagination, responsive design, and performance with large datasets. Verify integration with the new tabbed Activities interface.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create ActivityTimeline component structure",
+            "description": "Build the base ActivityTimeline React component with proper TypeScript interfaces",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement ActivityEvent data fetching",
+            "description": "Create API integration to query ActivityEvents for specific participants with proper error handling",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Build chronological event display",
+            "description": "Implement timeline UI with timestamps, event type icons, and formatted descriptions",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Add pagination or infinite scroll",
+            "description": "Implement efficient loading strategy for large event datasets",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement filtering functionality",
+            "description": "Add event type and date range filtering with UI controls",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Integrate with reorganized Activities tab structure",
+            "description": "Ensure ActivityTimeline component works properly within the new tabbed Activities interface (Activities/Templates/Settings)",
+            "status": "done",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 7,
+            "title": "Add responsive design and mobile optimization",
+            "description": "Ensure timeline component works well on all screen sizes",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 8,
+            "title": "Performance optimization and testing",
+            "description": "Optimize for large datasets and conduct comprehensive testing",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "19",
+        "title": "Add Activity Event Logging for Admin Actions",
+        "description": "Implement comprehensive activity event logging for all admin profile management actions",
+        "details": "Enhance existing admin actions to create ActivityEvent entries:\n1. Log RBAC_ROLE_CHANGED events for role toggles\n2. Log EMAIL_RESENT events for email resend actions\n3. Log INVITE_SENT events for new invitations\n4. Log ENROLLED/UNENROLLED events for enrollment changes\n5. Include relevant metadata (previous role, target user, etc.)\n6. Ensure atomic operations (action + logging)\n7. Handle logging failures gracefully\n8. Add proper TypeScript types for event metadata\n9. Update existing action components to include logging\n10. Test event creation across all admin actions",
+        "testStrategy": "Test event logging for all admin actions, verify metadata accuracy, test atomic operations, error handling for logging failures, and timeline display of logged events.",
+        "priority": "medium",
+        "dependencies": [
+          "12"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "20",
+        "title": "Implement Permission Guards and Validation",
+        "description": "Add comprehensive permission validation and safety guards for profile management",
+        "details": "Implement security guards:\n1. Prevent demoting last ADMIN in workspace with validation check\n2. Prevent self-removal while currently admin with UI and API guards\n3. Validate membership presence for participant page access\n4. Use `isUserId` for ID format validation in routes\n5. Add middleware for route-level permission checking\n6. Implement proper error messages for unauthorized actions\n7. Add client-side guards to disable invalid actions\n8. Server-side validation for all profile update operations\n9. Rate limiting for sensitive operations\n10. Audit logging for permission violations",
+        "testStrategy": "Test all permission scenarios, last admin protection, self-removal prevention, membership validation, ID format validation, and proper error handling for unauthorized actions.",
+        "priority": "high",
+        "dependencies": [
+          "12",
+          "13"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "21",
+        "title": "Integration Testing and Error Handling",
+        "description": "Comprehensive testing and error handling for complete profile management flows",
+        "details": "Implement comprehensive testing and error handling:\n1. End-to-end testing for admin participant management flows\n2. Integration testing for participant self-profile functionality\n3. Error boundary components for graceful failure handling\n4. Loading states and skeleton components for all async operations\n5. Proper error messages and user feedback\n6. Performance testing for large datasets\n7. Cross-browser compatibility testing\n8. Mobile responsiveness testing\n9. Accessibility compliance testing (WCAG 2.1)\n10. Security testing for authorization and data validation",
+        "testStrategy": "Execute comprehensive test suite covering all user flows, error scenarios, performance benchmarks, accessibility compliance, and security validation. Verify no breaking changes to existing functionality.",
+        "priority": "high",
+        "dependencies": [
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19",
+          "20"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "22",
+        "title": "Enhanced Self Profile - Global Identity Management",
+        "description": "Implement comprehensive global identity management system extending the current basic profile with full name, avatar, pronouns, bio, skills/interests, security features, accessibility settings, profile completeness meter, and optimistic updates.",
+        "status": "in-progress",
+        "dependencies": [
+          "13",
+          "14",
+          "15",
+          "25"
+        ],
+        "priority": "medium",
+        "details": "Complete the enhanced profile implementation by building the remaining UI components and integrating with the ready API infrastructure:\n\n1. **Profile Data Model Extensions** (API Ready):\n   - User model extended with avatar_url, pronouns, bio, skills, interests fields\n   - ProfileSettings model with accessibility preferences (ui_density, reduced_motion, color_contrast)\n   - Profile completeness score calculation available\n   - Timezone and date format settings in user_metadata\n   - Notification preferences stored in preferences JSON\n\n2. **Enhanced Profile API** (API Ready):\n   - Extended `/api/account/profile/route.ts` with new fields\n   - Avatar upload endpoint with image validation and storage\n   - Skills/interests tagging system for challenge recommendations\n   - Profile completeness calculation logic\n   - Timezone and date format preference handling\n   - Notification toggle management\n\n3. **Required UI Components** (Remaining Work):\n   - **NotificationMatrix Component**: Build comprehensive notification preferences grid with categories (email, push, in-app) and event types (challenges, updates, reminders)\n   - **QuietHoursPicker Component**: Create time range selector for notification quiet hours with timezone awareness\n   - **VisibilityToggles Component**: Implement profile visibility controls (public, workspace-only, private) with granular field-level settings\n   - **InterestsTagInput Component**: Build autocomplete tag input for skills/interests with suggestion system\n\n4. **Default Landing View** (Remaining Work):\n   - Create default workspace landing page when no specific workspace is selected\n   - Implement workspace discovery and selection interface\n   - Add recent workspaces quick access\n\n5. **Workspace Selector UI** (Remaining Work):\n   - Build workspace switcher component with search and filtering\n   - Implement workspace creation flow integration\n   - Add workspace invitation acceptance interface\n\n6. **Enhanced Profile Integration**:\n   - Extend existing profile-name-form.tsx with additional fields\n   - Create avatar upload component with crop functionality\n   - Implement inline autosave with optimistic updates and conflict resolution\n   - Add profile preview component with completeness meter\n\n7. **Security Features**:\n   - Implement password reset flow with email verification\n   - Add session management dashboard showing active sessions\n   - Include two-factor authentication setup options\n   - Add account deletion with confirmation flow\n\n8. **Global Settings Application**:\n   - Apply accessibility settings across all workspace interfaces\n   - Implement theme context for consistent styling\n   - Add settings synchronization across browser tabs\n   - Integrate timezone and date format preferences globally",
+        "testStrategy": "Test comprehensive profile management functionality including: NotificationMatrix component with all notification categories and preferences persistence, QuietHoursPicker with timezone handling and validation, VisibilityToggles with granular privacy controls, InterestsTagInput with autocomplete and tag management, default landing view navigation and workspace selection flow, avatar upload and validation, profile completeness calculation accuracy, accessibility settings application across interfaces, timezone and date format preference application, inline autosave with optimistic updates and conflict resolution, security feature integration, responsive design across devices, and performance with large profile datasets. Verify proper data persistence, error handling, and user feedback for all profile operations.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Build NotificationMatrix Component",
+            "description": "Create comprehensive notification preferences grid component with categories (email, push, in-app) and event types (challenges, updates, reminders, workspace activity)",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Implement NotificationMatrix component with toggle grid for notification preferences, integration with preferences JSON API, real-time updates, and proper accessibility support",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement QuietHoursPicker Component",
+            "description": "Create time range selector for notification quiet hours with timezone awareness and validation",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Build QuietHoursPicker with time range selection, timezone integration from user_metadata, validation for logical time ranges, and visual feedback for active quiet periods",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Create VisibilityToggles Component",
+            "description": "Implement profile visibility controls with granular field-level privacy settings",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Build VisibilityToggles component with options for public, workspace-only, and private visibility levels, field-level granular controls, and clear privacy explanations",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Build InterestsTagInput Component",
+            "description": "Create autocomplete tag input for skills/interests with suggestion system and challenge recommendation integration",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Implement InterestsTagInput with autocomplete functionality, tag management, skills/interests API integration, and connection to challenge recommendation system",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Create Default Landing View",
+            "description": "Build default workspace landing page with workspace discovery and selection interface",
+            "status": "done",
+            "dependencies": [],
+            "details": "Implement default landing view with workspace discovery, recent workspaces quick access, workspace creation flow integration, and invitation acceptance interface",
+            "testStrategy": "",
+            "parentId": "undefined",
+            "updatedAt": "2025-10-07T04:51:57.209Z"
+          },
+          {
+            "id": 6,
+            "title": "Implement Workspace Selector UI",
+            "description": "Build workspace switcher component with search, filtering, and management capabilities",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Create workspace selector with search functionality, filtering options, workspace creation integration, and seamless switching between workspaces",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 7,
+            "title": "Integrate Enhanced Profile Components",
+            "description": "Combine all profile components into cohesive enhanced profile interface with completeness meter and optimistic updates",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Integrate NotificationMatrix, QuietHoursPicker, VisibilityToggles, and InterestsTagInput into enhanced profile interface with profile completeness meter, inline autosave, and optimistic updates",
+            "testStrategy": "",
+            "parentId": "undefined"
+          }
+        ],
+        "updatedAt": "2025-10-07T04:51:57.209Z"
+      },
+      {
+        "id": "23",
+        "title": "Implement Per-Workspace Participant Settings",
+        "description": "Implement comprehensive workspace-scoped participant preferences system including notification settings, privacy controls, participation preferences, time/locale settings, and data controls stored in WorkspaceMembership.preferences JSONB field.",
+        "status": "pending",
+        "dependencies": [
+          "13",
+          "14",
+          "25"
+        ],
+        "priority": "medium",
+        "details": "Build UI components and settings management interface for workspace-specific participant preferences. The API infrastructure and database schema are already in place with the preferences JSONB field added to WorkspaceMembership.\n\nRemaining implementation focuses on:\n\n1. **Settings UI Components**: Create comprehensive settings interface using shadcn/ui with form sections for each preference category:\n   - Notification settings (frequency, types, quiet hours)\n   - Privacy controls (leaderboard opt-in, profile visibility, DM permissions)\n   - Participation preferences (landing view, interests, reminders)\n   - Time/locale settings (timezone, week start, time format)\n   - Data controls (export permissions, leave workspace)\n\n2. **Settings Management Interface**: Build workspace-specific settings page at `/w/[slug]/settings/preferences` with:\n   - Form validation and error handling\n   - Save/cancel functionality with optimistic updates\n   - Real-time preference updates\n   - Integration with existing workspace navigation\n\n3. **Enhanced Profile Integration**: Connect preference settings with enhanced profile components:\n   - Display preference-based customizations in profile views\n   - Respect privacy settings in participant listings\n   - Apply notification preferences to system communications\n   - Honor time/locale preferences in UI formatting\n\nTypeScript interfaces for preference structure:\n```typescript\ninterface ParticipantPreferences {\n  notifications: {\n    frequency: 'real-time' | 'hourly' | 'daily';\n    types: {\n      challengePublished: boolean;\n      enrollmentChanges: boolean;\n      activityReminders: boolean;\n      reviewOutcomes: boolean;\n      pointsChanges: boolean;\n    };\n    quietHours: {\n      enabled: boolean;\n      startTime: string; // HH:MM format\n      endTime: string;\n    };\n  };\n  privacy: {\n    leaderboardOptIn: boolean;\n    profileVisibility: 'public' | 'workspace' | 'private';\n    dmPermissions: 'all' | 'admins-only' | 'none';\n  };\n  participation: {\n    defaultLandingView: 'dashboard' | 'challenges' | 'leaderboard';\n    challengeInterests: string[];\n    reminderCadence: 'daily' | 'weekly' | 'never';\n  };\n  timeAndLocale: {\n    timezoneOverride?: string;\n    weekStart: 'sunday' | 'monday';\n    timeFormat: '12h' | '24h';\n  };\n  dataControls: {\n    allowDataExport: boolean;\n    allowLeaveWorkspace: boolean;\n  };\n}\n```",
+        "testStrategy": "Test UI components for all preference categories with form validation, save/cancel functionality, and real-time updates. Verify integration with existing API endpoints at `/api/w/[slug]/participant/preferences` for preference storage and retrieval. Test settings management interface navigation, responsive design, and accessibility. Verify integration with enhanced profile components including privacy setting enforcement, notification preference application, and time/locale formatting. Test default preference initialization for new workspace members and proper authentication/authorization throughout the UI.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Settings UI Components",
+            "description": "Build comprehensive settings interface components using shadcn/ui with form sections for notifications, privacy, participation, time/locale, and data controls",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement Settings Management Interface",
+            "description": "Create workspace-specific settings page at `/w/[slug]/settings/preferences` with form validation, save/cancel functionality, and real-time updates",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Integrate with Enhanced Profile Components",
+            "description": "Connect preference settings with profile views, participant listings, notification systems, and UI formatting based on user preferences",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement Preference-Based UI Customization",
+            "description": "Apply user preferences for default landing views, time formatting, and privacy controls throughout the workspace interface",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Add Settings Navigation Integration",
+            "description": "Integrate settings interface with existing workspace navigation and ensure proper routing and access controls",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "24",
+        "title": "Enhanced Email Management System",
+        "description": "Implement comprehensive email system with WorkspaceEmailSettings and WorkspaceEmailTemplate models, admin interface with Default Emails, Templates, and Settings tabs, plus API endpoints for template management and test-send functionality.",
+        "status": "done",
+        "dependencies": [
+          "7",
+          "9",
+          "25"
+        ],
+        "priority": "medium",
+        "details": "Create a comprehensive email management system with the following components:\n\n1. **Database Models**:\n   - Create `WorkspaceEmailSettings` model with fields: workspace_id, fromName, fromEmail, replyTo, footerHtml, brandColor, created_at, updated_at\n   - Create `WorkspaceEmailTemplate` model with fields: workspace_id, template_type (enum: INVITE, EMAIL_RESENT, ENROLLMENT_UPDATE, REMINDER, GENERIC), subject, body_html, body_text, is_active, created_at, updated_at\n   - Add proper foreign key constraints and indexes\n\n2. **Admin Interface - New Sidebar Entry** ✅ COMPLETED:\n   - Add \"Emails\" entry to admin sidebar navigation in `/app/w/[slug]/admin/layout.tsx`\n   - Create `/app/w/[slug]/admin/emails/page.tsx` with three tabs:\n     - **Default Emails Tab**: Read-only preview of system default email templates with template type filtering\n     - **Templates Tab**: Workspace-specific template overrides with CRUD operations, rich text editor for HTML content, preview functionality\n     - **Settings Tab**: Brand and sender configuration form with color picker, email validation, footer HTML editor\n\n3. **API Endpoints**:\n   - `/api/workspaces/[slug]/email-settings` - GET/PUT for workspace email settings ✅ COMPLETED as `/api/workspaces/[slug]/emails/settings`\n   - `/api/workspaces/[slug]/email-templates` - GET/POST/PUT/DELETE for template management\n   - `/api/workspaces/[slug]/email-templates/[id]/test` - POST for test email sending\n   - `/api/workspaces/[slug]/email-templates/preview` - POST for template preview generation\n\n4. **Email Service Integration**:\n   - Extend existing email service to use workspace-specific settings and templates\n   - Implement template fallback logic (workspace override → system default)\n   - Add email template rendering with variable substitution\n   - Implement test email functionality with proper error handling\n\n5. **UI Components**:\n   - Email template editor with rich text capabilities using shadcn/ui\n   - Color picker component for brand color selection\n   - Email preview component with mobile/desktop views\n   - Template type selector and status indicators\n   - Form validation for email addresses and required fields\n\n**Progress Made**:\n- ✅ Admin sidebar entry and page structure with tabs\n- ✅ Settings API route with GET/PUT operations\n- ✅ WorkspaceEmailSettings and WorkspaceEmailTemplate types in queries.ts\n- ✅ Database query functions for settings management\n\n**Remaining Work**:\n- Templates API routes for CRUD operations\n- Test-send API endpoint for email testing\n- Prisma schema updates (depends on task 25)\n- Email service integration and template rendering\n- Rich text editor and preview components",
+        "testStrategy": "Test email management system functionality including: workspace email settings CRUD operations with validation, template override creation and editing with rich text content, template fallback logic from workspace to system defaults, test email sending with proper error handling, brand customization application in email previews, admin interface navigation and tab switching, API endpoint security and proper workspace scoping, email template variable substitution accuracy, and integration with existing email sending workflows. Verify proper permissions for admin-only access and validate email format requirements. Focus testing on remaining components: template CRUD operations, test-send functionality, and email service integration.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Email Templates API Routes",
+            "description": "Create API endpoints for workspace email template management including CRUD operations, template type filtering, and proper workspace scoping.",
+            "status": "done",
+            "dependencies": [],
+            "details": "Create the following API routes:\n- `/api/workspaces/[slug]/emails/templates/route.ts` for GET (list) and POST (create)\n- `/api/workspaces/[slug]/emails/templates/[id]/route.ts` for GET, PUT, DELETE operations\n- Implement proper validation for template_type enum values\n- Add workspace authorization checks\n- Include error handling and proper HTTP status codes",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement Test Email Sending API",
+            "description": "Create API endpoint for sending test emails using workspace templates and settings with proper error handling.",
+            "status": "done",
+            "dependencies": [],
+            "details": "Create `/api/workspaces/[slug]/emails/templates/[id]/test/route.ts` endpoint:\n- Accept test recipient email address\n- Use workspace email settings for sender configuration\n- Apply template with sample variable substitution\n- Integrate with existing email service\n- Return detailed success/error responses\n- Add rate limiting for test sends",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Build Email Template Editor UI Components",
+            "description": "Implement rich text editor, preview functionality, and template management interface for the Templates tab.",
+            "status": "done",
+            "dependencies": [],
+            "details": "Create UI components for template management:\n- Rich text editor for HTML email content using shadcn/ui\n- Template preview component with mobile/desktop views\n- Template type selector with proper validation\n- Form components for subject and text content\n- Save/cancel actions with optimistic updates\n- Template status indicators and activation controls",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Integrate Email Service with Workspace Settings",
+            "description": "Extend existing email service to use workspace-specific settings and templates with fallback logic.",
+            "status": "done",
+            "dependencies": [],
+            "details": "Modify email service to:\n- Load workspace email settings for sender configuration\n- Implement template fallback logic (workspace → system default)\n- Add variable substitution for dynamic content\n- Apply workspace branding (colors, footer)\n- Maintain backward compatibility with existing email flows\n- Add proper error handling and logging",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Complete Settings Tab UI Implementation",
+            "description": "Finish the Settings tab with color picker, email validation, and footer HTML editor components.",
+            "status": "done",
+            "dependencies": [],
+            "details": "Complete Settings tab implementation:\n- Color picker component for brand color selection\n- Email address validation for fromEmail and replyTo fields\n- Rich text editor for footer HTML content\n- Form validation and error display\n- Save functionality with optimistic updates\n- Preview of email appearance with current settings",
+            "testStrategy": "",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "25",
+        "title": "Prisma Schema Updates for Enhanced Features",
+        "description": "Update the Prisma schema to support enhanced user profile features including WorkspaceEmailSettings, WorkspaceEmailTemplate tables, EmailTemplateType enum, WorkspaceMembership preferences field, and optional WorkspaceParticipantSegment table with proper migrations and client regeneration.",
+        "details": "Update the Prisma schema file (schema.prisma) with the following comprehensive changes:\n\n1. **WorkspaceEmailSettings Table**:\n   - Add model with fields: id (String @id @default(cuid())), workspaceId (String @unique), fromName (String), fromEmail (String), replyTo (String?), footerHtml (String?), brandColor (String?), updatedBy (String), createdAt (DateTime @default(now())), updatedAt (DateTime @updatedAt)\n   - Add relations: workspace (Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)), updatedByUser (User @relation(fields: [updatedBy], references: [id]))\n\n2. **WorkspaceEmailTemplate Table**:\n   - Add model with fields: id (String @id @default(cuid())), workspaceId (String), type (EmailTemplateType), subject (String), html (String @db.Text), enabled (Boolean @default(true)), updatedBy (String), createdAt (DateTime @default(now())), updatedAt (DateTime @updatedAt)\n   - Add relations: workspace (Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)), updatedByUser (User @relation(fields: [updatedBy], references: [id]))\n   - Add unique constraint: @@unique([workspaceId, type])\n\n3. **EmailTemplateType Enum**:\n   - Add enum with values: INVITE, EMAIL_RESENT, ENROLLMENT_UPDATE, REMINDER, GENERIC\n\n4. **WorkspaceMembership Enhancement**:\n   - Add preferences field: preferences (Json? @db.JsonB) for per-workspace participant settings\n\n5. **WorkspaceParticipantSegment Table (Optional)**:\n   - Add model with fields: id (String @id @default(cuid())), workspaceId (String), name (String), description (String?), filterCriteria (Json @db.JsonB), createdBy (String), createdAt (DateTime @default(now())), updatedAt (DateTime @updatedAt)\n   - Add relations and constraints for saved participant filters\n\n6. **Migration and Client Generation**:\n   - Run `npx prisma migrate dev --name enhanced-email-features` to create migration\n   - Run `npx prisma generate` to regenerate Prisma client\n   - Update any existing relation arrays in Workspace and User models to include new relations",
+        "testStrategy": "Verify schema updates by: 1) Confirming migration runs successfully without errors and creates all new tables/columns/enums, 2) Testing Prisma client regeneration completes and new types are available in TypeScript, 3) Validating database schema matches expected structure using Prisma Studio or direct database inspection, 4) Testing basic CRUD operations on new models through Prisma client to ensure relations work correctly, 5) Verifying WorkspaceMembership.preferences field accepts JSONB data, 6) Confirming EmailTemplateType enum values are properly constrained, 7) Testing cascade deletion behavior for workspace-related records, 8) Validating unique constraints work as expected (workspaceId unique for settings, workspaceId+type unique for templates).",
+        "status": "done",
+        "dependencies": [
+          "11"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "26",
+        "title": "Implement New API Endpoints for Enhanced Features",
+        "description": "Create comprehensive API endpoints to support enhanced user profile features including workspace participant preferences, email template management, test email functionality, and global identity management with proper authentication and authorization.",
+        "details": "Implement the following API endpoints with proper authentication and authorization middleware:\n\n1. **Workspace Participant Preferences Endpoints**:\n   - GET/PUT `/api/workspaces/[slug]/me/preferences` - Retrieve and update participant workspace settings\n   - Integrate with Task 23's WorkspaceMembership.preferences JSONB field structure\n   - Validate workspace membership and participant permissions\n\n2. **Email Template Management Endpoints**:\n   - GET `/api/workspaces/[slug]/emails/templates` - List all email templates\n   - POST `/api/workspaces/[slug]/emails/templates` - Create new email template\n   - GET `/api/workspaces/[slug]/emails/templates/[id]` - Get specific template\n   - PUT `/api/workspaces/[slug]/emails/templates/[id]` - Update template\n   - DELETE `/api/workspaces/[slug]/emails/templates/[id]` - Delete template\n   - Require ADMIN role for template management operations\n\n3. **Test Email Functionality**:\n   - POST `/api/workspaces/[slug]/emails/test-send` - Send test emails\n   - Support template preview and validation\n   - Include rate limiting and admin-only access\n\n4. **Enhanced Global Profile Endpoint**:\n   - Extend existing `/api/account/profile` endpoint (from Task 14)\n   - Add avatar upload functionality with file validation and storage\n   - Implement skills/interests management with JSONB storage\n   - Add security features (2FA settings, login history, session management)\n   - Maintain backward compatibility with existing profile functionality\n\n5. **Authentication/Authorization Middleware**:\n   - Create reusable middleware for workspace role validation\n   - Implement proper error responses for unauthorized access\n   - Add request logging for security auditing\n   - Support both session-based and token-based authentication\n\nTechnical Implementation:\n- Use Supabase Auth for authentication validation\n- Implement proper TypeScript interfaces for all request/response types\n- Add comprehensive input validation and sanitization\n- Include proper error handling with meaningful error messages\n- Implement rate limiting for sensitive operations\n- Add request/response logging for debugging and security\n- Use existing database models and extend where necessary",
+        "testStrategy": "Implement comprehensive testing strategy covering:\n\n1. **Authentication/Authorization Testing**:\n   - Test all endpoints with valid/invalid authentication tokens\n   - Verify workspace membership validation for workspace-scoped endpoints\n   - Test role-based access control (ADMIN vs PARTICIPANT permissions)\n   - Validate unauthorized access returns proper 401/403 responses\n\n2. **Participant Preferences API Testing**:\n   - Test GET/PUT operations for workspace preferences\n   - Verify JSONB field validation and structure compliance\n   - Test default preference initialization for new participants\n   - Validate preference updates reflect immediately in responses\n\n3. **Email Template Management Testing**:\n   - Test full CRUD operations for email templates\n   - Verify admin-only access restrictions\n   - Test template validation and sanitization\n   - Validate proper error handling for invalid template data\n\n4. **Test Email Functionality Testing**:\n   - Test email sending with various template configurations\n   - Verify rate limiting prevents abuse\n   - Test email delivery and error handling\n   - Validate admin-only access and proper logging\n\n5. **Enhanced Profile API Testing**:\n   - Test avatar upload with various file types and sizes\n   - Verify skills/interests CRUD operations\n   - Test security features integration\n   - Validate backward compatibility with existing profile functionality\n\n6. **Integration Testing**:\n   - Test API endpoints integration with existing UI components\n   - Verify database transactions and data consistency\n   - Test error boundary handling and graceful degradation\n   - Validate performance under load with concurrent requests\n\n7. **Security Testing**:\n   - Test input validation and SQL injection prevention\n   - Verify file upload security and malware scanning\n   - Test rate limiting effectiveness\n   - Validate audit logging captures all security-relevant events",
+        "status": "pending",
+        "dependencies": [
+          "14",
+          "23",
+          "25"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "27",
+        "title": "Implement New UI Components for Enhanced Features",
+        "description": "Create specialized UI components to support enhanced user profile features including notification settings, timezone-aware controls, visibility toggles, data export functionality, and accessibility panels.",
+        "status": "pending",
+        "dependencies": [
+          "13",
+          "14",
+          "23",
+          "26"
+        ],
+        "priority": "medium",
+        "details": "Implement the following specialized UI components with proper TypeScript interfaces and integration with existing systems:\n\n1. **NotificationMatrix Component** (`components/notification-matrix.tsx`):\n   - Grid layout for notification types × frequency combinations\n   - Real-time digest preview showing sample notification content\n   - Integration with WorkspaceMembership.preferences structure from Task 23\n   - Toggle controls for each notification type and frequency setting\n\n2. **QuietHoursPicker Component** (`components/quiet-hours-picker.tsx`):\n   - Timezone-aware time range selector with dropdown for timezone selection\n   - Visual time picker with drag handles for start/end times\n   - Integration with user's locale settings and workspace timezone\n   - Validation for logical time ranges and timezone conflicts\n\n3. **VisibilityToggles Component** (`components/visibility-toggles.tsx`):\n   - Toggle switches for leaderboard and profile card visibility\n   - Live preview panels showing how profile appears with current settings\n   - Real-time updates using optimistic UI patterns\n   - Integration with participant preferences system\n\n4. **InterestsTagInput Component** (`components/interests-tag-input.tsx`):\n   - Chip-based input with autocomplete functionality\n   - Tag management with add/remove capabilities\n   - Search and filter existing interest categories\n   - Validation for duplicate tags and maximum limits\n\n5. **DataExportButton Component** (`components/data-export-button.tsx`):\n   - Secure download functionality using signed URLs\n   - Progress indicator for export generation\n   - Multiple export formats (JSON, CSV) with streaming support\n   - Integration with API endpoints from Task 26\n\nThese components are essential for:\n- Enhanced Self Profile functionality (Task 14)\n- Per-Workspace Settings interface (Task 23)\n- Advanced user preference management\n- Data export and privacy controls\n\nAll components should follow existing design system patterns, include proper loading states, error handling, and accessibility features. Use React Hook Form for form management and implement proper TypeScript interfaces for all props and data structures.",
+        "testStrategy": "Implement comprehensive testing strategy covering:\n\n1. **Component Unit Tests**:\n   - Test each component in isolation with various prop combinations\n   - Verify proper rendering of all UI elements and states\n   - Test form validation and error handling scenarios\n   - Mock API calls and test loading/success/error states\n\n2. **Integration Tests**:\n   - Test component integration with existing profile system\n   - Verify proper data flow between components and API endpoints\n   - Test optimistic updates and rollback functionality\n   - Validate timezone handling and locale-specific formatting\n\n3. **Accessibility Testing**:\n   - Screen reader compatibility testing for all components\n   - Keyboard navigation testing with tab order verification\n   - Color contrast and visual accessibility validation\n   - ARIA attributes and semantic HTML structure verification\n\n4. **User Experience Testing**:\n   - Test responsive design across different screen sizes\n   - Verify live preview functionality and real-time updates\n   - Test drag-and-drop interactions and touch gestures\n   - Validate form submission flows and error recovery\n\n5. **Performance Testing**:\n   - Test component rendering performance with large datasets\n   - Verify efficient re-rendering with React.memo and optimization\n   - Test export functionality with various data sizes\n   - Validate autocomplete performance with large tag datasets\n\n6. **Cross-browser Testing**:\n   - Test components across major browsers (Chrome, Firefox, Safari, Edge)\n   - Verify timezone handling across different browser environments\n   - Test file download functionality across platforms",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement NotificationMatrix Component",
+            "description": "Create grid-based notification settings component with real-time preview",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement QuietHoursPicker Component",
+            "description": "Create timezone-aware time range selector with visual picker interface",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement VisibilityToggles Component",
+            "description": "Create visibility controls with live preview functionality",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Implement InterestsTagInput Component",
+            "description": "Create chip-based tag input with autocomplete and management features",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement DataExportButton Component",
+            "description": "Create secure data export functionality with progress indicators",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "28",
+        "title": "Implement Security Quick Actions",
+        "description": "Add 'Send password reset' quick action and 'Sign out other sessions' functionality for participant management and self-profile security sections.",
+        "details": "Implement critical security quick actions across both admin participant management and self-profile contexts:\n\n1. **Password Reset Quick Action**:\n   - Add \"Send Password Reset\" button to admin participant detail pages\n   - Integrate with existing Supabase auth.resetPasswordForEmail() API\n   - Create `/api/w/[slug]/participants/[id]/password-reset` endpoint with ADMIN permission validation\n   - Add confirmation dialog with participant email display\n   - Show success/error toast notifications\n   - Log PASSWORD_RESET_SENT activity events for admin audit trail\n\n2. **Sign Out Other Sessions Functionality**:\n   - Implement \"Sign Out Other Sessions\" action in self-profile security section\n   - Create `/api/account/sessions/revoke-others` endpoint using Supabase admin.signOut() with scope: 'others'\n   - Add confirmation dialog explaining session termination impact\n   - Show loading states during session revocation process\n   - Handle edge cases (no other sessions, network failures)\n\n3. **UI Integration**:\n   - Add security quick actions section to admin participant detail pages\n   - Enhance self-profile security section with session management controls\n   - Use shadcn/ui Button, Dialog, and Alert components for consistent styling\n   - Implement proper loading states and error handling\n   - Add appropriate icons (Shield, Key, LogOut) for visual clarity\n\n4. **Security Considerations**:\n   - Validate workspace membership and permissions for all actions\n   - Rate limit password reset requests (max 3 per hour per participant)\n   - Audit log all security actions with proper metadata\n   - Ensure CSRF protection on all endpoints\n   - Validate participant existence before allowing actions",
+        "testStrategy": "Test comprehensive security action functionality:\n\n1. **Password Reset Testing**:\n   - Test admin can send password reset for workspace participants\n   - Verify email delivery and reset link functionality\n   - Test rate limiting prevents abuse (max 3 requests per hour)\n   - Verify proper activity event logging for audit trail\n   - Test error handling for invalid participants or email failures\n\n2. **Session Management Testing**:\n   - Test \"Sign Out Other Sessions\" terminates only other sessions, not current\n   - Verify user remains logged in after revoking other sessions\n   - Test behavior when no other sessions exist\n   - Test error handling for network failures or API errors\n\n3. **Permission and Security Testing**:\n   - Verify only ADMINs can send password resets for other participants\n   - Test workspace membership validation for all actions\n   - Verify CSRF protection on security endpoints\n   - Test rate limiting enforcement and proper error messages\n\n4. **UI/UX Testing**:\n   - Test confirmation dialogs display correct participant information\n   - Verify loading states during async operations\n   - Test success/error toast notifications\n   - Verify responsive design on mobile and desktop\n   - Test keyboard navigation and accessibility compliance",
+        "status": "pending",
+        "dependencies": [
+          "13",
+          "14",
+          "19"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "29",
+        "title": "Implement Role Protection Guards",
+        "description": "Add comprehensive last-admin demotion guards to prevent removing the last admin from a workspace, implementing actual enforcement logic beyond existing copy/text guardrails.",
+        "details": "Implement comprehensive role protection enforcement logic to prevent workspace admin lockout scenarios:\n\n1. **Last Admin Detection Logic**:\n   - Create `isLastAdmin(workspaceId: string, userId: string)` utility function\n   - Query WorkspaceMembership to count active ADMIN role members\n   - Return true if user is the sole remaining admin in workspace\n   - Cache results for performance optimization\n\n2. **API Enforcement Guards**:\n   - Add validation middleware to role update endpoints (`/api/w/[slug]/participants/[id]/role`)\n   - Prevent ADMIN → PARTICIPANT demotion if `isLastAdmin()` returns true\n   - Return 400 error with specific message: \"Cannot remove last admin from workspace\"\n   - Ensure atomic operations to prevent race conditions\n\n3. **UI Protection Guards**:\n   - Disable role toggle buttons when user is last admin\n   - Add tooltip explaining \"Cannot demote last admin\"\n   - Show warning badge on last admin's profile indicating special status\n   - Implement real-time updates when admin count changes\n\n4. **Self-Demotion Prevention**:\n   - Extend guards to prevent admins from demoting themselves if they're the last admin\n   - Add confirmation dialog for self-demotion attempts with clear warning\n   - Integrate with existing permission validation from Task 20\n\n5. **Activity Logging Integration**:\n   - Log ADMIN_PROTECTION_TRIGGERED events when guards prevent demotion\n   - Include metadata about attempted action and protection reason\n   - Integrate with existing ActivityEvent system from Task 19\n\n6. **Error Handling and UX**:\n   - Provide clear error messages explaining why action was blocked\n   - Suggest adding another admin before attempting demotion\n   - Implement graceful fallbacks for edge cases",
+        "testStrategy": "Test comprehensive role protection scenarios:\n\n1. **Last Admin Detection Testing**:\n   - Test `isLastAdmin()` function with single admin workspace\n   - Test with multiple admins and verify false return\n   - Test edge cases with deactivated/pending memberships\n   - Verify caching behavior and cache invalidation\n\n2. **API Enforcement Testing**:\n   - Test API blocks last admin demotion with 400 error\n   - Test successful demotion when multiple admins exist\n   - Test race condition scenarios with concurrent requests\n   - Verify proper error messages and response format\n\n3. **UI Protection Testing**:\n   - Test disabled state of role toggle for last admin\n   - Test tooltip display and warning badge visibility\n   - Test real-time UI updates when admin count changes\n   - Test self-demotion prevention dialogs and warnings\n\n4. **Integration Testing**:\n   - Test integration with existing permission guards from Task 20\n   - Test activity logging integration with Task 19 events\n   - Test with existing profile management workflows\n   - Verify no conflicts with current role management system\n\n5. **Edge Case Testing**:\n   - Test with workspace having no active admins (data integrity)\n   - Test with pending admin invitations\n   - Test admin removal vs role change scenarios\n   - Test workspace deletion edge cases",
+        "status": "pending",
+        "dependencies": [
+          "20",
+          "19",
+          "14"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "30",
+        "title": "Complete Participant Management UI Interactive Features",
+        "description": "Implement missing bulk action handlers and slide-over detail view with inline event feed for the participant management interface, building on existing filters and column selection.",
+        "details": "Complete the participant management UI by implementing the remaining interactive features:\n\n1. **Bulk Action Handlers Implementation**:\n   - Implement bulk point distribution handler with validation and confirmation dialogs\n   - Add bulk role change functionality (PARTICIPANT ↔ ADMIN) with last-admin protection\n   - Create bulk enrollment management (enroll/unenroll from challenges)\n   - Implement bulk export functionality for selected participants\n   - Add bulk email notification sender with template selection\n   - Include progress indicators and error handling for all bulk operations\n\n2. **Slide-over Detail View**:\n   - Create slide-over component using shadcn/ui Sheet component\n   - Display comprehensive participant information: profile, enrollment status, points balance, recent activity\n   - Include quick action buttons: send email, adjust points, change role, manage enrollments\n   - Implement responsive design for mobile and desktop views\n\n3. **Inline Event Feed Integration**:\n   - Build real-time activity timeline showing recent participant actions\n   - Display point transactions, challenge enrollments, activity submissions, role changes\n   - Implement infinite scroll or pagination for large activity histories\n   - Add filtering options for event types and date ranges\n   - Include contextual actions for each event type\n\n4. **Enhanced User Experience**:\n   - Add keyboard shortcuts for common actions (Ctrl+A for select all, Delete for bulk actions)\n   - Implement optimistic updates for immediate feedback\n   - Add confirmation dialogs for destructive actions\n   - Include loading states and skeleton components for all async operations\n   - Implement proper error boundaries and user-friendly error messages\n\n5. **Performance Optimizations**:\n   - Implement virtual scrolling for large participant lists\n   - Add debounced search and filtering\n   - Optimize API calls with proper caching and pagination\n   - Use React.memo and useMemo for expensive computations",
+        "testStrategy": "Execute comprehensive testing for interactive participant management features:\n\n1. **Bulk Actions Testing**:\n   - Test bulk point distribution with various amounts and participant selections\n   - Verify bulk role changes respect last-admin protection rules\n   - Test bulk enrollment/unenrollment with different challenge types\n   - Validate bulk export functionality with large datasets\n   - Test bulk email sending with template selection and delivery confirmation\n\n2. **Slide-over Detail View Testing**:\n   - Test slide-over opening/closing with keyboard and mouse interactions\n   - Verify all participant data displays correctly in detail view\n   - Test quick actions functionality and proper state updates\n   - Validate responsive behavior across different screen sizes\n   - Test accessibility compliance with screen readers and keyboard navigation\n\n3. **Event Feed Testing**:\n   - Test real-time activity updates and proper event ordering\n   - Verify infinite scroll performance with large activity histories\n   - Test event filtering and date range selection functionality\n   - Validate contextual actions for different event types\n   - Test event feed performance with concurrent user activities\n\n4. **User Experience Testing**:\n   - Test keyboard shortcuts and accessibility features\n   - Verify optimistic updates and proper error rollback\n   - Test confirmation dialogs and user feedback mechanisms\n   - Validate loading states and skeleton component behavior\n   - Test error boundary functionality with simulated failures\n\n5. **Performance Testing**:\n   - Test virtual scrolling with 1000+ participants\n   - Verify debounced search performance and API call optimization\n   - Test concurrent bulk operations and system responsiveness\n   - Validate memory usage and component cleanup on unmount",
+        "status": "pending",
+        "dependencies": [
+          "9",
+          "12",
+          "20",
+          "29"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "31",
+        "title": "Implement Comprehensive Event Logging System",
+        "description": "Implement comprehensive event logging throughout the application to emit ActivityEvent logs for email settings/template changes, segment CRUD operations, and other critical actions using existing ActivityEvent enums.",
+        "details": "Implement comprehensive event logging system to emit ActivityEvent logs throughout the application:\n\n1. **Email Settings & Template Event Logging**:\n   - Add logging to email template CRUD operations (CREATE, UPDATE, DELETE events)\n   - Log email settings changes (SMTP configuration, sender settings)\n   - Log test email sends with recipient and template metadata\n   - Integrate with Task 26's email template management endpoints\n\n2. **Segment CRUD Event Logging**:\n   - Log SEGMENT_CREATED, SEGMENT_UPDATED, SEGMENT_DELETED events\n   - Include segment criteria, participant count, and modification metadata\n   - Track segment membership changes and bulk operations\n\n3. **Workspace Management Event Logging**:\n   - Log workspace settings changes (name, description, configuration updates)\n   - Track workspace feature toggles and permission changes\n   - Log workspace deletion and archival events\n\n4. **Challenge & Points Event Logging**:\n   - Integrate with Task 4's challenge progression system to log state transitions\n   - Log point awards, adjustments, and balance changes\n   - Track challenge creation, modification, and completion events\n\n5. **Participant Management Event Logging**:\n   - Extend Task 19's admin action logging to cover additional participant events\n   - Log preference changes from Task 23's participant settings system\n   - Track bulk participant operations and imports\n\n6. **Event Logging Infrastructure**:\n   - Create centralized `EventLogger` service class for consistent logging\n   - Implement async event logging to prevent blocking main operations\n   - Add event batching for high-frequency operations\n   - Include proper error handling and fallback mechanisms\n   - Add event metadata validation and sanitization\n\n7. **Integration Points**:\n   - Hook into existing API endpoints to add logging calls\n   - Integrate with Task 18's activity timeline for event display\n   - Ensure atomic operations where logging is critical\n   - Add logging middleware for automatic event capture",
+        "testStrategy": "Test comprehensive event logging functionality:\n\n1. **Email Event Logging Tests**:\n   - Test template CRUD operations generate correct ActivityEvent entries\n   - Verify email settings changes are logged with proper metadata\n   - Test test email sends create events with recipient information\n   - Validate integration with email management endpoints\n\n2. **Segment Event Logging Tests**:\n   - Test segment creation, update, and deletion generate appropriate events\n   - Verify segment criteria and participant count metadata accuracy\n   - Test bulk segment operations create batched event entries\n\n3. **Event Logger Service Tests**:\n   - Test centralized EventLogger service handles all event types correctly\n   - Verify async logging doesn't block main application operations\n   - Test event batching functionality for high-frequency operations\n   - Test error handling and fallback mechanisms for logging failures\n\n4. **Integration Tests**:\n   - Test event logging integration with existing admin actions from Task 19\n   - Verify events appear correctly in Task 18's activity timeline component\n   - Test atomic operations ensure events are logged with their corresponding actions\n   - Validate event metadata structure matches ActivityEvent enum requirements\n\n5. **Performance Tests**:\n   - Test logging performance impact on main application operations\n   - Verify event batching reduces database load for high-frequency events\n   - Test logging system handles concurrent operations correctly",
+        "status": "pending",
+        "dependencies": [
+          "18",
+          "19",
+          "26"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "32",
+        "title": "Complete Workspace Features - Logo Upload, Challenge Defaults, Data Export, and Scheduled Exports",
+        "description": "Implement comprehensive workspace branding and data management features including logo upload functionality, challenge defaults configuration in Activities Settings, CSV data export capabilities, and automated scheduled export system.",
+        "details": "Implement comprehensive workspace features to complete the workspace management functionality:\n\n1. **Logo Upload for Workspace Branding**:\n   - Extend existing workspace color branding with logo upload capability\n   - Add `logo_url` field to Workspace model if not already present\n   - Implement file upload handler with image validation (PNG, JPG, SVG support)\n   - Add image resizing/optimization for consistent branding display\n   - Create logo upload component with drag-and-drop interface using shadcn/ui\n   - Integrate with existing workspace settings page alongside color picker\n   - Add logo preview and removal functionality\n   - Implement proper file storage (cloud storage or local with proper serving)\n\n2. **Challenge Defaults in Activities Settings Tab**:\n   - Create Activities Settings tab in workspace admin settings\n   - Implement challenge default configuration interface\n   - Add fields for default point values, progression states, and challenge templates\n   - Create form components for setting default challenge parameters\n   - Integrate with Task 4's challenge progression state system\n   - Add validation for default values and proper form handling\n   - Store defaults in workspace settings or dedicated configuration table\n\n3. **Data Export (CSV) Functionality**:\n   - Implement comprehensive CSV export system for workspace data\n   - Create export endpoints for participants, challenges, activities, and points data\n   - Add export functionality to participant management interface (integrate with Task 30's bulk actions)\n   - Implement proper CSV formatting with headers and data sanitization\n   - Add date range filtering and data selection options\n   - Create download progress indicators and file generation status\n   - Ensure proper permissions and admin-only access for sensitive exports\n\n4. **Scheduled Exports System**:\n   - Design scheduled export configuration interface\n   - Implement cron-like scheduling system for automated exports\n   - Create background job system for export generation and delivery\n   - Add email delivery system for scheduled export results\n   - Implement export history and status tracking\n   - Create management interface for viewing, editing, and canceling scheduled exports\n   - Add proper error handling and retry logic for failed exports\n   - Integrate with existing event logging system for audit trails",
+        "testStrategy": "Execute comprehensive testing for all workspace feature implementations:\n\n1. **Logo Upload Testing**:\n   - Test file upload with various image formats (PNG, JPG, SVG)\n   - Verify image validation rejects invalid file types and oversized files\n   - Test drag-and-drop functionality across different browsers\n   - Verify logo preview displays correctly and updates workspace branding\n   - Test logo removal functionality and fallback to default state\n   - Verify proper file storage and serving of uploaded logos\n\n2. **Challenge Defaults Testing**:\n   - Test Activities Settings tab navigation and form rendering\n   - Verify default value configuration saves and persists correctly\n   - Test integration with challenge creation using configured defaults\n   - Verify validation prevents invalid default configurations\n   - Test form reset and default value restoration functionality\n\n3. **Data Export Testing**:\n   - Test CSV export generation for all data types (participants, challenges, activities, points)\n   - Verify CSV formatting, headers, and data accuracy\n   - Test date range filtering and data selection options\n   - Verify export permissions restrict access to admin users only\n   - Test large dataset exports for performance and memory usage\n   - Verify proper file download and browser compatibility\n\n4. **Scheduled Exports Testing**:\n   - Test scheduled export configuration interface and validation\n   - Verify background job execution and export generation\n   - Test email delivery system for scheduled export results\n   - Verify export history tracking and status updates\n   - Test error handling and retry logic for failed exports\n   - Verify management interface for editing and canceling schedules\n   - Test integration with event logging system for audit trails",
+        "status": "pending",
+        "dependencies": [
+          "4",
+          "26",
+          "30",
+          "31"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "33",
+        "title": "Implement Points Budget Data Models and Prisma Migrations",
+        "description": "Add Prisma models for points budget tracking, including WorkspacePointsBudget, ChallengePointsBudget, PointsLedger, and optional BudgetLedger, and run database migrations to apply schema updates.",
+        "details": "Define new Prisma models in the schema for:\n\n- **WorkspacePointsBudget**: Fields include `id` (UUID, primary key), `workspaceId` (unique, foreign key), `totalBudget` (numeric), `allocated` (numeric), `remaining` (numeric), `updatedBy` (foreign key to User), and standard timestamp fields (`createdAt`, `updatedAt`).\n- **ChallengePointsBudget**: Fields include `id` (UUID, primary key), `challengeId` (unique, foreign key), `workspaceId` (foreign key), `totalBudget`, `allocated`, `remaining`, `updatedBy`, and timestamps.\n- **PointsLedger**: Tracks transactions with fields: `id` (UUID, primary key), `workspaceId` (foreign key), `challengeId` (optional, foreign key), `toUserId` (foreign key), `amount` (numeric), `reason` (string or enum), `submissionId` (optional, foreign key), `actorUserId` (foreign key), and timestamps.\n- **BudgetLedger** (optional): Tracks budget changes with fields such as `id`, `workspaceId`, `challengeId` (optional), `changeType` (enum: allocation, adjustment, etc.), `amount`, `actorUserId`, and timestamps.\n\nFollow best practices for Prisma modeling:\n- Use UUIDs for primary keys for scalability.\n- Enforce uniqueness constraints on `workspaceId` and `challengeId` where required.\n- Use foreign key relations for referential integrity.\n- Add appropriate indexes for query performance.\n- Use enums for transaction reasons and budget change types for consistency.\n- Document each model and field in the schema for maintainability.\n\nAfter updating the Prisma schema, run `npx prisma migrate dev --name points-budget-models` to generate and apply migrations. Review generated SQL for correctness. Update TypeScript types if using Prisma Client. Ensure backward compatibility and data integrity with existing models.",
+        "testStrategy": "1. Verify Prisma models are correctly defined and relations are enforced in the schema.\n2. Run migrations and confirm tables and constraints are created in the database.\n3. Write unit tests for model creation, updates, and deletions, including edge cases (e.g., unique constraint violations, foreign key integrity).\n4. Test PointsLedger and BudgetLedger transaction recording and retrieval, including filtering by workspace, challenge, and user.\n5. Validate that allocated and remaining budget fields update correctly on transactions.\n6. Confirm timestamps and updatedBy/actorUserId fields are populated as expected.\n7. Review database indexes and query performance for common access patterns.",
+        "status": "done",
+        "dependencies": [
+          "25"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "34",
+        "title": "Implement Points Budget Query and Award Functions",
+        "description": "Develop database query functions for managing workspace and challenge points budgets, including transactional award logic, budget decrement, balance validation, and ledger logging.",
+        "details": "Implement the following functions using best practices for transactional integrity and budget management:\n\n- **getWorkspacePointsBudget(workspaceId)** and **upsertWorkspacePointsBudget(workspaceId, budgetData)**: Query and update the workspace-level points budget. Ensure upsert operations are idempotent and validate input data.\n- **getChallengePointsBudget(challengeId)** and **upsertChallengePointsBudget(challengeId, budgetData)**: Query and update challenge-level points budgets. Use parameterized queries to prevent SQL injection and ensure atomicity for upserts.\n- **awardPointsWithBudget(workspaceId, challengeId?, toUserId, amount, actorUserId, submissionId?)**: Implement as a transactional function. The logic should:\n  - Check challenge budget first (if challengeId is provided), then workspace budget.\n  - Decrement the appropriate budget(s) only if sufficient funds are available.\n  - In Phase 1, log a warning if budget is insufficient but allow the transaction; in Phase 2, block the award if budget is insufficient.\n  - Increment the recipient's PointsBalance only after budget validation and successful decrement.\n  - Log all transactions in the PointsLedger table with full audit details (who, what, when, why).\n  - Use database transactions (e.g., PostgreSQL `BEGIN ... COMMIT/ROLLBACK`) to ensure atomicity and consistency.\n  - Apply optimistic concurrency control or row-level locking to prevent race conditions on budget decrement.\n- Ensure all queries and mutations are covered by TypeScript interfaces and use parameterized SQL or ORM methods for safety.\n- Follow current best practices for financial/budget systems: audit trails, transactional integrity, input validation, and clear error handling.\n- Document all functions with JSDoc and provide usage examples for integration.\n- Prepare for future extensibility (e.g., budget period dimensions, reporting) by structuring queries and models to support additional budget attributes.\n",
+        "testStrategy": "1. Unit test all query and upsert functions for correct data retrieval, creation, and update scenarios, including edge cases (e.g., missing budgets).\n2. Integration test awardPointsWithBudget for both Phase 1 (warning-only) and Phase 2 (blocking) logic:\n   - Simulate awards with sufficient and insufficient budgets at both workspace and challenge levels.\n   - Verify transactional integrity: budgets decrement only on success, PointsBalance increments only after validation, and PointsLedger logs all actions.\n   - Test concurrent awards to ensure no race conditions or double-spending (using database transaction isolation).\n3. Validate audit logging: every award, warning, and block must be recorded in PointsLedger with correct metadata.\n4. Test error handling and rollback for all failure scenarios (e.g., database errors, invalid input).\n5. Review code for security best practices (SQL injection prevention, access control).\n6. Document and verify usage examples for all functions.",
+        "status": "done",
+        "dependencies": [
+          "33"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "35",
+        "title": "Update Submission Review API for Budget Integration",
+        "description": "Modify the submission approval flow to integrate with the budget system, updating the PUT route for activity submissions, replacing direct PointsBalance upserts with budget-aware logic, and implementing robust error handling and transactional integrity.",
+        "details": "1. Refactor the `/api/workspaces/[slug]/activity-submissions/[id]` PUT route to use the new `awardPointsWithBudget` function for point awards, replacing any direct PointsBalance upsert logic. Ensure the API call passes all necessary context (workspaceId, challengeId, participantId, points amount) to the budget functions.\n\n2. Integrate budget validation: Before awarding points, query the relevant workspace or challenge budget using the query functions from Task 34. If the budget is insufficient, return a structured error response (e.g., HTTP 400/403 with a clear message and error code) and do not proceed with the award.\n\n3. Implement transactional integrity using your ORM/database transaction primitives (e.g., Prisma's `$transaction`). Ensure that budget decrement, ledger logging, and points award all succeed or fail together, preventing partial updates.\n\n4. Add comprehensive error handling for budget validation failures, including:\n   - Insufficient budget (return error, log event)\n   - Unexpected database errors (return generic error, log for diagnostics)\n   - Permission errors (return 403 if user lacks rights to approve submissions or view budgets)\n\n5. Update API documentation to reflect new error responses and budget integration logic.\n\n6. Ensure the approval flow is extensible for future budget types or multi-stage approvals. Use clear separation of concerns in code (e.g., service layer for budget logic, controller for API orchestration).\n\nBest practices:\n- Use atomic transactions for all state changes related to budget and points.\n- Return machine-readable error codes for client-side handling.\n- Log all failed budget validations for audit and analytics.\n- Write unit and integration tests for all new logic paths.\n- Document all new API behaviors and error codes for frontend and integration teams.",
+        "testStrategy": "1. Unit test the updated PUT route for all scenarios: sufficient budget, insufficient budget, permission errors, and unexpected failures.\n2. Integration test the full approval flow, simulating concurrent submissions to verify transactional integrity and no race conditions.\n3. Validate error responses for insufficient budget and permission errors, ensuring correct HTTP status codes and error payloads.\n4. Confirm that points are only awarded when budget is sufficient and all related updates (budget decrement, ledger entry, PointsBalance) occur atomically.\n5. Review API documentation updates for accuracy and completeness.\n6. Audit logs for failed and successful budget validations.",
+        "status": "done",
+        "dependencies": [
+          "34"
+        ],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "36",
+        "title": "Add Points and Budget Display to Dashboard Header Components",
+        "description": "Display participant points and admin budget information as badges in the dashboard header. Since the main data models and query functions are already implemented, focus on updating the dashboard header component to fetch and display budget information.",
+        "status": "pending",
+        "dependencies": [
+          "33",
+          "34"
+        ],
+        "priority": "medium",
+        "details": "Update the `components/layout/dashboard-header.tsx` to include new badge elements next to role indicators: for participants, show a 'My Points: X/Y' badge (where X is current points and Y is available budget); for admins, show a 'Budget: R/T' badge (where R is remaining budget and T is total budget). Use a compact, visually distinct badge style (e.g., small, colored, rounded) for clarity and accessibility. Leverage the existing query functions from the points budget logic (getWorkspacePointsBudget, getChallengePointsBudget) to fetch the necessary data. Ensure the header dynamically renders the correct badge based on user role, and that the admin badge includes a clickable quick link to the budget management page. Follow React best practices for state management (e.g., hooks, context if needed), and ensure all UI changes are responsive and accessible (ARIA labels, keyboard navigation). Use TypeScript for type safety and maintainability. Consider using a UI library badge component (e.g., MUI, Chakra, or custom) for consistency. Ensure the header remains performant by memoizing expensive computations and minimizing unnecessary re-renders.",
+        "testStrategy": "1. Unit test the header component to verify correct badge rendering for both participant and admin roles, including edge cases (e.g., zero points, full budget).\n2. Integration test the header component's data fetching to ensure accurate display of points/budget data using existing query functions.\n3. Verify that the admin quick link navigates to the budget management page and is only visible to admins.\n4. Conduct accessibility testing (screen reader, keyboard navigation) for all new badge elements.\n5. Perform responsive UI testing to ensure badges display correctly on all screen sizes.\n6. Mock existing query function responses in tests to simulate various points and budget scenarios.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Update dashboard header component to fetch budget data",
+            "description": "Modify the dashboard-header.tsx component to call existing budget query functions and retrieve workspace/challenge budget information for display",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement participant points badge display",
+            "description": "Add 'My Points: X/Y' badge for participants showing current points (X) and available budget (Y) with proper styling and accessibility",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Implement admin budget badge display",
+            "description": "Add 'Budget: R/T' badge for admins showing remaining budget (R) and total budget (T) with clickable quick link to budget management",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Add responsive design and accessibility features",
+            "description": "Ensure badges are responsive across screen sizes and include proper ARIA labels and keyboard navigation support",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Optimize header performance",
+            "description": "Implement memoization and optimize re-renders to maintain header performance with new budget data fetching",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "37",
+        "title": "Create Admin Budget Management UI",
+        "description": "Develop admin-facing UI controls for managing workspace and challenge budgets, with sections integrated into Workspace Settings and Challenge Edit pages. The data models are already implemented, so focus is on creating the UI components for budget allocation and management.",
+        "status": "pending",
+        "dependencies": [
+          "33"
+        ],
+        "priority": "medium",
+        "details": "Implement a modular, responsive admin budget management interface using modern UI libraries (e.g., shadcn/ui, React, TypeScript). Key features:\n\n- **Workspace Settings Budget Section**: Add a dedicated section to the Workspace Settings page for viewing and editing the total workspace points budget. Display current allocation status showing how much budget is allocated to challenges vs. remaining available budget. Use color-coded indicators and clear labeling for budget status, following dashboard design best practices for clarity and accessibility.\n\n- **Challenge Edit/Create Budget Section**: Integrate a budget allocation section into the Challenge Edit and Create pages, allowing admins to allocate points budget from the workspace total to specific challenges. Show real-time feedback on remaining workspace budget as allocations are made. Include forms for budget allocation with real-time validation and error handling.\n\n- **Budget Status Display**: Both sections should clearly show:\n  - Total workspace budget\n  - Currently allocated budget (sum of all challenge allocations)\n  - Remaining available budget for allocation\n  - Visual indicators (progress bars, color coding) for budget utilization\n\n- **Budget Allocation Forms**: Implement forms for budget allocation with validation (e.g., non-negative values, cannot exceed available workspace budget), optimistic UI updates, and rollback on failure. Ensure accessibility (ARIA labels, keyboard navigation) and responsive design for all components.\n\n- **Real-time Budget Updates**: Ensure budget displays update in real-time as allocations are made, showing accurate remaining budget calculations across both workspace and challenge sections.\n\n- **Integration**: Connect UI components to the existing Points Budget Data Models and admin dashboard structure. Use TypeScript interfaces for all data and props. Leverage the already implemented data layer for budget operations.",
+        "testStrategy": "1. Verify workspace budget section renders correctly in Workspace Settings page for admin users, showing total budget and allocation status.\n2. Test challenge budget allocation section in Challenge Edit/Create pages, ensuring proper integration and real-time budget updates.\n3. Validate budget allocation forms with edge cases (negative values, exceeding available budget, zero allocations).\n4. Confirm remaining budget calculations are accurate and update in real-time across both sections when allocations change.\n5. Test budget status displays show correct total, allocated, and remaining amounts with proper visual indicators.\n6. Ensure budget allocation validation prevents over-allocation of workspace budget.\n7. Perform responsive design checks across devices and screen sizes for both budget sections.\n8. Conduct integration tests with existing Points Budget Data Models and admin dashboard APIs.\n9. Use automated UI tests (e.g., Jest, React Testing Library, Cypress) for budget allocation workflows and validation scenarios.",
+        "subtasks": []
+      },
+      {
+        "id": "38",
+        "title": "Enhance Participant Points Visibility and History",
+        "description": "Enhance participant-facing points visibility by implementing a header badge showing 'My Points: X/Y' format where X is current points balance and Y is available budget, providing consistent visibility across all participant pages.",
+        "status": "done",
+        "dependencies": [
+          "36",
+          "13",
+          "2"
+        ],
+        "priority": "low",
+        "details": "Implement the following enhancement for participant points visibility:\n\n- **Header Badge Implementation**: Add a points badge to the participant header displaying 'My Points: X/Y' format where X represents the user's current PointsBalance and Y represents the available budget from their workspace. The badge should be prominently displayed and accessible across all participant pages.\n- **Real-time Data Integration**: Use server-side data fetching to ensure accuracy of both current points balance and available budget information. Implement optimistic UI updates for responsiveness when points change.\n- **Cross-page Consistency**: Ensure the header badge appears consistently across all participant-facing pages (dashboard, profile, settings, activities, etc.) for seamless user experience.\n- **Mobile Responsiveness**: Design the header badge to be mobile-friendly and maintain readability across different screen sizes.\n- **Security and Privacy**: Ensure participants can only see their own points balance and their workspace's available budget, with no access to other users' data or administrative budget information.\n- **UI/UX Best Practices**: Use clear, accessible design with appropriate color contrast and intuitive formatting. The badge should be easily scannable and not interfere with existing header functionality.\n- **Integration with Existing Systems**: Build upon the existing points data models and coordinate with any existing points displays on profile/settings pages to maintain consistency.",
+        "testStrategy": "1. Verify the points badge appears in the participant header across all participant pages with correct 'My Points: X/Y' format.\n2. Confirm the badge displays accurate current PointsBalance and available budget data matching backend records.\n3. Test real-time updates of the badge when points balance changes through various activities.\n4. Verify mobile responsiveness and accessibility of the header badge across different devices and screen sizes.\n5. Confirm participants can only see their own points data and workspace budget, with no access to other users' information.\n6. Test the badge's visual integration with existing header elements and ensure it doesn't interfere with navigation or other functionality.\n7. Validate the badge appears consistently across all participant-facing pages and maintains the same format and styling.",
+        "subtasks": [],
+        "updatedAt": "2025-10-07T04:52:34.992Z"
+      },
+      {
+        "id": "39",
+        "title": "Implement Points Ledger and Audit Logging System",
+        "description": "Develop a robust points ledger system with comprehensive audit logging for all points transactions, including admin-facing audit trail viewing and export capabilities, ensuring full traceability and compliance.",
+        "status": "pending",
+        "dependencies": [
+          "34"
+        ],
+        "priority": "medium",
+        "details": "Since PointsLedger entries are already being created by the awardPointsWithBudget function, the remaining work focuses on building the admin interface for viewing and managing the audit trail:\n\n1. **Admin Audit Trail Interface**: \n   - Build an admin-facing UI for viewing the points ledger and audit trail. Features should include chronological listing, filtering by user, workspace, challenge, transaction type, and date range. Display all relevant metadata and provide links to related entities (e.g., participant, challenge).\n   - Implement pagination or infinite scroll for large datasets, and ensure responsive design for desktop and mobile.\n   - Create API endpoints to query PointsLedger entries with filtering and sorting capabilities.\n\n2. **Export Capability**: \n   - Add export functionality (CSV/Excel) for the ledger data, supporting filtered and full exports. Ensure exported data includes all relevant fields for compliance and reconciliation purposes.\n   - Implement server-side export generation to handle large datasets efficiently.\n\n3. **ActivityEvent Integration Enhancement**: \n   - Verify and enhance the ActivityEvent enum and logging system to include event types: POINTS_BUDGET_UPDATED, POINTS_AWARDED, and any other relevant actions. Ensure these events are properly emitted alongside existing PointsLedger entries.\n   - Add any missing ActivityEvent emissions for points-related operations not currently covered.\n\n4. **Security & Permissions**: \n   - Restrict audit trail and export access to authorized admin roles. Log all audit trail access events for compliance.\n   - Implement proper authorization checks in the audit interface API endpoints.\n\n5. **Documentation**: \n   - Document the admin interface usage, including how to interpret ledger entries and use filtering/export features.\n   - Create troubleshooting guide for reconciliation issues and common audit trail queries.",
+        "testStrategy": "1. **API Tests**: \n   - Test PointsLedger query endpoints with various filtering combinations (user, workspace, challenge, transaction type, date range).\n   - Verify pagination and sorting functionality works correctly with large datasets.\n   - Test authorization controls restrict access to admin roles only.\n\n2. **UI Tests**: \n   - Test the admin audit trail interface for correct data loading, filtering, pagination, and responsive design.\n   - Verify all filter combinations work correctly and display expected results.\n   - Test loading states, error handling, and empty state displays.\n\n3. **Export Verification**: \n   - Confirm exported CSV/Excel files contain all expected fields and match filtered data sets.\n   - Test export functionality with various filter combinations and large datasets.\n   - Verify export file formatting and data integrity.\n\n4. **ActivityEvent Integration**: \n   - Verify all points-related actions result in proper ActivityEvent entries alongside existing PointsLedger entries.\n   - Test that new event types are properly logged and displayed in the audit interface.\n\n5. **Security Tests**: \n   - Test access controls prevent non-admin users from accessing audit trail features.\n   - Verify audit trail access events are properly logged.\n\n6. **Performance Tests**: \n   - Test interface performance with large volumes of ledger entries.\n   - Verify pagination and filtering don't cause performance issues.\n\n7. **Documentation Review**: \n   - Review admin documentation for completeness and clarity of audit interface usage.",
+        "subtasks": []
+      },
+      {
+        "id": "40",
+        "title": "Budget System Migration and Rollout",
+        "description": "Complete the budget system rollout by backfilling initial workspace budgets for existing workspaces, implementing phased enforcement configuration, and documenting the migration process. The schema migrations and models have already been implemented.",
+        "status": "pending",
+        "dependencies": [
+          "33",
+          "34",
+          "35"
+        ],
+        "priority": "high",
+        "details": "With the Prisma schema migrations and budget models already implemented (Task 33) and query functions completed (Task 34), the remaining work focuses on:\n\n1. **Backfill Initial Workspace Budgets**: Create a backfill script or function to initialize WorkspacePointsBudget entries for existing workspaces that don't currently have budget records. For each workspace without a budget, create an entry with either 'unlimited' budget (null totalBudget) or a configured default value. Ensure the script is idempotent and logs all changes for auditability.\n\n2. **Phase 1: Non-blocking Mode**: Implement configuration logic to control budget enforcement behavior. In Phase 1 (warnings only), the system should check budget status during award/transaction operations and return warnings in API responses when transactions would result in negative budgets, but allow the operations to proceed. Log all warnings for monitoring.\n\n3. **Phase 2: Enforced Mode**: Add a configuration toggle to enable strict budget enforcement. When enabled, block any award or transaction that would exceed available budget, returning clear error messages. The toggle should be easily discoverable and changes should be auditable.\n\n4. **Configuration Management**: Implement the enforcement mode toggle using a secure, versioned configuration approach (database config table, environment variable, or admin UI setting). Ensure the setting is clearly labeled and documented for authorized users.\n\n5. **Rollout Documentation**: Create comprehensive documentation covering the rollout plan, including: backfill process execution, phased enforcement strategy, configuration management procedures, monitoring guidelines, and rollback procedures. Include specific commands, code examples, and troubleshooting guidance.\n\n**Best Practices**:\n- Test backfill scripts in staging environment before production execution\n- Use transactional operations for budget initialization\n- Monitor enforcement toggle changes and set up alerts\n- Communicate rollout phases clearly to stakeholders\n- Ensure all configuration changes are version controlled and auditable",
+        "testStrategy": "1. Test the backfill script in a staging environment to verify that WorkspacePointsBudget entries are correctly created for existing workspaces without budgets.\n2. Confirm that workspaces with existing budgets are not affected by the backfill process (idempotency check).\n3. In non-blocking mode, attempt transactions that would exceed budget limits and verify that warnings are returned but operations succeed.\n4. Enable enforced mode and attempt over-budget transactions; verify that they are blocked with appropriate error messages.\n5. Test the configuration toggle mechanism to ensure enforcement mode switches work correctly and changes are logged.\n6. Validate that the rollout documentation is complete and accurate by performing a dry run in a test environment.\n7. Monitor system behavior during both enforcement phases, checking logs for warnings, errors, and successful budget enforcement.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create Workspace Budget Backfill Script",
+            "description": "Develop an idempotent script to create WorkspacePointsBudget entries for existing workspaces that don't have budget records",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Create a backfill function that queries all workspaces without existing WorkspacePointsBudget entries and creates initial budget records. The script should allow configuration of default budget values (unlimited vs. specific amounts) and include comprehensive logging of all changes made.",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Implement Budget Enforcement Configuration Toggle",
+            "description": "Add configuration mechanism to control budget enforcement behavior (Phase 1: warnings vs Phase 2: blocking)",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Implement a configuration system that allows toggling between warning-only mode and strict enforcement mode. This could be an environment variable, database configuration table, or admin UI setting. Ensure changes are auditable and the current mode is easily discoverable.",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Update Award Functions with Enforcement Logic",
+            "description": "Modify existing award/transaction functions to respect the enforcement configuration toggle",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Update the award functions to check the enforcement configuration and behave accordingly: in Phase 1, return warnings but allow over-budget operations; in Phase 2, block operations that would exceed available budget. Ensure proper error messages and logging in both modes.",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Create Rollout Documentation",
+            "description": "Document the complete rollout process including backfill execution, enforcement phases, and rollback procedures",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Create comprehensive documentation covering: how to execute the backfill script, how to toggle enforcement modes, monitoring guidelines for each phase, rollback procedures if issues arise, and troubleshooting common problems. Include specific commands and code examples.",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Execute Production Rollout",
+            "description": "Perform the actual rollout in production following the documented process",
+            "status": "pending",
+            "dependencies": [],
+            "details": "Execute the rollout plan: run backfill script, enable Phase 1 (warnings), monitor system behavior, communicate with stakeholders, and prepare for Phase 2 enforcement when appropriate. Include post-rollout validation and monitoring setup.",
+            "testStrategy": "",
+            "parentId": "undefined"
+          }
+        ]
+      },
+      {
+        "id": "41",
+        "title": "Develop Comprehensive Points Budget Testing Suite",
+        "description": "Design and implement a robust automated testing suite for the implemented points budget system, focusing on comprehensive testing of query functions, integration testing of the awardPointsWithBudget flow, and end-to-end testing of the complete admin/participant budget experience including UI interactions.",
+        "status": "pending",
+        "dependencies": [
+          "33",
+          "34",
+          "35",
+          "36",
+          "37",
+          "39",
+          "40"
+        ],
+        "priority": "medium",
+        "details": "With the core budget system now implemented, focus on comprehensive testing coverage:\n\n1. **Unit Tests for Query Functions**: Write granular unit tests for all budget query functions (getWorkspacePointsBudget, getChallengePointsBudget, upsertWorkspacePointsBudget, upsertChallengePointsBudget). Test data retrieval, creation, update scenarios, and edge cases like missing budgets or invalid parameters.\n\n2. **Integration Tests for awardPointsWithBudget**: Test the complete awardPointsWithBudget transaction flow including budget decrement, participant balance increment, ledger logging, and audit trail creation. Validate both warning and blocking enforcement modes with sufficient and insufficient budget scenarios.\n\n3. **Concurrency Testing**: Simulate concurrent award scenarios to verify atomicity, race condition handling, and correct locking behavior in the implemented budget system. Test parallel awards against the same budget to ensure no double-spending or inconsistent states.\n\n4. **End-to-End Budget Experience Tests**: Automate complete user flows using Playwright or Cypress: admin sets budget → approves submission → participant points increase → budget decreases → UI badges update. Test both admin and participant perspectives of the budget system.\n\n5. **UI Badge Integration Testing**: Verify header badge updates reflect budget changes in real-time, including edge cases (zero budget, budget exhaustion, over-budget scenarios). Test badge behavior in both enforcement modes.\n\n6. **Audit Trail Validation**: Test that all budget-related transactions generate proper PointsLedger entries with correct metadata, ensuring full traceability of budget operations.\n\n7. **Error Handling and Edge Cases**: Test system behavior with invalid inputs, network failures, database constraints, and boundary conditions to ensure robust error handling.",
+        "testStrategy": "- Execute unit tests for all budget query functions with >90% coverage, including edge cases and error scenarios.\n- Run integration tests for awardPointsWithBudget flow covering both enforcement modes, budget validation, and ledger logging.\n- Perform concurrency tests with parallel award attempts to verify transaction integrity and prevent race conditions.\n- Automate E2E flows: admin budget management → submission approval → participant experience → UI badge updates, using Playwright/Cypress.\n- Test UI badge responsiveness to backend budget changes across different user roles and scenarios.\n- Validate audit trail completeness by checking PointsLedger entries after each budget operation.\n- Execute error handling tests for invalid inputs, constraint violations, and system failures.\n- Integrate all tests into CI/CD pipeline with clear pass/fail criteria and comprehensive reporting.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Unit Tests for Budget Query Functions",
+            "description": "Write comprehensive unit tests for getWorkspacePointsBudget, getChallengePointsBudget, upsertWorkspacePointsBudget, and upsertChallengePointsBudget functions",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 2,
+            "title": "Develop Integration Tests for awardPointsWithBudget Flow",
+            "description": "Create integration tests covering the complete awardPointsWithBudget transaction including budget validation, decrement, balance increment, and ledger logging",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 3,
+            "title": "Build Concurrency Tests for Budget Operations",
+            "description": "Implement parallel testing scenarios to verify atomicity and prevent race conditions in concurrent budget award operations",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 4,
+            "title": "Create End-to-End Budget Experience Tests",
+            "description": "Develop automated E2E tests using Playwright/Cypress covering admin budget setup, submission approval, and participant experience flows",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 5,
+            "title": "Implement UI Badge Integration Tests",
+            "description": "Test header badge updates and responsiveness to budget changes across different user roles and enforcement modes",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 6,
+            "title": "Validate Audit Trail and Ledger Integration",
+            "description": "Test PointsLedger entry creation and metadata accuracy for all budget-related transactions",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          },
+          {
+            "id": 7,
+            "title": "Test Error Handling and Edge Cases",
+            "description": "Implement comprehensive error handling tests for invalid inputs, constraint violations, and system failure scenarios",
+            "status": "pending",
+            "dependencies": [],
+            "details": "",
+            "testStrategy": "",
+            "parentId": "undefined"
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "version": "1.0.0",
+      "lastModified": "2025-10-07T04:52:34.997Z",
+      "taskCount": 37,
+      "completedCount": 8,
+      "tags": [
+        "master"
+      ]
+    }
+  }
+}

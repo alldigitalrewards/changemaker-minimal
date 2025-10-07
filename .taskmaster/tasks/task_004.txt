@@ -1,0 +1,49 @@
+# Task ID: 4
+# Title: Implement Challenge Progression States
+# Status: pending
+# Dependencies: 2
+# Priority: medium
+# Description: Implement challenge progression state system with enum field and state machine service, integrating with existing PointsBalance for point awards.
+# Details:
+Add progressionState enum field to existing Challenge model with states: submitted, approved, in_development, in_production, verified, completed. Create ChallengeProgressionService class for managing state transitions without external libraries. Build API routes at /api/w/[slug]/challenges/[id]/progression for state updates. Integrate with existing PointsBalance system when progression triggers point awards. Simple implementation focused solely on challenge progression states.
+
+# Test Strategy:
+Test challenge progression state machine and API routes for state updates using unit tests and integration tests. Verify proper integration with existing PointsBalance system for automatic point awards.
+
+# Subtasks:
+## 1. Add ProgressionState Enum to Challenge Model [pending]
+### Dependencies: None
+### Description: Add progressionState enum field to existing Challenge model with defined states.
+### Details:
+Add progressionState enum field to Challenge model with states: submitted, approved, in_development, in_production, verified, completed. Update database migration and model validation to support the new field. Ensure compatibility with existing Challenge model structure.
+
+## 2. Create ChallengeProgressionService for State Transitions [pending]
+### Dependencies: 4.1
+### Description: Implement simple state machine service for managing challenge progression states without external libraries.
+### Details:
+Create ChallengeProgressionService class with methods for state transitions: submitChallenge(), approveChallenge(), moveToInDevelopment(), moveToInProduction(), verifyChallenge(), completeChallenge(). Implement validation for allowed state transitions and define transition rules. Include error handling for invalid transitions and proper state validation.
+
+## 3. Integrate Challenge Progression with Existing PointsBalance System [pending]
+### Dependencies: 4.2
+### Description: Connect challenge progression state changes with existing PointsBalance for automatic point awards.
+### Details:
+Integrate ChallengeProgressionService with existing PointsBalance system to automatically award points on specific state transitions. Implement point award rules: Challenge submission = 10 points, Challenge approval = 50 points, Challenge completion = 100 points. Ensure proper error handling and transaction consistency when awarding points.
+
+## 4. Build Challenge Progression API Routes [pending]
+### Dependencies: 4.3
+### Description: Create API routes for challenge progression state updates at /api/w/[slug]/challenges/[id]/progression.
+### Details:
+Implement API routes: PUT /api/w/[slug]/challenges/[id]/progression for updating challenge state, GET /api/w/[slug]/challenges/[id]/progression for retrieving current state. Include proper validation for state transitions, workspace isolation, and integration with automatic point awards through PointsBalance system.
+
+## 5. Integrate Challenge Progression with Existing Challenge System [pending]
+### Dependencies: 4.4
+### Description: Integrate the new progression state machine with existing challenge workflows.
+### Details:
+Update existing challenge creation, submission, and management workflows to use the new progression states. Ensure seamless integration with current challenge functionality while maintaining backward compatibility. Update challenge display and management interfaces to show progression state.
+
+## 6. Test Comprehensive Challenge Progression System [pending]
+### Dependencies: 4.5
+### Description: Conduct comprehensive testing of challenge progression functionality and PointsBalance integration.
+### Details:
+Use unit tests and integration tests to ensure proper challenge progression state machine functionality, API route operations, and PointsBalance integration. Test specific scenarios: challenge state transitions, automatic point awards (10 points for submission, 50 for approval, 100 for completion), invalid transition handling, and workspace isolation.
+
