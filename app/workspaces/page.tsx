@@ -30,7 +30,7 @@ export default async function WorkspacesPage() {
   // Get user's workspace memberships (new system)
   const memberships = await listMemberships(dbUser.id)
 
-  // Tenancy-aware available workspaces list (hide discovery for non-super-admins)
+  // Tenancy-aware available workspaces list
   let allWorkspaces: { id: string; name: string; slug: string; _count: { memberships: number; challenges: number } }[] = []
   const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
   if (userIsPlatformAdmin) {
@@ -45,28 +45,23 @@ export default async function WorkspacesPage() {
       }
     })
   } else {
-    // Non-super-admins: no global discovery; show only tenant-visible workspaces if user is admin of any tenant
+    // Non-super-admins: show tenant-visible workspaces
     // Determine tenant from first membership (preferred) or legacy workspace
     const userTenantId = dbUser.workspaceId
       ? (await prisma.workspace.findUnique({ where: { id: dbUser.workspaceId }, select: { tenantId: true } }))?.tenantId
-      : null
+      : memberships[0]?.workspace?.tenantId || null
     if (userTenantId) {
-      // Client admins (role ADMIN in any workspace) see tenant workspaces
-      const isClientAdmin = memberships.some(m => m.role === 'ADMIN')
-      if (isClientAdmin) {
-        allWorkspaces = await prisma.workspace.findMany({
-          where: { tenantId: userTenantId, active: true, published: true },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            _count: { select: { memberships: true, challenges: true } }
-          }
-        })
-      } else {
-        // Participants: suppress discovery completely
-        allWorkspaces = []
-      }
+      // Show all active, published workspaces in the same tenant
+      // Both admins and participants can discover workspaces within their tenant
+      allWorkspaces = await prisma.workspace.findMany({
+        where: { tenantId: userTenantId, active: true, published: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          _count: { select: { memberships: true, challenges: true } }
+        }
+      })
     } else {
       // No tenant context resolvable, suppress discovery
       allWorkspaces = []
@@ -175,11 +170,11 @@ export default async function WorkspacesPage() {
           </Card>
         )}
 
-        {/* Available Workspaces (hidden for participants) */}
+        {/* Available Workspaces - Show if there are any workspaces to discover */}
+        {allWorkspaces.length > 0 && (
         <Card
           id="discover-workspaces"
           className="border-gray-200 shadow-sm transition-all"
-          style={{ display: userIsPlatformAdmin || memberships.some(m => m.role === 'ADMIN') ? undefined : 'none' }}
         >
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
@@ -219,6 +214,7 @@ export default async function WorkspacesPage() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   )
