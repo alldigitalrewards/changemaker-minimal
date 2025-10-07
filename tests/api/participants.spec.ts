@@ -162,7 +162,7 @@ test.describe('Participants API', () => {
     const segmentData = {
       name: `Test Segment ${Date.now()}`,
       description: 'Test participant segment',
-      filters: {
+      filterJson: {
         role: 'PARTICIPANT',
         createdAfter: '2024-01-01'
       }
@@ -177,7 +177,7 @@ test.describe('Participants API', () => {
     const data = await response.json();
 
     expect(data.segment.name).toBe(segmentData.name);
-    expect(data.segment.filters).toEqual(segmentData.filters);
+    expect(data.segment.filterJson).toEqual(segmentData.filterJson);
 
     // Cleanup
     await prisma.workspaceParticipantSegment.delete({ where: { id: data.segment.id } });
@@ -190,8 +190,8 @@ test.describe('Participants API', () => {
         name: `Segment 1 ${Date.now()}`,
         description: 'First test segment',
         workspaceId,
-        filters: { role: 'PARTICIPANT' },
-        createdById: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
+        filterJson: { role: 'PARTICIPANT' },
+        createdBy: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
       }
     });
 
@@ -200,8 +200,8 @@ test.describe('Participants API', () => {
         name: `Segment 2 ${Date.now()}`,
         description: 'Second test segment',
         workspaceId,
-        filters: { status: 'active' },
-        createdById: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
+        filterJson: { status: 'active' },
+        createdBy: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
       }
     });
 
@@ -238,8 +238,8 @@ test.describe('Participants API', () => {
         name: `Active Segment ${Date.now()}`,
         description: 'Segment with participants',
         workspaceId,
-        filters: { role: 'PARTICIPANT' },
-        createdById: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
+        filterJson: { role: 'PARTICIPANT' },
+        createdBy: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
       }
     });
 
@@ -263,15 +263,15 @@ test.describe('Participants API', () => {
         name: `Update Test ${Date.now()}`,
         description: 'Original description',
         workspaceId,
-        filters: { role: 'PARTICIPANT' },
-        createdById: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
+        filterJson: { role: 'PARTICIPANT' },
+        createdBy: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
       }
     });
 
     const updateData = {
       name: 'Updated Segment Name',
       description: 'Updated description',
-      filters: { role: 'PARTICIPANT', status: 'active' }
+      filterJson: { role: 'PARTICIPANT', status: 'active' }
     };
 
     const response = await page.request.put(`/api/workspaces/${WORKSPACE_SLUG}/participants/segments/${segment.id}`, {
@@ -295,8 +295,8 @@ test.describe('Participants API', () => {
         name: `Delete Test ${Date.now()}`,
         description: 'Will be deleted',
         workspaceId,
-        filters: { role: 'PARTICIPANT' },
-        createdById: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
+        filterJson: { role: 'PARTICIPANT' },
+        createdBy: (await prisma.user.findFirst({ where: { role: 'ADMIN', workspaceId } }))!.id
       }
     });
 

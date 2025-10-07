@@ -323,8 +323,6 @@ test.describe('Challenge CRUD API', () => {
           create: {
             totalBudget: 10000,
             allocated: 2000,
-            spent: 500,
-            remaining: 7500,
             workspaceId
           }
         }

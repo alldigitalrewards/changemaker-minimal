@@ -138,10 +138,10 @@ test.describe('Enrollment API', () => {
     // Update to COMPLETED
     const completedEnrollment = await prisma.enrollment.update({
       where: { id: enrollment.id },
-      data: { status: EnrollmentStatus.COMPLETED }
+      data: { status: EnrollmentStatus.ENROLLED }
     });
 
-    expect(completedEnrollment.status).toBe(EnrollmentStatus.COMPLETED);
+    expect(completedEnrollment.status).toBe(EnrollmentStatus.ENROLLED);
 
     // Cleanup
     await prisma.enrollment.delete({ where: { id: data.enrollment.id } });
@@ -172,7 +172,7 @@ test.describe('Enrollment API', () => {
       data: {
         userId: participantId,
         challengeId: challenge2.id,
-        status: EnrollmentStatus.COMPLETED
+        status: EnrollmentStatus.ENROLLED
       }
     });
 

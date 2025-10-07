@@ -58,7 +58,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
     await page.fill('input[name="endDate"], input[type="date"]:last', nextMonth.toISOString().split('T')[0]);
 
     // Select reward type
-    await page.selectOption('select[name="rewardType"]', RewardType.POINTS);
+    await page.selectOption('select[name="rewardType"]', 'points');
 
     // Enter points amount
     await page.fill('input[name="pointsAmount"], input[name="rewardConfig.pointsAmount"]', '100');
@@ -76,7 +76,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
       where: { id: challengeId }
     });
     expect(challenge).toBeTruthy();
-    expect(challenge?.rewardType).toBe(RewardType.POINTS);
+    expect(challenge?.rewardType).toBe('points');
 
     // 2. Participant enrolls in challenge
     await logout(page);
@@ -205,7 +205,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
       where: {
         userId: participantId,
         challengeId,
-        type: RewardType.POINTS
+        type: 'points'
       }
     });
 
@@ -215,7 +215,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
 
     // 6. Verify RewardIssuance record details
     expect(rewardIssuance?.workspaceId).toBe(workspaceId);
-    expect(rewardIssuance?.type).toBe(RewardType.POINTS);
+    expect(rewardIssuance?.type).toBe('points');
 
     // 7. Verify submission is linked to reward
     const updatedSubmission = await prisma.activitySubmission.findUnique({
@@ -249,7 +249,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
         status: 'PUBLISHED',
-        rewardType: RewardType.SKU,
+        rewardType: 'sku',
         rewardConfig: {
           skuId: 'E2E-TEST-SKU',
           description: 'Test Product'
@@ -312,7 +312,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
       where: {
         userId: participantId,
         challengeId,
-        type: RewardType.SKU
+        type: 'sku'
       }
     });
 
@@ -342,7 +342,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
-        rewardType: RewardType.POINTS,
+        rewardType: 'points',
         rewardConfig: { pointsAmount: 50 }
       }
     });
@@ -353,7 +353,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
         userId: participantId,
         workspaceId,
         challengeId,
-        type: RewardType.POINTS,
+        type: 'points',
         amount: 50,
         status: RewardStatus.PENDING
       }

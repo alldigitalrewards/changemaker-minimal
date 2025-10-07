@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // Run tests serially to avoid race conditions with shared user state
 test.describe.configure({ mode: 'serial' });
@@ -22,7 +23,7 @@ test.describe('Email Change API', () => {
         where: { id: user.id },
         data: {
           email: ADMIN_EMAIL,
-          emailChangePending: null
+          emailChangePending: Prisma.JsonNull
         }
       });
     }
@@ -66,7 +67,7 @@ test.describe('Email Change API', () => {
     });
 
     if (!existingUser) {
-      test.skip('No other user found to test duplicate email');
+      test.skip(true, 'No other user found to test duplicate email');
       return;
     }
 
@@ -127,7 +128,7 @@ test.describe('Email Change API', () => {
     const user = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
 
     if (!user) {
-      test.skip('User not found');
+      test.skip(true, 'User not found');
       return;
     }
 
@@ -236,7 +237,7 @@ test.describe('Email Change API', () => {
     if (user) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { emailChangePending: null }
+        data: { emailChangePending: Prisma.JsonNull }
       });
     }
 

@@ -67,7 +67,8 @@ test.describe('Participant Journey - End to End', () => {
           code: `JOURNEY-${Date.now()}`,
           workspaceId,
           maxUses: 1,
-          createdById: admin!.id
+          createdBy: admin!.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
         }
       });
       inviteCode = invite.code;

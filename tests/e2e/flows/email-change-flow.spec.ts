@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../support/auth';
 import { prisma } from '../../../lib/prisma';
+import { Prisma } from '@prisma/client';
 
 test.describe('Email Change Flow - End to End', () => {
   const NEW_EMAIL = `newemail_${Date.now()}@alldigitalrewards.com`;
@@ -19,7 +20,7 @@ test.describe('Email Change Flow - End to End', () => {
         where: { id: user.id },
         data: {
           email: originalEmail,
-          emailChangePending: null
+          emailChangePending: Prisma.JsonNull
         }
       });
     }
@@ -233,7 +234,7 @@ test.describe('Email Change Flow - End to End', () => {
     const user = await prisma.user.findUnique({ where: { email: originalEmail } });
     await prisma.user.update({
       where: { id: user!.id },
-      data: { emailChangePending: null }
+      data: { emailChangePending: Prisma.JsonNull }
     });
   });
 });

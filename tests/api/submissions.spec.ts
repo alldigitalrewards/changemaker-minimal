@@ -196,7 +196,7 @@ test.describe('Submissions and Review API', () => {
         challengeId,
         type: 'points'
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { issuedAt: 'desc' }
     });
 
     expect(rewardIssuance).toBeTruthy();
@@ -454,7 +454,7 @@ test.describe('Submissions and Review API', () => {
         userId: participantId,
         challengeId
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { issuedAt: 'desc' }
     });
 
     // Should be null or from previous test
