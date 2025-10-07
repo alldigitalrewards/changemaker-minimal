@@ -18,7 +18,8 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     )
   }
 
-  if (newEmail === supabaseUser.email) {
+  // Compare against dbUser email (source of truth for current email)
+  if (newEmail === dbUser.email) {
     return NextResponse.json(
       { error: 'New email must be different from current email' },
       { status: 400 }
@@ -42,28 +43,19 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
   // Store pending email change in database
-  // Note: Prisma Json fields need explicit casting
+  // Prisma Json fields need to be passed as objects (will be serialized to JSON)
   const pendingData = {
     newEmail,
     token,
     expiresAt: expiresAt.toISOString()
   }
 
-  const updated = await prisma.user.update({
+  await prisma.user.update({
     where: { id: dbUser.id },
     data: {
-      emailChangePending: pendingData as any
+      emailChangePending: pendingData
     }
   })
-
-  // Verify the update succeeded
-  if (!updated.emailChangePending) {
-    console.error('Failed to set emailChangePending', { pendingData, updated })
-    return NextResponse.json(
-      { error: 'Failed to initiate email change' },
-      { status: 500 }
-    )
-  }
 
   // TODO: Send verification email
   // For now, we just store the pending change

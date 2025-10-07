@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
 
+// Run tests serially to avoid race conditions with shared user state
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Email Change API', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
   const NEW_EMAIL = 'newemail@alldigitalrewards.com';
