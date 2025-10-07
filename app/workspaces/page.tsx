@@ -55,9 +55,20 @@ export default async function WorkspacesPage() {
   } else {
     // Non-super-admins: show tenant-visible workspaces
     // Determine tenant from first membership (preferred) or legacy workspace
-    const userTenantId = dbUser.workspaceId
-      ? (await prisma.workspace.findUnique({ where: { id: dbUser.workspaceId }, select: { tenantId: true } }))?.tenantId
-      : memberships[0]?.workspace?.tenantId || null
+    let userTenantId: string | null = null
+    if (dbUser.workspaceId) {
+      const legacyWorkspace = await prisma.workspace.findUnique({
+        where: { id: dbUser.workspaceId },
+        select: { tenantId: true }
+      })
+      userTenantId = legacyWorkspace?.tenantId || null
+    } else if (memberships[0]?.workspaceId) {
+      const firstWorkspace = await prisma.workspace.findUnique({
+        where: { id: memberships[0].workspaceId },
+        select: { tenantId: true }
+      })
+      userTenantId = firstWorkspace?.tenantId || null
+    }
     if (userTenantId) {
       // Show all active, published workspaces in the same tenant
       // Both admins and participants can discover workspaces within their tenant
