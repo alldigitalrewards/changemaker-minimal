@@ -94,11 +94,11 @@ export default async function WorkspacesPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               {/* Action buttons */}
               <div className="flex gap-3">
-                <CreateWorkspaceDialog 
-                  userId={dbUser.id} 
+                <CreateWorkspaceDialog
+                  userId={dbUser.id}
                   currentWorkspace={null}
                 />
-                <JoinWorkspaceDialog userId={dbUser.id} />
+                <JoinWorkspaceDialog userId={dbUser.id} scrollToDiscover />
               </div>
               
               {/* User info */}
@@ -165,18 +165,22 @@ export default async function WorkspacesPage() {
                 Get started by creating your own workspace or joining an existing one.
               </CardDescription>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <CreateWorkspaceDialog 
-                  userId={dbUser.id} 
+                <CreateWorkspaceDialog
+                  userId={dbUser.id}
                   currentWorkspace={null}
                 />
-                <JoinWorkspaceDialog userId={dbUser.id} />
+                <JoinWorkspaceDialog userId={dbUser.id} scrollToDiscover />
               </div>
             </CardContent>
           </Card>
         )}
 
         {/* Available Workspaces (hidden for participants) */}
-        <Card className="border-gray-200 shadow-sm" style={{ display: userIsPlatformAdmin || memberships.some(m => m.role === 'ADMIN') ? undefined : 'none' }}>
+        <Card
+          id="discover-workspaces"
+          className="border-gray-200 shadow-sm transition-all"
+          style={{ display: userIsPlatformAdmin || memberships.some(m => m.role === 'ADMIN') ? undefined : 'none' }}
+        >
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gray-100 rounded-lg">
