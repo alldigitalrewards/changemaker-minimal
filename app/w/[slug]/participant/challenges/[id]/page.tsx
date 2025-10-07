@@ -29,6 +29,7 @@ import type { ChallengeStatus } from '@/lib/auth/types'
 import { getChallengeLeaderboard } from '@/lib/db/queries';
 import JoinButton, { SimpleSubmissionDialog } from './join-button';
 import { TabNavigationButtons } from './tab-navigation-buttons';
+import { getRewardLabel, formatRewardValue, getRewardUnit } from '@/lib/reward-utils';
 
 interface PageProps {
   params: Promise<{
@@ -60,6 +61,8 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
           createdAt: true,
           status: true,
           enrollmentDeadline: true,
+          rewardType: true,
+          rewardConfig: true,
           enrollments: {
             where: {
               userId: userId,
@@ -475,25 +478,29 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
 
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-amber-800">Your Points</CardTitle>
+            <CardTitle className="text-sm font-medium text-amber-800">
+              {getRewardLabel(challenge.rewardType as any)}
+            </CardTitle>
             <Star className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
             {isEnrolled ? (
               <div>
                 <div className="text-xl md:text-2xl font-bold text-amber-900">
-                  {pointsBalance?.totalPoints || 0}
+                  {formatRewardValue(challenge.rewardType as any, pointsBalance?.totalPoints || 0)}
                 </div>
                 <p className="text-xs text-amber-700">
-                  / {challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0} available
+                  / {formatRewardValue(challenge.rewardType as any, challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0)} available
                 </p>
               </div>
             ) : (
               <div>
                 <div className="text-xl md:text-2xl font-bold text-amber-900">
-                  {challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0}
+                  {formatRewardValue(challenge.rewardType as any, challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0)}
                 </div>
-                <p className="text-xs text-amber-700">Points available</p>
+                <p className="text-xs text-amber-700">
+                  {getRewardLabel(challenge.rewardType as any).split(' ')[0]} available
+                </p>
               </div>
             )}
           </CardContent>

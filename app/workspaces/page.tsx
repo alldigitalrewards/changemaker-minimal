@@ -11,7 +11,7 @@ import WorkspaceCard from "./workspace-card-client"
 import { getUserBySupabaseId } from "@/lib/db/queries"
 import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
 import { listMemberships } from "@/lib/db/workspace-membership"
-import { Plus, Search, Building, Users } from "lucide-react"
+import { Plus, Search, Building, Users, Trophy, TrendingUp, BarChart } from "lucide-react"
 
 export default async function WorkspacesPage() {
   const supabase = await createClient()
@@ -30,8 +30,14 @@ export default async function WorkspacesPage() {
   // Get user's workspace memberships (new system)
   const memberships = await listMemberships(dbUser.id)
 
-  // Tenancy-aware available workspaces list
-  let allWorkspaces: { id: string; name: string; slug: string; _count: { memberships: number; challenges: number } }[] = []
+  // Tenancy-aware available workspaces list with enhanced stats
+  let allWorkspaces: {
+    id: string;
+    name: string;
+    slug: string;
+    createdAt: Date;
+    _count: { memberships: number; challenges: number }
+  }[] = []
   const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
   if (userIsPlatformAdmin) {
     // Super admin sees all tenants' active & published workspaces
@@ -41,8 +47,10 @@ export default async function WorkspacesPage() {
         id: true,
         name: true,
         slug: true,
+        createdAt: true,
         _count: { select: { memberships: true, challenges: true } }
-      }
+      },
+      orderBy: { createdAt: 'desc' }
     })
   } else {
     // Non-super-admins: show tenant-visible workspaces
@@ -59,14 +67,21 @@ export default async function WorkspacesPage() {
           id: true,
           name: true,
           slug: true,
+          createdAt: true,
           _count: { select: { memberships: true, challenges: true } }
-        }
+        },
+        orderBy: { createdAt: 'desc' }
       })
     } else {
       // No tenant context resolvable, suppress discovery
       allWorkspaces = []
     }
   }
+
+  // Calculate summary stats
+  const totalWorkspaces = memberships.length
+  const totalMembers = memberships.reduce((sum, m) => sum + (m.workspace._count?.memberships || 0), 0)
+  const totalChallenges = memberships.reduce((sum, m) => sum + (m.workspace._count?.challenges || 0), 0)
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -108,6 +123,50 @@ export default async function WorkspacesPage() {
           </div>
         </div>
       </div>
+
+      {/* Summary Stats */}
+      {memberships.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card className="bg-gradient-to-br from-coral-50 to-white border-coral-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Your Workspaces</p>
+                  <p className="text-3xl font-bold text-coral-600">{totalWorkspaces}</p>
+                  <p className="text-xs text-gray-500 mt-1">Active memberships</p>
+                </div>
+                <Building className="h-10 w-10 text-coral-500 opacity-75" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Members</p>
+                  <p className="text-3xl font-bold text-blue-600">{totalMembers}</p>
+                  <p className="text-xs text-gray-500 mt-1">Across all workspaces</p>
+                </div>
+                <Users className="h-10 w-10 text-blue-500 opacity-75" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Challenges</p>
+                  <p className="text-3xl font-bold text-amber-600">{totalChallenges}</p>
+                  <p className="text-xs text-gray-500 mt-1">Available to join</p>
+                </div>
+                <Trophy className="h-10 w-10 text-amber-500 opacity-75" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="grid gap-8">
         {/* User's Workspaces */}

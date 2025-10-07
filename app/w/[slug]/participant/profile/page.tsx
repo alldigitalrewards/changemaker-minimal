@@ -5,10 +5,11 @@ import { getOrCreatePointsBalance, getUserBySupabaseId, getUserEnrollments } fro
 import { prisma } from "@/lib/db"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { User as UserIcon, Calendar, Trophy } from "lucide-react"
+import { User as UserIcon, Calendar, Trophy, Shield } from "lucide-react"
 import ProfileNameForm from "@/components/ui/profile-name-form"
 import ProfileParticipantForm from "@/components/ui/profile-participant-form"
 import ProfileStats from "@/components/ui/profile-stats"
+import { PasswordResetDialog } from "@/components/ui/password-reset-dialog"
 
 export default async function ParticipantProfilePage({
   params
@@ -105,6 +106,28 @@ export default async function ParticipantProfilePage({
           invited: enrollments.filter(e => e.status === "INVITED").length
         }}
       />
+
+      {/* Security Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Security
+          </CardTitle>
+          <CardDescription>Manage your account security settings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Password</p>
+                <p className="text-sm text-gray-500">Update your password to keep your account secure</p>
+              </div>
+              <PasswordResetDialog />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Enrollment Summary */}
       <Card>

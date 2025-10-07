@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
-import { 
-  Activity, 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
-  FileText, 
-  Trophy, 
+import {
+  Activity,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  FileText,
+  Trophy,
   TrendingUp,
   Calendar,
   Star,
@@ -23,6 +23,7 @@ import {
   Filter
 } from "lucide-react"
 import { format } from "date-fns"
+import { getRewardLabel } from "@/lib/reward-utils"
 
 function ActivitiesSkeleton() {
   return (
@@ -307,7 +308,7 @@ export default async function ParticipantActivitiesPage({
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Points Earned</p>
+                  <p className="text-sm font-medium text-gray-600">Rewards Earned</p>
                   <p className="text-3xl font-bold text-coral-600">{totalPointsEarned}</p>
                 </div>
                 <Star className="h-8 w-8 text-coral-500 opacity-75" />
