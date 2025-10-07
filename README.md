@@ -46,7 +46,7 @@ Currently implementing comprehensive gamification features:
 - **Enhanced Participant Management**: Advanced filtering, sorting, and bulk actions
 - **Integration Preparation**: Adapter patterns for future RewardSTACK API integration
 
-See TODO.md for detailed task breakdown (9 main tasks, 40 subtasks).
+See docs/planning/todo.md for detailed task breakdown (9 main tasks, 40 subtasks).
 
 ## Task Management
 

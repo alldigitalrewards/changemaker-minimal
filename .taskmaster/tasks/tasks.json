@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": "2",
+        "id": 2,
         "title": "Add PointTransaction Model for Audit Trail",
         "description": "Add PointTransaction model to the existing Prisma schema for comprehensive audit trail tracking, building on existing PointsBalance, ActivityTemplate, and ActivitySubmission models.",
         "status": "pending",
@@ -83,7 +83,7 @@
         ]
       },
       {
-        "id": "4",
+        "id": 4,
         "title": "Implement Challenge Progression States",
         "description": "Implement challenge progression state system with enum field and state machine service, integrating with existing PointsBalance for point awards.",
         "status": "pending",
@@ -167,7 +167,7 @@
         ]
       },
       {
-        "id": "7",
+        "id": 7,
         "title": "Build Admin Dashboard for Points & Progression",
         "description": "Build admin dashboard features for managing challenge progression states and points using existing models. Display PointsBalance (the wallet), PointTransaction history, and challenge progression controls. Add UI for funding workspace PointsBalance, distributing points to users, and managing challenge state transitions using existing /app/w/[slug]/admin structure.",
         "status": "pending",
@@ -263,7 +263,7 @@
         ]
       },
       {
-        "id": "8",
+        "id": 8,
         "title": "Build Participant Dashboard",
         "description": "Build participant dashboard at /app/w/[slug]/participant showing their PointsBalance, PointTransaction history, challenge progression, and ActivitySubmission status. Display earned points from completed activities, available challenges with potential points, and submission progress using existing models and shadcn/ui components.",
         "status": "pending",
@@ -396,7 +396,7 @@
         ]
       },
       {
-        "id": "9",
+        "id": 9,
         "title": "Enhance Admin Participant Management",
         "description": "Enhance existing /app/w/[slug]/admin/participants page with advanced filtering, sorting, and bulk actions. Focus on comprehensive participant management features including filtering by enrollment status, points range, and activity level; sorting by name, points, and date; and bulk point distribution capabilities.",
         "status": "pending",
@@ -444,7 +444,7 @@
         ]
       },
       {
-        "id": "10",
+        "id": 10,
         "title": "Integration Testing & Documentation",
         "description": "Comprehensive testing of all new features and documentation.",
         "status": "in-progress",
@@ -541,18 +541,7 @@
         "updatedAt": "2025-10-07T04:51:24.142Z"
       },
       {
-        "id": "11",
-        "title": "Apply Database Migration for User.isPending Column Fix",
-        "description": "Apply the missing database migration 20250919223129_add_invite_email_targeting to the remote database to resolve the User.isPending column issue and ensure proper user invitation functionality.",
-        "details": "Execute the database migration 20250919223129_add_invite_email_targeting on the remote database environment to fix the User.isPending column issue. This involves: 1) Verify current database schema state and identify missing columns/indexes related to user invitation targeting, 2) Review the migration file contents to understand the changes being applied (likely adding isPending column and related invite_email_targeting functionality), 3) Create a database backup before applying the migration, 4) Execute the migration using the appropriate database migration tool (e.g., `npm run db:migrate` or similar command), 5) Verify the migration was applied successfully by checking the database schema and migration history table, 6) Test user invitation functionality to ensure isPending column is working correctly, 7) Monitor for any related errors in application logs post-migration. Pay special attention to any foreign key constraints or indexes that may be affected by this migration.",
-        "testStrategy": "Verify migration success by: 1) Confirming the User table now contains the isPending column with correct data type and constraints, 2) Checking migration history table shows 20250919223129_add_invite_email_targeting as completed, 3) Testing user invitation flow to ensure isPending status is properly set and updated, 4) Verifying existing user records maintain data integrity after migration, 5) Running application health checks to ensure no functionality is broken, 6) Testing user authentication and authorization flows that may depend on isPending status, 7) Monitoring application logs for any database-related errors for 24 hours post-migration.",
-        "status": "done",
-        "dependencies": [],
-        "priority": "high",
-        "subtasks": []
-      },
-      {
-        "id": "12",
+        "id": 12,
         "title": "Implement Admin Participant Detail Page",
         "description": "Create comprehensive admin participant detail page with full management capabilities",
         "details": "Create `app/w/[slug]/admin/participants/[id]/page.tsx` with server component that:\n1. Validates admin role using `getUserWorkspaceRole(slug)`\n2. Fetches participant data with User, WorkspaceMembership, Enrollments, PointsBalance, and ActivityEvents\n3. Renders participant-detail-card.tsx with email, role, joined date\n4. Includes action buttons: EmailActions, ParticipantRoleToggle, ChallengeAssignment, RemoveParticipantAction\n5. Shows statistics section with enrollment counts and points balance\n6. Displays enrollments table with RemoveEnrollmentButton for each\n7. Implements activity timeline showing recent ActivityEvents\n8. Handles unauthorized access with proper redirects\n9. Implements proper error boundaries and loading states",
@@ -622,85 +611,7 @@
         ]
       },
       {
-        "id": "13",
-        "title": "Create Participant Self Profile Page",
-        "description": "Implement participant self-profile page with editable name and workspace statistics",
-        "details": "Create `app/w/[slug]/participant/profile/page.tsx` with:\n1. Authentication check for workspace membership (ADMIN or PARTICIPANT)\n2. Server component fetching current user with workspace membership, enrollments, points\n3. Profile header showing email, full name, workspace joined date\n4. Editable name field component that updates Supabase user metadata\n5. Workspace-specific statistics display (points balance, enrollment summary)\n6. Security section with password reset link\n7. Real-time name updates reflected in header\n8. Proper error handling for metadata updates\n9. Loading states during name updates",
-        "testStrategy": "Test workspace membership validation, profile data loading, name editing functionality with immediate header reflection, statistics accuracy, and security section functionality.",
-        "priority": "high",
-        "dependencies": [
-          "12"
-        ],
-        "status": "done",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Implement Authentication and Workspace Membership Check",
-            "description": "Ensure only authenticated users with ADMIN or PARTICIPANT roles in the workspace can access the profile page.",
-            "dependencies": [],
-            "details": "Add logic to verify user authentication and workspace membership before rendering the profile page. Redirect unauthorized users appropriately.",
-            "status": "done",
-            "testStrategy": "Test with users of different roles and unauthenticated users to confirm correct access control and redirection.",
-            "parentId": "undefined",
-            "updatedAt": "2025-10-07T04:50:13.312Z"
-          },
-          {
-            "id": 2,
-            "title": "Fetch and Display User Profile Data",
-            "description": "Create a server component to fetch current user data, including workspace membership, enrollments, and points.",
-            "dependencies": [
-              "13.1"
-            ],
-            "details": "Retrieve user profile information from Supabase and display email, full name, and workspace joined date in the profile header.",
-            "status": "done",
-            "testStrategy": "Verify correct data loading for various users and workspaces; test loading and error states.",
-            "parentId": "undefined",
-            "updatedAt": "2025-10-07T04:50:18.302Z"
-          },
-          {
-            "id": 3,
-            "title": "Integrate Editable Name Field with Real-Time Updates",
-            "description": "Add an editable name field component that updates Supabase user metadata and reflects changes in the profile header in real time.",
-            "dependencies": [
-              "13.2"
-            ],
-            "details": "Implement inline editing, update logic, loading and error states, and ensure immediate header update upon successful name change.",
-            "status": "done",
-            "testStrategy": "Test name editing flow, metadata update, real-time header reflection, and error handling for failed updates.",
-            "parentId": "undefined",
-            "updatedAt": "2025-10-07T04:50:20.915Z"
-          },
-          {
-            "id": 4,
-            "title": "Display Workspace-Specific Statistics",
-            "description": "Show workspace-specific statistics such as points balance and enrollment summary for the current user.",
-            "dependencies": [
-              "13.2"
-            ],
-            "details": "Fetch and render points balance and enrollment summary, ensuring data accuracy and proper formatting.",
-            "status": "done",
-            "testStrategy": "Validate statistics accuracy for users with different enrollments and points; test edge cases and error states.",
-            "parentId": "undefined",
-            "updatedAt": "2025-10-07T04:50:26.836Z"
-          },
-          {
-            "id": 5,
-            "title": "Implement Security Section with Password Reset",
-            "description": "Add a security section to the profile page, including a password reset link and related functionality.",
-            "dependencies": [
-              "13.2"
-            ],
-            "details": "Integrate password reset link, ensure secure handling, and display relevant security information.",
-            "status": "done",
-            "testStrategy": "Test password reset flow, link visibility, and security section rendering for different user scenarios.",
-            "updatedAt": "2025-10-07T04:48:25.651Z",
-            "parentId": "undefined"
-          }
-        ],
-        "updatedAt": "2025-10-07T04:50:26.836Z"
-      },
-      {
-        "id": "14",
+        "id": 14,
         "title": "Implement Profile API Endpoints",
         "description": "Create API routes for profile management including self-profile updates",
         "details": "Create `/api/account/profile/route.ts` with:\n1. GET handler returning current profile data (email, name, metadata, workspace stats)\n2. PUT handler for updating full name in Supabase user metadata and User.updatedAt\n3. Proper authentication validation using Supabase auth\n4. Error handling for metadata update failures\n5. Response formatting with updated profile data\n6. Rate limiting for profile updates\n7. Validation of name field (non-empty, reasonable length)\n8. Extend existing `/api/workspaces/[slug]/participants/[id]` if needed\n9. Proper CORS and security headers",
@@ -775,7 +686,7 @@
         ]
       },
       {
-        "id": "15",
+        "id": 15,
         "title": "Create Profile Name Form Component",
         "description": "Build reusable profile name editing component with inline editing capabilities",
         "details": "Create `components/profile-name-form.tsx` with:\n1. Inline editing functionality with edit/save/cancel states\n2. Form validation using react-hook-form or similar\n3. API integration with profile update endpoint\n4. Loading states during save operations\n5. Error handling and user feedback\n6. Optimistic updates with rollback on failure\n7. Keyboard shortcuts (Enter to save, Escape to cancel)\n8. Accessibility features (proper ARIA labels, focus management)\n9. TypeScript interfaces for props and form data\n10. Integration with existing design system components",
@@ -788,7 +699,7 @@
         "subtasks": []
       },
       {
-        "id": "16",
+        "id": 16,
         "title": "Implement Profile Statistics Component",
         "description": "Create reusable component for displaying workspace-specific user statistics",
         "details": "Create `components/profile-stats.tsx` with:\n1. Display points balance with proper formatting\n2. Show enrollment counts (active, completed, total)\n3. Recent activity summary\n4. Responsive design for different screen sizes\n5. Loading skeleton states\n6. Error states for failed data loading\n7. Proper TypeScript interfaces for statistics data\n8. Integration with existing UI components and styling\n9. Optional admin vs participant view differences\n10. Caching considerations for frequently accessed stats",
@@ -799,7 +710,7 @@
         "subtasks": []
       },
       {
-        "id": "17",
+        "id": 17,
         "title": "Integrate Navigation for Profile Pages",
         "description": "Add profile navigation entries and update existing navigation patterns",
         "details": "Update navigation components:\n1. Add 'Profile' entry to participant sidebar with User icon\n2. Update admin participants table to link to detail pages\n3. Maintain existing 'Account Settings' link behavior in header\n4. Ensure proper active state highlighting for profile pages\n5. Update navigation TypeScript types and route definitions\n6. Test navigation accessibility and keyboard navigation\n7. Ensure consistent styling with existing navigation patterns\n8. Handle navigation permissions based on user roles\n9. Update breadcrumb components if applicable\n10. Test deep linking and browser back/forward functionality",
@@ -813,7 +724,7 @@
         "subtasks": []
       },
       {
-        "id": "18",
+        "id": 18,
         "title": "Implement Activity Timeline Component",
         "description": "Create activity timeline component for admin participant detail pages",
         "status": "pending",
@@ -907,7 +818,7 @@
         ]
       },
       {
-        "id": "19",
+        "id": 19,
         "title": "Add Activity Event Logging for Admin Actions",
         "description": "Implement comprehensive activity event logging for all admin profile management actions",
         "details": "Enhance existing admin actions to create ActivityEvent entries:\n1. Log RBAC_ROLE_CHANGED events for role toggles\n2. Log EMAIL_RESENT events for email resend actions\n3. Log INVITE_SENT events for new invitations\n4. Log ENROLLED/UNENROLLED events for enrollment changes\n5. Include relevant metadata (previous role, target user, etc.)\n6. Ensure atomic operations (action + logging)\n7. Handle logging failures gracefully\n8. Add proper TypeScript types for event metadata\n9. Update existing action components to include logging\n10. Test event creation across all admin actions",
@@ -920,7 +831,7 @@
         "subtasks": []
       },
       {
-        "id": "20",
+        "id": 20,
         "title": "Implement Permission Guards and Validation",
         "description": "Add comprehensive permission validation and safety guards for profile management",
         "details": "Implement security guards:\n1. Prevent demoting last ADMIN in workspace with validation check\n2. Prevent self-removal while currently admin with UI and API guards\n3. Validate membership presence for participant page access\n4. Use `isUserId` for ID format validation in routes\n5. Add middleware for route-level permission checking\n6. Implement proper error messages for unauthorized actions\n7. Add client-side guards to disable invalid actions\n8. Server-side validation for all profile update operations\n9. Rate limiting for sensitive operations\n10. Audit logging for permission violations",
@@ -934,7 +845,7 @@
         "subtasks": []
       },
       {
-        "id": "21",
+        "id": 21,
         "title": "Integration Testing and Error Handling",
         "description": "Comprehensive testing and error handling for complete profile management flows",
         "details": "Implement comprehensive testing and error handling:\n1. End-to-end testing for admin participant management flows\n2. Integration testing for participant self-profile functionality\n3. Error boundary components for graceful failure handling\n4. Loading states and skeleton components for all async operations\n5. Proper error messages and user feedback\n6. Performance testing for large datasets\n7. Cross-browser compatibility testing\n8. Mobile responsiveness testing\n9. Accessibility compliance testing (WCAG 2.1)\n10. Security testing for authorization and data validation",
@@ -955,7 +866,7 @@
         "subtasks": []
       },
       {
-        "id": "22",
+        "id": 22,
         "title": "Enhanced Self Profile - Global Identity Management",
         "description": "Implement comprehensive global identity management system extending the current basic profile with full name, avatar, pronouns, bio, skills/interests, security features, accessibility settings, profile completeness meter, and optimistic updates.",
         "status": "in-progress",
@@ -1044,7 +955,7 @@
         "updatedAt": "2025-10-07T04:51:57.209Z"
       },
       {
-        "id": "23",
+        "id": 23,
         "title": "Implement Per-Workspace Participant Settings",
         "description": "Implement comprehensive workspace-scoped participant preferences system including notification settings, privacy controls, participation preferences, time/locale settings, and data controls stored in WorkspaceMembership.preferences JSONB field.",
         "status": "pending",
@@ -1110,86 +1021,7 @@
         ]
       },
       {
-        "id": "24",
-        "title": "Enhanced Email Management System",
-        "description": "Implement comprehensive email system with WorkspaceEmailSettings and WorkspaceEmailTemplate models, admin interface with Default Emails, Templates, and Settings tabs, plus API endpoints for template management and test-send functionality.",
-        "status": "done",
-        "dependencies": [
-          "7",
-          "9",
-          "25"
-        ],
-        "priority": "medium",
-        "details": "Create a comprehensive email management system with the following components:\n\n1. **Database Models**:\n   - Create `WorkspaceEmailSettings` model with fields: workspace_id, fromName, fromEmail, replyTo, footerHtml, brandColor, created_at, updated_at\n   - Create `WorkspaceEmailTemplate` model with fields: workspace_id, template_type (enum: INVITE, EMAIL_RESENT, ENROLLMENT_UPDATE, REMINDER, GENERIC), subject, body_html, body_text, is_active, created_at, updated_at\n   - Add proper foreign key constraints and indexes\n\n2. **Admin Interface - New Sidebar Entry** ✅ COMPLETED:\n   - Add \"Emails\" entry to admin sidebar navigation in `/app/w/[slug]/admin/layout.tsx`\n   - Create `/app/w/[slug]/admin/emails/page.tsx` with three tabs:\n     - **Default Emails Tab**: Read-only preview of system default email templates with template type filtering\n     - **Templates Tab**: Workspace-specific template overrides with CRUD operations, rich text editor for HTML content, preview functionality\n     - **Settings Tab**: Brand and sender configuration form with color picker, email validation, footer HTML editor\n\n3. **API Endpoints**:\n   - `/api/workspaces/[slug]/email-settings` - GET/PUT for workspace email settings ✅ COMPLETED as `/api/workspaces/[slug]/emails/settings`\n   - `/api/workspaces/[slug]/email-templates` - GET/POST/PUT/DELETE for template management\n   - `/api/workspaces/[slug]/email-templates/[id]/test` - POST for test email sending\n   - `/api/workspaces/[slug]/email-templates/preview` - POST for template preview generation\n\n4. **Email Service Integration**:\n   - Extend existing email service to use workspace-specific settings and templates\n   - Implement template fallback logic (workspace override → system default)\n   - Add email template rendering with variable substitution\n   - Implement test email functionality with proper error handling\n\n5. **UI Components**:\n   - Email template editor with rich text capabilities using shadcn/ui\n   - Color picker component for brand color selection\n   - Email preview component with mobile/desktop views\n   - Template type selector and status indicators\n   - Form validation for email addresses and required fields\n\n**Progress Made**:\n- ✅ Admin sidebar entry and page structure with tabs\n- ✅ Settings API route with GET/PUT operations\n- ✅ WorkspaceEmailSettings and WorkspaceEmailTemplate types in queries.ts\n- ✅ Database query functions for settings management\n\n**Remaining Work**:\n- Templates API routes for CRUD operations\n- Test-send API endpoint for email testing\n- Prisma schema updates (depends on task 25)\n- Email service integration and template rendering\n- Rich text editor and preview components",
-        "testStrategy": "Test email management system functionality including: workspace email settings CRUD operations with validation, template override creation and editing with rich text content, template fallback logic from workspace to system defaults, test email sending with proper error handling, brand customization application in email previews, admin interface navigation and tab switching, API endpoint security and proper workspace scoping, email template variable substitution accuracy, and integration with existing email sending workflows. Verify proper permissions for admin-only access and validate email format requirements. Focus testing on remaining components: template CRUD operations, test-send functionality, and email service integration.",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Implement Email Templates API Routes",
-            "description": "Create API endpoints for workspace email template management including CRUD operations, template type filtering, and proper workspace scoping.",
-            "status": "done",
-            "dependencies": [],
-            "details": "Create the following API routes:\n- `/api/workspaces/[slug]/emails/templates/route.ts` for GET (list) and POST (create)\n- `/api/workspaces/[slug]/emails/templates/[id]/route.ts` for GET, PUT, DELETE operations\n- Implement proper validation for template_type enum values\n- Add workspace authorization checks\n- Include error handling and proper HTTP status codes",
-            "testStrategy": "",
-            "parentId": "undefined"
-          },
-          {
-            "id": 2,
-            "title": "Implement Test Email Sending API",
-            "description": "Create API endpoint for sending test emails using workspace templates and settings with proper error handling.",
-            "status": "done",
-            "dependencies": [],
-            "details": "Create `/api/workspaces/[slug]/emails/templates/[id]/test/route.ts` endpoint:\n- Accept test recipient email address\n- Use workspace email settings for sender configuration\n- Apply template with sample variable substitution\n- Integrate with existing email service\n- Return detailed success/error responses\n- Add rate limiting for test sends",
-            "testStrategy": "",
-            "parentId": "undefined"
-          },
-          {
-            "id": 3,
-            "title": "Build Email Template Editor UI Components",
-            "description": "Implement rich text editor, preview functionality, and template management interface for the Templates tab.",
-            "status": "done",
-            "dependencies": [],
-            "details": "Create UI components for template management:\n- Rich text editor for HTML email content using shadcn/ui\n- Template preview component with mobile/desktop views\n- Template type selector with proper validation\n- Form components for subject and text content\n- Save/cancel actions with optimistic updates\n- Template status indicators and activation controls",
-            "testStrategy": "",
-            "parentId": "undefined"
-          },
-          {
-            "id": 4,
-            "title": "Integrate Email Service with Workspace Settings",
-            "description": "Extend existing email service to use workspace-specific settings and templates with fallback logic.",
-            "status": "done",
-            "dependencies": [],
-            "details": "Modify email service to:\n- Load workspace email settings for sender configuration\n- Implement template fallback logic (workspace → system default)\n- Add variable substitution for dynamic content\n- Apply workspace branding (colors, footer)\n- Maintain backward compatibility with existing email flows\n- Add proper error handling and logging",
-            "testStrategy": "",
-            "parentId": "undefined"
-          },
-          {
-            "id": 5,
-            "title": "Complete Settings Tab UI Implementation",
-            "description": "Finish the Settings tab with color picker, email validation, and footer HTML editor components.",
-            "status": "done",
-            "dependencies": [],
-            "details": "Complete Settings tab implementation:\n- Color picker component for brand color selection\n- Email address validation for fromEmail and replyTo fields\n- Rich text editor for footer HTML content\n- Form validation and error display\n- Save functionality with optimistic updates\n- Preview of email appearance with current settings",
-            "testStrategy": "",
-            "parentId": "undefined"
-          }
-        ]
-      },
-      {
-        "id": "25",
-        "title": "Prisma Schema Updates for Enhanced Features",
-        "description": "Update the Prisma schema to support enhanced user profile features including WorkspaceEmailSettings, WorkspaceEmailTemplate tables, EmailTemplateType enum, WorkspaceMembership preferences field, and optional WorkspaceParticipantSegment table with proper migrations and client regeneration.",
-        "details": "Update the Prisma schema file (schema.prisma) with the following comprehensive changes:\n\n1. **WorkspaceEmailSettings Table**:\n   - Add model with fields: id (String @id @default(cuid())), workspaceId (String @unique), fromName (String), fromEmail (String), replyTo (String?), footerHtml (String?), brandColor (String?), updatedBy (String), createdAt (DateTime @default(now())), updatedAt (DateTime @updatedAt)\n   - Add relations: workspace (Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)), updatedByUser (User @relation(fields: [updatedBy], references: [id]))\n\n2. **WorkspaceEmailTemplate Table**:\n   - Add model with fields: id (String @id @default(cuid())), workspaceId (String), type (EmailTemplateType), subject (String), html (String @db.Text), enabled (Boolean @default(true)), updatedBy (String), createdAt (DateTime @default(now())), updatedAt (DateTime @updatedAt)\n   - Add relations: workspace (Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)), updatedByUser (User @relation(fields: [updatedBy], references: [id]))\n   - Add unique constraint: @@unique([workspaceId, type])\n\n3. **EmailTemplateType Enum**:\n   - Add enum with values: INVITE, EMAIL_RESENT, ENROLLMENT_UPDATE, REMINDER, GENERIC\n\n4. **WorkspaceMembership Enhancement**:\n   - Add preferences field: preferences (Json? @db.JsonB) for per-workspace participant settings\n\n5. **WorkspaceParticipantSegment Table (Optional)**:\n   - Add model with fields: id (String @id @default(cuid())), workspaceId (String), name (String), description (String?), filterCriteria (Json @db.JsonB), createdBy (String), createdAt (DateTime @default(now())), updatedAt (DateTime @updatedAt)\n   - Add relations and constraints for saved participant filters\n\n6. **Migration and Client Generation**:\n   - Run `npx prisma migrate dev --name enhanced-email-features` to create migration\n   - Run `npx prisma generate` to regenerate Prisma client\n   - Update any existing relation arrays in Workspace and User models to include new relations",
-        "testStrategy": "Verify schema updates by: 1) Confirming migration runs successfully without errors and creates all new tables/columns/enums, 2) Testing Prisma client regeneration completes and new types are available in TypeScript, 3) Validating database schema matches expected structure using Prisma Studio or direct database inspection, 4) Testing basic CRUD operations on new models through Prisma client to ensure relations work correctly, 5) Verifying WorkspaceMembership.preferences field accepts JSONB data, 6) Confirming EmailTemplateType enum values are properly constrained, 7) Testing cascade deletion behavior for workspace-related records, 8) Validating unique constraints work as expected (workspaceId unique for settings, workspaceId+type unique for templates).",
-        "status": "done",
-        "dependencies": [
-          "11"
-        ],
-        "priority": "high",
-        "subtasks": []
-      },
-      {
-        "id": "26",
+        "id": 26,
         "title": "Implement New API Endpoints for Enhanced Features",
         "description": "Create comprehensive API endpoints to support enhanced user profile features including workspace participant preferences, email template management, test email functionality, and global identity management with proper authentication and authorization.",
         "details": "Implement the following API endpoints with proper authentication and authorization middleware:\n\n1. **Workspace Participant Preferences Endpoints**:\n   - GET/PUT `/api/workspaces/[slug]/me/preferences` - Retrieve and update participant workspace settings\n   - Integrate with Task 23's WorkspaceMembership.preferences JSONB field structure\n   - Validate workspace membership and participant permissions\n\n2. **Email Template Management Endpoints**:\n   - GET `/api/workspaces/[slug]/emails/templates` - List all email templates\n   - POST `/api/workspaces/[slug]/emails/templates` - Create new email template\n   - GET `/api/workspaces/[slug]/emails/templates/[id]` - Get specific template\n   - PUT `/api/workspaces/[slug]/emails/templates/[id]` - Update template\n   - DELETE `/api/workspaces/[slug]/emails/templates/[id]` - Delete template\n   - Require ADMIN role for template management operations\n\n3. **Test Email Functionality**:\n   - POST `/api/workspaces/[slug]/emails/test-send` - Send test emails\n   - Support template preview and validation\n   - Include rate limiting and admin-only access\n\n4. **Enhanced Global Profile Endpoint**:\n   - Extend existing `/api/account/profile` endpoint (from Task 14)\n   - Add avatar upload functionality with file validation and storage\n   - Implement skills/interests management with JSONB storage\n   - Add security features (2FA settings, login history, session management)\n   - Maintain backward compatibility with existing profile functionality\n\n5. **Authentication/Authorization Middleware**:\n   - Create reusable middleware for workspace role validation\n   - Implement proper error responses for unauthorized access\n   - Add request logging for security auditing\n   - Support both session-based and token-based authentication\n\nTechnical Implementation:\n- Use Supabase Auth for authentication validation\n- Implement proper TypeScript interfaces for all request/response types\n- Add comprehensive input validation and sanitization\n- Include proper error handling with meaningful error messages\n- Implement rate limiting for sensitive operations\n- Add request/response logging for debugging and security\n- Use existing database models and extend where necessary",
@@ -1204,7 +1036,7 @@
         "subtasks": []
       },
       {
-        "id": "27",
+        "id": 27,
         "title": "Implement New UI Components for Enhanced Features",
         "description": "Create specialized UI components to support enhanced user profile features including notification settings, timezone-aware controls, visibility toggles, data export functionality, and accessibility panels.",
         "status": "pending",
@@ -1271,7 +1103,7 @@
         ]
       },
       {
-        "id": "28",
+        "id": 28,
         "title": "Implement Security Quick Actions",
         "description": "Add 'Send password reset' quick action and 'Sign out other sessions' functionality for participant management and self-profile security sections.",
         "details": "Implement critical security quick actions across both admin participant management and self-profile contexts:\n\n1. **Password Reset Quick Action**:\n   - Add \"Send Password Reset\" button to admin participant detail pages\n   - Integrate with existing Supabase auth.resetPasswordForEmail() API\n   - Create `/api/w/[slug]/participants/[id]/password-reset` endpoint with ADMIN permission validation\n   - Add confirmation dialog with participant email display\n   - Show success/error toast notifications\n   - Log PASSWORD_RESET_SENT activity events for admin audit trail\n\n2. **Sign Out Other Sessions Functionality**:\n   - Implement \"Sign Out Other Sessions\" action in self-profile security section\n   - Create `/api/account/sessions/revoke-others` endpoint using Supabase admin.signOut() with scope: 'others'\n   - Add confirmation dialog explaining session termination impact\n   - Show loading states during session revocation process\n   - Handle edge cases (no other sessions, network failures)\n\n3. **UI Integration**:\n   - Add security quick actions section to admin participant detail pages\n   - Enhance self-profile security section with session management controls\n   - Use shadcn/ui Button, Dialog, and Alert components for consistent styling\n   - Implement proper loading states and error handling\n   - Add appropriate icons (Shield, Key, LogOut) for visual clarity\n\n4. **Security Considerations**:\n   - Validate workspace membership and permissions for all actions\n   - Rate limit password reset requests (max 3 per hour per participant)\n   - Audit log all security actions with proper metadata\n   - Ensure CSRF protection on all endpoints\n   - Validate participant existence before allowing actions",
@@ -1286,7 +1118,7 @@
         "subtasks": []
       },
       {
-        "id": "29",
+        "id": 29,
         "title": "Implement Role Protection Guards",
         "description": "Add comprehensive last-admin demotion guards to prevent removing the last admin from a workspace, implementing actual enforcement logic beyond existing copy/text guardrails.",
         "details": "Implement comprehensive role protection enforcement logic to prevent workspace admin lockout scenarios:\n\n1. **Last Admin Detection Logic**:\n   - Create `isLastAdmin(workspaceId: string, userId: string)` utility function\n   - Query WorkspaceMembership to count active ADMIN role members\n   - Return true if user is the sole remaining admin in workspace\n   - Cache results for performance optimization\n\n2. **API Enforcement Guards**:\n   - Add validation middleware to role update endpoints (`/api/w/[slug]/participants/[id]/role`)\n   - Prevent ADMIN → PARTICIPANT demotion if `isLastAdmin()` returns true\n   - Return 400 error with specific message: \"Cannot remove last admin from workspace\"\n   - Ensure atomic operations to prevent race conditions\n\n3. **UI Protection Guards**:\n   - Disable role toggle buttons when user is last admin\n   - Add tooltip explaining \"Cannot demote last admin\"\n   - Show warning badge on last admin's profile indicating special status\n   - Implement real-time updates when admin count changes\n\n4. **Self-Demotion Prevention**:\n   - Extend guards to prevent admins from demoting themselves if they're the last admin\n   - Add confirmation dialog for self-demotion attempts with clear warning\n   - Integrate with existing permission validation from Task 20\n\n5. **Activity Logging Integration**:\n   - Log ADMIN_PROTECTION_TRIGGERED events when guards prevent demotion\n   - Include metadata about attempted action and protection reason\n   - Integrate with existing ActivityEvent system from Task 19\n\n6. **Error Handling and UX**:\n   - Provide clear error messages explaining why action was blocked\n   - Suggest adding another admin before attempting demotion\n   - Implement graceful fallbacks for edge cases",
@@ -1301,7 +1133,7 @@
         "subtasks": []
       },
       {
-        "id": "30",
+        "id": 30,
         "title": "Complete Participant Management UI Interactive Features",
         "description": "Implement missing bulk action handlers and slide-over detail view with inline event feed for the participant management interface, building on existing filters and column selection.",
         "details": "Complete the participant management UI by implementing the remaining interactive features:\n\n1. **Bulk Action Handlers Implementation**:\n   - Implement bulk point distribution handler with validation and confirmation dialogs\n   - Add bulk role change functionality (PARTICIPANT ↔ ADMIN) with last-admin protection\n   - Create bulk enrollment management (enroll/unenroll from challenges)\n   - Implement bulk export functionality for selected participants\n   - Add bulk email notification sender with template selection\n   - Include progress indicators and error handling for all bulk operations\n\n2. **Slide-over Detail View**:\n   - Create slide-over component using shadcn/ui Sheet component\n   - Display comprehensive participant information: profile, enrollment status, points balance, recent activity\n   - Include quick action buttons: send email, adjust points, change role, manage enrollments\n   - Implement responsive design for mobile and desktop views\n\n3. **Inline Event Feed Integration**:\n   - Build real-time activity timeline showing recent participant actions\n   - Display point transactions, challenge enrollments, activity submissions, role changes\n   - Implement infinite scroll or pagination for large activity histories\n   - Add filtering options for event types and date ranges\n   - Include contextual actions for each event type\n\n4. **Enhanced User Experience**:\n   - Add keyboard shortcuts for common actions (Ctrl+A for select all, Delete for bulk actions)\n   - Implement optimistic updates for immediate feedback\n   - Add confirmation dialogs for destructive actions\n   - Include loading states and skeleton components for all async operations\n   - Implement proper error boundaries and user-friendly error messages\n\n5. **Performance Optimizations**:\n   - Implement virtual scrolling for large participant lists\n   - Add debounced search and filtering\n   - Optimize API calls with proper caching and pagination\n   - Use React.memo and useMemo for expensive computations",
@@ -1317,7 +1149,7 @@
         "subtasks": []
       },
       {
-        "id": "31",
+        "id": 31,
         "title": "Implement Comprehensive Event Logging System",
         "description": "Implement comprehensive event logging throughout the application to emit ActivityEvent logs for email settings/template changes, segment CRUD operations, and other critical actions using existing ActivityEvent enums.",
         "details": "Implement comprehensive event logging system to emit ActivityEvent logs throughout the application:\n\n1. **Email Settings & Template Event Logging**:\n   - Add logging to email template CRUD operations (CREATE, UPDATE, DELETE events)\n   - Log email settings changes (SMTP configuration, sender settings)\n   - Log test email sends with recipient and template metadata\n   - Integrate with Task 26's email template management endpoints\n\n2. **Segment CRUD Event Logging**:\n   - Log SEGMENT_CREATED, SEGMENT_UPDATED, SEGMENT_DELETED events\n   - Include segment criteria, participant count, and modification metadata\n   - Track segment membership changes and bulk operations\n\n3. **Workspace Management Event Logging**:\n   - Log workspace settings changes (name, description, configuration updates)\n   - Track workspace feature toggles and permission changes\n   - Log workspace deletion and archival events\n\n4. **Challenge & Points Event Logging**:\n   - Integrate with Task 4's challenge progression system to log state transitions\n   - Log point awards, adjustments, and balance changes\n   - Track challenge creation, modification, and completion events\n\n5. **Participant Management Event Logging**:\n   - Extend Task 19's admin action logging to cover additional participant events\n   - Log preference changes from Task 23's participant settings system\n   - Track bulk participant operations and imports\n\n6. **Event Logging Infrastructure**:\n   - Create centralized `EventLogger` service class for consistent logging\n   - Implement async event logging to prevent blocking main operations\n   - Add event batching for high-frequency operations\n   - Include proper error handling and fallback mechanisms\n   - Add event metadata validation and sanitization\n\n7. **Integration Points**:\n   - Hook into existing API endpoints to add logging calls\n   - Integrate with Task 18's activity timeline for event display\n   - Ensure atomic operations where logging is critical\n   - Add logging middleware for automatic event capture",
@@ -1332,7 +1164,7 @@
         "subtasks": []
       },
       {
-        "id": "32",
+        "id": 32,
         "title": "Complete Workspace Features - Logo Upload, Challenge Defaults, Data Export, and Scheduled Exports",
         "description": "Implement comprehensive workspace branding and data management features including logo upload functionality, challenge defaults configuration in Activities Settings, CSV data export capabilities, and automated scheduled export system.",
         "details": "Implement comprehensive workspace features to complete the workspace management functionality:\n\n1. **Logo Upload for Workspace Branding**:\n   - Extend existing workspace color branding with logo upload capability\n   - Add `logo_url` field to Workspace model if not already present\n   - Implement file upload handler with image validation (PNG, JPG, SVG support)\n   - Add image resizing/optimization for consistent branding display\n   - Create logo upload component with drag-and-drop interface using shadcn/ui\n   - Integrate with existing workspace settings page alongside color picker\n   - Add logo preview and removal functionality\n   - Implement proper file storage (cloud storage or local with proper serving)\n\n2. **Challenge Defaults in Activities Settings Tab**:\n   - Create Activities Settings tab in workspace admin settings\n   - Implement challenge default configuration interface\n   - Add fields for default point values, progression states, and challenge templates\n   - Create form components for setting default challenge parameters\n   - Integrate with Task 4's challenge progression state system\n   - Add validation for default values and proper form handling\n   - Store defaults in workspace settings or dedicated configuration table\n\n3. **Data Export (CSV) Functionality**:\n   - Implement comprehensive CSV export system for workspace data\n   - Create export endpoints for participants, challenges, activities, and points data\n   - Add export functionality to participant management interface (integrate with Task 30's bulk actions)\n   - Implement proper CSV formatting with headers and data sanitization\n   - Add date range filtering and data selection options\n   - Create download progress indicators and file generation status\n   - Ensure proper permissions and admin-only access for sensitive exports\n\n4. **Scheduled Exports System**:\n   - Design scheduled export configuration interface\n   - Implement cron-like scheduling system for automated exports\n   - Create background job system for export generation and delivery\n   - Add email delivery system for scheduled export results\n   - Implement export history and status tracking\n   - Create management interface for viewing, editing, and canceling scheduled exports\n   - Add proper error handling and retry logic for failed exports\n   - Integrate with existing event logging system for audit trails",
@@ -1348,46 +1180,7 @@
         "subtasks": []
       },
       {
-        "id": "33",
-        "title": "Implement Points Budget Data Models and Prisma Migrations",
-        "description": "Add Prisma models for points budget tracking, including WorkspacePointsBudget, ChallengePointsBudget, PointsLedger, and optional BudgetLedger, and run database migrations to apply schema updates.",
-        "details": "Define new Prisma models in the schema for:\n\n- **WorkspacePointsBudget**: Fields include `id` (UUID, primary key), `workspaceId` (unique, foreign key), `totalBudget` (numeric), `allocated` (numeric), `remaining` (numeric), `updatedBy` (foreign key to User), and standard timestamp fields (`createdAt`, `updatedAt`).\n- **ChallengePointsBudget**: Fields include `id` (UUID, primary key), `challengeId` (unique, foreign key), `workspaceId` (foreign key), `totalBudget`, `allocated`, `remaining`, `updatedBy`, and timestamps.\n- **PointsLedger**: Tracks transactions with fields: `id` (UUID, primary key), `workspaceId` (foreign key), `challengeId` (optional, foreign key), `toUserId` (foreign key), `amount` (numeric), `reason` (string or enum), `submissionId` (optional, foreign key), `actorUserId` (foreign key), and timestamps.\n- **BudgetLedger** (optional): Tracks budget changes with fields such as `id`, `workspaceId`, `challengeId` (optional), `changeType` (enum: allocation, adjustment, etc.), `amount`, `actorUserId`, and timestamps.\n\nFollow best practices for Prisma modeling:\n- Use UUIDs for primary keys for scalability.\n- Enforce uniqueness constraints on `workspaceId` and `challengeId` where required.\n- Use foreign key relations for referential integrity.\n- Add appropriate indexes for query performance.\n- Use enums for transaction reasons and budget change types for consistency.\n- Document each model and field in the schema for maintainability.\n\nAfter updating the Prisma schema, run `npx prisma migrate dev --name points-budget-models` to generate and apply migrations. Review generated SQL for correctness. Update TypeScript types if using Prisma Client. Ensure backward compatibility and data integrity with existing models.",
-        "testStrategy": "1. Verify Prisma models are correctly defined and relations are enforced in the schema.\n2. Run migrations and confirm tables and constraints are created in the database.\n3. Write unit tests for model creation, updates, and deletions, including edge cases (e.g., unique constraint violations, foreign key integrity).\n4. Test PointsLedger and BudgetLedger transaction recording and retrieval, including filtering by workspace, challenge, and user.\n5. Validate that allocated and remaining budget fields update correctly on transactions.\n6. Confirm timestamps and updatedBy/actorUserId fields are populated as expected.\n7. Review database indexes and query performance for common access patterns.",
-        "status": "done",
-        "dependencies": [
-          "25"
-        ],
-        "priority": "high",
-        "subtasks": []
-      },
-      {
-        "id": "34",
-        "title": "Implement Points Budget Query and Award Functions",
-        "description": "Develop database query functions for managing workspace and challenge points budgets, including transactional award logic, budget decrement, balance validation, and ledger logging.",
-        "details": "Implement the following functions using best practices for transactional integrity and budget management:\n\n- **getWorkspacePointsBudget(workspaceId)** and **upsertWorkspacePointsBudget(workspaceId, budgetData)**: Query and update the workspace-level points budget. Ensure upsert operations are idempotent and validate input data.\n- **getChallengePointsBudget(challengeId)** and **upsertChallengePointsBudget(challengeId, budgetData)**: Query and update challenge-level points budgets. Use parameterized queries to prevent SQL injection and ensure atomicity for upserts.\n- **awardPointsWithBudget(workspaceId, challengeId?, toUserId, amount, actorUserId, submissionId?)**: Implement as a transactional function. The logic should:\n  - Check challenge budget first (if challengeId is provided), then workspace budget.\n  - Decrement the appropriate budget(s) only if sufficient funds are available.\n  - In Phase 1, log a warning if budget is insufficient but allow the transaction; in Phase 2, block the award if budget is insufficient.\n  - Increment the recipient's PointsBalance only after budget validation and successful decrement.\n  - Log all transactions in the PointsLedger table with full audit details (who, what, when, why).\n  - Use database transactions (e.g., PostgreSQL `BEGIN ... COMMIT/ROLLBACK`) to ensure atomicity and consistency.\n  - Apply optimistic concurrency control or row-level locking to prevent race conditions on budget decrement.\n- Ensure all queries and mutations are covered by TypeScript interfaces and use parameterized SQL or ORM methods for safety.\n- Follow current best practices for financial/budget systems: audit trails, transactional integrity, input validation, and clear error handling.\n- Document all functions with JSDoc and provide usage examples for integration.\n- Prepare for future extensibility (e.g., budget period dimensions, reporting) by structuring queries and models to support additional budget attributes.\n",
-        "testStrategy": "1. Unit test all query and upsert functions for correct data retrieval, creation, and update scenarios, including edge cases (e.g., missing budgets).\n2. Integration test awardPointsWithBudget for both Phase 1 (warning-only) and Phase 2 (blocking) logic:\n   - Simulate awards with sufficient and insufficient budgets at both workspace and challenge levels.\n   - Verify transactional integrity: budgets decrement only on success, PointsBalance increments only after validation, and PointsLedger logs all actions.\n   - Test concurrent awards to ensure no race conditions or double-spending (using database transaction isolation).\n3. Validate audit logging: every award, warning, and block must be recorded in PointsLedger with correct metadata.\n4. Test error handling and rollback for all failure scenarios (e.g., database errors, invalid input).\n5. Review code for security best practices (SQL injection prevention, access control).\n6. Document and verify usage examples for all functions.",
-        "status": "done",
-        "dependencies": [
-          "33"
-        ],
-        "priority": "high",
-        "subtasks": []
-      },
-      {
-        "id": "35",
-        "title": "Update Submission Review API for Budget Integration",
-        "description": "Modify the submission approval flow to integrate with the budget system, updating the PUT route for activity submissions, replacing direct PointsBalance upserts with budget-aware logic, and implementing robust error handling and transactional integrity.",
-        "details": "1. Refactor the `/api/workspaces/[slug]/activity-submissions/[id]` PUT route to use the new `awardPointsWithBudget` function for point awards, replacing any direct PointsBalance upsert logic. Ensure the API call passes all necessary context (workspaceId, challengeId, participantId, points amount) to the budget functions.\n\n2. Integrate budget validation: Before awarding points, query the relevant workspace or challenge budget using the query functions from Task 34. If the budget is insufficient, return a structured error response (e.g., HTTP 400/403 with a clear message and error code) and do not proceed with the award.\n\n3. Implement transactional integrity using your ORM/database transaction primitives (e.g., Prisma's `$transaction`). Ensure that budget decrement, ledger logging, and points award all succeed or fail together, preventing partial updates.\n\n4. Add comprehensive error handling for budget validation failures, including:\n   - Insufficient budget (return error, log event)\n   - Unexpected database errors (return generic error, log for diagnostics)\n   - Permission errors (return 403 if user lacks rights to approve submissions or view budgets)\n\n5. Update API documentation to reflect new error responses and budget integration logic.\n\n6. Ensure the approval flow is extensible for future budget types or multi-stage approvals. Use clear separation of concerns in code (e.g., service layer for budget logic, controller for API orchestration).\n\nBest practices:\n- Use atomic transactions for all state changes related to budget and points.\n- Return machine-readable error codes for client-side handling.\n- Log all failed budget validations for audit and analytics.\n- Write unit and integration tests for all new logic paths.\n- Document all new API behaviors and error codes for frontend and integration teams.",
-        "testStrategy": "1. Unit test the updated PUT route for all scenarios: sufficient budget, insufficient budget, permission errors, and unexpected failures.\n2. Integration test the full approval flow, simulating concurrent submissions to verify transactional integrity and no race conditions.\n3. Validate error responses for insufficient budget and permission errors, ensuring correct HTTP status codes and error payloads.\n4. Confirm that points are only awarded when budget is sufficient and all related updates (budget decrement, ledger entry, PointsBalance) occur atomically.\n5. Review API documentation updates for accuracy and completeness.\n6. Audit logs for failed and successful budget validations.",
-        "status": "done",
-        "dependencies": [
-          "34"
-        ],
-        "priority": "high",
-        "subtasks": []
-      },
-      {
-        "id": "36",
+        "id": 36,
         "title": "Add Points and Budget Display to Dashboard Header Components",
         "description": "Display participant points and admin budget information as badges in the dashboard header. Since the main data models and query functions are already implemented, focus on updating the dashboard header component to fetch and display budget information.",
         "status": "pending",
@@ -1452,7 +1245,7 @@
         ]
       },
       {
-        "id": "37",
+        "id": 37,
         "title": "Create Admin Budget Management UI",
         "description": "Develop admin-facing UI controls for managing workspace and challenge budgets, with sections integrated into Workspace Settings and Challenge Edit pages. The data models are already implemented, so focus is on creating the UI components for budget allocation and management.",
         "status": "pending",
@@ -1465,23 +1258,7 @@
         "subtasks": []
       },
       {
-        "id": "38",
-        "title": "Enhance Participant Points Visibility and History",
-        "description": "Enhance participant-facing points visibility by implementing a header badge showing 'My Points: X/Y' format where X is current points balance and Y is available budget, providing consistent visibility across all participant pages.",
-        "status": "done",
-        "dependencies": [
-          "36",
-          "13",
-          "2"
-        ],
-        "priority": "low",
-        "details": "Implement the following enhancement for participant points visibility:\n\n- **Header Badge Implementation**: Add a points badge to the participant header displaying 'My Points: X/Y' format where X represents the user's current PointsBalance and Y represents the available budget from their workspace. The badge should be prominently displayed and accessible across all participant pages.\n- **Real-time Data Integration**: Use server-side data fetching to ensure accuracy of both current points balance and available budget information. Implement optimistic UI updates for responsiveness when points change.\n- **Cross-page Consistency**: Ensure the header badge appears consistently across all participant-facing pages (dashboard, profile, settings, activities, etc.) for seamless user experience.\n- **Mobile Responsiveness**: Design the header badge to be mobile-friendly and maintain readability across different screen sizes.\n- **Security and Privacy**: Ensure participants can only see their own points balance and their workspace's available budget, with no access to other users' data or administrative budget information.\n- **UI/UX Best Practices**: Use clear, accessible design with appropriate color contrast and intuitive formatting. The badge should be easily scannable and not interfere with existing header functionality.\n- **Integration with Existing Systems**: Build upon the existing points data models and coordinate with any existing points displays on profile/settings pages to maintain consistency.",
-        "testStrategy": "1. Verify the points badge appears in the participant header across all participant pages with correct 'My Points: X/Y' format.\n2. Confirm the badge displays accurate current PointsBalance and available budget data matching backend records.\n3. Test real-time updates of the badge when points balance changes through various activities.\n4. Verify mobile responsiveness and accessibility of the header badge across different devices and screen sizes.\n5. Confirm participants can only see their own points data and workspace budget, with no access to other users' information.\n6. Test the badge's visual integration with existing header elements and ensure it doesn't interfere with navigation or other functionality.\n7. Validate the badge appears consistently across all participant-facing pages and maintains the same format and styling.",
-        "subtasks": [],
-        "updatedAt": "2025-10-07T04:52:34.992Z"
-      },
-      {
-        "id": "39",
+        "id": 39,
         "title": "Implement Points Ledger and Audit Logging System",
         "description": "Develop a robust points ledger system with comprehensive audit logging for all points transactions, including admin-facing audit trail viewing and export capabilities, ensuring full traceability and compliance.",
         "status": "pending",
@@ -1494,7 +1271,7 @@
         "subtasks": []
       },
       {
-        "id": "40",
+        "id": 40,
         "title": "Budget System Migration and Rollout",
         "description": "Complete the budget system rollout by backfilling initial workspace budgets for existing workspaces, implementing phased enforcement configuration, and documenting the migration process. The schema migrations and models have already been implemented.",
         "status": "pending",
@@ -1560,7 +1337,7 @@
         ]
       },
       {
-        "id": "41",
+        "id": 41,
         "title": "Develop Comprehensive Points Budget Testing Suite",
         "description": "Design and implement a robust automated testing suite for the implemented points budget system, focusing on comprehensive testing of query functions, integration testing of the awardPointsWithBudget flow, and end-to-end testing of the complete admin/participant budget experience including UI interactions.",
         "status": "pending",
@@ -1657,7 +1434,9 @@
       "completedCount": 8,
       "tags": [
         "master"
-      ]
+      ],
+      "created": "2025-10-07T04:57:21.145Z",
+      "description": "Tasks for master context"
     }
   }
 }
