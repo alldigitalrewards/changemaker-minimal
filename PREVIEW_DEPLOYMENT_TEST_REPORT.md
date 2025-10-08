@@ -1,8 +1,8 @@
 # Preview Deployment Test Report
 
 **URL**: https://preview.changemaker.im
-**Date**: 2025-10-07 16:15:18 MST
-**Tester**: AI Agent (SuperClaude)
+**Date**: 2025-10-07 16:49 PST (UPDATED)
+**Tester**: AI Agent (Automated Playwright Testing)
 **Build**: `cdd1a70f65acc21399b50c1bf43068107eda8844`
 **Commit Message**: "fix: Resolve all blocking test issues - auth timeout and TypeScript errors"
 **Branch**: global-account-workspace-visibility-leaderboard-multi-reward
@@ -12,63 +12,296 @@
 
 ## Executive Summary
 
-**Deployment Status**: ✅ LIVE AND HEALTHY
-**Database Connection**: ✅ CONNECTED
-**Overall Assessment**: ⚠️ MANUAL TESTING REQUIRED
+**Deployment Status**: ❌ **CRITICAL FAILURE**
+**Database Connection**: ⚠️ UNKNOWN (Cannot verify due to app error)
+**Overall Assessment**: ❌ **NO-GO - PRODUCTION BLOCKER**
 
-The preview deployment is successfully live and passing all automated infrastructure checks. API health endpoint confirms database connectivity. Performance metrics are acceptable (< 2s load times). However, comprehensive functional testing requires manual execution due to authentication and UI interaction requirements.
+**Critical Issue**: Server-side exception (Digest: 3647767175) prevents user authentication and access to the application. Only 1 of 7 automated tests passed (14% pass rate). The preview deployment is experiencing a complete failure of the login flow, making all authenticated features inaccessible.
 
----
-
-## Automated Test Results
-
-### 1. Infrastructure & Deployment ✅
-
-| Check | Status | Details |
-|-------|--------|---------|
-| HTTP Status | ✅ PASS | 200 OK with proper headers |
-| Health Endpoint | ✅ PASS | `{"status":"ok","database":"connected"}` |
-| SSL/TLS | ✅ PASS | HTTPS with HSTS enabled |
-| Vercel Deployment | ✅ PASS | Cache headers present, proper routing |
-| Next.js Rendering | ✅ PASS | Prerender headers, RSC enabled |
-
-**Response Headers Analysis**:
-- `HTTP/2 200` - Modern protocol
-- `strict-transport-security: max-age=63072000` - Secure transport enforced
-- `x-vercel-cache: PRERENDER` - Static optimization working
-- `x-nextjs-prerender: 1` - Pre-rendering enabled
-- `server: Vercel` - Proper deployment platform
-
-### 2. Performance Metrics ✅
-
-| Endpoint | Response Time | Status | Threshold |
-|----------|--------------|--------|-----------|
-| Home page | 0.994s | ✅ PASS | < 3s |
-| Workspaces page | 0.364s | ✅ PASS | < 3s |
-| API Health | 1.658s | ✅ PASS | < 3s |
-
-**Analysis**: All pages load well under the 3-second threshold. Workspaces page is particularly fast at 364ms, indicating good caching and optimization.
-
-### 3. API Endpoints 🔍
-
-| Endpoint | Expected | Actual | Status |
-|----------|----------|--------|--------|
-| `/api/health` | 200 with status | 200 OK | ✅ PASS |
-| `/api/auth/user` | 401 unauthorized | 404 Not Found | ⚠️ INVESTIGATE |
-| `/api/workspaces` | 401 unauthorized | 404 Not Found | ⚠️ INVESTIGATE |
-
-**Note**: The 404 responses on protected endpoints may indicate:
-1. Routes are configured differently than expected
-2. API routes use different path structure
-3. This is acceptable if authentication is handled differently
-
-**Action Required**: Manual verification of actual API route paths in the codebase.
+**Recommendation**: DO NOT PROMOTE TO PRODUCTION. Immediate debugging required via Vercel deployment logs.
 
 ---
 
-## Manual Test Procedures
+## Automated Test Results (Playwright E2E Suite)
 
-The following test cases require manual execution with browser interaction and authenticated sessions.
+### Test Summary
+
+| Metric | Value |
+|--------|-------|
+| Total Tests | 7 |
+| Passed | 1 (14%) |
+| Failed | 6 (86%) |
+| Duration | 41.6 seconds |
+| Browser | Chromium |
+| Workers | 4 parallel |
+
+### Individual Test Results
+
+| Test Case | Status | Failure Reason | Severity |
+|-----------|--------|----------------|----------|
+| TC1: Login Flow | ❌ FAIL | Server-side exception after authentication | CRITICAL |
+| TC2: Session Persistence | ❌ FAIL | Cascading failure from TC1 | HIGH |
+| TC3: Workspaces Dashboard Display | ❌ FAIL | Cannot load due to server error | HIGH |
+| TC4: Points Reward Challenge Creation | ❌ TIMEOUT | Page never loaded - "Create Challenge" button not found | HIGH |
+| TC5: Password Reset Function | ❌ TIMEOUT | Profile page inaccessible (30s timeout) | MEDIUM |
+| TC6: Workspace Isolation Security | ✅ PASS | Properly blocks cross-workspace access | - |
+| TC7: Dynamic Reward Display | ❌ FAIL | Page inaccessible due to login failure | HIGH |
+
+### Critical Failure Details
+
+#### TC1: Login Flow - SERVER-SIDE EXCEPTION
+
+**Error Message**: "Application error: a server-side exception has occurred while loading preview.changemaker.im (see the server logs for more information)."
+
+**Error Digest**: 3647767175
+
+**Test Steps Executed**:
+1. Navigate to homepage ✅
+2. Click "Sign In" ✅
+3. Fill email: `jfelke@alldigitalrewards.com` ✅
+4. Fill password: `Changemaker2025!` ✅
+5. Submit form ✅
+6. Wait for redirect to `/workspaces` or `/dashboard` ❌ **SERVER ERROR**
+
+**Actual Result**: Server-side exception page displayed
+
+**Expected Result**: Successful login, redirect to workspaces dashboard, user identity visible
+
+**Page Snapshot** (from error context):
+```yaml
+- heading "Application error: a server-side exception has occurred
+  while loading preview.changemaker.im (see the server logs for
+  more information)." [level=2]
+- paragraph: "Digest: 3647767175"
+```
+
+**Impact**: Blocks 100% of user functionality - complete login system failure
+
+**Screenshot Evidence**: `/test-results/preview-preview-deployment-c9e1c-unctionality-TC1-Login-Flow-chromium/test-failed-1.png`
+
+**Video Recording**: `/test-results/preview-preview-deployment-c9e1c-unctionality-TC1-Login-Flow-chromium/video.webm`
+
+---
+
+## Root Cause Analysis
+
+### Primary Hypothesis: Server-Side Rendering Failure
+
+**Symptoms**:
+- Login page loads with `BAILOUT_TO_CLIENT_SIDE_RENDERING` marker
+- Homepage returns 200 OK (static pre-rendered)
+- Protected routes trigger server exception
+- Error digest: 3647767175
+
+**Potential Root Causes**:
+
+1. **Database Connection Failure** (HIGH PROBABILITY)
+   - Prisma client cannot connect to Supabase from Vercel Edge Runtime
+   - `DATABASE_URL` environment variable missing or incorrect
+   - Connection pooling issue in serverless environment
+   - SSL/TLS certificate validation failure
+
+2. **Environment Variable Misconfiguration** (HIGH PROBABILITY)
+   - `NEXT_PUBLIC_SUPABASE_URL` not set in preview
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` mismatch
+   - `SUPABASE_SERVICE_ROLE_KEY` missing
+   - `DATABASE_URL` pointing to wrong instance
+
+3. **Middleware Edge Runtime Error** (MEDIUM PROBABILITY)
+   - `/middleware.ts` using incompatible Node.js APIs
+   - Synchronous database calls in middleware
+   - Large middleware bundle (current: 69.5 kB)
+   - Missing Edge Runtime compatibility
+
+4. **Prisma Client Generation** (MEDIUM PROBABILITY)
+   - Build process not running `prisma generate`
+   - Binary targets misconfigured for Vercel deployment
+   - Version mismatch between local and deployed Prisma
+
+5. **Supabase Auth Redirect Issue** (LOW PROBABILITY)
+   - Callback URL not whitelisted for `preview.changemaker.im`
+   - OAuth flow broken in preview environment
+   - JWT secret mismatch
+
+---
+
+## Immediate Debugging Actions
+
+### P0: CRITICAL - MUST DO NOW
+
+#### 1. Check Vercel Deployment Logs
+
+**Action**:
+```bash
+# Via Vercel Dashboard (RECOMMENDED):
+# 1. Visit: https://vercel.com/alldigitalrewards/changemaker-minimal/deployments
+# 2. Find deployment: preview.changemaker.im (deployment ID visible in logs)
+# 3. Click deployment → Runtime Logs tab
+# 4. Search for: "3647767175" (error digest)
+# 5. Review full stack trace
+
+# Via CLI (may not show runtime logs):
+vercel logs https://preview.changemaker.im --output=raw
+```
+
+**Expected Output**: Full stack trace showing exact line causing exception
+
+#### 2. Verify Environment Variables
+
+**Action**:
+```bash
+# Pull preview environment variables
+vercel env pull .env.preview --environment=preview
+
+# Check critical variables are set:
+grep -E "^(DATABASE_URL|NEXT_PUBLIC_SUPABASE|SUPABASE_SERVICE)" .env.preview
+```
+
+**Required Variables**:
+- `DATABASE_URL`: Should match production Supabase connection string
+- `NEXT_PUBLIC_SUPABASE_URL`: https://miqaqnbujprzffjnebso.supabase.co
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Valid anon key for production project
+- `SUPABASE_SERVICE_ROLE_KEY`: Service role key for server-side ops
+
+**Validation**:
+```bash
+# Test database connection with pulled env
+export $(cat .env.preview | xargs)
+pnpm prisma db execute --stdin <<< "SELECT 1;"
+```
+
+#### 3. Check Prisma Client in Build
+
+**Action**: Review Vercel build logs for Prisma generation
+
+```bash
+# Look for this in build output:
+# "Prisma schema loaded from prisma/schema.prisma"
+# "Generated Prisma Client"
+
+# If not present, update package.json:
+{
+  "scripts": {
+    "build": "prisma generate && prisma migrate deploy && next build"
+  }
+}
+```
+
+**Verify Binary Targets**:
+```prisma
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+```
+
+### P1: HIGH - DEBUG NEXT
+
+#### 4. Test Middleware Compatibility
+
+**Action**: Review middleware.ts for Edge Runtime issues
+
+Common incompatibilities:
+- ❌ `fs` module usage
+- ❌ Synchronous Prisma calls
+- ❌ Buffer manipulation
+- ❌ Process.env access (use `env()` from next/navigation)
+
+**Fix Pattern**:
+```typescript
+// BAD - Synchronous in middleware
+const user = await prisma.user.findUnique({...});
+
+// GOOD - Defer to route handler
+// Middleware only validates tokens, route handlers query DB
+```
+
+#### 5. Test API Routes Directly
+
+**Action**:
+```bash
+# Test health endpoint (should work)
+curl https://preview.changemaker.im/api/health
+
+# Test auth callback (likely where failure occurs)
+curl -v https://preview.changemaker.im/api/auth/callback \
+  -H "Cookie: sb-miqaqnbujprzffjnebso-auth-token=test"
+
+# Test workspace API
+curl https://preview.changemaker.im/api/user/workspaces
+```
+
+#### 6. Compare Local vs Preview Build
+
+**Action**:
+```bash
+# Build locally with same config
+NODE_ENV=production pnpm build
+
+# Check for build errors or warnings
+# Compare bundle sizes
+# Verify middleware compiles for Edge Runtime
+
+# Test preview build locally
+pnpm start
+```
+
+### P2: MEDIUM - INVESTIGATE
+
+#### 7. Supabase Auth Configuration
+
+**Verify**:
+- Site URL includes: `https://preview.changemaker.im`
+- Redirect URLs include: `https://preview.changemaker.im/auth/callback`
+- JWT secret matches `SUPABASE_JWT_SECRET` env var
+
+**Check**:
+```bash
+# Via Supabase dashboard
+# Project: miqaqnbujprzffjnebso (production)
+# Settings → Authentication → URL Configuration
+```
+
+#### 8. Check Database Migration Status
+
+**Action**:
+```bash
+# Check migrations applied in production DB
+pnpm prisma migrate status --schema=./prisma/schema.prisma
+
+# If out of sync:
+pnpm prisma migrate deploy
+```
+
+---
+
+## Test Artifacts & Evidence
+
+### Screenshots (6 total)
+1. `/test-results/preview-preview-deployment-c9e1c-unctionality-TC1-Login-Flow-chromium/test-failed-1.png` - Server exception error page
+2. `/test-results/preview-preview-deployment-d7206-ity-TC2-Session-Persistence-chromium/test-failed-1.png` - Session test failure
+3. `/test-results/preview-preview-deployment-1655a-orkspaces-Dashboard-Display-chromium/test-failed-1.png` - Dashboard load failure
+4. `/test-results/preview-preview-deployment-04db3-s-Reward-Challenge-Creation-chromium/test-failed-1.png` - Challenge creation timeout
+5. `/test-results/preview-preview-deployment-030f0-TC5-Password-Reset-Function-chromium/test-failed-1.png` - Password reset timeout
+6. `/test-results/preview-preview-deployment-a6ed3--TC7-Dynamic-Reward-Display-chromium/test-failed-1.png` - Reward display failure
+
+### Video Recordings (6 total)
+- Full test execution videos showing exact failure points
+- Located in `/test-results/*/video.webm`
+
+### Error Context Files (6 total)
+- DOM snapshots at point of failure
+- Located in `/test-results/*/error-context.md`
+
+### Raw Test Output
+- Playwright HTML report available at: `http://localhost:9323` (if still running)
+- Console logs available in test artifacts
+
+---
+
+## Database Verification (BLOCKED)
+
+The following database queries from `preview-deployment-db-verification.sql` **cannot be executed** until the deployment is fixed:
 
 ### Test Suite 1: Authentication Flow 🔐
 
@@ -1029,23 +1262,88 @@ Notes: [any observations]
 
 ### Next Steps
 
-**Immediate (Within 24 Hours)**:
-1. Assign human tester to execute manual test suites
-2. Execute critical path testing (Test Suite 7)
-3. Run database verification queries
-4. Document all results in this report
+```sql
+-- 1. Recent reward issuances
+SELECT type, status, COUNT(*) FROM "RewardIssuance"
+WHERE "createdAt" >= CURRENT_DATE GROUP BY type, status;
 
-**Before Production Deployment**:
-1. All manual tests must pass (minimum 95% success rate)
-2. All critical path tests must pass (100% success rate)
-3. Security tests must pass (100% success rate)
-4. Database state must match expected results
+-- 2. Test challenges created today
+SELECT id, title, "rewardType" FROM "Challenge"
+WHERE "createdAt" >= CURRENT_DATE ORDER BY "createdAt" DESC LIMIT 10;
 
-**Post-Testing**:
-1. Update this report with results
-2. Create GitHub issues for any failures
-3. Re-test after fixes
-4. Final GO/NO-GO decision by tech lead
+-- 3. Tenant distribution
+SELECT "tenantId", COUNT(*) FROM "User" GROUP BY "tenantId";
+
+-- Continue with remaining 7 queries from preview-deployment-db-verification.sql
+```
+
+**Status**: ⚠️ **CANNOT EXECUTE** - Application error prevents database operations
+
+---
+
+## Production Readiness Decision
+
+### ❌ **NO-GO - CRITICAL BLOCKER IDENTIFIED**
+
+### Issues Summary
+
+| Severity | Count | Details |
+|----------|-------|---------|
+| CRITICAL | 1 | Server-side exception blocking all authentication |
+| HIGH | 5 | All user functionality inaccessible |
+| MEDIUM | 0 | - |
+| LOW | 0 | - |
+
+### Blockers for Production
+
+1. ❌ **BLOCKER**: Server-side exception (Digest: 3647767175) prevents user login
+2. ❌ **BLOCKER**: 0% functional test pass rate (excluding security test)
+3. ❌ **BLOCKER**: Root cause unknown - requires log analysis
+4. ❌ **BLOCKER**: Cannot verify database connectivity
+5. ❌ **BLOCKER**: Cannot execute any user flows
+
+### Required Actions Before Production
+
+**Priority 0 (Immediate)**:
+1. Access Vercel deployment logs and identify root cause of error 3647767175
+2. Fix the underlying issue (likely database connection or environment variables)
+3. Re-deploy preview with fix
+4. Re-run all automated tests
+
+**Priority 1 (After Fix)**:
+1. Verify 100% test pass rate (all 7 tests)
+2. Execute database verification queries
+3. Perform manual smoke test of login flow
+4. Verify all environment variables match production
+5. Test with both admin and participant accounts
+
+**Priority 2 (Before Production)**:
+1. Load test authentication system
+2. Verify email functionality
+3. Test all three reward types (points, SKU, monetary)
+4. Verify workspace isolation still works
+5. Test password reset flow
+
+### Estimated Time to Resolution
+
+**Optimistic** (Config/Env Issue): 2-4 hours
+**Realistic** (Code/Build Issue): 8-24 hours
+**Pessimistic** (Architecture Issue): 2-5 days
+
+### Recommendation
+
+**DO NOT PROMOTE TO PRODUCTION**
+
+The preview deployment is experiencing a critical failure that blocks all user functionality. The authentication system is completely broken, making it impossible to test any features that require login.
+
+**Next Steps**:
+1. Human developer must access Vercel deployment logs immediately
+2. Search for error digest: 3647767175
+3. Review full stack trace to identify exact failure point
+4. Apply fix and redeploy
+5. Re-run this test suite to verify resolution
+
+**Contingency**: If fix takes longer than 24 hours, consider rolling back preview to last known working deployment.
 
 ---
 
@@ -1057,10 +1355,9 @@ Notes: [any observations]
 - **Database**: Supabase (shared with production)
 - **Branch**: global-account-workspace-visibility-leaderboard-multi-reward
 - **Commit**: cdd1a70f65acc21399b50c1bf43068107eda8844
-- **Next.js Version**: 15.x (inferred from headers)
-- **Node.js Version**: Unknown (check Vercel build logs)
-
----
+- **Build Status**: Successful (but runtime failure)
+- **Middleware Size**: 69.5 kB
+- **Next.js Version**: 15.x (with App Router)
 
 ### Test Credentials
 
@@ -1069,39 +1366,42 @@ Notes: [any observations]
 - Password: `Changemaker2025!`
 - Workspace: `alldigitalrewards`
 - Role: ADMIN
+- **Status**: ❌ Cannot login due to server error
 
 **Participant Account**:
 - Email: `john.doe@acme.com`
 - Password: `Changemaker2025!`
 - Workspace: `acme`
 - Role: PARTICIPANT
+- **Status**: ❌ Cannot login due to server error
 
-**Test Email**:
-- Email: `test-preview-20251007@example.com`
-- Purpose: Email change testing
+### Debugging Commands
 
----
-
-### Useful Commands
-
-**Check Deployment**:
+**Check Deployment Status**:
 ```bash
-curl -I https://preview.changemaker.im
-curl https://preview.changemaker.im/api/health
+curl -I https://preview.changemaker.im  # Returns 200 for homepage
+curl https://preview.changemaker.im/api/health  # Test API health
+vercel env pull .env.preview --environment=preview  # Get env vars
 ```
 
-**Monitor Logs**:
+**Monitor Logs** (CRITICAL):
 ```bash
-vercel logs https://preview.changemaker.im --follow
+# Via Vercel Dashboard:
+# https://vercel.com/alldigitalrewards/changemaker-minimal/deployments
+# Find preview.changemaker.im deployment → Runtime Logs → Search "3647767175"
 ```
 
-**Database Access**:
+**Test Database Connection**:
 ```bash
-# Via Supabase CLI
-supabase db remote connect
+export $(cat .env.preview | xargs)
+pnpm prisma db execute --stdin <<< "SELECT 1;"
+```
 
-# Or use Supabase dashboard
-# https://supabase.com/dashboard/project/[project-id]
+**Local Build Test**:
+```bash
+NODE_ENV=production pnpm build
+pnpm start
+# Test same flows locally to isolate Vercel-specific issues
 ```
 
 ---
@@ -1109,22 +1409,35 @@ supabase db remote connect
 ### Contact Information
 - **Tech Lead**: Jack Felke
 - **Deployment**: Vercel Preview (auto-deploy on push)
-- **Database**: Supabase Production (shared)
-- **Repository**: changemaker-template (branch: global-account-workspace-visibility-leaderboard-multi-reward)
+- **Database**: Supabase Production (miqaqnbujprzffjnebso)
+- **Repository**: changemaker-template
+- **Branch**: global-account-workspace-visibility-leaderboard-multi-reward
 
 ---
 
-**Report Generated**: 2025-10-07 16:15:18 MST
-**Report Version**: 1.0
-**Status**: Draft - Pending Manual Testing Completion
+**Report Generated**: 2025-10-07 16:49 PST
+**Test Duration**: 41.6 seconds
+**Test Suite**: Playwright E2E (/tests/preview/preview-deployment.spec.ts)
+**Report Status**: FINAL - CRITICAL FAILURE DOCUMENTED
 
 ---
 
 ## Revision History
 
-| Version | Date | Author | Changes |
-|---------|------|--------|---------|
-| 1.0 | 2025-10-07 | AI Agent | Initial automated testing and manual test procedure documentation |
+| Version | Date | Time | Author | Changes |
+|---------|------|------|--------|---------|
+| 1.0 | 2025-10-07 | 16:15 | AI Agent | Initial infrastructure checks (passed) |
+| 2.0 | 2025-10-07 | 16:49 | AI Agent | Automated E2E testing (FAILED) - Critical blocker identified |
+
+---
+
+## Summary for Leadership
+
+**TL;DR**: Preview deployment is **completely broken**. Server exception prevents all users from logging in. Only 1 out of 7 tests passed. **DO NOT deploy to production**. Requires immediate debugging via Vercel logs to find root cause of error digest 3647767175.
+
+**Impact**: 100% of user functionality blocked.
+
+**Next Action**: Check Vercel deployment logs NOW.
 
 ---
 
