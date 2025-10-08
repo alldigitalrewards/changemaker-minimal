@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 // Configure for preview environment
+// Note: Update this URL to the latest preview deployment from: vercel ls changemaker-minimal
 test.use({
-  baseURL: 'https://preview.changemaker.im',
+  baseURL: 'https://changemaker-minimal-r0opudxll-alldigitalrewards.vercel.app',
 });
 
 const ADMIN_EMAIL = 'jfelke@alldigitalrewards.com';
@@ -49,7 +50,7 @@ test.describe('Preview Deployment - Core Functionality', () => {
 
     // Open new tab
     const newPage = await context.newPage();
-    await newPage.goto('https://preview.changemaker.im/workspaces');
+    await newPage.goto('/workspaces');
 
     // Verify session active in new tab
     await expect(newPage.locator('text=jfelke').or(newPage.locator('[data-testid="user-menu"]'))).toBeVisible();
