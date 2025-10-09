@@ -26,6 +26,7 @@ export type UserId = string
 export type WorkspaceId = string
 export type ChallengeId = string
 export type EnrollmentId = string
+export type RewardType = 'points' | 'sku' | 'monetary'
 
 // Validation functions for type safety
 export const isWorkspaceSlug = (slug: string): slug is WorkspaceSlug => {
@@ -77,7 +78,7 @@ export interface Challenge {
   readonly endDate: Date
   readonly enrollmentDeadline: Date | null
   readonly workspaceId: WorkspaceId
-  readonly rewardType?: 'points' | 'sku' | 'monetary'
+  readonly rewardType?: RewardType
   readonly rewardConfig?: unknown
   readonly emailEditAllowed?: boolean
 }
@@ -106,6 +107,8 @@ export interface ActivityTemplate {
   readonly description: string
   readonly type: ActivityType
   readonly basePoints: number
+  readonly rewardType?: RewardType | null
+  readonly rewardConfig?: unknown | null
   readonly workspaceId: string
   readonly requiresApproval: boolean
   readonly allowMultiple: boolean
@@ -249,7 +252,7 @@ export interface ChallengeCreateRequest {
   readonly startDate: string // ISO string format for API
   readonly endDate: string   // ISO string format for API
   readonly enrollmentDeadline?: string // Optional ISO string format for API
-  readonly rewardType?: 'points' | 'sku' | 'monetary'
+  readonly rewardType?: RewardType
   readonly rewardConfig?: unknown
   readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment (legacy)
   readonly invitedParticipantIds?: UserId[] // Optional participant IDs to invite
@@ -494,6 +497,8 @@ export interface ActivityTemplateCreateRequest {
   readonly description: string
   readonly type: ActivityType
   readonly basePoints: number
+  readonly rewardType?: RewardType
+  readonly rewardConfig?: unknown
   readonly requiresApproval?: boolean
   readonly allowMultiple?: boolean
 }

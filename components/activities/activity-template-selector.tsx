@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Activity, Clock, Trophy, Users, Calendar } from 'lucide-react';
-import { ActivityType } from '@/lib/types';
+import { type RewardType, ActivityType } from '@/lib/types';
+import { formatRewardValue, getRewardLabelShort, getRewardUnit } from '@/lib/reward-utils';
 
 interface ActivityTemplate {
   id: string;
@@ -19,6 +20,8 @@ interface ActivityTemplate {
   description: string;
   type: ActivityType;
   basePoints: number;
+  rewardType?: RewardType;
+  rewardConfig?: Record<string, any> | null;
   requiresApproval: boolean;
   allowMultiple: boolean;
 }
@@ -51,7 +54,7 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
   const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Activity configuration
-  const [pointsValue, setPointsValue] = useState<number | null>(null);
+  const [rewardValue, setRewardValue] = useState<number | null>(null);
   const [maxSubmissions, setMaxSubmissions] = useState(1);
   const [deadline, setDeadline] = useState('');
   const [isRequired, setIsRequired] = useState(false);
@@ -81,6 +84,10 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
     }
   }, [initialSelectedTemplateId])
 
+  useEffect(() => {
+    setRewardValue(null)
+  }, [selectedTemplateId])
+
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
   const filteredTemplates = templates.filter(t => {
     if (!query.trim()) return true;
@@ -91,6 +98,26 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
     );
   });
 
+  const selectedTemplateRewardType: RewardType = selectedTemplate ? (selectedTemplate.rewardType ?? 'points') : 'points'
+  const selectedTemplateRewardLabel = getRewardLabelShort(selectedTemplateRewardType)
+  const selectedTemplateRewardUnit = getRewardUnit(selectedTemplateRewardType)
+  const selectedTemplateDefaultDisplay = selectedTemplate
+    ? formatRewardValue(selectedTemplateRewardType, selectedTemplate.basePoints)
+    : '0'
+  const selectedTemplateDefaultSummary = selectedTemplateRewardUnit
+    ? `${selectedTemplateDefaultDisplay} ${selectedTemplateRewardUnit}`
+    : selectedTemplateDefaultDisplay
+  const rewardHelpText = (() => {
+    switch (selectedTemplateRewardType) {
+      case 'sku':
+        return 'Set how many items are issued when the activity is approved.'
+      case 'monetary':
+        return 'Set the monetary amount issued when the activity is approved (whole dollars).'
+      default:
+        return 'Set how many points participants earn when the activity is approved.'
+    }
+  })()
+
   const handleAssign = async () => {
     if (!selectedTemplateId) {
       setError('Please select an activity template');
@@ -99,9 +126,9 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
 
     // Basic client constraints
     const template = templates.find(t => t.id === selectedTemplateId)
-    const finalPoints = (pointsValue ?? template?.basePoints ?? 1)
-    if (finalPoints < 1) {
-      setError('Points must be at least 1');
+    const finalRewardValue = (rewardValue ?? template?.basePoints ?? 1)
+    if (finalRewardValue < 1) {
+      setError('Reward value must be at least 1');
       return;
     }
     if (maxSubmissions < 1) {
@@ -113,7 +140,7 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
     if (mode === 'local' && onAdd) {
       onAdd({
         templateId: selectedTemplateId,
-        pointsValue: finalPoints,
+        pointsValue: finalRewardValue,
         maxSubmissions,
         deadline: deadline || null,
         isRequired,
@@ -139,7 +166,7 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
         },
         body: JSON.stringify({
           templateId: selectedTemplateId,
-          pointsValue: finalPoints,
+          pointsValue: finalRewardValue,
           maxSubmissions,
           deadline: deadline || null,
           isRequired,
@@ -217,25 +244,38 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
         </div>
         <RadioGroup value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
           <div className="space-y-4 max-h-64 overflow-y-auto">
-            {filteredTemplates.map((template) => (
-              <div key={template.id} className="flex items-start space-x-3">
-                <RadioGroupItem value={template.id} id={template.id} className="mt-1" />
-                <div className="flex-1 min-w-0">
-                  <Label htmlFor={template.id} className="cursor-pointer">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <span className="font-medium">{template.name}</span>
-                      <Badge variant={getActivityTypeVariant(template.type)} className="text-xs">
-                        {getActivityTypeLabel(template.type)}
-                      </Badge>
-                      <span className="text-sm text-gray-500">
-                        {template.basePoints} pts
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 line-clamp-2">{template.description}</p>
-                  </Label>
+            {filteredTemplates.map((template) => {
+              const templateRewardType: RewardType = template.rewardType ?? 'points'
+              const templateRewardLabel = getRewardLabelShort(templateRewardType)
+              const templateRewardUnit = getRewardUnit(templateRewardType)
+              const templateRewardDisplay = formatRewardValue(templateRewardType, template.basePoints)
+              const templateRewardSummary = templateRewardUnit
+                ? `${templateRewardDisplay} ${templateRewardUnit}`
+                : templateRewardDisplay
+
+              return (
+                <div key={template.id} className="flex items-start space-x-3">
+                  <RadioGroupItem value={template.id} id={template.id} className="mt-1" />
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor={template.id} className="cursor-pointer">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="font-medium">{template.name}</span>
+                        <Badge variant={getActivityTypeVariant(template.type)} className="text-xs">
+                          {getActivityTypeLabel(template.type)}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {templateRewardLabel}
+                        </Badge>
+                        <span className="text-sm text-gray-500">
+                          {templateRewardSummary}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 line-clamp-2">{template.description}</p>
+                    </Label>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </RadioGroup>
       </div>
@@ -248,23 +288,23 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
             <Label className="text-base font-medium mb-4 block">Configure for This Challenge</Label>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Points Value */}
+              {/* Reward Amount */}
               <div>
                 <Label htmlFor="points" className="flex items-center space-x-1">
                   <Trophy className="h-4 w-4 text-amber-500" />
-                  <span>Points Value</span>
+                  <span>Reward Amount ({selectedTemplateRewardLabel})</span>
                 </Label>
                 <Input
                   id="points"
                   type="number"
                   min="1"
                   max="1000"
-                  value={pointsValue ?? selectedTemplate.basePoints}
-                  onChange={(e) => setPointsValue(e.target.value ? parseInt(e.target.value) : null)}
-                  placeholder={`Default: ${selectedTemplate.basePoints}`}
+                  value={rewardValue ?? selectedTemplate.basePoints}
+                  onChange={(e) => setRewardValue(e.target.value ? parseInt(e.target.value) : null)}
+                  placeholder={`Default: ${selectedTemplateDefaultSummary}`}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Override the template's default points ({selectedTemplate.basePoints})
+                  Override the template's default reward ({selectedTemplateDefaultSummary}). {rewardHelpText}
                 </p>
               </div>
 

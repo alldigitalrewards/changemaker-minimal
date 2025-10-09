@@ -34,7 +34,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspaceParticipantSegment, type WorkspacePointsBudget, type ChallengePointsBudget } from '@prisma/client'
-import { type Role, type ActivityType, type SubmissionStatus } from '@/lib/types'
+import { type Role, type ActivityType, type RewardType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { nanoid } from 'nanoid'
 
@@ -1029,6 +1029,8 @@ export async function createActivityTemplate(
     description: string
     type: ActivityType
     basePoints: number
+    rewardType?: RewardType
+    rewardConfig?: unknown
     requiresApproval?: boolean
     allowMultiple?: boolean
   },
@@ -1037,8 +1039,13 @@ export async function createActivityTemplate(
   try {
     return await prisma.activityTemplate.create({
       data: {
-        ...data,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        basePoints: data.basePoints,
         workspaceId,
+        rewardType: data.rewardType ?? 'points',
+        rewardConfig: (data.rewardConfig as any) ?? null,
         requiresApproval: data.requiresApproval ?? true,
         allowMultiple: data.allowMultiple ?? false
       }
@@ -1073,6 +1080,8 @@ export async function updateActivityTemplate(
     name: string
     description: string
     basePoints: number
+    rewardType: RewardType
+    rewardConfig: unknown
     requiresApproval: boolean
     allowMultiple: boolean
   }>,
@@ -1087,10 +1096,20 @@ export async function updateActivityTemplate(
     throw new ResourceNotFoundError('ActivityTemplate', templateId)
   }
 
+  // Prepare update data with proper type casting for JSON field
+  const updateData: any = {}
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.description !== undefined) updateData.description = data.description
+  if (data.basePoints !== undefined) updateData.basePoints = data.basePoints
+  if (data.rewardType !== undefined) updateData.rewardType = data.rewardType
+  if (data.rewardConfig !== undefined) updateData.rewardConfig = data.rewardConfig as any
+  if (data.requiresApproval !== undefined) updateData.requiresApproval = data.requiresApproval
+  if (data.allowMultiple !== undefined) updateData.allowMultiple = data.allowMultiple
+
   try {
     return await prisma.activityTemplate.update({
       where: { id: templateId },
-      data
+      data: updateData
     })
   } catch (error) {
     throw new DatabaseError(`Failed to update activity template: ${error}`)

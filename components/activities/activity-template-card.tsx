@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { MoreVertical, Edit, Trash2, FileText, Image, Link, Video, CheckSquare, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import ActivityTemplateForm from './activity-template-form'
+import { formatRewardValue, getRewardLabelShort, getRewardUnit } from '@/lib/reward-utils'
 
 interface ActivityTemplateCardProps {
   template: ActivityTemplate
@@ -40,6 +41,11 @@ export default function ActivityTemplateCard({ template, workspace }: ActivityTe
 
   const IconComponent = activityTypeIcons[template.type]
   const typeLabel = activityTypeLabels[template.type]
+  const rewardType = template.rewardType ?? 'points'
+  const rewardLabel = getRewardLabelShort(rewardType)
+  const rewardValue = formatRewardValue(rewardType, template.basePoints)
+  const rewardUnit = getRewardUnit(rewardType)
+  const rewardDisplay = rewardUnit ? `${rewardValue} ${rewardUnit}` : rewardValue
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -78,9 +84,14 @@ export default function ActivityTemplateCard({ template, workspace }: ActivityTe
                 <CardTitle className="text-base font-semibold truncate">
                   {template.name}
                 </CardTitle>
-                <Badge variant="secondary" className="text-xs">
-                  {typeLabel}
-                </Badge>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {typeLabel}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {rewardLabel}
+                  </Badge>
+                </div>
               </div>
             </div>
             
@@ -119,7 +130,7 @@ export default function ActivityTemplateCard({ template, workspace }: ActivityTe
           </CardDescription>
           
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>{template.basePoints} points</span>
+            <span>{rewardDisplay}</span>
             <div className="flex items-center space-x-2">
               {template.requiresApproval && (
                 <Badge variant="outline" className="text-xs">

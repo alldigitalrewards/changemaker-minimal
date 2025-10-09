@@ -126,6 +126,8 @@ model ActivityTemplate {
   description      String
   type             ActivityType
   basePoints       Int          @default(10)
+  rewardType       RewardType?
+  rewardConfig     Json?
   workspaceId      String       @db.Uuid
   requiresApproval Boolean      @default(true)
   allowMultiple    Boolean      @default(false)

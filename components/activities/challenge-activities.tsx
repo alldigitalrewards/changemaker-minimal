@@ -10,7 +10,8 @@ import { Activity, Plus, Clock, Users, Trophy, Settings, Save } from 'lucide-rea
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ActivityAddDialog } from './ActivityAddDialog';
 import ActivityAddInline from './ActivityAddInline';
-import { ActivityType } from '@/lib/types';
+import { ActivityType, type RewardType } from '@/lib/types';
+import { formatRewardValue, getRewardLabelShort, getRewardUnit } from '@/lib/reward-utils';
 import { format } from 'date-fns';
 
 interface ActivityWithTemplate {
@@ -27,6 +28,7 @@ interface ActivityWithTemplate {
     description: string;
     type: ActivityType;
     basePoints: number;
+    rewardType?: RewardType;
     requiresApproval: boolean;
     allowMultiple: boolean;
   };
@@ -312,7 +314,14 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
               />
               <label htmlFor="select-all">Select all</label>
             </div>
-            {activities.map((activity) => (
+            {activities.map((activity) => {
+              const activityRewardType: RewardType = activity.template.rewardType ?? 'points'
+              const activityRewardLabel = getRewardLabelShort(activityRewardType)
+              const activityRewardUnit = getRewardUnit(activityRewardType)
+              const activityRewardDisplay = formatRewardValue(activityRewardType, activity.pointsValue)
+              const activityRewardSummary = activityRewardUnit ? `${activityRewardDisplay} ${activityRewardUnit}` : activityRewardDisplay
+
+              return (
               <div key={activity.id} className={`border rounded-lg p-4 transition hover:bg-gray-50 ${selectedIds.includes(activity.id) ? 'ring-1 ring-amber-300' : ''}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -335,7 +344,7 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
                     {editingId === activity.id ? (
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Points</label>
+                          <label className="block text-xs text-gray-500 mb-1">Reward Amount ({activityRewardLabel})</label>
                           <input
                             className="w-full border rounded px-2 py-1"
                             type="number"
@@ -377,7 +386,7 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div className="flex items-center space-x-1">
                           <Trophy className="h-4 w-4 text-amber-500" />
-                          <span className="font-medium">{activity.pointsValue} points</span>
+                          <span className="font-medium">{activityRewardSummary}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Users className="h-4 w-4 text-blue-500" />
@@ -418,7 +427,8 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            )})}
           </div>
         )}
       </CardContent>

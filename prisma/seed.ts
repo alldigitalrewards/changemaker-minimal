@@ -582,12 +582,12 @@ async function seed() {
     // Create activity templates for each workspace
     console.log('\n📋 Creating activity templates and activities...')
     const activityTemplates = [
-      { name: 'Weekly Check-in', description: 'Share your weekly progress', type: 'TEXT_SUBMISSION', points: 10 },
-      { name: 'Document Upload', description: 'Upload supporting documents', type: 'FILE_UPLOAD', points: 20 },
-      { name: 'Photo Evidence', description: 'Share a photo of your work', type: 'PHOTO_UPLOAD', points: 15 },
-      { name: 'Resource Sharing', description: 'Share helpful links', type: 'LINK_SUBMISSION', points: 5 },
-      { name: 'Video Submission', description: 'Record a video update', type: 'VIDEO_SUBMISSION', points: 25 },
-      { name: 'Quiz Response', description: 'Answer multiple choice questions', type: 'MULTIPLE_CHOICE', points: 8 }
+      { name: 'Weekly Check-in', description: 'Share your weekly progress', type: 'TEXT_SUBMISSION', points: 10, rewardType: 'points' },
+      { name: 'Document Upload', description: 'Upload supporting documents', type: 'FILE_UPLOAD', points: 20, rewardType: 'points' },
+      { name: 'Photo Evidence', description: 'Share a photo of your work', type: 'PHOTO_UPLOAD', points: 15, rewardType: 'points' },
+      { name: 'Resource Sharing', description: 'Share helpful links', type: 'LINK_SUBMISSION', points: 5, rewardType: 'points' },
+      { name: 'Video Submission', description: 'Record a video update', type: 'VIDEO_SUBMISSION', points: 25, rewardType: 'points' },
+      { name: 'Quiz Response', description: 'Answer multiple choice questions', type: 'MULTIPLE_CHOICE', points: 8, rewardType: 'points' }
     ]
 
     for (const workspace of createdWorkspaces) {
@@ -598,6 +598,7 @@ async function seed() {
             description: template.description,
             type: template.type as any,
             basePoints: template.points,
+            rewardType: template.rewardType as any,
             workspaceId: workspace.id,
             requiresApproval: template.type !== 'MULTIPLE_CHOICE',
             allowMultiple: template.type === 'TEXT_SUBMISSION'

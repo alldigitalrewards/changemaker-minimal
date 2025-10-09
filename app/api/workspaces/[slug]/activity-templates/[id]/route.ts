@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { 
   ActivityTemplateCreateResponse,
+  type RewardType,
   validateActivityTemplateData,
   ApiError
 } from '@/lib/types';
@@ -41,7 +42,7 @@ export async function PUT(
       );
     }
 
-    const { name, description, type, basePoints, requiresApproval, allowMultiple } = body;
+    const { name, description, type, basePoints, rewardType, rewardConfig, requiresApproval, allowMultiple } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -78,16 +79,40 @@ export async function PUT(
       );
     }
 
+    // Normalize rewardType to lowercase for Prisma enum
+    const normalizedRewardType = (
+      typeof rewardType === 'string'
+        ? rewardType.toLowerCase()
+        : rewardType
+    ) as RewardType | undefined;
+
+    const updatePayload: {
+      name: string
+      description: string
+      basePoints: number
+      rewardType?: RewardType
+      rewardConfig?: unknown
+      requiresApproval: boolean
+      allowMultiple: boolean
+    } = {
+      name,
+      description,
+      basePoints,
+      requiresApproval: requiresApproval ?? true,
+      allowMultiple: allowMultiple ?? false
+    }
+
+    if (normalizedRewardType) {
+      updatePayload.rewardType = normalizedRewardType
+    }
+    if (rewardConfig !== undefined) {
+      updatePayload.rewardConfig = rewardConfig
+    }
+
     // Update activity template
     const template = await updateActivityTemplate(
       id,
-      { 
-        name, 
-        description,
-        basePoints,
-        requiresApproval: requiresApproval ?? true,
-        allowMultiple: allowMultiple ?? false
-      },
+      updatePayload,
       workspace.id
     );
 

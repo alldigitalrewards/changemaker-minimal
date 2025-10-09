@@ -5,6 +5,7 @@ import {
   ActivityTemplateCreateRequest, 
   ActivityTemplateListResponse,
   ActivityTemplateCreateResponse,
+  type RewardType,
   validateActivityTemplateData,
   ApiError
 } from '@/lib/types';
@@ -104,7 +105,7 @@ export async function POST(
       );
     }
 
-    const { name, description, type, basePoints, requiresApproval, allowMultiple } = body;
+    const { name, description, type, basePoints, rewardType, rewardConfig, requiresApproval, allowMultiple } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -132,13 +133,23 @@ export async function POST(
       );
     }
 
+    // Normalize rewardType to lowercase for Prisma enum and default to points
+    const normalizedRewardType = (
+      typeof rewardType === 'string'
+        ? rewardType.toLowerCase()
+        : rewardType
+    ) as RewardType | undefined;
+    const finalRewardType: RewardType = normalizedRewardType ?? 'points';
+
     // Create activity template
     const template = await createActivityTemplate(
-      { 
-        name, 
+      {
+        name,
         description,
         type,
         basePoints,
+        rewardType: finalRewardType,
+        rewardConfig: rewardConfig ?? undefined,
         requiresApproval: requiresApproval ?? true,
         allowMultiple: allowMultiple ?? false
       },
