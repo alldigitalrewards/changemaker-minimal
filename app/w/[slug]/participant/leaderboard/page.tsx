@@ -125,19 +125,21 @@ export default async function ParticipantLeaderboardPage({ params }: { params: P
         {/* Compact grid with "Your ranking" tile */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {userRank > 0 && (
-            <Card className="bg-gradient-to-r from-coral-50 to-pink-50 border-coral-200">
-              <CardContent className="p-4">
+            <Card className="bg-gradient-to-br from-white to-coral-50 border-2 border-coral-300 shadow-sm">
+              <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CheckSquare className="h-5 w-5 text-coral-600" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-6 h-6 rounded-full bg-coral-100 flex items-center justify-center">
+                      <CheckSquare className="h-4 w-4 text-coral-600" />
+                    </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">Your ranking</p>
-                      <p className="text-xs text-gray-600">#{userRank}</p>
+                      <p className="text-sm font-medium text-gray-600">Your ranking</p>
+                      <p className="text-lg font-bold text-gray-900">#{userRank}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-coral-600">{leaderboard[userIndex]?.totalPoints ?? 0}</div>
-                    <div className="text-[10px] text-gray-500">completed</div>
+                    <div className="text-2xl font-bold text-coral-600">{leaderboard[userIndex]?.totalPoints ?? 0}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">completed</div>
                   </div>
                 </div>
               </CardContent>
@@ -155,39 +157,45 @@ export default async function ParticipantLeaderboardPage({ params }: { params: P
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-l-4 border-l-amber-500">
-            <CardContent className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50 to-orange-50">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Top completed</p>
-                  <p className="text-2xl font-bold text-amber-600">{leaderboard[0]?.totalPoints || 0}</p>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Top completed</p>
+                  <p className="text-3xl font-bold text-amber-600">{leaderboard[0]?.totalPoints || 0}</p>
                 </div>
-                <Crown className="h-6 w-6 text-amber-500 opacity-75" />
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Crown className="h-7 w-7 text-amber-500" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-4">
+          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Average completed</p>
-                  <p className="text-2xl font-bold text-blue-600">{
+                  <p className="text-sm font-medium text-gray-600 mb-2">Average completed</p>
+                  <p className="text-3xl font-bold text-blue-600">{
                     leaderboard.length ? Math.round(leaderboard.reduce((s, e) => s + e.totalPoints, 0) / leaderboard.length) : 0
                   }</p>
                 </div>
-                <Users className="h-6 w-6 text-blue-500 opacity-75" />
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Target className="h-7 w-7 text-blue-500" />
+                </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-4">
+          <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-emerald-50">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Participants</p>
-                  <p className="text-2xl font-bold text-green-600">{leaderboard.length}</p>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Participants</p>
+                  <p className="text-3xl font-bold text-green-600">{leaderboard.length}</p>
                 </div>
-                <Users className="h-6 w-6 text-green-500 opacity-75" />
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <Users className="h-7 w-7 text-green-500" />
+                </div>
               </div>
             </CardContent>
           </Card>
