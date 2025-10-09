@@ -2,6 +2,114 @@
 
 This document tracks all database migrations, their purpose, and deployment considerations.
 
+## Migration: `20250925173507_add_email_and_segments` (Manual Application Required)
+
+**Date**: 2025-10-08
+**Status**: ✅ Applied to Production Database (Manual Fix)
+
+### Issue Background
+
+The migration `20250925173507_add_email_and_segments` was recorded in the `_prisma_migrations` table with `applied_steps_count: 0`, meaning Prisma tracked it as "applied" but never executed the actual SQL statements. This caused deployment errors:
+
+```
+The table `public.WorkspaceEmailSettings` does not exist in the current database.
+The table `public.WorkspaceEmailTemplate` does not exist in the current database.
+```
+
+A later migration `20251008203826_add_email_settings_and_templates` was created but contained only an empty comment, leaving the tables still missing.
+
+### What Changed
+
+#### New Enum
+- **EmailTemplateType**: INVITE, EMAIL_RESENT, ENROLLMENT_UPDATE, REMINDER, GENERIC
+
+#### New Tables
+1. **WorkspaceEmailSettings**
+   - id (UUID, PK)
+   - workspaceId (UUID, unique, FK to Workspace)
+   - fromName, fromEmail, replyTo (optional email sender settings)
+   - footerHtml (TEXT), brandColor (optional branding)
+   - updatedBy (UUID, FK to User)
+   - createdAt, updatedAt (timestamps)
+
+2. **WorkspaceEmailTemplate**
+   - id (UUID, PK)
+   - workspaceId (UUID, FK to Workspace)
+   - type (EmailTemplateType enum)
+   - subject, html (optional template content)
+   - enabled (boolean, default false)
+   - updatedBy (UUID, FK to User)
+   - createdAt, updatedAt (timestamps)
+   - Unique constraint on (workspaceId, type)
+
+3. **WorkspaceParticipantSegment**
+   - id (UUID, PK)
+   - workspaceId (UUID, FK to Workspace)
+   - name (TEXT), description (TEXT, nullable)
+   - filterJson (JSONB, nullable)
+   - createdBy (UUID, FK to User)
+   - createdAt, updatedAt (timestamps)
+
+#### Indexes Created
+- `WorkspaceEmailSettings_workspaceId_key` (unique)
+- `WorkspaceEmailTemplate_workspaceId_idx`
+- `WorkspaceEmailTemplate_workspaceId_type_key` (unique)
+- `WorkspaceParticipantSegment_workspaceId_idx`
+
+#### Foreign Keys
+- All tables have CASCADE delete on workspaceId
+- All updatedBy/createdBy fields have proper User FK
+
+### How Fixed
+
+The tables were manually created using a TypeScript script that executed each SQL statement individually:
+
+```bash
+# Script applied the migration SQL step-by-step:
+# 1. Created EmailTemplateType enum
+# 2. Created WorkspaceEmailSettings table
+# 3. Created WorkspaceEmailTemplate table
+# 4. Created WorkspaceParticipantSegment table
+# 5. Added all indexes
+# 6. Added all foreign key constraints
+```
+
+### Verification
+
+After application, verified tables are accessible:
+```typescript
+await prisma.workspaceEmailSettings.findMany({ take: 1 }); // ✅ Works
+await prisma.workspaceEmailTemplate.findMany({ take: 1 }); // ✅ Works
+```
+
+### Why This Happened
+
+1. Migration `20250925173507_add_email_and_segments` executed with 0 applied steps (likely due to transaction rollback or error)
+2. Prisma still marked it as "applied" in `_prisma_migrations` table
+3. Later migration `20251008203826_add_email_settings_and_templates` was created but auto-generated as empty
+4. `prisma migrate status` reported "up to date" despite missing tables
+5. Preview deployment failed when code tried to query non-existent tables
+
+### Lessons Learned
+
+1. **Always verify migrations**: Run `prisma migrate status` is not enough - must actually query tables
+2. **Check applied_steps_count**: Look for `applied_steps_count: 0` in `_prisma_migrations` table
+3. **Manual verification needed**: After migration, run actual queries against new tables
+4. **Empty migrations are suspicious**: If `prisma migrate dev` creates an empty migration, investigate why
+
+### Testing Checklist
+
+- [✅] EmailTemplateType enum exists with all values
+- [✅] WorkspaceEmailSettings table created
+- [✅] WorkspaceEmailTemplate table created
+- [✅] WorkspaceParticipantSegment table created
+- [✅] All indexes created
+- [✅] All foreign keys configured correctly
+- [✅] Tables accessible via Prisma client
+- [✅] Preview deployment no longer throws errors
+
+---
+
 ## Migration: `20250930164003_multi_reward_tenancy_and_email_updates`
 
 **Date**: 2025-09-30
