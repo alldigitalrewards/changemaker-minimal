@@ -255,7 +255,7 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
             />
           </div>
         )}
-        {(
+        {selectedIds.length > 0 && (
           <div className="mb-4 p-3 border rounded-lg bg-white/80 backdrop-blur sticky top-0 z-10 flex items-center gap-3 shadow-sm">
             <div className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">{selectedIds.length} selected</div>
             <Input
@@ -426,9 +426,9 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
                     </Button>
                   </div>
                 </div>
-                </div>
+              </div>
               );
-            )})}
+            })}
           </div>
         )}
       </CardContent>
