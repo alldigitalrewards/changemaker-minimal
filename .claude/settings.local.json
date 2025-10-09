@@ -46,7 +46,9 @@
       "Bash(timeout 120 npx playwright test:*)",
       "Bash(timeout 90 pnpm build)",
       "Bash(pnpm test:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(export PROD_DB=\"postgresql://postgres.naptpgyrdaoachpmbyaq:Changemaker2025!@aws-1-us-east-2.pooler.supabase.com:5432/postgres\")",
+      "Bash(vercel logs:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

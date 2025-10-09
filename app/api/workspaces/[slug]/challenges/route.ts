@@ -76,6 +76,10 @@ export async function GET(
         rewardType: rewardType as 'points' | 'sku' | 'monetary' | undefined,
         rewardConfig: (c as any).rewardConfig,
         emailEditAllowed: (c as any).emailEditAllowed,
+        status: (c as any).status ?? 'DRAFT',
+        createdAt: (c as any).createdAt,
+        updatedAt: (c as any).updatedAt,
+        _count: (c as any)._count ?? { enrollments: 0 }
       }
     })
 
