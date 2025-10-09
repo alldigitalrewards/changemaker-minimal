@@ -322,7 +322,7 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
               const activityRewardSummary = activityRewardUnit ? `${activityRewardDisplay} ${activityRewardUnit}` : activityRewardDisplay
 
               return (
-              <div key={activity.id} className={`border rounded-lg p-4 transition hover:bg-gray-50 ${selectedIds.includes(activity.id) ? 'ring-1 ring-amber-300' : ''}`}>
+                <div key={activity.id} className={`border rounded-lg p-4 transition hover:bg-gray-50 ${selectedIds.includes(activity.id) ? 'ring-1 ring-amber-300' : ''}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
@@ -426,7 +426,7 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
                     </Button>
                   </div>
                 </div>
-              </div>
+                </div>
               );
             )})}
           </div>
