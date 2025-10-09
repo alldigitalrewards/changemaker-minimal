@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { prisma } from '@/lib/db'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Edit, Info, Users, Activity, Settings, Trophy, Clock } from 'lucide-react'
+import { ArrowLeft, Edit, Info, Users, Activity, Settings, Trophy, Clock, ClipboardList } from 'lucide-react'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -140,6 +140,11 @@ export default async function ChallengeAdminLayout({ children, params }: LayoutP
             </Link>
           </li>
           <li>
+            <Link href={`/w/${slug}/admin/challenges/${id}/submissions`} className="text-sm inline-flex items-center gap-1 px-3 py-1 rounded hover:bg-muted/50">
+              <ClipboardList className="h-4 w-4" /> Submissions
+            </Link>
+          </li>
+          <li>
             <Link href={`/w/${slug}/admin/challenges/${id}/points`} className="text-sm inline-flex items-center gap-1 px-3 py-1 rounded hover:bg-muted/50">
               <Trophy className="h-4 w-4" /> Points
             </Link>
@@ -161,5 +166,4 @@ export default async function ChallengeAdminLayout({ children, params }: LayoutP
     </div>
   )
 }
-
 

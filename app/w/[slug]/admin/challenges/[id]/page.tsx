@@ -193,10 +193,9 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   const tabParam = typeof sp.tab === 'string' ? sp.tab : undefined
   // Back-compat: redirect ?tab=... to subroutes
   if (tabParam && ['activities','participants','settings','submissions','points','timeline'].includes(tabParam)) {
-    const next = tabParam === 'submissions' ? 'activities' : tabParam
     // Prefer a server redirect to subroutes for back-compat with ?tab
     const { redirect } = await import('next/navigation')
-    redirect(`/w/${slug}/admin/challenges/${id}/${next}`)
+    redirect(`/w/${slug}/admin/challenges/${id}/${tabParam}`)
   }
 
   return (
@@ -360,7 +359,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                         <ClipboardList className="h-4 w-4 text-amber-600" />
                         <span>{pendingSubmissionCount} submission{pendingSubmissionCount === 1 ? '' : 's'} awaiting review</span>
                       </div>
-                      <Link href={`?tab=submissions&submissions=pending`}>
+                      <Link href={`/w/${slug}/admin/challenges/${id}/submissions?status=pending`}>
                         <Button size="sm" variant="outline">Review now</Button>
                       </Link>
                     </div>

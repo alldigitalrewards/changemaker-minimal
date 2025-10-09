@@ -8,7 +8,7 @@ test('Admin can approve with reward selection via UI', async ({ page }) => {
   const { submission, challenge } = await ensurePendingSubmission({ slug, title: 'UI Approve', userEmail: participant })
 
   await loginWithCredentials(page, ADMIN_EMAIL, DEFAULT_PASSWORD)
-  await page.goto(`/w/${slug}/admin/challenges/${challenge.id}?tab=submissions&submissions=pending`)
+  await page.goto(`/w/${slug}/admin/challenges/${challenge.id}/submissions?status=pending`)
 
   // Open approve dialog
   await page.getByRole('button', { name: 'Approve' }).first().click()
@@ -21,5 +21,4 @@ test('Admin can approve with reward selection via UI', async ({ page }) => {
 
   await expect(page.getByText('Submission approved!')).toBeVisible()
 })
-
 

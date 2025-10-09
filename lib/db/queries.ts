@@ -1745,6 +1745,63 @@ export async function getChallengeEvents(challengeId: string) {
   })
 }
 
+/**
+ * Get recent workspace activities for admin dashboard
+ * Combines activity events and pending submissions
+ */
+export async function getRecentWorkspaceActivities(
+  workspaceId: WorkspaceId,
+  limit: number = 20
+): Promise<{
+  events: any[]
+  pendingSubmissions: (ActivitySubmission & {
+    activity: Activity & { template: ActivityTemplate, challenge: Challenge }
+    user: User
+    enrollment: Enrollment
+  })[]
+}> {
+  try {
+    const [events, pendingSubmissions] = await Promise.all([
+      // Get recent activity events
+      (prisma as any).activityEvent.findMany({
+        where: { workspaceId },
+        include: {
+          user: { select: { id: true, email: true } },
+          actor: { select: { id: true, email: true } },
+          challenge: { select: { id: true, title: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }),
+      // Get pending submissions
+      prisma.activitySubmission.findMany({
+        where: {
+          status: 'PENDING',
+          activity: {
+            challenge: { workspaceId }
+          }
+        },
+        include: {
+          activity: {
+            include: {
+              template: true,
+              challenge: true
+            }
+          },
+          user: true,
+          enrollment: true
+        },
+        orderBy: { submittedAt: 'desc' },
+        take: limit
+      })
+    ])
+
+    return { events, pendingSubmissions }
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch recent workspace activities: ${error}`)
+  }
+}
+
 // =============================================================================
 // INVITE CODE QUERIES
 // =============================================================================

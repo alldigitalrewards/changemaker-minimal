@@ -2,10 +2,12 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
+import { getRecentWorkspaceActivities } from "@/lib/db/queries"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Users, Trophy, Plus } from "lucide-react"
+import { ActivityFeed } from "./activity-feed"
 
 export default async function AdminDashboard({ 
   params 
@@ -46,6 +48,9 @@ export default async function AdminDashboard({
   const participantCount = stats?.users.filter(u => u.role === "PARTICIPANT").length || 0
   const challengeCount = stats?.challenges.length || 0
   const totalEnrollments = stats?.challenges.reduce((acc, c) => acc + c.enrollments.length, 0) || 0
+
+  // Get recent activities
+  const { events, pendingSubmissions } = await getRecentWorkspaceActivities(workspace.id)
 
   return (
     <div className="space-y-6">
@@ -143,36 +148,51 @@ export default async function AdminDashboard({
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common administrative tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button asChild variant="outline" className="h-auto p-4 flex items-start space-x-3">
-              <Link href={`/w/${slug}/admin/challenges`}>
-                <Trophy className="h-5 w-5 text-coral-500 mt-0.5" />
-                <div className="text-left">
-                  <div className="font-medium">Manage Challenges</div>
-                  <div className="text-sm text-gray-500">Create and edit challenges</div>
-                </div>
-              </Link>
-            </Button>
-            
-            <Button asChild variant="outline" className="h-auto p-4 flex items-start space-x-3">
-              <Link href={`/w/${slug}/admin/participants`}>
-                <Users className="h-5 w-5 text-coral-500 mt-0.5" />
-                <div className="text-left">
-                  <div className="font-medium">View Participants</div>
-                  <div className="text-sm text-gray-500">Manage workspace members</div>
-                </div>
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Activity Feed and Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Activity Feed - Takes 2 columns */}
+        <div className="lg:col-span-2">
+          <ActivityFeed
+            workspaceId={workspace.id}
+            slug={slug}
+            events={events}
+            pendingSubmissions={pendingSubmissions}
+          />
+        </div>
+
+        {/* Quick Actions - Takes 1 column */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Common administrative tasks</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button asChild variant="outline" className="w-full h-auto p-4 flex items-start space-x-3">
+                  <Link href={`/w/${slug}/admin/challenges`}>
+                    <Trophy className="h-5 w-5 text-coral-500 mt-0.5" />
+                    <div className="text-left">
+                      <div className="font-medium">Manage Challenges</div>
+                      <div className="text-sm text-gray-500">Create and edit challenges</div>
+                    </div>
+                  </Link>
+                </Button>
+
+                <Button asChild variant="outline" className="w-full h-auto p-4 flex items-start space-x-3">
+                  <Link href={`/w/${slug}/admin/participants`}>
+                    <Users className="h-5 w-5 text-coral-500 mt-0.5" />
+                    <div className="text-left">
+                      <div className="font-medium">View Participants</div>
+                      <div className="text-sm text-gray-500">Manage workspace members</div>
+                    </div>
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
