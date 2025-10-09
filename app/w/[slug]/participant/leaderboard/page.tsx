@@ -46,39 +46,45 @@ function LeaderboardTile({ entry, rank, isCurrentUser }: LeaderboardEntryProps) 
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
-        return <Crown className="h-5 w-5 text-amber-500" />
+        return <Crown className="h-6 w-6 text-amber-500" />
       case 2:
-        return <Medal className="h-5 w-5 text-gray-400" />
+        return <Medal className="h-6 w-6 text-gray-400" />
       case 3:
-        return <Award className="h-5 w-5 text-amber-600" />
+        return <Award className="h-6 w-6 text-amber-700" />
       default:
-        return <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">{rank}</div>
+        return <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-sm font-semibold text-gray-600">#{rank}</div>
     }
   }
 
   const displayName = entry.user.email.split('@')[0]
 
+  // Special styling for top 3
+  const isTopThree = rank <= 3
+  const borderColor = isCurrentUser ? 'border-l-4 border-l-coral-500' : isTopThree ? 'border-l-4 border-l-amber-400' : ''
+
   return (
-    <Card className={`transition-all duration-200 ${isCurrentUser ? 'ring-2 ring-coral-300' : ''}`}>
-      <CardContent className="p-4">
+    <Card className={`transition-all duration-200 hover:shadow-md ${borderColor} ${isCurrentUser && !isTopThree ? 'ring-2 ring-coral-200 bg-coral-50/30' : ''}`}>
+      <CardContent className="p-5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {getRankIcon(rank)}
             <div>
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-gray-900 truncate max-w-[140px]">{displayName}</p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="font-semibold text-gray-900 truncate max-w-[180px]">{displayName}</p>
                 {isCurrentUser && (
-                  <Badge className="bg-coral-500 text-white text-xs">You</Badge>
+                  <Badge className="bg-coral-500 hover:bg-coral-600 text-white text-xs px-2 py-0.5">You</Badge>
                 )}
               </div>
-              <p className="text-xs text-gray-600">
+              <p className="text-sm text-gray-500">
                 {entry.totalPoints} activities completed
               </p>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-xl font-bold text-coral-600">{entry.totalPoints}</div>
-            <div className="text-[10px] text-gray-500">completed</div>
+            <div className={`text-2xl font-bold ${isTopThree ? 'text-amber-600' : 'text-gray-700'}`}>
+              {entry.totalPoints}
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5">completed</div>
           </div>
         </div>
       </CardContent>
