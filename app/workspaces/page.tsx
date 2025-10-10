@@ -104,6 +104,11 @@ export default async function WorkspacesPage() {
         showRoleSwitcher={false}
         showWorkspaceSwitcher={false}
         isGlobalPage={true}
+        customBadge={userIsPlatformAdmin ? {
+          label: 'Platform Admin',
+          value: '🔱 Superadmin',
+          variant: 'purple' as const
+        } : undefined}
       />
 
       {/* Main content with sidebar */}
@@ -118,6 +123,7 @@ export default async function WorkspacesPage() {
           currentView="my-workspaces"
           userRole={primaryMembership?.role || 'PARTICIPANT'}
           isAdmin={userIsWorkspaceAdmin}
+          isSuperAdmin={userIsPlatformAdmin}
         />
 
         {/* Main content area */}

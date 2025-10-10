@@ -21,7 +21,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, ExternalLink, Star } from 'lucide-react';
+import { Search, ExternalLink, Star, Crown } from 'lucide-react';
+import { isPlatformSuperAdmin } from '@/lib/auth/rbac';
+import { RoleEditor } from './role-editor';
+import { WorkspaceManagerDialog } from './workspace-manager-dialog';
+import { BulkUploadDialog } from './bulk-upload-dialog';
 
 interface User {
   id: string;
@@ -49,6 +53,7 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL');
   const [workspaceFilter, setWorkspaceFilter] = useState<string>('ALL');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Get unique workspaces from all memberships
   const allWorkspaces = Array.from(
@@ -95,14 +100,66 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
     }
   };
 
+  const handleGrantSuperadmin = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/superadmin`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to grant superadmin access');
+      }
+
+      // Refresh the page to show updated status
+      window.location.reload();
+    } catch (error) {
+      console.error('Error granting superadmin:', error);
+      alert('Failed to grant superadmin access');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRevokeSuperadmin = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/superadmin`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to revoke superadmin access');
+      }
+
+      // Refresh the page to show updated status
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error revoking superadmin:', error);
+      alert(error.message || 'Failed to revoke superadmin access');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleBulkAction = async (action: 'change-role' | 'add-workspace' | 'remove-workspace') => {
     // TODO: Implement bulk actions
     console.log(`Bulk ${action}:`, Array.from(selectedIds));
     setSelectedIds(new Set());
   };
 
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
   return (
     <div className="space-y-4">
+      {/* Bulk Upload Button */}
+      <div className="flex justify-end">
+        <BulkUploadDialog onUpdate={handleRefresh} />
+      </div>
+
       {/* Filters and Search */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
@@ -188,6 +245,7 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
                 />
               </TableHead>
               <TableHead className="font-semibold text-purple-900">Email</TableHead>
+              <TableHead className="font-semibold text-purple-900">Platform Admin</TableHead>
               <TableHead className="font-semibold text-purple-900">Workspaces</TableHead>
               <TableHead className="font-semibold text-purple-900">Roles</TableHead>
               <TableHead className="font-semibold text-purple-900">Joined</TableHead>
@@ -196,13 +254,14 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   No users found
                 </TableCell>
               </TableRow>
             ) : (
               filteredUsers.map((user) => {
                 const primaryWorkspace = user.memberships.find((m) => m.isPrimary);
+                const isSuperAdmin = isPlatformSuperAdmin([], user.email);
 
                 return (
                   <TableRow key={user.id}>
@@ -213,7 +272,50 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
                       />
                     </TableCell>
                     <TableCell>
-                      <span className="font-medium text-gray-900">{user.email}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900">{user.email}</span>
+                        {isSuperAdmin && (
+                          <span title="Platform Superadmin">
+                            <Crown className="h-4 w-4 text-purple-600" />
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {isSuperAdmin ? (
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700 border border-purple-300">
+                            Superadmin
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs text-gray-500 hover:text-red-600"
+                            onClick={() => {
+                              if (confirm(`Revoke superadmin access from ${user.email}?`)) {
+                                handleRevokeSuperadmin(user.id);
+                              }
+                            }}
+                            disabled={isLoading}
+                          >
+                            Revoke
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs border-purple-300 text-purple-700 hover:bg-purple-50"
+                          onClick={() => {
+                            if (confirm(`Grant superadmin access to ${user.email}?`)) {
+                              handleGrantSuperadmin(user.id);
+                            }
+                          }}
+                          disabled={isLoading}
+                        >
+                          Grant Access
+                        </Button>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
@@ -234,6 +336,13 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
                             </Link>
                           ))
                         )}
+                        <WorkspaceManagerDialog
+                          userId={user.id}
+                          userEmail={user.email}
+                          currentWorkspaces={user.memberships.map(m => m.workspace)}
+                          allWorkspaces={allWorkspaces}
+                          onUpdate={handleRefresh}
+                        />
                       </div>
                     </TableCell>
                     <TableCell>
@@ -242,9 +351,12 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
                           <span className="text-sm text-gray-400">-</span>
                         ) : (
                           user.memberships.map((membership) => (
-                            <RoleBadge
+                            <RoleEditor
                               key={membership.workspace.id}
-                              role={membership.role as 'ADMIN' | 'PARTICIPANT'}
+                              userId={user.id}
+                              workspaceId={membership.workspace.id}
+                              currentRole={membership.role as 'ADMIN' | 'PARTICIPANT'}
+                              onUpdate={handleRefresh}
                             />
                           ))
                         )}

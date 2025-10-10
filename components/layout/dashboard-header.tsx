@@ -26,6 +26,7 @@ interface DashboardHeaderProps {
   showWorkspaceSwitcher?: boolean;
   pointsBadge?: { label: string; value: string } | null;
   budgetBadge?: { label: string; value: string } | null;
+  customBadge?: { label: string; value: string; variant?: 'purple' | 'default' } | null;
   isGlobalPage?: boolean; // Set to true for /workspaces and other non-workspace pages
 }
 
@@ -38,6 +39,7 @@ export default function DashboardHeader({
   showWorkspaceSwitcher = true,
   pointsBadge,
   budgetBadge,
+  customBadge,
   isGlobalPage = false,
 }: DashboardHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -107,6 +109,15 @@ export default function DashboardHeader({
             {budgetBadge && (
               <div className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-900">
                 {budgetBadge.label}: {budgetBadge.value}
+              </div>
+            )}
+            {customBadge && (
+              <div className={`px-3 py-1.5 text-xs font-semibold rounded-full border ${
+                customBadge.variant === 'purple'
+                  ? 'bg-purple-50 text-purple-700 border-purple-300'
+                  : 'bg-gray-50 text-gray-700 border-gray-300'
+              }`}>
+                {customBadge.value}
               </div>
             )}
 
