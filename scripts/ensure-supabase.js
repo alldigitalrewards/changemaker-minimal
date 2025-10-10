@@ -82,6 +82,11 @@ async function startSupabase() {
 }
 
 async function ensureSupabase() {
+  if (process.env.SKIP_SUPABASE === '1' || /^true$/i.test(process.env.SKIP_SUPABASE || '')) {
+    console.log('⚠️  SKIP_SUPABASE is set - skipping Supabase startup');
+    return;
+  }
+
   const isRunning = await checkSupabaseStatus();
   
   if (isRunning) {
