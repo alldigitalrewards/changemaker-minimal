@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth"
-import { reviewActivitySubmission, DatabaseError, ResourceNotFoundError, awardPointsWithBudget } from "@/lib/db/queries"
-import { issueReward } from '@/lib/db/reward-issuance'
+import { reviewActivitySubmission, DatabaseError, ResourceNotFoundError, awardPointsWithBudget, issueReward, logActivityEvent } from "@/lib/db/queries"
 import { prisma } from "@/lib/db"
-import { logActivityEvent } from "@/lib/db/queries"
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
@@ -86,30 +84,18 @@ export const POST = withErrorHandling(async (
       }
 
       // Create reward issuance if we have a reward type
+      // NOTE: issueReward automatically handles points awards via awardPointsWithBudget
       if (rewardType) {
-        if (rewardType === 'points' && (rewardAmount ?? 0) > 0) {
-          // Award points to budget/balance
-          await awardPointsWithBudget({
-            workspaceId: workspace.id,
-            challengeId: submission.activity.challengeId,
-            toUserId: submission.userId,
-            amount: rewardAmount!,
-            actorUserId: user.dbUser.id,
-            submissionId: submission.id
-          })
-        }
-
-        // Create reward issuance record (PENDING status)
         await issueReward({
           workspaceId: workspace.id,
           userId: submission.userId,
           challengeId: submission.activity.challengeId,
           submissionId: submission.id,
           type: rewardType,
-          amount: rewardAmount,
-          currency: rewardCurrency,
-          skuId: rewardSkuId,
-          provider: rewardProvider
+          amount: rewardAmount ?? undefined,
+          currency: rewardCurrency ?? undefined,
+          skuId: rewardSkuId ?? undefined,
+          provider: rewardProvider ?? undefined
         })
       }
     }

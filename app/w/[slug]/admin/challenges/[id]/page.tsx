@@ -40,6 +40,7 @@ import { Timeline } from './timeline'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { revalidatePath } from 'next/cache'
+import { CommunicationComposer } from '@/components/communications/communication-composer'
 
 interface PageProps {
   params: Promise<{
@@ -186,6 +187,11 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
   const stalledInvitesCount = enrolledUsers.filter(e => e.status === 'INVITED' && (now.getTime() - new Date((e as any).createdAt).getTime()) > sevenDaysMs).length
   const isUnpublished = statusForActions !== 'PUBLISHED'
+
+  const activityOptions = (challenge.activities || []).map(a => ({
+    id: a.id,
+    name: a.template?.name || 'Activity'
+  }))
 
   // Fetch timeline events (server-side)
   const events = await getChallengeEvents(id);
@@ -466,7 +472,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Challenge Details</CardTitle>
@@ -524,6 +530,22 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                     View Leaderboard
                   </Button>
                 </Link>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Send Communication</CardTitle>
+                <CardDescription>Share updates with enrolled participants or specific activities.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CommunicationComposer
+                  workspaceSlug={slug}
+                  challengeId={id}
+                  activities={activityOptions}
+                  allowedScopes={activityOptions.length > 0 ? ['CHALLENGE', 'ACTIVITY'] : ['CHALLENGE']}
+                  defaultScope={activityOptions.length > 0 ? 'CHALLENGE' : 'CHALLENGE'}
+                />
               </CardContent>
             </Card>
           </div>
