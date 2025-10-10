@@ -48,7 +48,8 @@
       "Bash(pnpm test:*)",
       "Bash(tee:*)",
       "Bash(export PROD_DB=\"postgresql://postgres.naptpgyrdaoachpmbyaq:Changemaker2025!@aws-1-us-east-2.pooler.supabase.com:5432/postgres\")",
-      "Bash(vercel logs:*)"
+      "Bash(vercel logs:*)",
+      "Bash(npx tsc:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

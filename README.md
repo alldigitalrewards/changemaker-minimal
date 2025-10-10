@@ -57,6 +57,12 @@ This project uses Task Master AI for development workflow:
 - Update status: `task-master set-status --id=<id> --status=<status>`
 - See `.taskmaster/` for full project planning
 
+## Documentation
+
+- Public API reference: visit `/docs/public-api` (served via Redoc from `public/api/public-openapi.yaml`).
+- Additional project docs live in `docs/` – start with `docs/README.md` for an index.
+- Workflow for editing the API spec is documented in `docs/operations/api-docs.md`.
+
 ## Project Evolution Log (Discussion Summaries)
 
 - **Refactor Goals**: Stripping bloat from original repo, adapting Vercel template to path-based multi-tenancy (/w/[slug]), focusing on minimal MVP (Supabase auth, workspaces, challenges/enrollment, 4-model schema). No extras like analytics or Redis.
