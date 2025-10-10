@@ -3,15 +3,17 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogoutButton } from "@/components/auth/logout-button"
 import Link from "next/link"
 import CreateWorkspaceDialog from "./create-workspace-dialog"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
 import WorkspaceCard from "./workspace-card-client"
+import { RedeemInviteDialog } from "./redeem-invite-dialog"
 import { getUserBySupabaseId } from "@/lib/db/queries"
 import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
-import { listMemberships } from "@/lib/db/workspace-membership"
+import { listMemberships, getPrimaryMembership } from "@/lib/db/workspace-membership"
 import { Plus, Search, Building, Users, Trophy, TrendingUp, BarChart } from "lucide-react"
+import DashboardHeader from "@/components/layout/dashboard-header"
+import WorkspacesSidebar from "@/components/workspaces/workspaces-sidebar"
 
 export default async function WorkspacesPage() {
   const supabase = await createClient()
@@ -30,18 +32,21 @@ export default async function WorkspacesPage() {
   // Get user's workspace memberships (new system)
   const memberships = await listMemberships(dbUser.id)
 
-  // Tenancy-aware available workspaces list with enhanced stats
-  let allWorkspaces: {
+  const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
+  const userIsWorkspaceAdmin = memberships.some(m => m.role === 'ADMIN')
+
+  // Discoverable workspaces based on role
+  let discoverableWorkspaces: {
     id: string;
     name: string;
     slug: string;
     createdAt: Date;
     _count: { memberships: number; challenges: number }
   }[] = []
-  const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
+
   if (userIsPlatformAdmin) {
-    // Super admin sees all tenants' active & published workspaces
-    allWorkspaces = await prisma.workspace.findMany({
+    // Platform super admin (PM) sees ALL workspaces across all tenants
+    discoverableWorkspaces = await prisma.workspace.findMany({
       where: { active: true, published: true },
       select: {
         id: true,
@@ -52,28 +57,21 @@ export default async function WorkspacesPage() {
       },
       orderBy: { createdAt: 'desc' }
     })
-  } else {
-    // Non-super-admins: show tenant-visible workspaces
-    // Determine tenant from first membership (preferred) or legacy workspace
-    let userTenantId: string | null = null
-    if (dbUser.workspaceId) {
-      const legacyWorkspace = await prisma.workspace.findUnique({
-        where: { id: dbUser.workspaceId },
-        select: { tenantId: true }
-      })
-      userTenantId = legacyWorkspace?.tenantId || null
-    } else if (memberships[0]?.workspaceId) {
-      const firstWorkspace = await prisma.workspace.findUnique({
-        where: { id: memberships[0].workspaceId },
-        select: { tenantId: true }
-      })
-      userTenantId = firstWorkspace?.tenantId || null
-    }
-    if (userTenantId) {
-      // Show all active, published workspaces in the same tenant
-      // Both admins and participants can discover workspaces within their tenant
-      allWorkspaces = await prisma.workspace.findMany({
-        where: { tenantId: userTenantId, active: true, published: true },
+  } else if (userIsWorkspaceAdmin) {
+    // Regular admins only see workspaces within their tenant boundaries
+    // Get tenant IDs from user's admin workspaces
+    const adminWorkspaceIds = memberships
+      .filter(m => m.role === 'ADMIN')
+      .map(m => m.workspaceId)
+
+    if (adminWorkspaceIds.length > 0) {
+      // For now, show public workspaces that the admin owns or manages
+      discoverableWorkspaces = await prisma.workspace.findMany({
+        where: {
+          id: { in: adminWorkspaceIds },
+          active: true,
+          published: true
+        },
         select: {
           id: true,
           name: true,
@@ -83,9 +81,6 @@ export default async function WorkspacesPage() {
         },
         orderBy: { createdAt: 'desc' }
       })
-    } else {
-      // No tenant context resolvable, suppress discovery
-      allWorkspaces = []
     }
   }
 
@@ -94,46 +89,37 @@ export default async function WorkspacesPage() {
   const totalMembers = memberships.reduce((sum, m) => sum + (m.workspace._count?.memberships || 0), 0)
   const totalChallenges = memberships.reduce((sum, m) => sum + (m.workspace._count?.challenges || 0), 0)
 
+  // Get primary membership for header
+  const primaryMembership = await getPrimaryMembership(dbUser.id)
+
   return (
-    <div className="container mx-auto py-8 px-4">
-      {/* Professional Header */}
-      <div className="bg-white border-b border-gray-100 -mx-4 px-4 mb-8">
-        <div className="py-6">
-          <div className="flex flex-col lg:flex-row justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-coral-100 rounded-lg">
-                  <Building className="h-6 w-6 text-coral-600" />
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900">Workspaces</h1>
-              </div>
-              <p className="text-gray-600">
-                Manage your workspaces and discover new opportunities
-              </p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                <CreateWorkspaceDialog
-                  userId={dbUser.id}
-                  currentWorkspace={null}
-                />
-                <JoinWorkspaceDialog userId={dbUser.id} scrollToDiscover />
-              </div>
-              
-              {/* User info */}
-              <div className="flex items-center gap-3 pl-0 sm:pl-4 sm:border-l border-gray-200">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                  <div className="text-xs text-gray-500">Signed in</div>
-                </div>
-                <LogoutButton variant="outline" className="text-gray-700 border-gray-300 hover:bg-gray-50" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="flex h-screen flex-col">
+      {/* Header */}
+      <DashboardHeader
+        title="Workspaces"
+        workspace={primaryMembership?.workspace || { name: 'All Workspaces', slug: 'home' }}
+        user={user}
+        role={primaryMembership?.role || 'PARTICIPANT'}
+        showRoleSwitcher={false}
+      />
+
+      {/* Main content with sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <WorkspacesSidebar
+          memberships={memberships.map(m => ({
+            workspaceId: m.workspaceId,
+            role: m.role,
+            workspace: m.workspace
+          }))}
+          currentView="my-workspaces"
+          userRole={primaryMembership?.role || 'PARTICIPANT'}
+          isAdmin={userIsWorkspaceAdmin}
+        />
+
+        {/* Main content area */}
+        <main className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="container mx-auto py-8 px-6">
 
       {/* Summary Stats */}
       {memberships.length > 0 && (
@@ -230,18 +216,20 @@ export default async function WorkspacesPage() {
                 Get started by creating your own workspace or joining an existing one.
               </CardDescription>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <CreateWorkspaceDialog
-                  userId={dbUser.id}
-                  currentWorkspace={null}
-                />
-                <JoinWorkspaceDialog userId={dbUser.id} scrollToDiscover />
+                {userIsWorkspaceAdmin && (
+                  <CreateWorkspaceDialog
+                    userId={dbUser.id}
+                    currentWorkspace={null}
+                  />
+                )}
+                <RedeemInviteDialog />
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Available Workspaces - Show if there are any workspaces to discover */}
-        {allWorkspaces.length > 0 && (
+        {/* Available Workspaces - Show for platform admins and workspace admins */}
+        {(userIsPlatformAdmin || userIsWorkspaceAdmin) && discoverableWorkspaces.length > 0 && (
         <Card
           id="discover-workspaces"
           className="border-gray-200 shadow-sm transition-all"
@@ -259,7 +247,7 @@ export default async function WorkspacesPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {allWorkspaces.map((workspace) => {
+              {discoverableWorkspaces.map((workspace) => {
                 // Check if user is already a member
                 const membership = memberships.find(m => m.workspaceId === workspace.id)
                 const isUserWorkspace = !!membership
@@ -285,6 +273,9 @@ export default async function WorkspacesPage() {
           </CardContent>
         </Card>
         )}
+      </div>
+          </div>
+        </main>
       </div>
     </div>
   )

@@ -147,27 +147,7 @@ export async function getUserWorkspaces(supabaseUserId: string): Promise<Workspa
 
     // Get workspaces where user has explicit membership
     const memberships = await listMemberships(dbUser.id)
-    let workspaces = memberships.map(m => m.workspace)
-
-    // Client admins also see all active/published workspaces in their tenant (even without explicit membership)
-    if (dbUser.role === 'ADMIN') {
-      const tenantWorkspaces = await prisma.workspace.findMany({
-        where: {
-          tenantId: dbUser.tenantId,
-          active: true,
-          published: true
-        },
-        orderBy: { name: 'asc' }
-      })
-
-      // Merge with membership workspaces, avoiding duplicates
-      const workspaceIds = new Set(workspaces.map(w => w.id))
-      for (const workspace of tenantWorkspaces) {
-        if (!workspaceIds.has(workspace.id)) {
-          workspaces.push(workspace as Workspace)
-        }
-      }
-    }
+    let workspaces = memberships.map(m => m.workspace as Workspace)
 
     // Add legacy workspace if not already included (backward compatibility)
     if (dbUser.workspaceId && dbUser.workspace) {
@@ -177,7 +157,7 @@ export async function getUserWorkspaces(supabaseUserId: string): Promise<Workspa
       }
     }
 
-    // Filter to only show active/published for non-admins and non-super-admins
+    // For non-admins, hide inactive/unpublished workspaces by default
     if (dbUser.role !== 'ADMIN') {
       workspaces = workspaces.filter(w => (w as any).active !== false && (w as any).published !== false)
     }
