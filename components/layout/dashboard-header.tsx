@@ -26,6 +26,7 @@ interface DashboardHeaderProps {
   showWorkspaceSwitcher?: boolean;
   pointsBadge?: { label: string; value: string } | null;
   budgetBadge?: { label: string; value: string } | null;
+  isGlobalPage?: boolean; // Set to true for /workspaces and other non-workspace pages
 }
 
 export default function DashboardHeader({
@@ -37,6 +38,7 @@ export default function DashboardHeader({
   showWorkspaceSwitcher = true,
   pointsBadge,
   budgetBadge,
+  isGlobalPage = false,
 }: DashboardHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -145,12 +147,14 @@ export default function DashboardHeader({
                       </button>
                     </Link>
 
-                    <Link href={`/w/${workspace.slug}/${role === 'ADMIN' ? 'admin' : 'participant'}/profile`}>
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
-                        <User className="h-4 w-4" />
-                        <span>Workspace Profile</span>
-                      </button>
-                    </Link>
+                    {!isGlobalPage && (
+                      <Link href={`/w/${workspace.slug}/${role === 'ADMIN' ? 'admin' : 'participant'}/profile`}>
+                        <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
+                          <User className="h-4 w-4" />
+                          <span>Workspace Profile</span>
+                        </button>
+                      </Link>
+                    )}
 
                     <form action="/auth/logout" method="POST">
                       <button type="submit" className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
