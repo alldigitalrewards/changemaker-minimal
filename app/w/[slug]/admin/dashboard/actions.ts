@@ -1,9 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { reviewActivitySubmission, awardPointsWithBudget } from '@/lib/db/queries'
+import { reviewActivitySubmission, awardPointsWithBudget, getUserBySupabaseId, verifyWorkspaceAdmin, logActivityEvent } from '@/lib/db/queries'
 import { createClient } from '@/lib/supabase/server'
-import { getUserBySupabaseId } from '@/lib/db/queries'
+import { issueReward } from '@/lib/db/reward-issuance'
 
 export async function quickApproveSubmission(
   submissionId: string,
@@ -24,6 +24,11 @@ export async function quickApproveSubmission(
       return { success: false, error: 'User not found' }
     }
 
+    const isAdmin = await verifyWorkspaceAdmin(dbUser.id, workspaceId)
+    if (!isAdmin) {
+      return { success: false, error: 'Admin privileges required' }
+    }
+
     // Review submission
     const reviewed = await reviewActivitySubmission(
       submissionId,
@@ -36,19 +41,68 @@ export async function quickApproveSubmission(
       workspaceId
     )
 
+    // Determine reward configuration
+    let rewardType: 'points' | 'sku' | 'monetary' | null = null
+    let rewardAmount: number | null = null
+    let rewardCurrency: string | null = null
+    let rewardSkuId: string | null = null
+
+    if ((pointsAwarded ?? 0) > 0) {
+      rewardType = 'points'
+      rewardAmount = pointsAwarded
+    } else if (reviewed.activity.challenge.rewardType) {
+      const challengeRewardType = reviewed.activity.challenge.rewardType as string
+      rewardType = challengeRewardType.toLowerCase() as 'points' | 'sku' | 'monetary'
+      const config = reviewed.activity.challenge.rewardConfig as any
+      if (config) {
+        rewardAmount = config.pointsAmount || config.amount || null
+        rewardCurrency = config.currency || null
+        rewardSkuId = config.skuId || null
+      }
+    }
+
     // Award points
-    if (pointsAwarded > 0) {
+    if (rewardType === 'points' && (rewardAmount ?? 0) > 0) {
       await awardPointsWithBudget({
         workspaceId,
         challengeId: reviewed.activity.challengeId,
         toUserId: reviewed.userId,
-        amount: pointsAwarded,
+        amount: rewardAmount!,
         actorUserId: dbUser.id,
         submissionId: reviewed.id
       })
     }
 
+    if (rewardType) {
+      await issueReward({
+        workspaceId,
+        userId: reviewed.userId,
+        challengeId: reviewed.activity.challengeId,
+        submissionId: reviewed.id,
+        type: rewardType,
+        amount: rewardAmount,
+        currency: rewardCurrency,
+        skuId: rewardSkuId
+      })
+    }
+
+    await logActivityEvent({
+      workspaceId,
+      challengeId: reviewed.activity.challengeId,
+      userId: reviewed.userId,
+      actorUserId: dbUser.id,
+      type: 'SUBMISSION_APPROVED',
+      metadata: {
+        submissionId: reviewed.id,
+        pointsAwarded: rewardAmount || 0,
+        activityId: reviewed.activityId,
+        activityName: reviewed.activity.template?.name,
+        reviewNotes: 'Quick approved from dashboard'
+      }
+    })
+
     revalidatePath(`/w/${slug}/admin/dashboard`)
+    revalidatePath(`/w/${slug}/admin/challenges/${reviewed.activity.challengeId}/submissions`)
     return { success: true, submission: reviewed }
   } catch (error) {
     console.error('Error approving submission:', error)
@@ -78,6 +132,11 @@ export async function quickRejectSubmission(
       return { success: false, error: 'User not found' }
     }
 
+    const isAdmin = await verifyWorkspaceAdmin(dbUser.id, workspaceId)
+    if (!isAdmin) {
+      return { success: false, error: 'Admin privileges required' }
+    }
+
     const reviewed = await reviewActivitySubmission(
       submissionId,
       {
@@ -88,7 +147,22 @@ export async function quickRejectSubmission(
       workspaceId
     )
 
+    await logActivityEvent({
+      workspaceId,
+      challengeId: reviewed.activity.challengeId,
+      userId: reviewed.userId,
+      actorUserId: dbUser.id,
+      type: 'SUBMISSION_REJECTED',
+      metadata: {
+        submissionId: reviewed.id,
+        activityId: reviewed.activityId,
+        activityName: reviewed.activity.template?.name,
+        reviewNotes: reviewNotes || 'Rejected from dashboard'
+      }
+    })
+
     revalidatePath(`/w/${slug}/admin/dashboard`)
+    revalidatePath(`/w/${slug}/admin/challenges/${reviewed.activity.challengeId}/submissions`)
     return { success: true, submission: reviewed }
   } catch (error) {
     console.error('Error rejecting submission:', error)
