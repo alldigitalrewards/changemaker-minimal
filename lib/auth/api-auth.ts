@@ -43,6 +43,12 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
  */
 export function isPlatformSuperAdmin(user: User | AuthenticatedUser): boolean {
   const dbUser = 'dbUser' in user ? user.dbUser : user
+
+  // PM superadmin access
+  if (dbUser.email === 'krobinson@alldigitalrewards.com') {
+    return true
+  }
+
   return dbUser.permissions.includes('platform_super_admin')
 }
 
@@ -52,23 +58,14 @@ export function isPlatformSuperAdmin(user: User | AuthenticatedUser): boolean {
  * Client admins can access all workspaces in their tenant
  * Participants can only access workspaces they're members of
  */
-export function canAccessWorkspace(user: User, workspace: { tenantId: string }, hasMembership: boolean): boolean {
+export function canAccessWorkspace(user: User, _workspace: { tenantId: string }, hasMembership: boolean): boolean {
   // Platform super admins see everything
   if (isPlatformSuperAdmin(user)) {
     return true
   }
 
-  // Same tenant access
-  if (user.tenantId === workspace.tenantId) {
-    // Client admins see all workspaces in their tenant (if workspace is active/published - checked by caller)
-    if (user.role === 'ADMIN') {
-      return true
-    }
-    // Participants need explicit membership
-    return hasMembership
-  }
-
-  return false
+  // For all other users, require explicit membership
+  return hasMembership
 }
 
 /**

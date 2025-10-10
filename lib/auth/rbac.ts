@@ -73,8 +73,13 @@ export function isParticipant(userRole: Role): boolean {
 }
 
 // Platform-level authorization
-// Detect elevated, cross-tenant capability via user permissions
-export function isPlatformSuperAdmin(input: { permissions?: string[] } | string[] | null | undefined): boolean {
+// Detect elevated, cross-tenant capability via user permissions or specific email
+export function isPlatformSuperAdmin(input: { permissions?: string[] } | string[] | null | undefined, email?: string): boolean {
+  // Check for PM superadmin email
+  if (email === 'krobinson@alldigitalrewards.com') {
+    return true;
+  }
+
   const permissions = Array.isArray(input) ? input : (input?.permissions ?? []);
   return permissions.includes('platform_super_admin');
 }
