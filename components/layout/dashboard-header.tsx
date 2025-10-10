@@ -23,6 +23,7 @@ interface DashboardHeaderProps {
   user: User;
   role: 'ADMIN' | 'PARTICIPANT';
   showRoleSwitcher?: boolean;
+  showWorkspaceSwitcher?: boolean;
   pointsBadge?: { label: string; value: string } | null;
   budgetBadge?: { label: string; value: string } | null;
 }
@@ -33,6 +34,7 @@ export default function DashboardHeader({
   user,
   role,
   showRoleSwitcher = false,
+  showWorkspaceSwitcher = true,
   pointsBadge,
   budgetBadge,
 }: DashboardHeaderProps) {
@@ -83,7 +85,7 @@ export default function DashboardHeader({
           {/* Right side - Workspace switcher, role badge, user menu */}
           <div className="flex items-center space-x-4">
             {/* Workspace Switcher */}
-            <WorkspaceSwitcher />
+            {showWorkspaceSwitcher && <WorkspaceSwitcher />}
 
             {/* Role badge */}
             <div className={`px-3 py-1 text-xs font-medium rounded-full ${

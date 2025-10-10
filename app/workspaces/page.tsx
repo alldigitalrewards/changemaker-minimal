@@ -101,6 +101,7 @@ export default async function WorkspacesPage() {
         user={user}
         role={primaryMembership?.role || 'PARTICIPANT'}
         showRoleSwitcher={false}
+        showWorkspaceSwitcher={false}
       />
 
       {/* Main content with sidebar */}
