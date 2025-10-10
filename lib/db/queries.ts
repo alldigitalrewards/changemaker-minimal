@@ -126,6 +126,71 @@ export async function getWorkspaceBySlug(slug: string): Promise<WorkspaceWithCou
 }
 
 /**
+ * Optimized workspace dashboard query for /workspaces page
+ * Consolidates all data fetching into a single aggregated query to eliminate N+1 issues
+ * Returns user memberships with pre-calculated counts and workspace details
+ */
+export async function getOptimizedWorkspaceDashboardData(userId: string) {
+  try {
+    // Single query with optimized joins and aggregations
+    const memberships = await prisma.workspaceMembership.findMany({
+      where: { userId },
+      include: {
+        workspace: {
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                challenges: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { isPrimary: 'desc' },
+        { createdAt: 'asc' }
+      ]
+    })
+
+    // Calculate aggregate totals in-memory (already fetched data)
+    const totalWorkspaces = memberships.length
+    const totalMembers = memberships.reduce((sum, m) => sum + (m.workspace._count?.memberships || 0), 0)
+    const totalChallenges = memberships.reduce((sum, m) => sum + (m.workspace._count?.challenges || 0), 0)
+
+    // Get points balance for all workspaces in a single query
+    const pointsBalances = await prisma.pointsBalance.findMany({
+      where: {
+        userId,
+        workspaceId: { in: memberships.map(m => m.workspaceId) }
+      },
+      select: {
+        workspaceId: true,
+        totalPoints: true,
+        availablePoints: true
+      }
+    })
+
+    // Create a map for quick lookup
+    const pointsMap = new Map(pointsBalances.map(pb => [pb.workspaceId, pb]))
+
+    return {
+      memberships: memberships.map(m => ({
+        ...m,
+        pointsBalance: pointsMap.get(m.workspaceId) || { totalPoints: 0, availablePoints: 0 }
+      })),
+      summary: {
+        totalWorkspaces,
+        totalMembers,
+        totalChallenges
+      }
+    }
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch optimized workspace dashboard data: ${error}`)
+  }
+}
+
+/**
  * Get workspace with full details (heavy query - use sparingly)
  */
 export async function getWorkspaceWithDetails(

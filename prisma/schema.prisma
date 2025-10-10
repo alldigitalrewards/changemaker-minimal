@@ -34,6 +34,7 @@ model Workspace {
   communications    WorkspaceCommunication[]
 
   @@index([tenantId])
+  @@index([tenantId, active, published])
 }
 
 model User {
@@ -351,6 +352,7 @@ model WorkspaceMembership {
   @@index([userId])
   @@index([workspaceId])
   @@index([userId, isPrimary])
+  @@index([workspaceId, role])
 }
 
 enum Role {
