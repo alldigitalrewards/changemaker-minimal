@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card"
-import { Trophy, CheckCircle, Clock, Coins } from "lucide-react"
+import { Trophy, CheckCircle, Clock, CheckSquare } from "lucide-react"
 
 export default function ProfileStats({
   points,
@@ -10,16 +10,15 @@ export default function ProfileStats({
 }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <Card className="border-l-4 border-l-amber-500">
+      <Card className="border-l-4 border-l-emerald-500">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Points</p>
-              <p className="text-3xl font-bold text-amber-600">{points.total}</p>
+              <p className="text-sm text-gray-600">Activities completed</p>
+              <p className="text-3xl font-bold text-emerald-600">{points.total}</p>
             </div>
-            <Coins className="h-8 w-8 text-amber-500 opacity-75" />
+            <CheckSquare className="h-8 w-8 text-emerald-500 opacity-75" />
           </div>
-          <p className="text-xs text-gray-500 mt-1">Available: {points.available}</p>
         </CardContent>
       </Card>
       <Card className="border-l-4 border-l-coral-500">

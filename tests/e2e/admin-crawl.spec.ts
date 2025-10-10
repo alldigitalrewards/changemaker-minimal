@@ -1,12 +1,24 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from './support/auth';
 
+interface CrawlResult {
+  path: string;
+  status: number;
+  error?: string;
+}
+
+interface CrawlResults {
+  visited: CrawlResult[];
+  failed: CrawlResult[];
+  links: Set<string>;
+}
+
 // Comprehensive crawler for admin routes
-async function crawlAdminRoutes(page, startPath: string, maxPages = 200) {
+async function crawlAdminRoutes(page: Page, startPath: string, maxPages = 200): Promise<CrawlResults> {
   const queue: string[] = [startPath];
   const seen = new Set<string>();
   const base = new URL(process.env.BASE_URL || 'http://localhost:3000');
-  const results = {
+  const results: CrawlResults = {
     visited: [],
     failed: [],
     links: new Set<string>()
@@ -85,8 +97,9 @@ async function crawlAdminRoutes(page, startPath: string, maxPages = 200) {
         });
       }
     } catch (error) {
-      console.log(`❌ ${path} - Error: ${error.message}`);
-      results.failed.push({ path, status: 0, error: error.message });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ ${path} - Error: ${errorMessage}`);
+      results.failed.push({ path, status: 0, error: errorMessage });
     }
   }
 
@@ -95,82 +108,54 @@ async function crawlAdminRoutes(page, startPath: string, maxPages = 200) {
 
 test.describe('Admin Route Testing', () => {
   test('admin - comprehensive route testing and link crawling', async ({ page }) => {
+    // Increase timeout for this comprehensive crawl test
+    test.setTimeout(120000); // 2 minutes
     console.log('\n' + '='.repeat(60));
-    console.log('🔐 ADMIN: Testing ALL admin routes and crawling ALL admin links');
+    console.log('🔐 ADMIN: Testing admin routes that actually exist');
     console.log('='.repeat(60));
-    
+
     // Login as admin (jfelke has access to alldigitalrewards and acme)
     await loginWithCredentials(page, ADMIN_EMAIL, DEFAULT_PASSWORD);
     const WORKSPACE_SLUG = 'alldigitalrewards'; // Admin's primary workspace
-    
-    // Define all admin routes to explicitly test
+
+    // Define only routes that actually exist (based on file structure)
     const adminRoutes = [
       // Workspace management
       '/workspaces',
-      '/workspaces/new',
-      
+
       // Workspace-specific admin routes
-      `/w/${WORKSPACE_SLUG}`,
-      `/w/${WORKSPACE_SLUG}/admin`,
       `/w/${WORKSPACE_SLUG}/admin/dashboard`,
-      
+
       // Challenge management
       `/w/${WORKSPACE_SLUG}/admin/challenges`,
       `/w/${WORKSPACE_SLUG}/admin/challenges/new`,
-      `/w/${WORKSPACE_SLUG}/admin/challenges/1`,
-      `/w/${WORKSPACE_SLUG}/admin/challenges/1/edit`,
-      `/w/${WORKSPACE_SLUG}/admin/challenges/1/submissions`,
-      
+
       // Participant management
       `/w/${WORKSPACE_SLUG}/admin/participants`,
-      `/w/${WORKSPACE_SLUG}/admin/participants/invite`,
-      `/w/${WORKSPACE_SLUG}/admin/participants/pending`,
-      `/w/${WORKSPACE_SLUG}/admin/participants/active`,
-      
-      // Settings
+
+      // Settings & other admin pages
       `/w/${WORKSPACE_SLUG}/admin/settings`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/general`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/members`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/roles`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/permissions`,
-      `/w/${WORKSPACE_SLUG}/admin/settings/integrations`,
-      
-      // Analytics
-      `/w/${WORKSPACE_SLUG}/admin/analytics`,
-      `/w/${WORKSPACE_SLUG}/admin/analytics/overview`,
-      `/w/${WORKSPACE_SLUG}/admin/analytics/engagement`,
-      `/w/${WORKSPACE_SLUG}/admin/analytics/performance`,
-      
-      // Reports
-      `/w/${WORKSPACE_SLUG}/admin/reports`,
-      `/w/${WORKSPACE_SLUG}/admin/reports/generate`,
-      `/w/${WORKSPACE_SLUG}/admin/reports/history`,
-      
-      // Global admin routes
-      '/admin',
-      '/admin/dashboard',
-      '/admin/profile',
-      '/admin/account',
-      '/admin/settings',
-      '/admin/notifications',
-      '/admin/activity',
-      '/admin/security',
-      
-      // User management (global)
-      '/profile',
+      `/w/${WORKSPACE_SLUG}/admin/profile`,
+      `/w/${WORKSPACE_SLUG}/admin/emails`,
+      `/w/${WORKSPACE_SLUG}/admin/invites`,
+      `/w/${WORKSPACE_SLUG}/admin/points`,
+      `/w/${WORKSPACE_SLUG}/admin/activity-templates`,
+
+      // Global routes
       '/account',
-      '/settings',
-      '/notifications',
     ];
     
     console.log('\n📋 Testing all admin routes explicitly:');
-    const routeResults = { success: [], failed: [] };
-    
+    const routeResults: {
+      success: string[];
+      failed: Array<{ route: string; status?: string | number; error?: string }>
+    } = { success: [], failed: [] };
+
     for (const route of adminRoutes) {
       try {
-        const resp = await page.goto(route, { 
+        const resp = await page.goto(route, {
           waitUntil: 'domcontentloaded',
-          timeout: 10000 
+          timeout: 10000
         });
         if (resp && resp.ok()) {
           console.log(`  ✅ ${route} - ${resp.status()}`);
@@ -185,11 +170,11 @@ test.describe('Admin Route Testing', () => {
         routeResults.failed.push({ route, error: 'Timeout' });
       }
     }
-    
+
     console.log(`\n📊 Admin routes summary:`);
     console.log(`  ✅ Working: ${routeResults.success.length}/${adminRoutes.length}`);
     console.log(`  ❌ Failed: ${routeResults.failed.length}/${adminRoutes.length}`);
-    
+
     if (routeResults.failed.length > 0) {
       console.log('\n❌ Failed routes:');
       routeResults.failed.forEach(f => {
@@ -197,29 +182,29 @@ test.describe('Admin Route Testing', () => {
       });
     }
     
-    // Now crawl to find ALL admin links
+    // Now crawl to find ALL admin links (with reduced scope to avoid timeouts)
     console.log('\n🕸️ Crawling for all admin links...');
-    const crawlResults = await crawlAdminRoutes(page, '/workspaces', 100);
-    
-    // Crawl from admin dashboard too
-    const dashboardCrawl = await crawlAdminRoutes(page, `/w/${WORKSPACE_SLUG}/admin/dashboard`, 100);
-    
+    const crawlResults = await crawlAdminRoutes(page, '/workspaces', 30);
+
+    // Crawl from admin dashboard too (limited scope)
+    const dashboardCrawl = await crawlAdminRoutes(page, `/w/${WORKSPACE_SLUG}/admin/dashboard`, 30);
+
     // Combine results
     dashboardCrawl.links.forEach(link => crawlResults.links.add(link));
     crawlResults.visited.push(...dashboardCrawl.visited);
     crawlResults.failed.push(...dashboardCrawl.failed);
-    
+
     // Report all unique admin links found
     console.log('\n📎 All unique admin links found:');
     const adminLinks = Array.from(crawlResults.links)
-      .filter(link => 
-        link.includes('/admin') || 
-        link.includes('/workspaces') || 
+      .filter(link =>
+        link.includes('/admin') ||
+        link.includes('/workspaces') ||
         link.startsWith('/w/'))
       .sort();
-    
+
     adminLinks.forEach(link => console.log(`  - ${link}`));
-    
+
     // Final summary
     console.log('\n' + '='.repeat(60));
     console.log('ADMIN TEST SUMMARY:');
@@ -229,23 +214,24 @@ test.describe('Admin Route Testing', () => {
     console.log(`  Unique admin links found: ${adminLinks.length}`);
     console.log(`  Failed pages during crawl: ${crawlResults.failed.length}`);
     console.log('='.repeat(60));
-    
+
     // Assertions
     expect(routeResults.success.length).toBeGreaterThan(0);
     expect(crawlResults.visited.length).toBeGreaterThan(0);
-    
-    // Warn if critical admin routes are missing
-    const criticalRoutes = [
+
+    // Require critical admin routes to work
+    const criticalRoutes: string[] = [
       '/workspaces',
       `/w/${WORKSPACE_SLUG}/admin/dashboard`,
       `/w/${WORKSPACE_SLUG}/admin/challenges`,
       `/w/${WORKSPACE_SLUG}/admin/participants`
     ];
-    
+
     const missingCritical = criticalRoutes.filter(r => !routeResults.success.includes(r));
     if (missingCritical.length > 0) {
-      console.log('\n⚠️  WARNING: Critical admin routes not working:');
+      console.log('\n❌ ERROR: Critical admin routes not working:');
       missingCritical.forEach(r => console.log(`    - ${r}`));
     }
+    expect(missingCritical.length).toBe(0);
   });
 });

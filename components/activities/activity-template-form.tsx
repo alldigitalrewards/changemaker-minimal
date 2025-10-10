@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ActivityTemplate, ActivityType, ACTIVITY_TYPES } from '@/lib/types'
+import { ActivityTemplate, ActivityType, ACTIVITY_TYPES, type RewardType } from '@/lib/types'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,6 +60,8 @@ export default function ActivityTemplateForm({ children, workspace, template, in
     description: (initialTemplate?.description as string) || template?.description || '',
     type: (initialTemplate?.type as ActivityType) || template?.type || 'TEXT_SUBMISSION' as ActivityType,
     basePoints: (initialTemplate?.basePoints as number) || template?.basePoints || 10,
+    rewardType: ((initialTemplate as any)?.rewardType || (template as any)?.rewardType || 'points') as RewardType,
+    rewardConfig: ((initialTemplate as any)?.rewardConfig || (template as any)?.rewardConfig || {}) as Record<string, any>,
     requiresApproval: (initialTemplate?.requiresApproval as boolean | undefined) ?? (template?.requiresApproval ?? true),
     allowMultiple: (initialTemplate?.allowMultiple as boolean | undefined) ?? (template?.allowMultiple ?? false),
   })
@@ -101,6 +103,8 @@ export default function ActivityTemplateForm({ children, workspace, template, in
           description: '',
           type: 'TEXT_SUBMISSION',
           basePoints: 10,
+          rewardType: 'points',
+          rewardConfig: {},
           requiresApproval: true,
           allowMultiple: false,
         })
@@ -119,6 +123,16 @@ export default function ActivityTemplateForm({ children, workspace, template, in
   const selectedTypeIcon = activityTypeIcons[formData.type]
   const selectedTypeLabel = activityTypeLabels[formData.type]
   const selectedTypeDescription = activityTypeDescriptions[formData.type]
+  const rewardValueLabel = formData.rewardType === 'sku'
+    ? 'Default Item Quantity'
+    : formData.rewardType === 'monetary'
+    ? 'Default Monetary Amount'
+    : 'Default Points'
+  const rewardValueHelp = formData.rewardType === 'sku'
+    ? 'Set how many items are issued when this activity is approved. Challenge-specific overrides are still available.'
+    : formData.rewardType === 'monetary'
+    ? 'Set the default monetary amount issued for this activity (whole dollars). You can override this per challenge.'
+    : 'Set how many points participants earn by completing this activity. Individual challenges can override this value.'
 
   const form = (
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -181,9 +195,9 @@ export default function ActivityTemplateForm({ children, workspace, template, in
             <p className="text-sm text-gray-600">{selectedTypeDescription}</p>
           </div>
 
-          {/* Points */}
+          {/* Reward Value */}
           <div>
-            <Label htmlFor="points">Base Points</Label>
+            <Label htmlFor="points">{rewardValueLabel}</Label>
             <Input
               id="points"
               type="number"
@@ -194,8 +208,124 @@ export default function ActivityTemplateForm({ children, workspace, template, in
               required
             />
             <p className="text-sm text-gray-600 mt-1">
-              Points awarded when this activity is completed (can be overridden per challenge)
+              {rewardValueHelp}
             </p>
+          </div>
+
+          {/* Reward Type */}
+          <div className="space-y-3">
+            <Label>Reward Type</Label>
+            <Select
+              value={formData.rewardType}
+              onValueChange={(value: RewardType) => {
+                setFormData(prev => ({
+                  ...prev,
+                  rewardType: value,
+                  rewardConfig: value === 'points'
+                    ? { pointsAmount: prev.basePoints }
+                    : value === 'sku'
+                    ? { skuId: '', provider: '' }
+                    : { amount: 0, currency: 'USD' }
+                }))
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="points">Points</SelectItem>
+                <SelectItem value="sku">SKU/Product</SelectItem>
+                <SelectItem value="monetary">Monetary</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-600">
+              Select how participants will be rewarded for completing this activity
+            </p>
+
+            {/* Reward Configuration based on type */}
+            {formData.rewardType === 'points' && (
+              <div className="space-y-2 mt-2 p-3 bg-gray-50 rounded border">
+                <Label htmlFor="pointsAmount">Points Amount</Label>
+                <Input
+                  id="pointsAmount"
+                  type="number"
+                  min="1"
+                  value={(formData.rewardConfig as any)?.pointsAmount || formData.basePoints}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    rewardConfig: { ...prev.rewardConfig, pointsAmount: parseInt(e.target.value) || 0 }
+                  }))}
+                />
+              </div>
+            )}
+
+            {formData.rewardType === 'sku' && (
+              <div className="space-y-3 mt-2 p-3 bg-gray-50 rounded border">
+                <div>
+                  <Label htmlFor="skuId">SKU/Product ID</Label>
+                  <Input
+                    id="skuId"
+                    value={(formData.rewardConfig as any)?.skuId || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      rewardConfig: { ...prev.rewardConfig, skuId: e.target.value }
+                    }))}
+                    placeholder="e.g., PROD-001"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="provider">Provider (optional)</Label>
+                  <Input
+                    id="provider"
+                    value={(formData.rewardConfig as any)?.provider || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      rewardConfig: { ...prev.rewardConfig, provider: e.target.value }
+                    }))}
+                    placeholder="e.g., Amazon, RewardSTACK"
+                  />
+                </div>
+              </div>
+            )}
+
+            {formData.rewardType === 'monetary' && (
+              <div className="space-y-3 mt-2 p-3 bg-gray-50 rounded border">
+                <div>
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={(formData.rewardConfig as any)?.amount || 0}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      rewardConfig: { ...prev.rewardConfig, amount: parseFloat(e.target.value) || 0 }
+                    }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="currency">Currency</Label>
+                  <Select
+                    value={(formData.rewardConfig as any)?.currency || 'USD'}
+                    onValueChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      rewardConfig: { ...prev.rewardConfig, currency: value }
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                      <SelectItem value="CAD">CAD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Settings */}

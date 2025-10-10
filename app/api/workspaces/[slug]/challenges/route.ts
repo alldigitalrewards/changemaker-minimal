@@ -62,14 +62,28 @@ export async function GET(
     const challenges = await getWorkspaceChallenges(workspace.id);
     
     // Filter enrollments to only show current user's enrollment status
-    const challengesWithUserEnrollment = challenges.map(challenge => ({
-      ...challenge,
-      enrollments: challenge.enrollments?.filter(enrollment => 
-        enrollment.userId === dbUser.id
-      ) || []
-    }));
+    const safeChallenges = challenges.map((c) => {
+      // Normalize and narrow to API Challenge type (omit extra prisma fields)
+      const rewardType = (c as any).rewardType ?? undefined
+      return {
+        id: c.id,
+        title: c.title,
+        description: c.description,
+        startDate: c.startDate as Date,
+        endDate: c.endDate as Date,
+        enrollmentDeadline: (c as any).enrollmentDeadline ?? null,
+        workspaceId: c.workspaceId,
+        rewardType: rewardType as 'points' | 'sku' | 'monetary' | undefined,
+        rewardConfig: (c as any).rewardConfig,
+        emailEditAllowed: (c as any).emailEditAllowed,
+        status: (c as any).status ?? 'DRAFT',
+        createdAt: (c as any).createdAt,
+        updatedAt: (c as any).updatedAt,
+        _count: (c as any)._count ?? { enrollments: 0 }
+      }
+    })
 
-    return NextResponse.json({ challenges: challengesWithUserEnrollment });
+    return NextResponse.json({ challenges: safeChallenges });
   } catch (error) {
     console.error('Error fetching challenges:', error);
     
@@ -112,13 +126,14 @@ export async function POST(
 
     // Validate input with type safety
     if (!validateChallengeData(body)) {
+      console.error('Challenge validation failed', { body })
       return NextResponse.json(
         { error: 'Title and description are required and must be non-empty strings' },
         { status: 400 }
       );
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId } = body;
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
@@ -146,14 +161,19 @@ export async function POST(
       );
     }
 
+    // Normalize rewardType to lowercase for Prisma enum
+    const normalizedRewardType = rewardType ? (rewardType.toLowerCase() as 'points' | 'sku' | 'monetary') : undefined;
+
     // Create challenge using standardized query
     const challenge = await createChallenge(
-      { 
-        title, 
+      {
+        title,
         description,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined
+        enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined,
+        rewardType: normalizedRewardType,
+        rewardConfig
       },
       workspace.id
     );
@@ -203,7 +223,20 @@ export async function POST(
       // Continue even if enrollments fail - challenge was created successfully
     }
 
-    return NextResponse.json({ challenge }, { status: 201 });
+    // Narrow response to API Challenge type
+    const normalized: any = {
+      id: challenge.id,
+      title: (challenge as any).title,
+      description: (challenge as any).description,
+      startDate: (challenge as any).startDate,
+      endDate: (challenge as any).endDate,
+      enrollmentDeadline: (challenge as any).enrollmentDeadline ?? null,
+      workspaceId: (challenge as any).workspaceId,
+      rewardType: (challenge as any).rewardType ?? undefined,
+      rewardConfig: (challenge as any).rewardConfig,
+      emailEditAllowed: (challenge as any).emailEditAllowed,
+    }
+    return NextResponse.json({ challenge: normalized }, { status: 201 });
   } catch (error) {
     console.error('Error creating challenge:', error);
     

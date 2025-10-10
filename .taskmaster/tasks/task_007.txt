@@ -1,0 +1,55 @@
+# Task ID: 7
+# Title: Build Admin Dashboard for Points & Progression
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Build admin dashboard features for managing challenge progression states and points using existing models. Display PointsBalance (the wallet), PointTransaction history, and challenge progression controls. Add UI for funding workspace PointsBalance, distributing points to users, and managing challenge state transitions using existing /app/w/[slug]/admin structure.
+# Details:
+Create admin dashboard components in `/app/w/[slug]/admin` for managing workspace points and challenges. Build UI components using shadcn/ui to display PointsBalance wallets, PointTransaction history, and challenge progression controls. Implement forms for funding workspace PointsBalance, distributing points to users, and managing challenge state transitions. Integrate with existing models (PointsBalance, PointTransaction, ActivityTemplate, ActivitySubmission) and admin structure.
+
+# Test Strategy:
+Test admin dashboard components using Jest and React Testing Library, ensuring proper integration with existing models, form validation, state management, and UI responsiveness. Test admin permissions and data flow.
+
+# Subtasks:
+## 1. Create Admin Points Management Dashboard Layout [pending]
+### Dependencies: None
+### Description: Build the main admin dashboard layout for points and challenge management using existing admin structure.
+### Details:
+Create admin dashboard page at `/app/w/[slug]/admin/points` using existing admin layout structure. Implement responsive layout with sections for workspace wallet overview, user points distribution, and challenge management. Use shadcn/ui components for consistent styling and navigation integration with existing admin sidebar.
+
+## 2. Build Workspace PointsBalance Wallet Display Component [pending]
+### Dependencies: 7.1
+### Description: Create UI component to display and manage workspace PointsBalance wallet with funding capabilities.
+### Details:
+Build WalletOverview component displaying current workspace PointsBalance, recent transactions, and funding controls. Include funding form with amount input, validation, and confirmation dialog. Use shadcn/ui Card, Input, Button, and Dialog components. Integrate with existing PointsBalance model and transaction recording.
+
+## 3. Implement PointTransaction History Table Component [pending]
+### Dependencies: None
+### Description: Create comprehensive transaction history table with filtering and pagination using existing PointTransaction model.
+### Details:
+Build TransactionHistory component with sortable table displaying PointTransaction records. Include filters for transaction type (EARNED/SPENT/ADJUSTED), date range, and user. Implement pagination and search functionality. Use shadcn/ui Table, Select, DatePicker, and Pagination components. Show transaction details including amount, type, description, and related activity/challenge.
+
+## 4. Create User Points Distribution Interface [pending]
+### Dependencies: 7.2
+### Description: Build UI for distributing points to individual users or groups with validation and confirmation.
+### Details:
+Implement PointsDistribution component with user selection (individual or bulk), amount input, reason description, and distribution type selection. Include user search/autocomplete, validation for sufficient workspace balance, and confirmation dialog showing distribution summary. Use shadcn/ui Form, Select, Input, and Dialog components.
+
+## 5. Build Challenge Progression Management Controls [pending]
+### Dependencies: 7.1
+### Description: Create admin interface for managing challenge states and progression using existing ActivityTemplate and ActivitySubmission models.
+### Details:
+Build ChallengeManager component displaying active challenges (ActivityTemplates), participant progress (ActivitySubmissions), and state management controls. Include challenge activation/deactivation, progress monitoring, and manual progression controls. Use shadcn/ui components for challenge cards, progress indicators, and action buttons.
+
+## 6. Implement Admin Points Analytics Dashboard [pending]
+### Dependencies: 7.3
+### Description: Create analytics dashboard showing points flow, user engagement metrics, and challenge performance using existing data models.
+### Details:
+Build PointsAnalytics component with charts and metrics for points distribution, transaction trends, user engagement, and challenge completion rates. Use existing PointTransaction and ActivitySubmission data for analytics. Implement date range selection and metric filtering. Use shadcn/ui components and chart library integration.
+
+## 7. Add Admin Permission Guards and API Routes [pending]
+### Dependencies: 7.2, 7.4, 7.5
+### Description: Implement admin-only access controls and API endpoints for points management operations.
+### Details:
+Create API routes at `/api/admin/points/*` for wallet funding, points distribution, and challenge management. Implement admin permission middleware using existing role-based access control. Add proper error handling, validation, and audit logging for admin operations. Ensure integration with existing PointsBalance and PointTransaction models.
+

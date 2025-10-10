@@ -23,6 +23,7 @@ interface DashboardHeaderProps {
   user: User;
   role: 'ADMIN' | 'PARTICIPANT';
   showRoleSwitcher?: boolean;
+  showWorkspaceSwitcher?: boolean;
   pointsBadge?: { label: string; value: string } | null;
   budgetBadge?: { label: string; value: string } | null;
 }
@@ -33,6 +34,7 @@ export default function DashboardHeader({
   user,
   role,
   showRoleSwitcher = false,
+  showWorkspaceSwitcher = true,
   pointsBadge,
   budgetBadge,
 }: DashboardHeaderProps) {
@@ -83,7 +85,7 @@ export default function DashboardHeader({
           {/* Right side - Workspace switcher, role badge, user menu */}
           <div className="flex items-center space-x-4">
             {/* Workspace Switcher */}
-            <WorkspaceSwitcher />
+            {showWorkspaceSwitcher && <WorkspaceSwitcher />}
 
             {/* Role badge */}
             <div className={`px-3 py-1 text-xs font-medium rounded-full ${
@@ -136,17 +138,24 @@ export default function DashboardHeader({
                   </div>
 
                   <div className="border-t border-gray-100 mt-2 pt-2">
-                    <Link href={`/w/${workspace.slug}/${role === 'ADMIN' ? 'admin' : 'participant'}/profile`}>
+                    <Link href="/account">
                       <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
                         <Settings className="h-4 w-4" />
-                        <span>Account Settings</span>
+                        <span>My Account Settings</span>
                       </button>
                     </Link>
 
-                    <form action={role === 'ADMIN' ? `/w/${workspace.slug}/admin/signout` : `/w/${workspace.slug}/participant/signout`} method="POST">
+                    <Link href={`/w/${workspace.slug}/${role === 'ADMIN' ? 'admin' : 'participant'}/profile`}>
+                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
+                        <User className="h-4 w-4" />
+                        <span>Workspace Profile</span>
+                      </button>
+                    </Link>
+
+                    <form action="/auth/logout" method="POST">
                       <button type="submit" className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
                         <LogOut className="h-4 w-4" />
-                        <span>Sign Out</span>
+                        <span>Log out</span>
                       </button>
                     </form>
                   </div>

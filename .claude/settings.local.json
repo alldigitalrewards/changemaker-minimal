@@ -39,7 +39,17 @@
       "Bash(task-master add-task:*)",
       "Bash(task-master add-dependency:*)",
       "Bash(task-master:*)",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(pnpm tsc:*)",
+      "Bash(pnpm playwright test:*)",
+      "Bash(timeout 90 pnpm test:*)",
+      "Bash(timeout 120 npx playwright test:*)",
+      "Bash(timeout 90 pnpm build)",
+      "Bash(pnpm test:*)",
+      "Bash(tee:*)",
+      "Bash(export PROD_DB=\"postgresql://postgres.naptpgyrdaoachpmbyaq:Changemaker2025!@aws-1-us-east-2.pooler.supabase.com:5432/postgres\")",
+      "Bash(vercel logs:*)",
+      "Bash(npx tsc:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

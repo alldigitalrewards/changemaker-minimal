@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { createMembership } from "@/lib/db/workspace-membership"
+import { nanoid } from "nanoid"
 
 export async function createWorkspace(formData: FormData, userId: string) {
   const name = formData.get("name") as string
@@ -18,11 +19,12 @@ export async function createWorkspace(formData: FormData, userId: string) {
       throw new Error("Slug already taken")
     }
 
-    // Create workspace 
+    // Create workspace with a unique tenant scope
     const workspace = await prisma.workspace.create({
       data: {
         name,
-        slug
+        slug,
+        tenantId: `tenant_${nanoid(12)}`
       }
     })
 

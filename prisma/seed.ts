@@ -4,7 +4,7 @@
  * Updated to support WorkspaceMembership for multi-workspace testing
  */
 
-import { PrismaClient, EnrollmentStatus, ActivityEventType, Prisma } from '@prisma/client'
+import { PrismaClient, EnrollmentStatus, ActivityEventType, Prisma, RewardType } from '@prisma/client'
 import { type Role, ROLE_ADMIN, ROLE_PARTICIPANT } from '../lib/types'
 import { awardPointsWithBudget } from '../lib/db/queries'
 import { createClient } from '@supabase/supabase-js'
@@ -184,9 +184,11 @@ async function seed() {
     // Clear existing data (optional - comment out if you want to preserve data)
     console.log('🗑️  Clearing existing data...')
     await prisma.activityEvent.deleteMany()
+    await prisma.workspaceCommunication.deleteMany()
     await prisma.pointsLedger.deleteMany()
-    await prisma.enrollment.deleteMany()
+    await prisma.rewardIssuance.deleteMany()
     await prisma.activitySubmission.deleteMany()
+    await prisma.enrollment.deleteMany()
     await prisma.activity.deleteMany()
     await prisma.activityTemplate.deleteMany()
     await prisma.challengePointsBudget.deleteMany()
@@ -199,10 +201,11 @@ async function seed() {
     await prisma.workspaceEmailSettings.deleteMany()
     await prisma.workspaceParticipantSegment.deleteMany()
     await prisma.workspacePointsBudget.deleteMany()
+    await (prisma as any).tenantSku.deleteMany()
     await prisma.user.deleteMany()
     await prisma.workspace.deleteMany()
 
-    // Create workspaces
+    // Create workspaces (default tenantId is set by schema default; override per slug if desired)
     console.log('🏢 Creating workspaces...')
     const createdWorkspaces = []
     for (const workspace of workspaces) {
@@ -237,8 +240,14 @@ async function seed() {
             // Set legacy workspaceId to primary workspace for backward compatibility
             workspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
-            )?.id
-          },
+            )?.id,
+            // Grant platform_super_admin to designated super admins for testing
+            permissions: (admin.email === 'jfelke@alldigitalrewards.com' || admin.email === 'krobinson@alldigitalrewards.com') ? { set: ['platform_super_admin'] } : undefined,
+            tenantId: 'default',
+            lastWorkspaceId: createdWorkspaces.find(w =>
+              w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
+            )?.id || null
+          } as any,
           create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
@@ -247,8 +256,13 @@ async function seed() {
             // Set legacy workspaceId to primary workspace for backward compatibility
             workspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
-            )?.id
-          }
+            )?.id,
+            permissions: (admin.email === 'jfelke@alldigitalrewards.com' || admin.email === 'krobinson@alldigitalrewards.com') ? ['platform_super_admin'] : [],
+            tenantId: 'default',
+            lastWorkspaceId: createdWorkspaces.find(w =>
+              w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
+            )?.id || null
+          } as any
         })
         
         // Create WorkspaceMemberships
@@ -398,13 +412,18 @@ async function seed() {
         console.log(`✓ Created participant segments for ${workspace.name}`)
       }
 
-      // Create workspace points budgets
+      // Create workspace points budgets (ensure exists)
       console.log('\n💰 Creating workspace points budgets...')
       for (const workspace of createdWorkspaces) {
-        await prisma.workspacePointsBudget.create({
-          data: {
+        await prisma.workspacePointsBudget.upsert({
+          where: { workspaceId: workspace.id },
+          update: {
+            totalBudget: 10000,
+            updatedBy: adminUserId
+          },
+          create: {
             workspaceId: workspace.id,
-            totalBudget: 10000, // 10,000 points per workspace
+            totalBudget: 10000,
             allocated: 0,
             updatedBy: adminUserId
           }
@@ -466,15 +485,17 @@ async function seed() {
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
-            workspaceId: workspace?.id
-          },
+            workspaceId: workspace?.id,
+            tenantId: 'default'
+          } as any,
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
             role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
-            workspaceId: workspace?.id
-          }
+            workspaceId: workspace?.id,
+            tenantId: 'default'
+          } as any
         })
         
         // Create WorkspaceMembership for participants too
@@ -504,21 +525,30 @@ async function seed() {
       }
     }
 
-    // Create challenges for each workspace
+    // Create challenges for each workspace with varied statuses
     console.log('\n🎯 Creating challenges...')
     const allChallenges = []
+    const challengeStatuses = ['DRAFT', 'PUBLISHED', 'PUBLISHED', 'PUBLISHED', 'ARCHIVED'] as const
     for (const workspace of createdWorkspaces) {
       // Create 3-5 challenges per workspace
       const numChallenges = Math.floor(Math.random() * 3) + 3
       for (let i = 0; i < numChallenges; i++) {
         const template = challengeTemplates[i % challengeTemplates.length]
-        
+
         // Generate realistic dates for demo data
         const now = new Date()
         const startDate = new Date(now.getTime() + (i * 7 + Math.floor(Math.random() * 14)) * 24 * 60 * 60 * 1000) // Start 0-2 weeks from now, staggered
         const endDate = new Date(startDate.getTime() + (30 + Math.floor(Math.random() * 30)) * 24 * 60 * 60 * 1000) // End 30-60 days after start
         const enrollmentDeadline = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000) // Enrollment deadline 1 week before start
-        
+
+        // Assign varied statuses and reward types
+        const status = challengeStatuses[i % challengeStatuses.length]
+        const rewardTypes = [RewardType.points, RewardType.sku, RewardType.monetary, null, null] as const
+        const rewardType = rewardTypes[i % rewardTypes.length]
+        const rewardConfig = rewardType === RewardType.sku ? { skuId: 'SKU-GIFT-10' }
+          : rewardType === RewardType.monetary ? { amount: 50, currency: 'USD' }
+          : null
+
         const challenge = await prisma.challenge.create({
           data: {
             title: `${template.title} - ${workspace.name}`,
@@ -526,20 +556,45 @@ async function seed() {
             startDate,
             endDate,
             enrollmentDeadline,
-            workspaceId: workspace.id
+            workspaceId: workspace.id,
+            status: status as any,
+            rewardType: rewardType as any,
+            rewardConfig: rewardConfig || Prisma.JsonNull
           }
         })
         allChallenges.push(challenge)
-        console.log(`✓ Created challenge: ${challenge.title}`)
+        console.log(`✓ Created challenge: ${challenge.title} (${status})`)
 
         // Seed timeline: challenge created event
         await prisma.activityEvent.create({
           data: {
             workspaceId: workspace.id,
             challengeId: challenge.id,
-            type: ActivityEventType.CHALLENGE_CREATED
+            type: ActivityEventType.CHALLENGE_CREATED,
+            actorUserId: adminUserId
           }
         })
+
+        // Add published/archived events if applicable
+        if (status === 'PUBLISHED') {
+          await prisma.activityEvent.create({
+            data: {
+              workspaceId: workspace.id,
+              challengeId: challenge.id,
+              type: ActivityEventType.CHALLENGE_PUBLISHED,
+              actorUserId: adminUserId
+            }
+          })
+        } else if (status === 'ARCHIVED') {
+          await prisma.activityEvent.create({
+            data: {
+              workspaceId: workspace.id,
+              challengeId: challenge.id,
+              type: ActivityEventType.CHALLENGE_ARCHIVED,
+              actorUserId: adminUserId
+            }
+          })
+        }
       }
     }
 
@@ -561,15 +616,17 @@ async function seed() {
       }
     }
 
-    // Create activity templates for each workspace
+    // Create activity templates for each workspace with diverse reward types
     console.log('\n📋 Creating activity templates and activities...')
     const activityTemplates = [
-      { name: 'Weekly Check-in', description: 'Share your weekly progress', type: 'TEXT_SUBMISSION', points: 10 },
-      { name: 'Document Upload', description: 'Upload supporting documents', type: 'FILE_UPLOAD', points: 20 },
-      { name: 'Photo Evidence', description: 'Share a photo of your work', type: 'PHOTO_UPLOAD', points: 15 },
-      { name: 'Resource Sharing', description: 'Share helpful links', type: 'LINK_SUBMISSION', points: 5 },
-      { name: 'Video Submission', description: 'Record a video update', type: 'VIDEO_SUBMISSION', points: 25 },
-      { name: 'Quiz Response', description: 'Answer multiple choice questions', type: 'MULTIPLE_CHOICE', points: 8 }
+      { name: 'Weekly Check-in', description: 'Share your weekly progress', type: 'TEXT_SUBMISSION', points: 10, rewardType: RewardType.points, rewardConfig: null },
+      { name: 'Document Upload', description: 'Upload supporting documents', type: 'FILE_UPLOAD', points: 20, rewardType: RewardType.points, rewardConfig: null },
+      { name: 'Photo Evidence', description: 'Share a photo of your work', type: 'PHOTO_UPLOAD', points: 15, rewardType: RewardType.points, rewardConfig: null },
+      { name: 'Resource Sharing', description: 'Share helpful links', type: 'LINK_SUBMISSION', points: 5, rewardType: RewardType.points, rewardConfig: null },
+      { name: 'Video Submission', description: 'Record a video update', type: 'VIDEO_SUBMISSION', points: 25, rewardType: RewardType.points, rewardConfig: null },
+      { name: 'Quiz Response', description: 'Answer multiple choice questions', type: 'MULTIPLE_CHOICE', points: 8, rewardType: RewardType.points, rewardConfig: null },
+      { name: 'Excellence Award', description: 'Earn a gift card for outstanding contribution', type: 'TEXT_SUBMISSION', points: 0, rewardType: RewardType.sku, rewardConfig: { skuId: 'SKU-GIFT-25', label: '$25 Gift Card' } },
+      { name: 'Bonus Task', description: 'Complete this task for monetary reward', type: 'FILE_UPLOAD', points: 0, rewardType: RewardType.monetary, rewardConfig: { amount: 10, currency: 'USD' } }
     ]
 
     for (const workspace of createdWorkspaces) {
@@ -580,6 +637,8 @@ async function seed() {
             description: template.description,
             type: template.type as any,
             basePoints: template.points,
+            rewardType: template.rewardType as any,
+            rewardConfig: template.rewardConfig || Prisma.JsonNull,
             workspaceId: workspace.id,
             requiresApproval: template.type !== 'MULTIPLE_CHOICE',
             allowMultiple: template.type === 'TEXT_SUBMISSION'
@@ -666,39 +725,82 @@ async function seed() {
       })
 
       if (activity) {
-        // Create an approved submission
+        // Create submissions with varied statuses
+        const statuses = ['APPROVED', 'PENDING', 'REJECTED', 'APPROVED']
+        const status = statuses[submissionCount % statuses.length] as 'APPROVED' | 'PENDING' | 'REJECTED'
+
         const submission = await prisma.activitySubmission.create({
           data: {
             activityId: activity.id,
             userId: enrollment.userId,
             enrollmentId: enrollment.id,
-            textContent: 'Sample submission content for testing',
-            status: 'APPROVED',
-            pointsAwarded: activity.pointsValue,
-            reviewedBy: adminUserId,
-            reviewedAt: new Date(),
-            reviewNotes: 'Approved for testing'
+            textContent: `Sample submission content for testing (${status})`,
+            status: status,
+            pointsAwarded: status === 'APPROVED' ? activity.pointsValue : null,
+            reviewedBy: status !== 'PENDING' ? adminUserId : null,
+            reviewedAt: status !== 'PENDING' ? new Date() : null,
+            reviewNotes: status === 'APPROVED' ? 'Approved for testing' : status === 'REJECTED' ? 'Does not meet requirements' : null
           }
         })
 
-        // Award points through the budget system
-        try {
-          await awardPointsWithBudget({
-            workspaceId: enrollment.challenge.workspaceId,
-            challengeId: enrollment.challengeId,
-            toUserId: enrollment.userId,
-            amount: activity.pointsValue,
-            actorUserId: adminUserId,
-            submissionId: submission.id
+        // Award points through the budget system for approved submissions
+        if (status === 'APPROVED') {
+          try {
+            await awardPointsWithBudget({
+              workspaceId: enrollment.challenge.workspaceId,
+              challengeId: enrollment.challengeId,
+              toUserId: enrollment.userId,
+              amount: activity.pointsValue,
+              actorUserId: adminUserId,
+              submissionId: submission.id
+            })
+            console.log(`✓ Created submission and awarded ${activity.pointsValue} points`)
+
+            // Create submission approved event
+            await prisma.activityEvent.create({
+              data: {
+                workspaceId: enrollment.challenge.workspaceId,
+                challengeId: enrollment.challengeId,
+                enrollmentId: enrollment.id,
+                userId: enrollment.userId,
+                actorUserId: adminUserId,
+                type: ActivityEventType.SUBMISSION_APPROVED,
+                metadata: { submissionId: submission.id, points: activity.pointsValue }
+              }
+            })
+          } catch (error) {
+            console.warn(`⚠️ Could not award points: ${error}`)
+          }
+        } else if (status === 'REJECTED') {
+          // Create submission rejected event
+          await prisma.activityEvent.create({
+            data: {
+              workspaceId: enrollment.challenge.workspaceId,
+              challengeId: enrollment.challengeId,
+              enrollmentId: enrollment.id,
+              userId: enrollment.userId,
+              actorUserId: adminUserId,
+              type: ActivityEventType.SUBMISSION_REJECTED,
+              metadata: { submissionId: submission.id }
+            }
           })
-          submissionCount++
-          console.log(`✓ Created submission and awarded ${activity.pointsValue} points`)
-        } catch (error) {
-          console.warn(`⚠️ Could not award points: ${error}`)
+        } else {
+          // Create submission created event for pending
+          await prisma.activityEvent.create({
+            data: {
+              workspaceId: enrollment.challenge.workspaceId,
+              challengeId: enrollment.challengeId,
+              enrollmentId: enrollment.id,
+              userId: enrollment.userId,
+              type: ActivityEventType.SUBMISSION_CREATED,
+              metadata: { submissionId: submission.id }
+            }
+          })
         }
+        submissionCount++
       }
     }
-    console.log(`✓ Created ${submissionCount} approved submissions with points awards`)
+    console.log(`✓ Created ${submissionCount} activity submissions (approved, pending, rejected)`)
 
     // Award some initial points to participants (not tied to submissions)
     console.log('\n🏆 Awarding initial points to participants...')
@@ -733,6 +835,7 @@ async function seed() {
     const finalEnrollmentCount = await prisma.enrollment.count()
     const finalMembershipCount = await prisma.workspaceMembership.count()
     const finalInviteCount = await prisma.inviteCode.count()
+    const finalInviteRedemptionCount = await prisma.inviteRedemption.count()
     const finalActivityTemplateCount = await prisma.activityTemplate.count()
     const finalActivityCount = await prisma.activity.count()
     const finalSubmissionCount = await prisma.activitySubmission.count()
@@ -743,6 +846,10 @@ async function seed() {
     const finalWorkspaceBudgetCount = await prisma.workspacePointsBudget.count()
     const finalChallengeBudgetCount = await prisma.challengePointsBudget.count()
     const finalPointsLedgerCount = await prisma.pointsLedger.count()
+    const finalCommunicationCount = await prisma.workspaceCommunication.count()
+    const finalActivityEventCount = await prisma.activityEvent.count()
+    const finalRewardIssuanceCount = await prisma.rewardIssuance.count()
+    const finalTenantSkuCount = await (prisma as any).tenantSku.count()
 
     console.log(`  - Workspaces: ${finalWorkspaceCount}`)
     console.log(`  - Users: ${finalUserCount} (${adminUsers.length} admins, ${participantUsers.length} participants)`)
@@ -753,6 +860,7 @@ async function seed() {
     console.log(`  - Activities: ${finalActivityCount}`)
     console.log(`  - Activity Submissions: ${finalSubmissionCount}`)
     console.log(`  - Invite Codes: ${finalInviteCount}`)
+    console.log(`  - Invite Redemptions: ${finalInviteRedemptionCount}`)
     console.log(`  - Email Settings: ${finalEmailSettingsCount}`)
     console.log(`  - Email Templates: ${finalEmailTemplateCount}`)
     console.log(`  - Participant Segments: ${finalSegmentCount}`)
@@ -760,6 +868,161 @@ async function seed() {
     console.log(`  - Workspace Budgets: ${finalWorkspaceBudgetCount}`)
     console.log(`  - Challenge Budgets: ${finalChallengeBudgetCount}`)
     console.log(`  - Points Ledger Entries: ${finalPointsLedgerCount}`)
+    console.log(`  - Workspace Communications: ${finalCommunicationCount}`)
+    console.log(`  - Activity Events: ${finalActivityEventCount}`)
+    console.log(`  - Reward Issuances: ${finalRewardIssuanceCount}`)
+    console.log(`  - Tenant SKUs: ${finalTenantSkuCount}`)
+
+    // Seed tenant SKU catalog (exemplar; safe to hardcode per tenant)
+    console.log('\n🛍️  Seeding tenant SKU catalog...')
+    const uniqueTenantIds = Array.from(new Set(createdWorkspaces.map(w => (w as any).tenantId || 'default')))
+    for (const tenantId of uniqueTenantIds) {
+      const skus = [
+        { skuId: 'SKU-GIFT-10', label: '$10 Gift Card', provider: 'stub' },
+        { skuId: 'SKU-GIFT-25', label: '$25 Gift Card', provider: 'stub' },
+        { skuId: 'SKU-SWAG-TEE', label: 'Company Tee', provider: 'stub' }
+      ]
+      for (const sku of skus) {
+        await (prisma as any).tenantSku.upsert({
+          where: { tenantId_skuId: { tenantId, skuId: sku.skuId } },
+          update: { label: sku.label, provider: sku.provider },
+          create: { tenantId, skuId: sku.skuId, label: sku.label, provider: sku.provider }
+        })
+      }
+      console.log(`✓ Seeded ${skus.length} SKUs for tenant '${tenantId}'`)
+    }
+
+    // Seed sample reward issuances for demo
+    console.log('\n🎁 Seeding sample reward issuances...')
+    for (const workspace of createdWorkspaces) {
+      const anyParticipant = await prisma.user.findFirst({ where: { role: ROLE_PARTICIPANT, workspaceId: workspace.id } })
+      if (anyParticipant) {
+        await prisma.rewardIssuance.createMany({
+          data: [
+            { userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.points, amount: 15, status: 'ISSUED', issuedAt: new Date() },
+            { userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.sku, skuId: 'SKU-GIFT-10', status: 'ISSUED', issuedAt: new Date() },
+            { userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.monetary, amount: 5, currency: 'USD', status: 'PENDING' },
+          ]
+        })
+        console.log(`✓ RewardIssuance samples created for ${workspace.name}`)
+      }
+    }
+
+    // Create workspace communications with various scopes
+    console.log('\n💬 Creating workspace communications...')
+    let communicationCount = 0
+    for (const workspace of createdWorkspaces) {
+      // Workspace-level communication
+      await prisma.workspaceCommunication.create({
+        data: {
+          workspaceId: workspace.id,
+          scope: 'WORKSPACE',
+          audience: 'ALL',
+          subject: `Welcome to ${workspace.name}!`,
+          message: 'We are excited to have you join our innovation community. Get ready to make an impact!',
+          sentBy: adminUserId!
+        }
+      })
+      communicationCount++
+
+      // Challenge-level communications
+      const workspaceChallenges = allChallenges.filter(c => c.workspaceId === workspace.id && c.status === 'PUBLISHED')
+      for (const challenge of workspaceChallenges.slice(0, 2)) {
+        // Communication to all enrolled participants
+        await prisma.workspaceCommunication.create({
+          data: {
+            workspaceId: workspace.id,
+            challengeId: challenge.id,
+            scope: 'CHALLENGE',
+            audience: 'ENROLLED',
+            subject: `${challenge.title} - Important Update`,
+            message: 'Thank you for enrolling! Here are some tips to get started with this challenge...',
+            sentBy: adminUserId!
+          }
+        })
+        communicationCount++
+
+        // Communication to invited participants
+        await prisma.workspaceCommunication.create({
+          data: {
+            workspaceId: workspace.id,
+            challengeId: challenge.id,
+            scope: 'CHALLENGE',
+            audience: 'INVITED',
+            subject: `You're invited to ${challenge.title}`,
+            message: 'Join us for this exciting challenge! Click here to enroll and start making a difference.',
+            sentBy: adminUserId!
+          }
+        })
+        communicationCount++
+
+        // Activity-level communication (if activities exist)
+        const challengeActivity = await prisma.activity.findFirst({
+          where: { challengeId: challenge.id }
+        })
+        if (challengeActivity) {
+          await prisma.workspaceCommunication.create({
+            data: {
+              workspaceId: workspace.id,
+              challengeId: challenge.id,
+              activityId: challengeActivity.id,
+              scope: 'ACTIVITY',
+              audience: 'ENROLLED',
+              subject: 'Activity Reminder',
+              message: 'Don\'t forget to complete your activity submission before the deadline!',
+              sentBy: adminUserId!
+            }
+          })
+          communicationCount++
+        }
+      }
+    }
+    console.log(`✓ Created ${communicationCount} workspace communications (workspace, challenge, and activity scoped)`)
+
+    // Create invite redemptions for participants
+    console.log('\n🎟️ Creating invite redemptions...')
+    let redemptionCount = 0
+    for (const workspace of createdWorkspaces) {
+      // Get participants in this workspace
+      const workspaceParticipants = participants.filter(p => p.workspaceId === workspace.id)
+
+      // Get invite codes for this workspace
+      const workspaceInvites = await prisma.inviteCode.findMany({
+        where: { workspaceId: workspace.id }
+      })
+
+      // Create redemptions for first 2 participants using the general invite
+      const generalInvite = workspaceInvites.find(i => !i.targetEmail)
+      if (generalInvite) {
+        for (const participant of workspaceParticipants.slice(0, 2)) {
+          await prisma.inviteRedemption.create({
+            data: {
+              inviteId: generalInvite.id,
+              userId: participant.id
+            }
+          })
+          redemptionCount++
+
+          // Update invite code used count
+          await prisma.inviteCode.update({
+            where: { id: generalInvite.id },
+            data: { usedCount: { increment: 1 } }
+          })
+
+          // Create activity event for invite redemption
+          await prisma.activityEvent.create({
+            data: {
+              workspaceId: workspace.id,
+              userId: participant.id,
+              actorUserId: participant.id,
+              type: ActivityEventType.INVITE_REDEEMED,
+              metadata: { inviteCode: generalInvite.code }
+            }
+          })
+        }
+      }
+    }
+    console.log(`✓ Created ${redemptionCount} invite redemptions`)
 
     // Show budget utilization
     console.log('\n💵 Budget Utilization:')

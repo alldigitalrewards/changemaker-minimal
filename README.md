@@ -46,7 +46,7 @@ Currently implementing comprehensive gamification features:
 - **Enhanced Participant Management**: Advanced filtering, sorting, and bulk actions
 - **Integration Preparation**: Adapter patterns for future RewardSTACK API integration
 
-See TODO.md for detailed task breakdown (9 main tasks, 40 subtasks).
+See docs/planning/todo.md for detailed task breakdown (9 main tasks, 40 subtasks).
 
 ## Task Management
 
@@ -56,6 +56,12 @@ This project uses Task Master AI for development workflow:
 - Next task: `task-master next`
 - Update status: `task-master set-status --id=<id> --status=<status>`
 - See `.taskmaster/` for full project planning
+
+## Documentation
+
+- Public API reference: visit `/docs/public-api` (served via Redoc from `public/api/public-openapi.yaml`).
+- Additional project docs live in `docs/` – start with `docs/README.md` for an index.
+- Workflow for editing the API spec is documented in `docs/operations/api-docs.md`.
 
 ## Project Evolution Log (Discussion Summaries)
 

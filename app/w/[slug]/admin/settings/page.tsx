@@ -224,11 +224,11 @@ export default async function AdminSettingsPage({
               <form action={setPointsBalance} className="grid gap-3 max-w-md">
                 <input type="hidden" name="workspaceId" value={workspace.id} />
                 <input type="hidden" name="userId" value={dbUser.id} />
-                <Label htmlFor="totalPoints">Your Points (Total)</Label>
+                <Label htmlFor="totalPoints">Activities completed (total)</Label>
                 <Input id="totalPoints" name="totalPoints" type="number" min={0} step={1} defaultValue={0} />
-                <Label htmlFor="availablePoints">Your Points (Available)</Label>
+                <Label htmlFor="availablePoints">Activities completed (available)</Label>
                 <Input id="availablePoints" name="availablePoints" type="number" min={0} step={1} defaultValue={0} />
-                <Button type="submit">Update My Points</Button>
+                <Button type="submit">Update activities completed</Button>
               </form>
               <p className="text-xs text-gray-500 mt-2">Admins and participants each have a per-workspace PointsBalance. This form updates your own allocation in this workspace.</p>
             </div>

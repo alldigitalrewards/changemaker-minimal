@@ -1,0 +1,80 @@
+# Test Results Summary - January 03, 2025
+
+## Test Execution Status
+
+### Local Environment Tests
+- **Command**: `pnpm playwright test --reporter=list` (run in background)
+- **Status**: In Progress (50+ minutes runtime, still executing)
+- **Progress**: 120+ tests executed out of 500 total
+- **Results**: 15 passed ✓, 105 failed ✘
+- **Pass Rate**: ~12.5%
+
+### Preview Environment Tests
+- **Command**: `pnpm test:e2e:preview`
+- **Status**: Timeout after 120 seconds
+- **Target**: https://preview.changemaker.im
+- **Note**: Tests started executing but did not complete within timeout.
+
+## Key Findings
+
+### Test Configuration
+- Total tests discovered: 120 tests across chromium, firefox, webkit
+- Test files located in: `tests/e2e/`, `tests/api/`
+- Running with 4 workers in parallel
+
+### Running Processes
+Multiple next-server and playwright processes detected:
+- next-server (v15.3.2) instances running
+- playwright test-server active on port (test UI mode)
+- Local dev server on port 3000
+
+### Failed/Incomplete Tests Observed
+
+#### Preview Environment Issues:
+1. **Challenge Reward Config Test** - API response validation failure
+2. **Email Change Flow Tests** - Route not found (404 on /account)
+3. **Complete Challenge Flow** - Timeout waiting for admin dashboard
+4. **Admin Route Testing** - 500 error on /admin/settings route
+5. **Participant Journey** - Missing `expiresAt` field in invite code creation
+6. **Review Approval UI** - Timeout waiting for approve button
+
+### Common Error Patterns:
+- Page not found (404) errors on account routes
+- Database validation errors (missing required fields)
+- Workspace access denied errors
+- Timeout issues on navigation/button clicks
+- API endpoint returning 500 errors
+
+## Test Suite Breakdown
+
+### API Tests (~50 tests):
+- Challenge CRUD operations
+- Email change workflow
+- Enrollment management
+- Participants management
+- Reward issuance system
+
+### E2E Flow Tests (~70 tests):
+- Admin workflows
+- Participant journey
+- Email change flows
+- Challenge completion flows
+- Route crawling tests
+
+## Recommendations
+
+1. **Performance**: Tests are timing out - consider increasing timeout limits or optimizing test execution
+2. **Cleanup**: Multiple dev servers running - may need to stop conflicting processes
+3. **Environment**: Preview environment has routing/API issues that need investigation
+4. **Database**: Schema validation errors suggest missing required fields (e.g., expiresAt on InviteCode)
+5. **Stability**: Several 500 errors and navigation timeouts indicate application stability issues
+
+## Next Steps
+
+To complete full test runs:
+1. Stop all running dev servers and test processes
+2. Run tests with extended timeout: `timeout 300 pnpm test`
+3. Run tests in headed mode for debugging: `pnpm playwright test --headed`
+4. Run specific failing tests individually to investigate root causes
+5. Fix database schema issues (InviteCode.expiresAt requirement)
+6. Investigate preview environment routing issues (/account route 404s)

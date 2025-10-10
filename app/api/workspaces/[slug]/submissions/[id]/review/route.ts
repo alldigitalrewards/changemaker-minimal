@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth"
-import { reviewActivitySubmission, DatabaseError, ResourceNotFoundError, awardPointsWithBudget } from "@/lib/db/queries"
+import { reviewActivitySubmission, DatabaseError, ResourceNotFoundError, awardPointsWithBudget, issueReward, logActivityEvent } from "@/lib/db/queries"
 import { prisma } from "@/lib/db"
-import { logActivityEvent } from "@/lib/db/queries"
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
   context: { params: Promise<{ slug: string; id: string }> }
 ) => {
   const { slug, id } = await context.params
-  const { status, reviewNotes, pointsAwarded } = await request.json()
+  const { status, reviewNotes, pointsAwarded, reward } = await request.json()
 
   // Require admin access
   const { workspace, user } = await requireWorkspaceAdmin(slug)
@@ -19,6 +18,27 @@ export const POST = withErrorHandling(async (
   }
 
   try {
+    // Get submission with challenge info for reward determination
+    const existingSubmission = await prisma.activitySubmission.findUnique({
+      where: { id },
+      include: {
+        activity: {
+          include: {
+            challenge: true
+          }
+        }
+      }
+    })
+
+    if (!existingSubmission) {
+      return NextResponse.json({ error: 'Submission not found' }, { status: 404 })
+    }
+
+    // Check if already reviewed
+    if (existingSubmission.status !== 'PENDING') {
+      return NextResponse.json({ error: 'Submission has already been reviewed' }, { status: 400 })
+    }
+
     // Review the submission
     const submission = await reviewActivitySubmission(
       id,
@@ -31,16 +51,53 @@ export const POST = withErrorHandling(async (
       workspace.id
     )
 
-    // If approved, update points via budgets + ledger
-    if (status === 'APPROVED' && pointsAwarded > 0) {
-      await awardPointsWithBudget({
-        workspaceId: workspace.id,
-        challengeId: submission.activity.challengeId,
-        toUserId: submission.userId,
-        amount: pointsAwarded,
-        actorUserId: user.dbUser.id,
-        submissionId: submission.id
-      })
+    // If approved, issue reward
+    if (status === 'APPROVED') {
+      // Determine reward configuration - priority: explicit reward > pointsAwarded > challenge config
+      let rewardType: 'points' | 'sku' | 'monetary' | null = null
+      let rewardAmount: number | null = null
+      let rewardCurrency: string | null = null
+      let rewardSkuId: string | null = null
+      let rewardProvider: string | null = null
+
+      if (reward && reward.type) {
+        // Explicit reward provided in request - normalize to lowercase
+        rewardType = reward.type.toLowerCase() as 'points' | 'sku' | 'monetary'
+        rewardAmount = reward.amount ?? null
+        rewardCurrency = reward.currency ?? null
+        rewardSkuId = reward.skuId ?? null
+        rewardProvider = reward.provider ?? null
+      } else if ((pointsAwarded ?? 0) > 0) {
+        // Points awarded provided (legacy)
+        rewardType = 'points'
+        rewardAmount = pointsAwarded
+      } else if (existingSubmission.activity.challenge.rewardType) {
+        // Use challenge reward configuration - normalize to lowercase
+        const challengeRewardType = existingSubmission.activity.challenge.rewardType as string
+        rewardType = challengeRewardType.toLowerCase() as 'points' | 'sku' | 'monetary'
+        const config = existingSubmission.activity.challenge.rewardConfig as any
+        if (config) {
+          rewardAmount = config.pointsAmount || config.amount || null
+          rewardCurrency = config.currency || null
+          rewardSkuId = config.skuId || null
+        }
+      }
+
+      // Create reward issuance if we have a reward type
+      // NOTE: issueReward automatically handles points awards via awardPointsWithBudget
+      if (rewardType) {
+        await issueReward({
+          workspaceId: workspace.id,
+          userId: submission.userId,
+          challengeId: submission.activity.challengeId,
+          submissionId: submission.id,
+          type: rewardType,
+          amount: rewardAmount ?? undefined,
+          currency: rewardCurrency ?? undefined,
+          skuId: rewardSkuId ?? undefined,
+          provider: rewardProvider ?? undefined
+        })
+      }
     }
 
     // Log review event
@@ -52,7 +109,7 @@ export const POST = withErrorHandling(async (
       type: status === 'APPROVED' ? 'SUBMISSION_APPROVED' : 'SUBMISSION_REJECTED',
       metadata: {
         submissionId: submission.id,
-        pointsAwarded: pointsAwarded || 0,
+        pointsAwarded: pointsAwarded || reward?.amount || 0,
         activityId: submission.activityId,
         activityName: submission.activity?.template?.name,
         reviewNotes: reviewNotes || undefined

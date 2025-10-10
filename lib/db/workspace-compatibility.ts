@@ -125,26 +125,41 @@ export async function checkWorkspaceAdmin(supabaseUserId: string, workspaceSlug:
 }
 
 /**
- * Get all workspaces for a user (new functionality with backward compatibility)
- * Returns workspaces from memberships plus legacy workspace if not in memberships
+ * Get all workspaces for a user with tenant-aware scoping
+ * - Platform super admins see all tenants
+ * - Client admins see all active/published workspaces in their tenant
+ * - Participants see only workspaces they have membership in
  */
 export async function getUserWorkspaces(supabaseUserId: string): Promise<Workspace[]> {
   try {
     const dbUser = await getUserBySupabaseId(supabaseUserId)
     if (!dbUser) return []
 
-    // Get all memberships
-    const memberships = await listMemberships(dbUser.id)
-    const workspaces = memberships.map(m => m.workspace)
+    const { isPlatformSuperAdmin } = await import('@/lib/auth/api-auth')
+    const { prisma } = await import('@/lib/prisma')
 
-    // Check if legacy workspace is included in memberships
+    // Platform super admins see all workspaces
+    if (isPlatformSuperAdmin(dbUser)) {
+      return await prisma.workspace.findMany({
+        orderBy: { name: 'asc' }
+      })
+    }
+
+    // Get workspaces where user has explicit membership
+    const memberships = await listMemberships(dbUser.id)
+    let workspaces = memberships.map(m => m.workspace as Workspace)
+
+    // Add legacy workspace if not already included (backward compatibility)
     if (dbUser.workspaceId && dbUser.workspace) {
-      const hasLegacyInMemberships = workspaces.some(w => w.id === dbUser.workspaceId)
-      
-      // If legacy workspace not in memberships, add it
-      if (!hasLegacyInMemberships) {
+      const hasLegacyInWorkspaces = workspaces.some(w => w.id === dbUser.workspaceId)
+      if (!hasLegacyInWorkspaces) {
         workspaces.push(dbUser.workspace)
       }
+    }
+
+    // For non-admins, hide inactive/unpublished workspaces by default
+    if (dbUser.role !== 'ADMIN') {
+      workspaces = workspaces.filter(w => (w as any).active !== false && (w as any).published !== false)
     }
 
     return workspaces

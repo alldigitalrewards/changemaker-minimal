@@ -24,7 +24,7 @@ export const POST = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
   
   const body = await request.json();
-  const { templateId, pointsValue, maxSubmissions, deadline, isRequired } = body;
+  const { templateId, pointsValue, maxSubmissions, deadline, isRequired, rewardRules } = body;
 
   if (!templateId) {
     return NextResponse.json({ error: 'Template ID is required' }, { status: 400 });
@@ -43,7 +43,8 @@ export const POST = withErrorHandling(async (
       pointsValue: pointsValue ?? template.basePoints,
       maxSubmissions: maxSubmissions ?? 1,
       deadline: deadline ? new Date(deadline) : undefined,
-      isRequired: isRequired ?? false
+      isRequired: isRequired ?? false,
+      rewardRules: Array.isArray(rewardRules) ? rewardRules : undefined
     },
     workspace.id
   );

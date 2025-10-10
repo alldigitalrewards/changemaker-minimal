@@ -1,0 +1,49 @@
+# Task ID: 2
+# Title: Add PointTransaction Model for Audit Trail
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Add PointTransaction model to the existing Prisma schema for comprehensive audit trail tracking, building on existing PointsBalance, ActivityTemplate, and ActivitySubmission models.
+# Details:
+Extend the existing `schema.prisma` with PointTransaction model for audit trail: PointTransaction (id UUID, userId UUID FK, workspaceId UUID FK, amount Int, type enum EARNED/SPENT/ADJUSTED, description String, activitySubmissionId UUID nullable FK, challengeId UUID nullable FK, metadata Json nullable, createdAt). The existing PointsBalance model serves as the wallet, ActivityTemplate already has basePoints field, and ActivitySubmission has pointsAwarded field. Focus on transaction history and service layer orchestration.
+
+# Test Strategy:
+Run Prisma migrations, verify PointTransaction model integrates with existing PointsBalance, ActivityTemplate, and ActivitySubmission models. Test transaction recording, foreign key constraints, enum validations, and service layer orchestration via Prisma Studio.
+
+# Subtasks:
+## 1. Define PointTransaction Model for Audit Trail [pending]
+### Dependencies: None
+### Description: Add PointTransaction model to Prisma schema for comprehensive transaction history tracking
+### Details:
+Add PointTransaction model with: id (UUID), userId (UUID, foreign key), workspaceId (UUID, foreign key), amount (Int), type (enum: EARNED, SPENT, ADJUSTED), description (String), activitySubmissionId (UUID, nullable, foreign key), challengeId (UUID, nullable, foreign key), metadata (Json, nullable), createdAt. Ensure proper foreign key constraints to existing models.
+
+## 2. Enhance Existing Model Relationships [pending]
+### Dependencies: None
+### Description: Add necessary relationship fields to existing models for PointTransaction integration
+### Details:
+Add relationship fields to existing models: PointsBalance should have pointTransactions relation, ActivitySubmission should have pointTransactions relation, Challenge should have pointTransactions relation. Ensure proper cascade delete rules.
+
+## 3. Apply Schema Changes with Migration [pending]
+### Dependencies: 2.1, 2.2
+### Description: Run Prisma migrations to apply PointTransaction model and relationship changes
+### Details:
+Execute `pnpm prisma migrate dev` to update the database schema with PointTransaction model and enhanced relationships. Ensure no breaking changes to existing PointsBalance, ActivityTemplate, ActivitySubmission, Challenge, User, Workspace, and Enrollment models.
+
+## 4. Regenerate Prisma Client with New Types [pending]
+### Dependencies: 2.3
+### Description: Regenerate Prisma Client to include PointTransaction model types and enums
+### Details:
+Run `pnpm prisma generate` to regenerate Prisma Client with new types for PointTransaction model and TransactionType enums, ensuring integration with existing model types.
+
+## 5. Create Point Service Layer for Transaction Orchestration [pending]
+### Dependencies: 2.4
+### Description: Develop service layer to orchestrate PointsBalance updates with PointTransaction audit trail
+### Details:
+Create PointService class in /lib/services/points.ts that orchestrates: updating PointsBalance records, creating corresponding PointTransaction audit entries, handling ActivitySubmission point awards, managing Challenge completion rewards. Ensure atomic database transactions.
+
+## 6. Test Schema Integration via Prisma Studio [pending]
+### Dependencies: 2.5
+### Description: Create sample data and verify PointTransaction integration using Prisma Studio
+### Details:
+Use Prisma Studio to test scenarios: Create PointTransaction for activity submission, Record challenge completion transaction, Test point adjustment transactions, Verify foreign key constraints to PointsBalance/ActivitySubmission/Challenge, Test enum validations, Verify audit trail completeness.
+

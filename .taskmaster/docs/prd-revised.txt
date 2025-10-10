@@ -1,0 +1,125 @@
+# Product Requirements Document - Challenge Progression & Rewards System (REVISED)
+# Changemaker Platform Enhancement
+# Date: January 17, 2025
+
+## Executive Summary
+
+This PRD outlines the implementation of Challenge Progression and Rewards features for the Changemaker platform. After thorough codebase analysis, we've identified that 60% of the required infrastructure already exists. This revised PRD focuses on surgical enhancements rather than infrastructure overhaul.
+
+## Existing Infrastructure (Already Implemented)
+
+1. **PointsBalance Model** - Serves as the wallet system for tracking user points per workspace
+2. **ActivityTemplate Model** - Already contains basePoints field for point values
+3. **ActivitySubmission Model** - Already has pointsAwarded field for tracking earned points
+4. **Challenge Model** - Core challenge functionality exists, missing only progression states
+5. **User/Workspace Models** - Multi-tenant architecture fully implemented with path-based routing
+
+## Required Enhancements
+
+### 1. Add PointTransaction Model for Audit Trail
+**Purpose**: Create comprehensive transaction history for all point movements
+**Implementation**:
+- Add PointTransaction model with fields: id, userId, workspaceId, amount, type (EARNED/SPENT/ADJUSTED), description, activitySubmissionId, challengeId, metadata, createdAt
+- Create service layer (PointService) to orchestrate PointsBalance updates with PointTransaction audit trail
+- Ensure atomic database transactions for consistency
+
+### 2. Implement Challenge Progression States
+**Purpose**: Track challenges through their lifecycle from submission to completion
+**Implementation**:
+- Add progressionState enum to Challenge model: submitted, approved, in_development, in_production, verified, completed
+- Create ChallengeProgressionService for state transitions (no external libraries needed)
+- Build API routes at /api/w/[slug]/challenges/[id]/progression
+- Integrate with PointsBalance for automatic point awards on state changes:
+  - Challenge submission: 10 points
+  - Challenge approval: 50 points
+  - Challenge completion: 100 points
+
+### 3. Build Admin Dashboard for Points & Progression
+**Purpose**: Provide administrators with comprehensive management tools
+**Location**: /app/w/[slug]/admin/points
+**Components**:
+- Workspace PointsBalance display with funding controls
+- PointTransaction history table with filtering and pagination
+- User points distribution interface with bulk operations
+- Challenge progression management controls
+- Points analytics dashboard
+**Technology**: shadcn/ui components, existing admin layout structure
+
+### 4. Build Participant Dashboard
+**Purpose**: Enable participants to track their progress and earnings
+**Location**: /app/w/[slug]/participant
+**Components**:
+- PointsBalance display showing earned points
+- PointTransaction history for the participant
+- Challenge progression tracker with available challenges
+- ActivitySubmission status indicators
+- Display potential points from ActivityTemplate.basePoints
+**Technology**: shadcn/ui components, Changemaker coral theme
+
+### 5. Enhance Admin Participant Management
+**Purpose**: Improve administrator efficiency in managing participants
+**Location**: /app/w/[slug]/admin/participants (enhance existing page)
+**Features**:
+- Advanced filtering by enrollment status, points range, activity level
+- Multi-column sorting (name, points, enrollment date)
+- Enhanced participant display showing PointsBalance and recent ActivitySubmissions
+- Bulk point distribution with validation
+
+### 6. Integration Testing & Documentation
+**Purpose**: Ensure quality and maintainability
+**Deliverables**:
+- Comprehensive test suite for all new features
+- API documentation for new endpoints
+- Updated README with feature documentation
+- Point award rules documentation
+- Challenge progression state documentation
+
+## Technical Constraints
+
+1. **No External State Machine Libraries** - Use simple service classes for state management
+2. **No Redis/Queues** - This is a mock system, keep it simple
+3. **No Webhooks** - Manual processes only for MVP
+4. **Use Existing Models** - Build on PointsBalance, ActivityTemplate, ActivitySubmission
+5. **Maintain Backward Compatibility** - Don't break existing challenge/enrollment systems
+
+## Success Criteria
+
+1. Administrators can manage challenge progression states
+2. Points are automatically awarded based on progression
+3. Complete audit trail exists for all point transactions
+4. Participants can view their points and progress
+5. Bulk operations work efficiently for large participant groups
+6. All features integrate seamlessly with existing systems
+
+## Implementation Priority
+
+1. **High Priority**: PointTransaction model, Challenge progression states
+2. **Medium Priority**: Admin dashboard, API routes
+3. **Low Priority**: Participant dashboard, bulk operations
+
+## Estimated Effort
+
+Total implementation: 15-20 focused subtasks (70% reduction from original estimate)
+- Backend changes: 30% of effort (mostly adding one model and one enum)
+- Service layer: 20% of effort
+- UI components: 40% of effort
+- Testing/Documentation: 10% of effort
+
+## Risk Mitigation
+
+1. **Data Migration**: Careful handling of existing Challenge records when adding progressionState
+2. **Performance**: Efficient queries for PointTransaction history with pagination
+3. **Consistency**: Atomic transactions for point operations
+4. **Security**: Proper validation and authorization for bulk operations
+
+## Future Considerations (Post-MVP)
+
+1. Integration with real RewardSTACK API
+2. Advanced analytics and reporting
+3. Automated challenge progression workflows
+4. Mobile app support
+5. Export capabilities for financial reconciliation
+
+## Conclusion
+
+This revised approach leverages existing infrastructure to deliver the required features with minimal complexity. By building on the solid foundation already in place, we can achieve the business goals efficiently while maintaining code quality and system stability.

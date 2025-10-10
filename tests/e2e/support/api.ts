@@ -17,4 +17,17 @@ export async function reviewSubmission(page: Page, slug: string, submissionId: s
   return res
 }
 
+export async function reviewSubmissionWithReward(page: Page, slug: string, submissionId: string, payload: {
+  status: 'APPROVED' | 'REJECTED'
+  reward?: { type: 'points' | 'sku' | 'monetary', amount?: number, currency?: string, skuId?: string }
+  pointsAwarded?: number
+  reviewNotes?: string
+}) {
+  const res = await page.request.post(`/api/workspaces/${slug}/submissions/${submissionId}/review`, {
+    headers: { 'Content-Type': 'application/json' },
+    data: payload
+  })
+  return res
+}
+
 

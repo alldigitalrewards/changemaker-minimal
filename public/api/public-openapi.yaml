@@ -1,0 +1,872 @@
+openapi: 3.1.0
+info:
+  title: Changemaker Public API
+  version: 1.1.0
+  description: |
+    The Changemaker public API exposes a small, security-hardened surface area
+    for building integrations around user account management, invite
+    redemption, and workspace awareness. All write operations are scoped to the
+    authenticated Supabase session held by the caller.
+
+    ### Authentication
+
+    Most endpoints require a valid Supabase session. Sessions are issued by the
+    Changemaker web application and conveyed via the `sb-access-token` and
+    `sb-refresh-token` cookies. When developing locally, sign in through the web
+    UI first so that the cookies are available in your browser or API client.
+
+    ### Conventions
+
+    * All responses are JSON encoded.
+    * Dates are expressed in ISO-8601 format (UTC).
+    * Rate limiting is enforced per-IP and/or per-resource. When a request is
+      rejected due to throttling the response includes `retryAfter` in the body.
+  contact:
+    name: Changemaker Support
+    email: support@changemaker.im
+  termsOfService: https://changemaker.im/terms
+servers:
+  - url: https://changemaker.im
+    description: Production
+  - url: https://preview.changemaker.im
+    description: Preview
+  - url: http://localhost:3000
+    description: Local development
+tags:
+  - name: Health
+    description: Platform status and connectivity checks.
+  - name: Account
+    description: Endpoints that operate on the authenticated user's profile and email.
+  - name: Password
+    description: Password change and reset workflows.
+  - name: Invites
+    description: Participant invite acceptance flows.
+  - name: Workspaces
+    description: Discovering workspaces available to the authenticated user.
+components:
+  securitySchemes:
+    SupabaseSession:
+      type: apiKey
+      in: cookie
+      name: sb-access-token
+      description: |
+        Send the Supabase session cookies issued after logging in (`sb-access-token`
+        and `sb-refresh-token`). Include both values when making requests.
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Human-readable description of the failure.
+        code:
+          type: string
+          description: Application specific error code when available.
+        retryAfter:
+          type: integer
+          format: int32
+          description: Milliseconds to wait before retrying (present on 429 responses).
+        details:
+          type: object
+          description: Additional context for validation errors.
+          additionalProperties: true
+      required:
+        - error
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+          description: Optional human-readable confirmation.
+      required:
+        - success
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: High-level service state.
+          examples: [ok]
+        timestamp:
+          type: string
+          format: date-time
+        database:
+          type: string
+          description: Connectivity status for the primary database.
+          examples: [connected, disconnected]
+      required:
+        - status
+        - timestamp
+        - database
+    ProfileResponse:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+          description: Display name sourced from Supabase user metadata.
+        userMetadata:
+          type: object
+          description: Raw Supabase `user_metadata` payload for the session.
+      required:
+        - email
+        - fullName
+        - userMetadata
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          description: Updated display name.
+        department:
+          type: string
+        bio:
+          type: string
+        organization:
+          type: string
+        timezone:
+          type: string
+          description: IANA timezone identifier (e.g., `America/New_York`).
+        notificationPrefs:
+          type: object
+          properties:
+            reviewQueue:
+              type: boolean
+            enrollmentChanges:
+              type: boolean
+            inviteEvents:
+              type: boolean
+        defaultLanding:
+          type: string
+          enum: [dashboard, participants, activities, emails]
+        defaultWorkspaceSlug:
+          type: string
+        dateFormat:
+          type: string
+        reducedMotion:
+          type: boolean
+        uiDensity:
+          type: string
+          enum: [comfortable, compact]
+        showKeyboardHints:
+          type: boolean
+      additionalProperties: false
+    EmailChangeStartRequest:
+      type: object
+      properties:
+        newEmail:
+          type: string
+          format: email
+      required:
+        - newEmail
+    EmailChangeConfirmRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Verification token from the confirmation email.
+      required:
+        - token
+    PasswordChangeRequest:
+      type: object
+      description: Request body used when changing a password while authenticated.
+      properties:
+        currentPassword:
+          type: string
+          description: Present for compatibility; the current implementation does not verify it.
+        newPassword:
+          type: string
+          minLength: 8
+      required:
+        - newPassword
+      additionalProperties: false
+    PasswordUpdateRequest:
+      type: object
+      description: Request body used when completing a Supabase password reset flow.
+      properties:
+        newPassword:
+          type: string
+          minLength: 8
+      required:
+        - newPassword
+      additionalProperties: false
+    PasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+      additionalProperties: false
+    WorkspaceSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        tenantId:
+          type: string
+        active:
+          type: boolean
+        published:
+          type: boolean
+      required:
+        - id
+        - name
+        - slug
+        - tenantId
+        - active
+        - published
+    WorkspaceMembershipSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, PARTICIPANT]
+        isPrimary:
+          type: boolean
+        joinedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - name
+        - role
+        - isPrimary
+        - joinedAt
+    WorkspaceListResponse:
+      type: object
+      properties:
+        workspaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMembershipSummary'
+      required:
+        - workspaces
+    ChallengeSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        rewardType:
+          type: string
+          nullable: true
+          enum: [points, sku, monetary]
+      required:
+        - id
+        - title
+        - description
+        - status
+        - startDate
+        - endDate
+    InviteAcceptRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Invite code issued by a workspace admin.
+      required:
+        - code
+    InviteAcceptResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        workspace:
+          $ref: '#/components/schemas/WorkspaceSummary'
+        challenge:
+          allOf:
+            - $ref: '#/components/schemas/ChallengeSummary'
+            - nullable: true
+        role:
+          type: string
+          description: Workspace role granted after accepting the invite.
+          enum: [ADMIN, PARTICIPANT]
+      required:
+        - success
+        - message
+        - workspace
+        - role
+paths:
+  /api/health:
+    get:
+      tags: [Health]
+      operationId: getHealthStatus
+      summary: Health check
+      description: Returns API readiness along with a database connectivity probe.
+      responses:
+        '200':
+          description: API is reachable and the database responded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                healthy:
+                  value:
+                    status: ok
+                    timestamp: '2025-01-31T12:34:56.000Z'
+                    database: connected
+        '503':
+          description: Database connectivity failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                dbDown:
+                  value:
+                    status: error
+                    timestamp: '2025-01-31T12:35:02.000Z'
+                    database: disconnected
+                    error: failed to reach postgres
+  /api/account/profile:
+    get:
+      tags: [Account]
+      operationId: getAccountProfile
+      summary: Get the authenticated user's profile
+      security:
+        - SupabaseSession: []
+      responses:
+        '200':
+          description: Profile information retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+              examples:
+                profile:
+                  value:
+                    email: participant@example.com
+                    fullName: Taylor Participant
+                    userMetadata:
+                      notification_prefs:
+                        reviewQueue: true
+                        enrollmentChanges: false
+                        inviteEvents: true
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    error: Authentication failed
+    put:
+      tags: [Account]
+      operationId: updateAccountProfile
+      summary: Update the authenticated user's profile
+      description: |
+        Updates the Supabase user profile metadata and mirrors the change into
+        the Prisma `User` record. Only provided fields are updated.
+      security:
+        - SupabaseSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+            examples:
+              updateProfile:
+                value:
+                  fullName: Taylor Participant
+                  timezone: America/New_York
+                  notificationPrefs:
+                    reviewQueue: true
+                    inviteEvents: true
+      responses:
+        '200':
+          description: Profile updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                updated:
+                  value:
+                    success: true
+        '400':
+          description: No valid fields provided in the request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid:
+                  value:
+                    error: No valid fields provided
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Supabase rejected the metadata update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/account/email/start-change:
+    post:
+      tags: [Account]
+      operationId: startEmailChange
+      summary: Begin the email change flow
+      description: |
+        Stores a pending email change token. A verification email will be sent
+        out-of-band (implementation TBD). Tokens expire after 24 hours.
+      security:
+        - SupabaseSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailChangeStartRequest'
+            examples:
+              startChange:
+                value:
+                  newEmail: new-address@example.com
+      responses:
+        '200':
+          description: Pending email change created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                pending:
+                  value:
+                    success: true
+                    message: verification email sent
+        '400':
+          description: Email validation failed or the address is already in use.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                inUse:
+                  value:
+                    error: Email address is already in use
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/account/email/confirm:
+    post:
+      tags: [Account]
+      operationId: confirmEmailChange
+      summary: Confirm a pending email change
+      description: Confirms a pending email change using the token supplied in the verification email.
+      security:
+        - SupabaseSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailChangeConfirmRequest'
+            examples:
+              confirm:
+                value:
+                  token: 9f8d1b47b7c34fb8b6a7b2e7c1f3a123
+      responses:
+        '200':
+          description: Email successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                confirmed:
+                  value:
+                    success: true
+                    message: Email successfully updated
+        '400':
+          description: Missing, invalid, or expired token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                expired:
+                  value:
+                    error: Token expired
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/account/email/cancel:
+    post:
+      tags: [Account]
+      operationId: cancelEmailChange
+      summary: Cancel a pending email change
+      description: Clears any stored email change token for the authenticated user.
+      security:
+        - SupabaseSession: []
+      responses:
+        '200':
+          description: Pending email change removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                cancelled:
+                  value:
+                    success: true
+                    message: Email change cancelled
+        '400':
+          description: No pending email change exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                nonePending:
+                  value:
+                    error: No pending email change to cancel
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/account/password/change:
+    post:
+      tags: [Password]
+      operationId: changePasswordAuthenticated
+      summary: Change password (authenticated session)
+      description: Updates the Supabase password for the currently authenticated user.
+      security:
+        - SupabaseSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+            examples:
+              changePassword:
+                value:
+                  newPassword: 'StrongerPass!9'
+      responses:
+        '200':
+          description: Password updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                changed:
+                  value:
+                    success: true
+        '400':
+          description: Validation failed (e.g., password too short).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                tooShort:
+                  value:
+                    error: New password must be at least 8 characters
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/account/password/update:
+    post:
+      tags: [Password]
+      operationId: completePasswordReset
+      summary: Update password after reset verification
+      description: |
+        Completes a Supabase password reset flow after the user has verified
+        their email via the reset link. Requires a valid Supabase session.
+      security:
+        - SupabaseSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordUpdateRequest'
+            examples:
+              updatePassword:
+                value:
+                  newPassword: 'AnotherStrongPass!2'
+      responses:
+        '200':
+          description: Password updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                updated:
+                  value:
+                    success: true
+                    message: Password updated successfully
+        '400':
+          description: Validation failed or Supabase rejected the update.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rejected:
+                  value:
+                    error: Password must be at least 8 characters long
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/account/password/request-reset:
+    post:
+      tags: [Password]
+      operationId: requestPasswordReset
+      summary: Send password reset email
+      description: Initiates the Supabase password reset flow by emailing the user a verification link.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+            examples:
+              resetRequest:
+                value:
+                  email: participant@example.com
+      responses:
+        '200':
+          description: Reset email dispatched if the account exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                sent:
+                  value:
+                    success: true
+                    message: Password reset email sent. Please check your inbox.
+        '400':
+          description: Supabase rejected the request (invalid email, throttling, etc.).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  value:
+                    error: Email is required
+        '500':
+          description: Unexpected error while sending the reset email.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/user/workspaces:
+    get:
+      tags: [Workspaces]
+      operationId: listUserWorkspaces
+      summary: List workspaces accessible to the user
+      description: Returns all workspaces the authenticated user can access along with their membership role.
+      security:
+        - SupabaseSession: []
+      responses:
+        '200':
+          description: Workspaces returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceListResponse'
+              examples:
+                memberships:
+                  value:
+                    workspaces:
+                      - id: 13a4f884-2ed4-4e33-81c7-5ab5dd4da021
+                        slug: acme
+                        name: Acme Corp
+                        role: ADMIN
+                        isPrimary: true
+                        joinedAt: '2025-01-15T14:23:10.000Z'
+                      - id: 7d4f212a-9c3b-48e4-8c34-2eb0998cbeab
+                        slug: beta-labs
+                        name: Beta Labs
+                        role: PARTICIPANT
+                        isPrimary: false
+                        joinedAt: '2025-01-20T09:12:55.000Z'
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Database record for the Supabase user was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected error retrieving workspace memberships.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/invites/accept:
+    post:
+      tags: [Invites]
+      operationId: acceptInviteCode
+      summary: Redeem an invite code
+      description: |
+        Accepts an invite code and enrolls the current user into the target
+        workspace (and optional challenge). A per-IP + code rate limit of **5
+        attempts per minute** is enforced.
+      security:
+        - SupabaseSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteAcceptRequest'
+            examples:
+              redeem:
+                value:
+                  code: CMKR-8QF7-AB21
+      responses:
+        '200':
+          description: Invite code redeemed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteAcceptResponse'
+              examples:
+                redeemed:
+                  value:
+                    success: true
+                    message: Welcome to Acme Corp! You have been enrolled in the challenge.
+                    workspace:
+                      id: 13a4f884-2ed4-4e33-81c7-5ab5dd4da021
+                      name: Acme Corp
+                      slug: acme
+                      tenantId: default
+                      active: true
+                      published: true
+                    challenge:
+                      id: 7a9b4a22-41e5-4bb3-8a20-46a3d0500d68
+                      title: January Wellness Sprint
+                      description: Complete daily wellness activities for 14 days.
+                      status: PUBLISHED
+                      startDate: '2025-01-15T00:00:00.000Z'
+                      endDate: '2025-01-29T00:00:00.000Z'
+                      rewardType: points
+                    role: PARTICIPANT
+        '400':
+          description: Invite code missing, malformed, or not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing:
+                  value:
+                    error: Valid invite code is required
+        '401':
+          description: Authentication failed or session missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Invite can only be redeemed by the intended recipient.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                mismatch:
+                  value:
+                    error: Invite code email mismatch
+                    code: INVITE_EMAIL_MISMATCH
+        '404':
+          description: Invite code does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Invite code exceeded the maximum allowed uses.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                maxUses:
+                  value:
+                    error: Invite code usage limit reached
+                    code: INVITE_MAX_USES
+        '410':
+          description: Invite code expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many attempts from the same IP/code combination.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                throttled:
+                  value:
+                    error: Too many attempts
+                    code: RATE_LIMITED
+                    retryAfter: 60000

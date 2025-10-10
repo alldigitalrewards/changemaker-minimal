@@ -1,0 +1,73 @@
+# Task ID: 8
+# Title: Build Participant Dashboard
+# Status: pending
+# Dependencies: None
+# Priority: low
+# Description: Build participant dashboard at /app/w/[slug]/participant showing their PointsBalance, PointTransaction history, challenge progression, and ActivitySubmission status. Display earned points from completed activities, available challenges with potential points, and submission progress using existing models and shadcn/ui components.
+# Details:
+Create participant-focused dashboard components using existing models (PointsBalance, PointTransaction, Challenge, ActivityTemplate, ActivitySubmission) and shadcn/ui library. Build PointsBalance display with earned points from completed activities, PointTransaction history table, challenge progression tracker showing available challenges with potential points from ActivityTemplate.basePoints, and ActivitySubmission status indicators. Focus on participant experience with proper data filtering and user context.
+
+# Test Strategy:
+Test participant dashboard components using Cypress and Jest for functionality, data integration with existing models, and responsive behavior. Verify proper participant data isolation and user experience flows.
+
+# Subtasks:
+## 1. Set Up Participant Dashboard Route Structure [pending]
+### Dependencies: None
+### Description: Create the participant dashboard route at /app/w/[slug]/participant and establish the basic layout structure.
+### Details:
+Set up Next.js route structure for /app/w/[slug]/participant, create main dashboard layout component, and establish data fetching patterns for participant-specific information using existing models.
+
+## 2. Implement Participant PointsBalance Component [pending]
+### Dependencies: 8.1
+### Description: Build PointsBalance display component showing participant's earned points from completed activities.
+### Details:
+Create component to display participant's current PointsBalance with format '1,234 points' and coin icon. Show earned points from completed ActivitySubmissions and animate balance changes. Integrate with existing PointsBalance model.
+
+## 3. Implement PointTransaction History Component [pending]
+### Dependencies: 8.1
+### Description: Build transaction history table showing participant's point transaction records.
+### Details:
+Create table component displaying PointTransaction history with columns: Date, Type, Description, Amount, Balance After. Filter transactions for current participant only and include basic filtering capabilities.
+
+## 4. Implement Challenge Progression Display [pending]
+### Dependencies: 8.1
+### Description: Build component showing available challenges and their potential points from ActivityTemplate.basePoints.
+### Details:
+Display available challenges with potential points from ActivityTemplate.basePoints, show challenge progression states, and highlight challenges the participant can engage with. Use existing Challenge and ActivityTemplate models.
+
+## 5. Implement ActivitySubmission Status Component [pending]
+### Dependencies: 8.1
+### Description: Build component showing participant's activity submission progress and status.
+### Details:
+Display participant's ActivitySubmission records with status indicators, submission progress, and completion tracking. Show which activities are in progress, submitted, or completed.
+
+## 6. Apply Changemaker Coral Theme to Dashboard [pending]
+### Dependencies: 8.2, 8.3, 8.4, 8.5
+### Description: Ensure all participant dashboard components use consistent Changemaker coral theme styling.
+### Details:
+Apply coral theme colors, typography, and spacing to all dashboard components. Ensure consistency with existing design system and responsive behavior across devices.
+
+## 7. Implement Data Integration and State Management [pending]
+### Dependencies: 8.6
+### Description: Set up proper data fetching, caching, and state management for participant dashboard.
+### Details:
+Implement efficient data fetching for PointsBalance, PointTransaction, Challenge, ActivityTemplate, and ActivitySubmission models. Set up proper error handling, loading states, and real-time updates where appropriate.
+
+## 8. Add Participant Authentication and Authorization [pending]
+### Dependencies: 8.7
+### Description: Ensure proper participant authentication and data access controls for the dashboard.
+### Details:
+Implement participant authentication checks, ensure users can only access their own data, and integrate with existing role-based access control system for proper data isolation.
+
+## 9. Implement Dashboard Interactivity and Navigation [pending]
+### Dependencies: 8.8
+### Description: Add interactive features and navigation elements to enhance participant experience.
+### Details:
+Add interactive elements like expandable transaction details, challenge engagement buttons, activity submission links, and smooth navigation between dashboard sections.
+
+## 10. Final Testing and Deployment of Participant Dashboard [pending]
+### Dependencies: 8.9
+### Description: Conduct comprehensive testing of the complete participant dashboard and deploy the changes.
+### Details:
+Run full test suite including unit tests for component logic, integration tests for data flow with existing models, and end-to-end tests for participant workflows. Verify proper data isolation, performance, and user experience.
+

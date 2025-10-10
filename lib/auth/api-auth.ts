@@ -4,6 +4,7 @@ import { getUserBySupabaseId, getWorkspaceBySlug, verifyWorkspaceAdmin } from '@
 import { syncSupabaseUser } from '@/lib/auth/sync-user'
 import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
 import type { AuthenticatedUser, WorkspaceContext } from '@/lib/auth/types'
+import type { User } from '@prisma/client'
 
 /**
  * Standardized authentication helper for API routes
@@ -38,24 +39,57 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
 }
 
 /**
+ * Check if a user has platform super admin permissions
+ */
+export function isPlatformSuperAdmin(user: User | AuthenticatedUser): boolean {
+  const dbUser = 'dbUser' in user ? user.dbUser : user
+
+  // PM superadmin access
+  if (dbUser.email === 'krobinson@alldigitalrewards.com') {
+    return true
+  }
+
+  return dbUser.permissions.includes('platform_super_admin')
+}
+
+/**
+ * Check if a user can access a workspace based on tenant scoping
+ * Platform super admins can access all tenants
+ * Client admins can access all workspaces in their tenant
+ * Participants can only access workspaces they're members of
+ */
+export function canAccessWorkspace(user: User, _workspace: { tenantId: string }, hasMembership: boolean): boolean {
+  // Platform super admins see everything
+  if (isPlatformSuperAdmin(user)) {
+    return true
+  }
+
+  // For all other users, require explicit membership
+  return hasMembership
+}
+
+/**
  * Requires authentication and workspace access
  * Returns workspace context with authenticated user
  */
 export async function requireWorkspaceAccess(slug: string): Promise<WorkspaceContext> {
   const user = await requireAuth()
-  
+
   const workspace = await getWorkspaceBySlug(slug)
   if (!workspace) {
     throw NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
   }
-  
+
   // Membership-aware access check with legacy fallback
   const role = await getUserWorkspaceRole(user.supabaseUser.id, slug)
-  if (!role) {
+  const hasMembership = !!role
+
+  // Tenant-aware access control
+  if (!canAccessWorkspace(user.dbUser, workspace as any, hasMembership)) {
     throw NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 })
   }
 
-  return { workspace, user, role }
+  return { workspace, user, role: role || user.dbUser.role }
 }
 
 /**

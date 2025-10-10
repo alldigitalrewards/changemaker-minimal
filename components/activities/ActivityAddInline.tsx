@@ -75,6 +75,8 @@ export default function ActivityAddInline({ workspaceSlug, challengeId, mode = '
                   description: selectedTemplate.description,
                   type: selectedTemplate.type,
                   basePoints: selectedTemplate.basePoints,
+                  rewardType: selectedTemplate.rewardType,
+                  rewardConfig: selectedTemplate.rewardConfig,
                   requiresApproval: selectedTemplate.requiresApproval,
                   allowMultiple: selectedTemplate.allowMultiple,
                 }}
@@ -89,5 +91,3 @@ export default function ActivityAddInline({ workspaceSlug, challengeId, mode = '
     </div>
   )
 }
-
-

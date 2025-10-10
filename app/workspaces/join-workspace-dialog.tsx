@@ -21,13 +21,15 @@ interface JoinWorkspaceDialogProps {
   workspaceId?: string
   workspaceName?: string
   className?: string
+  scrollToDiscover?: boolean
 }
 
-export default function JoinWorkspaceDialog({ 
-  userId, 
-  workspaceId, 
+export default function JoinWorkspaceDialog({
+  userId,
+  workspaceId,
   workspaceName,
-  className 
+  className,
+  scrollToDiscover = false
 }: JoinWorkspaceDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -35,7 +37,7 @@ export default function JoinWorkspaceDialog({
 
   async function handleJoin() {
     if (!userId || !workspaceId) return
-    
+
     setLoading(true)
     try {
       const result = await joinWorkspace(userId, workspaceId)
@@ -51,6 +53,18 @@ export default function JoinWorkspaceDialog({
     }
   }
 
+  function handleScrollToDiscover() {
+    const discoverSection = document.getElementById('discover-workspaces')
+    if (discoverSection) {
+      discoverSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      // Add a highlight effect
+      discoverSection.classList.add('ring-2', 'ring-coral-500', 'ring-offset-4')
+      setTimeout(() => {
+        discoverSection.classList.remove('ring-2', 'ring-coral-500', 'ring-offset-4')
+      }, 2000)
+    }
+  }
+
   if (!userId) {
     return (
       <Button variant="outline" disabled className={cn("w-full", className)}>
@@ -60,15 +74,33 @@ export default function JoinWorkspaceDialog({
     )
   }
 
+  // If scrollToDiscover is true, render a button that scrolls instead of opening dialog
+  if (scrollToDiscover) {
+    return (
+      <Button
+        onClick={handleScrollToDiscover}
+        variant="default"
+        className={cn(
+          "bg-coral-500 hover:bg-coral-600 text-white font-medium focus:ring-2 focus:ring-coral-500 focus:ring-offset-2",
+          className
+        )}
+        aria-label="Browse available workspaces"
+      >
+        <UserPlus className="h-4 w-4 mr-2" />
+        Join Workspace
+      </Button>
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
+        <Button
           variant={workspaceName ? "outline" : "default"}
           className={cn(
-            "min-h-[40px] focus:ring-2 focus:ring-coral-500 focus:ring-offset-2", 
-            workspaceName 
-              ? "w-full hover:bg-coral-50 hover:border-coral-300" 
+            "min-h-[40px] focus:ring-2 focus:ring-coral-500 focus:ring-offset-2",
+            workspaceName
+              ? "w-full hover:bg-coral-50 hover:border-coral-300"
               : "bg-coral-500 hover:bg-coral-600 text-white font-medium",
             className
           )}
@@ -92,8 +124,8 @@ export default function JoinWorkspaceDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleJoin} 
+          <Button
+            onClick={handleJoin}
             disabled={loading}
             className="bg-coral-500 hover:bg-coral-600"
           >

@@ -10,7 +10,8 @@ import { Activity, Plus, Clock, Users, Trophy, Settings, Save } from 'lucide-rea
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ActivityAddDialog } from './ActivityAddDialog';
 import ActivityAddInline from './ActivityAddInline';
-import { ActivityType } from '@/lib/types';
+import { ActivityType, type RewardType } from '@/lib/types';
+import { formatRewardValue, getRewardLabelShort, getRewardUnit } from '@/lib/reward-utils';
 import { format } from 'date-fns';
 
 interface ActivityWithTemplate {
@@ -27,6 +28,7 @@ interface ActivityWithTemplate {
     description: string;
     type: ActivityType;
     basePoints: number;
+    rewardType?: RewardType;
     requiresApproval: boolean;
     allowMultiple: boolean;
   };
@@ -253,7 +255,7 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
             />
           </div>
         )}
-        {(
+        {selectedIds.length > 0 && (
           <div className="mb-4 p-3 border rounded-lg bg-white/80 backdrop-blur sticky top-0 z-10 flex items-center gap-3 shadow-sm">
             <div className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">{selectedIds.length} selected</div>
             <Input
@@ -312,113 +314,124 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
               />
               <label htmlFor="select-all">Select all</label>
             </div>
-            {activities.map((activity) => (
-              <div key={activity.id} className={`border rounded-lg p-4 transition hover:bg-gray-50 ${selectedIds.includes(activity.id) ? 'ring-1 ring-amber-300' : ''}`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Checkbox
-                        checked={selectedIds.includes(activity.id)}
-                        onCheckedChange={(v) => setSelectedIds(prev => v ? Array.from(new Set([...prev, activity.id])) : prev.filter(id => id !== activity.id))}
-                        className="mr-1"
-                      />
-                      <h3 className="font-semibold text-lg">{activity.template.name}</h3>
-                      <Badge variant={getActivityTypeVariant(activity.template.type)}>
-                        {getActivityTypeLabel(activity.template.type)}
-                      </Badge>
-                      {(editingId ? editDraft?.isRequired : activity.isRequired) && (
-                        <Badge variant="destructive">Required</Badge>
+            {activities.map((activity) => {
+              const activityRewardType: RewardType = activity.template.rewardType ?? 'points'
+              const activityRewardLabel = getRewardLabelShort(activityRewardType)
+              const activityRewardUnit = getRewardUnit(activityRewardType)
+              const activityRewardDisplay = formatRewardValue(activityRewardType, activity.pointsValue)
+              const activityRewardSummary = activityRewardUnit ? `${activityRewardDisplay} ${activityRewardUnit}` : activityRewardDisplay
+
+              return (
+                <div
+                  key={activity.id}
+                  className={`border rounded-lg p-4 transition hover:bg-gray-50 ${selectedIds.includes(activity.id) ? 'ring-1 ring-amber-300' : ''}`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Checkbox
+                          checked={selectedIds.includes(activity.id)}
+                          onCheckedChange={(v) => setSelectedIds(prev => v ? Array.from(new Set([...prev, activity.id])) : prev.filter(id => id !== activity.id))}
+                          className="mr-1"
+                        />
+                        <h3 className="font-semibold text-lg">{activity.template.name}</h3>
+                        <Badge variant={getActivityTypeVariant(activity.template.type)}>
+                          {getActivityTypeLabel(activity.template.type)}
+                        </Badge>
+                        {(editingId ? editDraft?.isRequired : activity.isRequired) && (
+                          <Badge variant="destructive">Required</Badge>
+                        )}
+                      </div>
+                      <p className="text-gray-600 mb-3">{activity.template.description}</p>
+
+                      {editingId === activity.id ? (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Reward Amount ({activityRewardLabel})</label>
+                            <input
+                              className="w-full border rounded px-2 py-1"
+                              type="number"
+                              min={1}
+                              value={editDraft?.pointsValue ?? activity.pointsValue}
+                              onChange={(e) => setEditDraft(d => ({ ...d!, pointsValue: parseInt(e.target.value) || 1 }))}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Max submissions</label>
+                            <input
+                              className="w-full border rounded px-2 py-1"
+                              type="number"
+                              min={1}
+                              value={editDraft?.maxSubmissions ?? activity.maxSubmissions}
+                              onChange={(e) => setEditDraft(d => ({ ...d!, maxSubmissions: parseInt(e.target.value) || 1 }))}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Deadline</label>
+                            <input
+                              className="w-full border rounded px-2 py-1"
+                              type="datetime-local"
+                              value={editDraft?.deadline ? new Date(editDraft.deadline as any).toISOString().slice(0,16) : ''}
+                              onChange={(e) => setEditDraft(d => ({ ...d!, deadline: e.target.value ? new Date(e.target.value) : null }))}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              id={`req-${activity.id}`}
+                              type="checkbox"
+                              checked={!!editDraft?.isRequired}
+                              onChange={(e) => setEditDraft(d => ({ ...d!, isRequired: e.target.checked }))}
+                            />
+                            <label htmlFor={`req-${activity.id}`}>Required</label>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div className="flex items-center space-x-1">
+                            <Trophy className="h-4 w-4 text-amber-500" />
+                            <span className="font-medium">{activityRewardSummary}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Users className="h-4 w-4 text-blue-500" />
+                            <span>Max {activity.maxSubmissions} submission{activity.maxSubmissions !== 1 ? 's' : ''}</span>
+                          </div>
+                          {activity.deadline && (
+                            <div className="flex items-center space-x-1">
+                              <Clock className="h-4 w-4 text-red-500" />
+                              <span>Due {format(new Date(activity.deadline), 'MMM d')}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-1">
+                            <Settings className="h-4 w-4 text-gray-500" />
+                            <span>{activity.template.requiresApproval ? 'Needs approval' : 'Auto-approve'}</span>
+                          </div>
+                        </div>
                       )}
                     </div>
-                    <p className="text-gray-600 mb-3">{activity.template.description}</p>
 
-                    {editingId === activity.id ? (
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Points</label>
-                          <input
-                            className="w-full border rounded px-2 py-1"
-                            type="number"
-                            min={1}
-                            value={editDraft?.pointsValue ?? activity.pointsValue}
-                            onChange={(e) => setEditDraft(d => ({ ...d!, pointsValue: parseInt(e.target.value) || 1 }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Max submissions</label>
-                          <input
-                            className="w-full border rounded px-2 py-1"
-                            type="number"
-                            min={1}
-                            value={editDraft?.maxSubmissions ?? activity.maxSubmissions}
-                            onChange={(e) => setEditDraft(d => ({ ...d!, maxSubmissions: parseInt(e.target.value) || 1 }))}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Deadline</label>
-                          <input
-                            className="w-full border rounded px-2 py-1"
-                            type="datetime-local"
-                            value={editDraft?.deadline ? new Date(editDraft.deadline as any).toISOString().slice(0,16) : ''}
-                            onChange={(e) => setEditDraft(d => ({ ...d!, deadline: e.target.value ? new Date(e.target.value) : null }))}
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            id={`req-${activity.id}`}
-                            type="checkbox"
-                            checked={!!editDraft?.isRequired}
-                            onChange={(e) => setEditDraft(d => ({ ...d!, isRequired: e.target.checked }))}
-                          />
-                          <label htmlFor={`req-${activity.id}`}>Required</label>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div className="flex items-center space-x-1">
-                          <Trophy className="h-4 w-4 text-amber-500" />
-                          <span className="font-medium">{activity.pointsValue} points</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Users className="h-4 w-4 text-blue-500" />
-                          <span>Max {activity.maxSubmissions} submission{activity.maxSubmissions !== 1 ? 's' : ''}</span>
-                        </div>
-                        {activity.deadline && (
-                          <div className="flex items-center space-x-1">
-                            <Clock className="h-4 w-4 text-red-500" />
-                            <span>Due {format(new Date(activity.deadline), 'MMM d')}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center space-x-1">
-                          <Settings className="h-4 w-4 text-gray-500" />
-                          <span>{activity.template.requiresApproval ? 'Needs approval' : 'Auto-approve'}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex space-x-2 ml-4">
-                    {editingId === activity.id ? (
-                      <Button variant="outline" size="sm" onClick={saveEdit} disabled={savingId === activity.id}>
-                        {savingId === activity.id ? 'Saving…' : (<><Save className="h-4 w-4 mr-1" />Save</>)}
+                    <div className="flex space-x-2 ml-4">
+                      {editingId === activity.id ? (
+                        <Button variant="outline" size="sm" onClick={saveEdit} disabled={savingId === activity.id}>
+                          {savingId === activity.id ? 'Saving…' : (<><Save className="h-4 w-4 mr-1" />Save</>)}
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => beginEdit(activity)}>
+                          Edit
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteActivity(activity.id)}
+                        disabled={deletingActivityId === activity.id}
+                      >
+                        {deletingActivityId === activity.id ? 'Removing...' : 'Remove'}
                       </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => beginEdit(activity)}>
-                        Edit
-                      </Button>
-                    )}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleDeleteActivity(activity.id)}
-                      disabled={deletingActivityId === activity.id}
-                    >
-                      {deletingActivityId === activity.id ? 'Removing...' : 'Remove'}
-                    </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </CardContent>

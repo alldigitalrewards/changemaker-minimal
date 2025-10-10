@@ -3,14 +3,17 @@ import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogoutButton } from "@/components/auth/logout-button"
 import Link from "next/link"
 import CreateWorkspaceDialog from "./create-workspace-dialog"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
 import WorkspaceCard from "./workspace-card-client"
+import { RedeemInviteDialog } from "./redeem-invite-dialog"
 import { getUserBySupabaseId } from "@/lib/db/queries"
-import { listMemberships } from "@/lib/db/workspace-membership"
-import { Plus, Search, Building, Users } from "lucide-react"
+import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
+import { listMemberships, getPrimaryMembership } from "@/lib/db/workspace-membership"
+import { Plus, Search, Building, Users, Trophy, TrendingUp, BarChart } from "lucide-react"
+import DashboardHeader from "@/components/layout/dashboard-header"
+import WorkspacesSidebar from "@/components/workspaces/workspaces-sidebar"
 
 export default async function WorkspacesPage() {
   const supabase = await createClient()
@@ -29,61 +32,139 @@ export default async function WorkspacesPage() {
   // Get user's workspace memberships (new system)
   const memberships = await listMemberships(dbUser.id)
 
-  // Get all workspaces for join functionality
-  const allWorkspaces = await prisma.workspace.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      _count: {
+  const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
+  const userIsWorkspaceAdmin = memberships.some(m => m.role === 'ADMIN')
+
+  // Discoverable workspaces based on role
+  let discoverableWorkspaces: {
+    id: string;
+    name: string;
+    slug: string;
+    createdAt: Date;
+    _count: { memberships: number; challenges: number }
+  }[] = []
+
+  if (userIsPlatformAdmin) {
+    // Platform super admin (PM) sees ALL workspaces across all tenants
+    discoverableWorkspaces = await prisma.workspace.findMany({
+      where: { active: true, published: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        createdAt: true,
+        _count: { select: { memberships: true, challenges: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  } else if (userIsWorkspaceAdmin) {
+    // Regular admins only see workspaces within their tenant boundaries
+    // Get tenant IDs from user's admin workspaces
+    const adminWorkspaceIds = memberships
+      .filter(m => m.role === 'ADMIN')
+      .map(m => m.workspaceId)
+
+    if (adminWorkspaceIds.length > 0) {
+      // For now, show public workspaces that the admin owns or manages
+      discoverableWorkspaces = await prisma.workspace.findMany({
+        where: {
+          id: { in: adminWorkspaceIds },
+          active: true,
+          published: true
+        },
         select: {
-          memberships: true,
-          challenges: true
-        }
-      }
+          id: true,
+          name: true,
+          slug: true,
+          createdAt: true,
+          _count: { select: { memberships: true, challenges: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
     }
-  })
+  }
+
+  // Calculate summary stats
+  const totalWorkspaces = memberships.length
+  const totalMembers = memberships.reduce((sum, m) => sum + (m.workspace._count?.memberships || 0), 0)
+  const totalChallenges = memberships.reduce((sum, m) => sum + (m.workspace._count?.challenges || 0), 0)
+
+  // Get primary membership for header
+  const primaryMembership = await getPrimaryMembership(dbUser.id)
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      {/* Professional Header */}
-      <div className="bg-white border-b border-gray-100 -mx-4 px-4 mb-8">
-        <div className="py-6">
-          <div className="flex flex-col lg:flex-row justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-coral-100 rounded-lg">
-                  <Building className="h-6 w-6 text-coral-600" />
+    <div className="flex h-screen flex-col">
+      {/* Header */}
+      <DashboardHeader
+        title="Workspaces"
+        workspace={primaryMembership?.workspace || { name: 'All Workspaces', slug: 'home' }}
+        user={user}
+        role={primaryMembership?.role || 'PARTICIPANT'}
+        showRoleSwitcher={false}
+        showWorkspaceSwitcher={false}
+      />
+
+      {/* Main content with sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <WorkspacesSidebar
+          memberships={memberships.map(m => ({
+            workspaceId: m.workspaceId,
+            role: m.role,
+            workspace: m.workspace
+          }))}
+          currentView="my-workspaces"
+          userRole={primaryMembership?.role || 'PARTICIPANT'}
+          isAdmin={userIsWorkspaceAdmin}
+        />
+
+        {/* Main content area */}
+        <main className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="container mx-auto py-8 px-6">
+
+      {/* Summary Stats */}
+      {memberships.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card className="bg-gradient-to-br from-coral-50 to-white border-coral-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Your Workspaces</p>
+                  <p className="text-3xl font-bold text-coral-600">{totalWorkspaces}</p>
+                  <p className="text-xs text-gray-500 mt-1">Active memberships</p>
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900">Workspaces</h1>
+                <Building className="h-10 w-10 text-coral-500 opacity-75" />
               </div>
-              <p className="text-gray-600">
-                Manage your workspaces and discover new opportunities
-              </p>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                <CreateWorkspaceDialog 
-                  userId={dbUser.id} 
-                  currentWorkspace={null}
-                />
-                <JoinWorkspaceDialog userId={dbUser.id} />
-              </div>
-              
-              {/* User info */}
-              <div className="flex items-center gap-3 pl-0 sm:pl-4 sm:border-l border-gray-200">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                  <div className="text-xs text-gray-500">Signed in</div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Members</p>
+                  <p className="text-3xl font-bold text-blue-600">{totalMembers}</p>
+                  <p className="text-xs text-gray-500 mt-1">Across all workspaces</p>
                 </div>
-                <LogoutButton variant="outline" className="text-gray-700 border-gray-300 hover:bg-gray-50" />
+                <Users className="h-10 w-10 text-blue-500 opacity-75" />
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Challenges</p>
+                  <p className="text-3xl font-bold text-amber-600">{totalChallenges}</p>
+                  <p className="text-xs text-gray-500 mt-1">Available to join</p>
+                </div>
+                <Trophy className="h-10 w-10 text-amber-500 opacity-75" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      )}
 
       <div className="grid gap-8">
         {/* User's Workspaces */}
@@ -136,18 +217,24 @@ export default async function WorkspacesPage() {
                 Get started by creating your own workspace or joining an existing one.
               </CardDescription>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <CreateWorkspaceDialog 
-                  userId={dbUser.id} 
-                  currentWorkspace={null}
-                />
-                <JoinWorkspaceDialog userId={dbUser.id} />
+                {userIsWorkspaceAdmin && (
+                  <CreateWorkspaceDialog
+                    userId={dbUser.id}
+                    currentWorkspace={null}
+                  />
+                )}
+                <RedeemInviteDialog />
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Available Workspaces */}
-        <Card className="border-gray-200 shadow-sm">
+        {/* Available Workspaces - Show for platform admins and workspace admins */}
+        {(userIsPlatformAdmin || userIsWorkspaceAdmin) && discoverableWorkspaces.length > 0 && (
+        <Card
+          id="discover-workspaces"
+          className="border-gray-200 shadow-sm transition-all"
+        >
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gray-100 rounded-lg">
@@ -161,7 +248,7 @@ export default async function WorkspacesPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {allWorkspaces.map((workspace) => {
+              {discoverableWorkspaces.map((workspace) => {
                 // Check if user is already a member
                 const membership = memberships.find(m => m.workspaceId === workspace.id)
                 const isUserWorkspace = !!membership
@@ -186,6 +273,10 @@ export default async function WorkspacesPage() {
             </div>
           </CardContent>
         </Card>
+        )}
+      </div>
+          </div>
+        </main>
       </div>
     </div>
   )

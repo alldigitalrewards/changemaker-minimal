@@ -388,3 +388,77 @@ export async function ensureWorkspaceOwnership(workspaceId: string): Promise<boo
     return false
   }
 }
+
+/**
+ * Transfer workspace ownership from one admin to another
+ * Only the current primary admin can transfer ownership
+ */
+export async function transferWorkspaceOwnership(
+  workspaceId: string,
+  fromUserId: string,
+  toUserId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Verify fromUser is current primary owner
+    const currentOwner = await prisma.workspaceMembership.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: fromUserId,
+          workspaceId
+        }
+      }
+    })
+
+    if (!currentOwner || currentOwner.role !== 'ADMIN' || !currentOwner.isPrimary) {
+      return { success: false, error: 'Only the workspace owner can transfer ownership' }
+    }
+
+    // Verify toUser exists and is an admin
+    const newOwner = await prisma.workspaceMembership.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: toUserId,
+          workspaceId
+        }
+      }
+    })
+
+    if (!newOwner) {
+      return { success: false, error: 'Target user is not a member of this workspace' }
+    }
+
+    if (newOwner.role !== 'ADMIN') {
+      return { success: false, error: 'Target user must be an admin to receive ownership' }
+    }
+
+    // Perform atomic transfer
+    await prisma.$transaction([
+      // Remove primary from current owner
+      prisma.workspaceMembership.update({
+        where: {
+          userId_workspaceId: {
+            userId: fromUserId,
+            workspaceId
+          }
+        },
+        data: { isPrimary: false }
+      }),
+      // Set new owner as primary
+      prisma.workspaceMembership.update({
+        where: {
+          userId_workspaceId: {
+            userId: toUserId,
+            workspaceId
+          }
+        },
+        data: { isPrimary: true }
+      })
+    ])
+
+    console.log(`✓ Transferred ownership of workspace ${workspaceId} from ${fromUserId} to ${toUserId}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Error transferring workspace ownership:', error)
+    return { success: false, error: 'Failed to transfer ownership' }
+  }
+}

@@ -26,6 +26,7 @@ export type UserId = string
 export type WorkspaceId = string
 export type ChallengeId = string
 export type EnrollmentId = string
+export type RewardType = 'points' | 'sku' | 'monetary'
 
 // Validation functions for type safety
 export const isWorkspaceSlug = (slug: string): slug is WorkspaceSlug => {
@@ -77,6 +78,9 @@ export interface Challenge {
   readonly endDate: Date
   readonly enrollmentDeadline: Date | null
   readonly workspaceId: WorkspaceId
+  readonly rewardType?: RewardType
+  readonly rewardConfig?: unknown
+  readonly emailEditAllowed?: boolean
 }
 
 /**
@@ -103,6 +107,8 @@ export interface ActivityTemplate {
   readonly description: string
   readonly type: ActivityType
   readonly basePoints: number
+  readonly rewardType?: RewardType | null
+  readonly rewardConfig?: unknown | null
   readonly workspaceId: string
   readonly requiresApproval: boolean
   readonly allowMultiple: boolean
@@ -118,6 +124,7 @@ export interface Activity {
   readonly maxSubmissions: number
   readonly deadline: Date | null
   readonly isRequired: boolean
+  readonly rewardRules?: any[]
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -245,6 +252,8 @@ export interface ChallengeCreateRequest {
   readonly startDate: string // ISO string format for API
   readonly endDate: string   // ISO string format for API
   readonly enrollmentDeadline?: string // Optional ISO string format for API
+  readonly rewardType?: RewardType
+  readonly rewardConfig?: unknown
   readonly participantIds?: UserId[] // Optional participant IDs for batch enrollment (legacy)
   readonly invitedParticipantIds?: UserId[] // Optional participant IDs to invite
   readonly enrolledParticipantIds?: UserId[] // Optional participant IDs to enroll automatically
@@ -488,6 +497,8 @@ export interface ActivityTemplateCreateRequest {
   readonly description: string
   readonly type: ActivityType
   readonly basePoints: number
+  readonly rewardType?: RewardType
+  readonly rewardConfig?: unknown
   readonly requiresApproval?: boolean
   readonly allowMultiple?: boolean
 }
@@ -617,6 +628,17 @@ export function validateChallengeData(data: unknown): data is ChallengeCreateReq
       return false
     }
   }
+
+  // Optional reward fields validation (case-insensitive)
+  if ('rewardType' in (data as any) && (data as any).rewardType !== undefined) {
+    const rt = typeof (data as any).rewardType === 'string'
+      ? (data as any).rewardType.toLowerCase()
+      : (data as any).rewardType
+    if (rt !== 'points' && rt !== 'sku' && rt !== 'monetary') {
+      return false
+    }
+  }
+  // rewardConfig can be any JSON-serializable value; no strict validation here
 
   return true
 }

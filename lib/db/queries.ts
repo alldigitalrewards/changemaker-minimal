@@ -33,10 +33,10 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspaceParticipantSegment, type WorkspacePointsBudget, type ChallengePointsBudget } from '@prisma/client'
-import { type Role, type ActivityType, type SubmissionStatus } from '@/lib/types'
+import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspaceParticipantSegment, type WorkspacePointsBudget, type ChallengePointsBudget, type WorkspaceCommunication, CommunicationScope, CommunicationAudience } from '@prisma/client'
+import { type Role, type ActivityType, type RewardType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
-import { nanoid } from 'nanoid'
+import { randomBytes } from 'crypto'
 
 // =============================================================================
 // ERROR TYPES
@@ -379,6 +379,8 @@ export async function createChallenge(
     startDate: Date
     endDate: Date
     enrollmentDeadline?: Date
+    rewardType?: 'points' | 'sku' | 'monetary'
+    rewardConfig?: any
   },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {
@@ -390,6 +392,8 @@ export async function createChallenge(
         startDate: data.startDate,
         endDate: data.endDate,
         enrollmentDeadline: data.enrollmentDeadline || data.startDate,
+        rewardType: data.rewardType,
+        rewardConfig: data.rewardConfig,
         workspaceId
       }
     })
@@ -409,6 +413,8 @@ export async function updateChallenge(
     startDate?: Date;
     endDate?: Date;
     enrollmentDeadline?: Date;
+    rewardType?: 'points' | 'sku' | 'monetary';
+    rewardConfig?: any;
   },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {
@@ -1023,6 +1029,8 @@ export async function createActivityTemplate(
     description: string
     type: ActivityType
     basePoints: number
+    rewardType?: RewardType
+    rewardConfig?: unknown
     requiresApproval?: boolean
     allowMultiple?: boolean
   },
@@ -1031,8 +1039,13 @@ export async function createActivityTemplate(
   try {
     return await prisma.activityTemplate.create({
       data: {
-        ...data,
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        basePoints: data.basePoints,
         workspaceId,
+        rewardType: data.rewardType ?? 'points',
+        rewardConfig: (data.rewardConfig as any) ?? null,
         requiresApproval: data.requiresApproval ?? true,
         allowMultiple: data.allowMultiple ?? false
       }
@@ -1067,6 +1080,8 @@ export async function updateActivityTemplate(
     name: string
     description: string
     basePoints: number
+    rewardType: RewardType
+    rewardConfig: unknown
     requiresApproval: boolean
     allowMultiple: boolean
   }>,
@@ -1081,10 +1096,20 @@ export async function updateActivityTemplate(
     throw new ResourceNotFoundError('ActivityTemplate', templateId)
   }
 
+  // Prepare update data with proper type casting for JSON field
+  const updateData: any = {}
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.description !== undefined) updateData.description = data.description
+  if (data.basePoints !== undefined) updateData.basePoints = data.basePoints
+  if (data.rewardType !== undefined) updateData.rewardType = data.rewardType
+  if (data.rewardConfig !== undefined) updateData.rewardConfig = data.rewardConfig as any
+  if (data.requiresApproval !== undefined) updateData.requiresApproval = data.requiresApproval
+  if (data.allowMultiple !== undefined) updateData.allowMultiple = data.allowMultiple
+
   try {
     return await prisma.activityTemplate.update({
       where: { id: templateId },
-      data
+      data: updateData
     })
   } catch (error) {
     throw new DatabaseError(`Failed to update activity template: ${error}`)
@@ -1131,6 +1156,7 @@ export async function createActivity(
     maxSubmissions?: number
     deadline?: Date
     isRequired?: boolean
+    rewardRules?: any[]
   },
   workspaceId: WorkspaceId
 ): Promise<Activity> {
@@ -1160,7 +1186,8 @@ export async function createActivity(
         pointsValue: data.pointsValue ?? template.basePoints,
         maxSubmissions: data.maxSubmissions ?? 1,
         deadline: data.deadline,
-        isRequired: data.isRequired ?? false
+        isRequired: data.isRequired ?? false,
+        rewardRules: data.rewardRules ?? []
       }
     })
   } catch (error) {
@@ -1200,6 +1227,7 @@ export async function updateActivity(
     maxSubmissions: number
     deadline: Date | null
     isRequired: boolean
+    rewardRules: any[]
   }>
 ): Promise<Activity & { template: ActivityTemplate, challenge: Challenge }> {
   // Verify activity belongs to a challenge in this workspace
@@ -1219,7 +1247,8 @@ export async function updateActivity(
         pointsValue: data.pointsValue ?? activity.pointsValue,
         maxSubmissions: data.maxSubmissions ?? activity.maxSubmissions,
         deadline: data.deadline === undefined ? activity.deadline : data.deadline,
-        isRequired: data.isRequired ?? activity.isRequired
+        isRequired: data.isRequired ?? activity.isRequired,
+        rewardRules: data.rewardRules ?? activity.rewardRules
       },
       include: { template: true, challenge: true }
     })
@@ -1716,13 +1745,207 @@ export async function getChallengeEvents(challengeId: string) {
   })
 }
 
+/**
+ * Get recent workspace activities for admin dashboard
+ * Combines activity events and pending submissions
+ */
+export async function getRecentWorkspaceActivities(
+  workspaceId: WorkspaceId,
+  limit: number = 20
+): Promise<{
+  events: any[]
+  pendingSubmissions: (ActivitySubmission & {
+    activity: Activity & { template: ActivityTemplate, challenge: Challenge }
+    user: User
+    enrollment: Enrollment
+  })[]
+  pendingSubmissionCount: number
+  oldestPendingSubmission?: Pick<ActivitySubmission, 'submittedAt'> | null
+}> {
+  try {
+    const [events, pendingSubmissions, pendingSubmissionCount, oldestPendingSubmission] = await Promise.all([
+      // Get recent activity events
+      (prisma as any).activityEvent.findMany({
+        where: { workspaceId },
+        include: {
+          user: { select: { id: true, email: true } },
+          actor: { select: { id: true, email: true } },
+          challenge: { select: { id: true, title: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }),
+      // Get pending submissions
+      prisma.activitySubmission.findMany({
+        where: {
+          status: 'PENDING',
+          activity: {
+            challenge: { workspaceId }
+          }
+        },
+        include: {
+          activity: {
+            include: {
+              template: true,
+              challenge: true
+            }
+          },
+          user: true,
+          enrollment: true
+        },
+        orderBy: { submittedAt: 'desc' },
+        take: limit
+      }),
+      prisma.activitySubmission.count({
+        where: {
+          status: 'PENDING',
+          activity: {
+            challenge: { workspaceId }
+          }
+        }
+      }),
+      prisma.activitySubmission.findFirst({
+        where: {
+          status: 'PENDING',
+          activity: {
+            challenge: { workspaceId }
+          }
+        },
+        orderBy: { submittedAt: 'asc' },
+        select: { submittedAt: true }
+      })
+    ])
+
+    return { events, pendingSubmissions, pendingSubmissionCount, oldestPendingSubmission }
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch recent workspace activities: ${error}`)
+  }
+}
+
+// =============================================================================
+// COMMUNICATIONS
+// =============================================================================
+
+interface CreateCommunicationInput {
+  subject: string
+  message: string
+  scope: CommunicationScope
+  audience?: CommunicationAudience
+  challengeId?: string | null
+  activityId?: string | null
+}
+
+export async function createWorkspaceCommunication(
+  workspaceId: WorkspaceId,
+  input: CreateCommunicationInput,
+  sentBy: UserId
+): Promise<WorkspaceCommunication> {
+  const subject = input.subject?.trim()
+  const message = input.message?.trim()
+
+  if (!subject) {
+    throw new DatabaseError('Subject is required for workspace communication', 'COMMUNICATION_SUBJECT_REQUIRED')
+  }
+
+  if (!message) {
+    throw new DatabaseError('Message content is required for workspace communication', 'COMMUNICATION_MESSAGE_REQUIRED')
+  }
+
+  let challengeId: string | null = null
+  let activityId: string | null = null
+
+  if (input.scope === CommunicationScope.WORKSPACE) {
+    challengeId = null
+    activityId = null
+  } else if (input.scope === CommunicationScope.CHALLENGE) {
+    if (!input.challengeId) {
+      throw new DatabaseError('Challenge ID is required for challenge communications', 'COMMUNICATION_CHALLENGE_REQUIRED')
+    }
+    const challenge = await prisma.challenge.findFirst({
+      where: { id: input.challengeId, workspaceId },
+      select: { id: true }
+    })
+    if (!challenge) {
+      throw new ResourceNotFoundError('Challenge', input.challengeId)
+    }
+    challengeId = challenge.id
+  } else if (input.scope === CommunicationScope.ACTIVITY) {
+    if (!input.activityId) {
+      throw new DatabaseError('Activity ID is required for activity communications', 'COMMUNICATION_ACTIVITY_REQUIRED')
+    }
+    const activity = await prisma.activity.findFirst({
+      where: {
+        id: input.activityId,
+        challenge: { workspaceId }
+      },
+      select: { id: true, challengeId: true }
+    })
+    if (!activity) {
+      throw new ResourceNotFoundError('Activity', input.activityId)
+    }
+    activityId = activity.id
+    challengeId = activity.challengeId
+  } else {
+    throw new DatabaseError(`Unsupported communication scope: ${input.scope}`, 'COMMUNICATION_SCOPE_INVALID')
+  }
+
+  try {
+    return await prisma.workspaceCommunication.create({
+      data: {
+        workspaceId,
+        challengeId,
+        activityId,
+        scope: input.scope,
+        audience: input.audience ?? CommunicationAudience.ALL,
+        subject,
+        message,
+        sentBy,
+      }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to create workspace communication: ${error}`)
+  }
+}
+
+interface GetCommunicationsFilters {
+  scope?: CommunicationScope
+  challengeId?: string
+  activityId?: string
+  limit?: number
+}
+
+export async function getWorkspaceCommunications(
+  workspaceId: WorkspaceId,
+  filters: GetCommunicationsFilters = {}
+): Promise<(WorkspaceCommunication & { sender: Pick<User, 'id' | 'email'>; challenge?: Pick<Challenge, 'id' | 'title'> | null; activity?: Pick<Activity, 'id' | 'templateId'> | null })[]> {
+  const whereClause: any = { workspaceId }
+  if (filters.scope) whereClause.scope = filters.scope
+  if (filters.challengeId) whereClause.challengeId = filters.challengeId
+  if (filters.activityId) whereClause.activityId = filters.activityId
+
+  try {
+    return await prisma.workspaceCommunication.findMany({
+      where: whereClause,
+      include: {
+        sender: { select: { id: true, email: true } },
+        challenge: { select: { id: true, title: true } },
+        activity: { select: { id: true, templateId: true } }
+      },
+      orderBy: { sentAt: 'desc' },
+      take: filters.limit ?? 50
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to load workspace communications: ${error}`)
+  }
+}
+
 // =============================================================================
 // INVITE CODE QUERIES
 // =============================================================================
 
 export type InviteCodeWithDetails = InviteCode & {
   workspace: Workspace
-  challenge?: Challenge | null
+  challenge?: import('../types').Challenge | null
   creator: Pick<User, 'id' | 'email'>
 }
 
@@ -1762,7 +1985,7 @@ export async function createInviteCode(
     }
   }
   
-  const code = nanoid(10)
+  const code = randomBytes(10).toString('base64url').slice(0, 10)
   const expiresAt = new Date()
   expiresAt.setHours(expiresAt.getHours() + (data.expiresIn || 168))
   
@@ -1791,7 +2014,7 @@ export async function createInviteCode(
  */
 export async function getInviteByCode(code: string): Promise<InviteCodeWithDetails | null> {
   try {
-    return await prisma.inviteCode.findUnique({
+    const row = await prisma.inviteCode.findUnique({
       where: { code },
       include: {
         workspace: true,
@@ -1800,7 +2023,26 @@ export async function getInviteByCode(code: string): Promise<InviteCodeWithDetai
           select: { id: true, email: true }
         }
       }
-    })
+    }) as any
+    if (!row) return null
+    const normalizedChallenge = row.challenge
+      ? {
+          id: row.challenge.id,
+          title: row.challenge.title,
+          description: row.challenge.description,
+          startDate: row.challenge.startDate,
+          endDate: row.challenge.endDate,
+          enrollmentDeadline: row.challenge.enrollmentDeadline ?? null,
+          workspaceId: row.challenge.workspaceId,
+          rewardType: row.challenge.rewardType ?? undefined,
+          rewardConfig: row.challenge.rewardConfig,
+          emailEditAllowed: row.challenge.emailEditAllowed,
+        }
+      : row.challenge
+    return {
+      ...row,
+      challenge: normalizedChallenge,
+    }
   } catch (error) {
     throw new DatabaseError(`Failed to fetch invite code: ${error}`)
   }
@@ -1815,7 +2057,7 @@ export async function acceptInviteCode(
   userEmail: string
 ): Promise<{ 
   workspace: Workspace
-  challenge?: Challenge | null
+  challenge?: import('../types').Challenge | null
   enrollment?: Enrollment | null
   isExistingMember: boolean
   role: Role
@@ -1935,7 +2177,7 @@ export async function getWorkspaceInviteCodes(
   workspaceId: WorkspaceId
 ): Promise<InviteCodeWithDetails[]> {
   try {
-    return await prisma.inviteCode.findMany({
+    const rows = await prisma.inviteCode.findMany({
       where: { workspaceId },
       include: {
         workspace: true,
@@ -1945,7 +2187,11 @@ export async function getWorkspaceInviteCodes(
         }
       },
       orderBy: { createdAt: 'desc' }
-    })
+    }) as any
+    return rows.map((i: any) => ({
+      ...i,
+      challenge: i.challenge ? { ...i.challenge, rewardType: i.challenge.rewardType ?? undefined } : i.challenge
+    }))
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace invite codes: ${error}`)
   }
@@ -1962,16 +2208,188 @@ export async function deleteInviteCode(
   const invite = await prisma.inviteCode.findFirst({
     where: { id: inviteId, workspaceId }
   })
-  
+
   if (!invite) {
     throw new ResourceNotFoundError('InviteCode', inviteId)
   }
-  
+
   try {
     await prisma.inviteCode.delete({
       where: { id: inviteId }
     })
   } catch (error) {
     throw new DatabaseError(`Failed to delete invite code: ${error}`)
+  }
+}
+
+// =============================================================================
+// REWARD ISSUANCE QUERIES
+// =============================================================================
+
+/**
+ * Issue reward on submission approval
+ * Supports POINTS, SKU, and MONETARY reward types
+ */
+export async function issueReward(params: {
+  userId: UserId
+  workspaceId: WorkspaceId
+  challengeId?: ChallengeId | null
+  submissionId?: string | null
+  type: 'points' | 'sku' | 'monetary'
+  amount?: number
+  currency?: string
+  skuId?: string
+  provider?: string
+  metadata?: any
+}): Promise<import('@prisma/client').RewardIssuance> {
+  const { userId, workspaceId, challengeId, submissionId, type, amount, currency, skuId, provider, metadata } = params
+
+  // Validation
+  if (type === 'points' && (!amount || amount <= 0)) {
+    throw new DatabaseError('Points amount must be positive')
+  }
+  if (type === 'monetary' && (!amount || amount <= 0 || !currency)) {
+    throw new DatabaseError('Monetary rewards require positive amount and currency')
+  }
+  if (type === 'sku' && !skuId) {
+    throw new DatabaseError('SKU rewards require skuId')
+  }
+
+  try {
+    const reward = await prisma.rewardIssuance.create({
+      data: {
+        userId,
+        workspaceId,
+        challengeId: challengeId || null,
+        type,
+        amount: amount || null,
+        currency: currency || null,
+        skuId: skuId || null,
+        provider: provider || null,
+        status: 'ISSUED',
+        issuedAt: new Date(),
+        metadata: metadata as any || null
+      }
+    })
+
+    // Link reward to submission if provided
+    if (submissionId) {
+      await prisma.activitySubmission.update({
+        where: { id: submissionId },
+        data: {
+          rewardIssuanceId: reward.id,
+          rewardIssued: true
+        }
+      })
+    }
+
+    // If points, also award them via budget system
+    if (type === 'points' && amount) {
+      await awardPointsWithBudget({
+        workspaceId,
+        challengeId,
+        toUserId: userId,
+        amount,
+        submissionId
+      })
+    }
+
+    return reward
+  } catch (error) {
+    throw new DatabaseError(`Failed to issue reward: ${error}`)
+  }
+}
+
+/**
+ * Get rewards issued in workspace (admin analytics)
+ */
+export async function getWorkspaceRewards(
+  workspaceId: WorkspaceId,
+  filters?: {
+    status?: 'PENDING' | 'ISSUED' | 'FAILED' | 'CANCELLED'
+    type?: 'points' | 'sku' | 'monetary'
+    challengeId?: ChallengeId
+    userId?: UserId
+  }
+): Promise<import('@prisma/client').RewardIssuance[]> {
+  try {
+    const whereClause: any = { workspaceId }
+    if (filters?.status) whereClause.status = filters.status
+    if (filters?.type) whereClause.type = filters.type
+    if (filters?.challengeId) whereClause.challengeId = filters.challengeId
+    if (filters?.userId) whereClause.userId = filters.userId
+
+    return await prisma.rewardIssuance.findMany({
+      where: whereClause,
+      orderBy: { issuedAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace rewards: ${error}`)
+  }
+}
+
+/**
+ * Get user rewards (participant view)
+ */
+export async function getUserRewards(
+  userId: UserId,
+  workspaceId: WorkspaceId
+): Promise<import('@prisma/client').RewardIssuance[]> {
+  try {
+    return await prisma.rewardIssuance.findMany({
+      where: {
+        userId,
+        workspaceId
+      },
+      orderBy: { issuedAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch user rewards: ${error}`)
+  }
+}
+
+/**
+ * Reconcile reward issuance (admin report)
+ * Compare issued rewards to submission approvals
+ */
+export async function reconcileRewards(
+  workspaceId: WorkspaceId,
+  challengeId?: ChallengeId
+): Promise<{
+  totalRewards: number
+  totalIssued: number
+  totalPending: number
+  totalFailed: number
+  byType: Record<string, number>
+}> {
+  try {
+    const whereClause: any = { workspaceId }
+    if (challengeId) whereClause.challengeId = challengeId
+
+    const [rewards, totalRewards, issuedCount, pendingCount, failedCount] = await Promise.all([
+      prisma.rewardIssuance.findMany({
+        where: whereClause,
+        select: { type: true }
+      }),
+      prisma.rewardIssuance.count({ where: whereClause }),
+      prisma.rewardIssuance.count({ where: { ...whereClause, status: 'ISSUED' } }),
+      prisma.rewardIssuance.count({ where: { ...whereClause, status: 'PENDING' } }),
+      prisma.rewardIssuance.count({ where: { ...whereClause, status: 'FAILED' } })
+    ])
+
+    const byType = rewards.reduce((acc, r) => {
+      acc[r.type] = (acc[r.type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    return {
+      totalRewards,
+      totalIssued: issuedCount,
+      totalPending: pendingCount,
+      totalFailed: failedCount,
+      byType
+    }
+  } catch (error) {
+    throw new DatabaseError(`Failed to reconcile rewards: ${error}`)
   }
 }
