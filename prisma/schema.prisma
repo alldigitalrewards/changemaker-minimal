@@ -31,6 +31,7 @@ model Workspace {
   challengeBudgets  ChallengePointsBudget[]
   pointsLedger      PointsLedger[]
   rewardIssuances   RewardIssuance[]
+  communications    WorkspaceCommunication[]
 
   @@index([tenantId])
 }
@@ -67,6 +68,7 @@ model User {
   pointsLedgerTo          PointsLedger[] @relation("PointsLedgerToUser")
   pointsLedgerActor       PointsLedger[] @relation("PointsLedgerActor")
   rewardIssuances         RewardIssuance[]
+  sentCommunications      WorkspaceCommunication[] @relation("CommunicationSender")
 
   @@index([workspaceId])
   @@index([workspaceId, role])
@@ -95,6 +97,7 @@ model Challenge {
   pointsBudget       ChallengePointsBudget?
   pointsLedger       PointsLedger[]
   rewardIssuances    RewardIssuance[]
+  communications     WorkspaceCommunication[]
 
   @@index([workspaceId])
   @@index([workspaceId, createdAt])
@@ -154,6 +157,7 @@ model Activity {
   challenge      Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   template       ActivityTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
   submissions    ActivitySubmission[]
+  communications WorkspaceCommunication[]
 
   @@index([challengeId])
   @@index([templateId])
@@ -393,6 +397,43 @@ enum RewardStatus {
   ISSUED
   FAILED
   CANCELLED
+}
+
+enum CommunicationScope {
+  WORKSPACE
+  CHALLENGE
+  ACTIVITY
+}
+
+enum CommunicationAudience {
+  ALL
+  ENROLLED
+  INVITED
+  COMPLETED
+}
+
+model WorkspaceCommunication {
+  id           String                @id @default(uuid()) @db.Uuid
+  workspaceId  String                @db.Uuid
+  challengeId  String?               @db.Uuid
+  activityId   String?               @db.Uuid
+  scope        CommunicationScope
+  audience     CommunicationAudience @default(ALL)
+  subject      String
+  message      String
+  sentBy       String                @db.Uuid
+  sentAt       DateTime              @default(now())
+  updatedAt    DateTime              @default(now()) @updatedAt
+  workspace    Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge    Challenge?            @relation(fields: [challengeId], references: [id])
+  activity     Activity?             @relation(fields: [activityId], references: [id])
+  sender       User                  @relation("CommunicationSender", fields: [sentBy], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([challengeId])
+  @@index([activityId])
+  @@index([sentBy])
+  @@index([scope, audience])
 }
 
 model ActivityEvent {
