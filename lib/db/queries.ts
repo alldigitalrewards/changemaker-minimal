@@ -126,6 +126,71 @@ export async function getWorkspaceBySlug(slug: string): Promise<WorkspaceWithCou
 }
 
 /**
+ * Optimized workspace dashboard query for /workspaces page
+ * Consolidates all data fetching into a single aggregated query to eliminate N+1 issues
+ * Returns user memberships with pre-calculated counts and workspace details
+ */
+export async function getOptimizedWorkspaceDashboardData(userId: string) {
+  try {
+    // Single query with optimized joins and aggregations
+    const memberships = await prisma.workspaceMembership.findMany({
+      where: { userId },
+      include: {
+        workspace: {
+          include: {
+            _count: {
+              select: {
+                memberships: true,
+                challenges: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { isPrimary: 'desc' },
+        { createdAt: 'asc' }
+      ]
+    })
+
+    // Calculate aggregate totals in-memory (already fetched data)
+    const totalWorkspaces = memberships.length
+    const totalMembers = memberships.reduce((sum, m) => sum + (m.workspace._count?.memberships || 0), 0)
+    const totalChallenges = memberships.reduce((sum, m) => sum + (m.workspace._count?.challenges || 0), 0)
+
+    // Get points balance for all workspaces in a single query
+    const pointsBalances = await prisma.pointsBalance.findMany({
+      where: {
+        userId,
+        workspaceId: { in: memberships.map(m => m.workspaceId) }
+      },
+      select: {
+        workspaceId: true,
+        totalPoints: true,
+        availablePoints: true
+      }
+    })
+
+    // Create a map for quick lookup
+    const pointsMap = new Map(pointsBalances.map(pb => [pb.workspaceId, pb]))
+
+    return {
+      memberships: memberships.map(m => ({
+        ...m,
+        pointsBalance: pointsMap.get(m.workspaceId) || { totalPoints: 0, availablePoints: 0 }
+      })),
+      summary: {
+        totalWorkspaces,
+        totalMembers,
+        totalChallenges
+      }
+    }
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch optimized workspace dashboard data: ${error}`)
+  }
+}
+
+/**
  * Get workspace with full details (heavy query - use sparingly)
  */
 export async function getWorkspaceWithDetails(
@@ -2391,5 +2456,172 @@ export async function reconcileRewards(
     }
   } catch (error) {
     throw new DatabaseError(`Failed to reconcile rewards: ${error}`)
+  }
+}
+
+// =============================================================================
+// PLATFORM-LEVEL QUERIES (SUPERADMIN ONLY)
+// =============================================================================
+
+/**
+ * Get platform-wide statistics for superadmin dashboard
+ * Returns aggregated metrics across all workspaces
+ */
+export async function getPlatformStats(tenantId: string = 'default'): Promise<{
+  totalWorkspaces: number
+  activeWorkspaces: number
+  totalUsers: number
+  totalChallenges: number
+  totalPoints: number
+  trends: {
+    workspaces: number
+    users: number
+    challenges: number
+    points: number
+  }
+}> {
+  try {
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+    const [
+      totalWorkspaces,
+      activeWorkspaces,
+      totalUsers,
+      totalChallenges,
+      totalPointsResult,
+      recentWorkspaces,
+      recentUsers,
+      recentChallenges,
+      recentPointsResult
+    ] = await Promise.all([
+      // Total counts
+      prisma.workspace.count({ where: { tenantId } }),
+      prisma.workspace.count({ where: { tenantId, active: true, published: true } }),
+      prisma.workspaceMembership.count(),
+      prisma.challenge.count(),
+      prisma.pointsBalance.aggregate({ _sum: { totalPoints: true } }),
+
+      // Trend data (last 30 days)
+      prisma.workspace.count({
+        where: {
+          tenantId,
+          createdAt: { gte: thirtyDaysAgo }
+        }
+      }),
+      prisma.workspaceMembership.count({
+        where: {
+          createdAt: { gte: thirtyDaysAgo }
+        }
+      }),
+      prisma.challenge.count({
+        where: {
+          createdAt: { gte: thirtyDaysAgo }
+        }
+      }),
+      prisma.pointsLedger.aggregate({
+        where: {
+          createdAt: { gte: thirtyDaysAgo }
+        },
+        _sum: { amount: true }
+      })
+    ])
+
+    const totalPoints = totalPointsResult._sum.totalPoints || 0
+    const recentPoints = recentPointsResult._sum.amount || 0
+
+    // Calculate percentage trends (simplified - compare to previous 30 days)
+    const workspaceTrend = totalWorkspaces > 0 ? Math.round((recentWorkspaces / totalWorkspaces) * 100) : 0
+    const userTrend = totalUsers > 0 ? Math.round((recentUsers / totalUsers) * 100) : 0
+    const challengeTrend = totalChallenges > 0 ? Math.round((recentChallenges / totalChallenges) * 100) : 0
+    const pointsTrend = totalPoints > 0 ? Math.round((recentPoints / totalPoints) * 100) : 0
+
+    return {
+      totalWorkspaces,
+      activeWorkspaces,
+      totalUsers,
+      totalChallenges,
+      totalPoints,
+      trends: {
+        workspaces: workspaceTrend,
+        users: userTrend,
+        challenges: challengeTrend,
+        points: pointsTrend
+      }
+    }
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch platform stats: ${error}`)
+  }
+}
+
+/**
+ * Get all workspaces with admin details (superadmin only)
+ * Returns workspace data with membership and activity metrics
+ */
+export async function getAllWorkspacesWithDetails(tenantId: string = 'default'): Promise<(Workspace & {
+  _count: {
+    memberships: number
+    challenges: number
+    users: number
+  }
+  memberships: {
+    user: Pick<User, 'id' | 'email'>
+    role: Role
+  }[]
+})[]> {
+  try {
+    return await prisma.workspace.findMany({
+      where: { tenantId },
+      include: {
+        _count: {
+          select: {
+            memberships: true,
+            challenges: true,
+            users: true
+          }
+        },
+        memberships: {
+          where: { role: 'ADMIN' },
+          include: {
+            user: {
+              select: { id: true, email: true }
+            }
+          },
+          take: 5
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch all workspaces: ${error}`)
+  }
+}
+
+/**
+ * Get all users across platform (superadmin only)
+ * Returns user data with workspace memberships
+ */
+export async function getAllPlatformUsers(): Promise<(User & {
+  memberships: {
+    workspace: Pick<Workspace, 'id' | 'slug' | 'name'>
+    role: Role
+    isPrimary: boolean
+  }[]
+})[]> {
+  try {
+    return await prisma.user.findMany({
+      include: {
+        memberships: {
+          include: {
+            workspace: {
+              select: { id: true, slug: true, name: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch all platform users: ${error}`)
   }
 }
