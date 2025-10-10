@@ -7,6 +7,7 @@ This directory consolidates project knowledge that previously lived in the repos
   - [Amp Instructions](agents/amp-instructions.md)
 - **Operations**
   - [Database Migrations](operations/migrations.md)
+  - [Public API Documentation](operations/api-docs.md)
 - **Planning**
   - [Product TODO](planning/todo.md)
   - [Design TODO](planning/todo-design.md)
