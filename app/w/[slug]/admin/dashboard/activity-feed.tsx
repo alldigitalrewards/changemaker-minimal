@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Check, X, Clock, User, Trophy, Mail, Settings, FileText } from 'lucide-react'
+import { Check, X, Clock, User, Trophy, Mail, Settings, FileText, Paperclip, ExternalLink } from 'lucide-react'
 import { quickApproveSubmission, quickRejectSubmission } from './actions'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 interface ActivityFeedProps {
   workspaceId: string
@@ -18,6 +18,11 @@ interface ActivityFeedProps {
 export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: ActivityFeedProps) {
   const [filter, setFilter] = useState<'all' | 'submissions' | 'enrollments' | 'challenges'>('all')
   const [processing, setProcessing] = useState<Set<string>>(new Set())
+  const [queue, setQueue] = useState(pendingSubmissions)
+
+  useEffect(() => {
+    setQueue(pendingSubmissions)
+  }, [pendingSubmissions])
 
   const handleApprove = async (submissionId: string, pointsValue: number) => {
     setProcessing(prev => new Set(prev).add(submissionId))
@@ -25,6 +30,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
       const result = await quickApproveSubmission(submissionId, workspaceId, slug, pointsValue)
       if (result.success) {
         toast.success('Submission approved')
+        setQueue(prev => prev.filter(submission => submission.id !== submissionId))
       } else {
         toast.error(result.error || 'Failed to approve submission')
       }
@@ -43,6 +49,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
       const result = await quickRejectSubmission(submissionId, workspaceId, slug)
       if (result.success) {
         toast.success('Submission rejected')
+        setQueue(prev => prev.filter(submission => submission.id !== submissionId))
       } else {
         toast.error(result.error || 'Failed to reject submission')
       }
@@ -146,109 +153,145 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
   })
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Activity Feed</CardTitle>
-            <CardDescription>Recent workspace activity and pending submissions</CardDescription>
-          </div>
-          <div className="flex gap-2">
+    <div className="space-y-4">
+      {/* Filter Controls */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-700">Filter Activity</h3>
+        <div className="inline-flex gap-1 p-1 bg-gray-100 rounded-lg">
             <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
+              variant="ghost"
               size="sm"
               onClick={() => setFilter('all')}
+              className={filter === 'all' ? 'bg-coral-500 hover:bg-coral-600 text-white' : 'hover:bg-gray-200'}
             >
               All
             </Button>
             <Button
-              variant={filter === 'submissions' ? 'default' : 'outline'}
+              variant="ghost"
               size="sm"
               onClick={() => setFilter('submissions')}
+              className={filter === 'submissions' ? 'bg-coral-500 hover:bg-coral-600 text-white' : 'hover:bg-gray-200'}
             >
               Submissions
+              {queue.length > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 text-xs font-semibold bg-amber-400 text-white rounded">
+                  {queue.length}
+                </span>
+              )}
             </Button>
             <Button
-              variant={filter === 'enrollments' ? 'default' : 'outline'}
+              variant="ghost"
               size="sm"
               onClick={() => setFilter('enrollments')}
+              className={filter === 'enrollments' ? 'bg-coral-500 hover:bg-coral-600 text-white' : 'hover:bg-gray-200'}
             >
               Enrollments
             </Button>
             <Button
-              variant={filter === 'challenges' ? 'default' : 'outline'}
+              variant="ghost"
               size="sm"
               onClick={() => setFilter('challenges')}
+              className={filter === 'challenges' ? 'bg-coral-500 hover:bg-coral-600 text-white' : 'hover:bg-gray-200'}
             >
               Challenges
             </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[500px] overflow-y-auto pr-4">
-          {pendingSubmissions.length > 0 && (
+      </div>
+
+      {/* Activity Content */}
+      <div className="h-[500px] overflow-y-auto pr-2">
+          {queue.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-coral-600 mb-3">Pending Approvals</h3>
               <div className="space-y-3">
-                {pendingSubmissions.map((submission) => (
+                {queue.map((submission) => (
                   <div
                     key={submission.id}
-                    className="p-4 border border-yellow-200 rounded-lg bg-yellow-50"
+                    className="group p-4 border border-amber-200 rounded-lg bg-gradient-to-br from-amber-50 to-white hover:shadow-md transition-all"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className="bg-yellow-100 text-yellow-800">
+                    <div className="space-y-3">
+                      {/* Header - Time and Points */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-white border-amber-300 text-amber-700">
                             <Clock className="h-3 w-3 mr-1" />
-                            Pending
-                          </Badge>
-                          <span className="text-xs text-gray-500">
                             {getRelativeTime(submission.submittedAt)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-coral-100 rounded-md">
+                          <Trophy className="h-3.5 w-3.5 text-coral-600" />
+                          <span className="text-sm font-bold text-coral-700">
+                            {submission.activity.pointsValue}
                           </span>
                         </div>
-                        <p className="text-sm font-medium text-gray-900">
+                      </div>
+
+                      {/* Participant & Challenge Info */}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
                           {submission.user.email}
                         </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {submission.activity.template.name} - {submission.activity.challenge.title}
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          {submission.activity.template.name} • {submission.activity.challenge.title}
                         </p>
-                        {submission.textContent && (
-                          <p className="text-xs text-gray-500 mt-2 line-clamp-2">
+                      </div>
+
+                      {/* Content Preview */}
+                      {submission.textContent && (
+                        <div className="p-2.5 bg-white rounded border border-gray-200">
+                          <p className="text-xs text-gray-700 line-clamp-2">
                             {submission.textContent}
                           </p>
-                        )}
-                        {submission.linkUrl && (
-                          <a
-                            href={submission.linkUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-coral-600 hover:underline mt-1 block"
-                          >
-                            View submission link
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
+                        </div>
+                      )}
+
+                      {/* Attachments */}
+                      {(submission.linkUrl || submission.fileUrls?.length > 0) && (
+                        <div className="flex flex-wrap gap-2">
+                          {submission.linkUrl && (
+                            <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                              <a href={submission.linkUrl} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Link
+                              </a>
+                            </Button>
+                          )}
+                          {submission.fileUrls?.map((url: string, index: number) => (
+                            <Button key={`${submission.id}-file-${index}`} variant="outline" size="sm" className="h-7 text-xs" asChild>
+                              <a href={url} target="_blank" rel="noopener noreferrer">
+                                <Paperclip className="h-3 w-3 mr-1" />
+                                File {index + 1}
+                              </a>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="text-green-600 hover:bg-green-50 border-green-300"
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white h-9"
                           onClick={() => handleApprove(submission.id, submission.activity.pointsValue)}
                           disabled={processing.has(submission.id)}
                         >
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve ({submission.activity.pointsValue} pts)
+                          <Check className="h-4 w-4 mr-1.5" />
+                          Approve
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-red-600 hover:bg-red-50 border-red-300"
+                          className="flex-1 border-red-300 text-red-600 hover:bg-red-50 h-9"
                           onClick={() => handleReject(submission.id)}
                           disabled={processing.has(submission.id)}
                         >
-                          <X className="h-4 w-4 mr-1" />
+                          <X className="h-4 w-4 mr-1.5" />
                           Reject
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-9 px-3" asChild>
+                          <Link href={`/w/${slug}/admin/challenges/${submission.activity.challengeId}/submissions?status=pending`}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
                         </Button>
                       </div>
                     </div>
@@ -287,7 +330,6 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   )
 }
