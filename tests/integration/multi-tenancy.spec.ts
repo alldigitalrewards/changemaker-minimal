@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
+import { canAccessWorkspace } from '../../lib/auth/api-auth';
 
 test.describe('Multi-Tenancy Integration Tests', () => {
   let tenant1WorkspaceId: string;
@@ -58,6 +59,45 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     await prisma.workspace.deleteMany({
       where: { id: { in: [tenant1WorkspaceId, tenant2WorkspaceId] } }
     });
+  });
+
+  test('Membership required for workspace access regardless of tenant match', async () => {
+    const tenantId = `tenant-membership-${Date.now()}`;
+    const workspace = await prisma.workspace.create({
+      data: {
+        slug: `membership-test-${Date.now()}`,
+        name: 'Membership Gate Workspace',
+        tenantId
+      }
+    });
+
+    const adminUser = await prisma.user.create({
+      data: {
+        email: `membership-admin-${Date.now()}@test.com`,
+        role: 'ADMIN',
+        tenantId,
+        permissions: []
+      }
+    });
+
+    // No membership should deny access
+    expect(canAccessWorkspace(adminUser as any, workspace as any, false)).toBe(false);
+
+    const membership = await prisma.workspaceMembership.create({
+      data: {
+        userId: adminUser.id,
+        workspaceId: workspace.id,
+        role: 'ADMIN',
+        isPrimary: true
+      }
+    });
+
+    expect(membership).toBeTruthy();
+    expect(canAccessWorkspace(adminUser as any, workspace as any, true)).toBe(true);
+
+    await prisma.workspaceMembership.delete({ where: { id: membership.id } });
+    await prisma.user.delete({ where: { id: adminUser.id } });
+    await prisma.workspace.delete({ where: { id: workspace.id } });
   });
 
   test('Verify tenantId on all records', async () => {

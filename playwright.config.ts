@@ -62,7 +62,7 @@ export default defineConfig({
   // Only start local server when testing against localhost
   // Reuse existing dev server if available (faster for development)
   webServer: process.env.BASE_URL?.startsWith('http://localhost') !== false && !process.env.BASE_URL?.startsWith('https://') ? {
-    command: 'pnpm dev',
+    command: 'SKIP_SUPABASE=1 pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120 * 1000,
