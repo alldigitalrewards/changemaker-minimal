@@ -713,7 +713,7 @@ async function seed() {
     let submissionCount = 0
     const enrolledEnrollments = await prisma.enrollment.findMany({
       where: { status: EnrollmentStatus.ENROLLED },
-      include: { challenge: true },
+      include: { Challenge: true },
       take: 10 // Limit to 10 for sample data
     })
 
