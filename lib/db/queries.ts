@@ -33,7 +33,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspaceParticipantSegment, type WorkspacePointsBudget, type ChallengePointsBudget, type WorkspaceCommunication, CommunicationScope, CommunicationAudience } from '@prisma/client'
+import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspacePointsBudget, type ChallengePointsBudget, type WorkspaceCommunication, CommunicationScope, CommunicationAudience } from '@prisma/client'
 import { type Role, type ActivityType, type RewardType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { randomBytes } from 'crypto'
@@ -67,8 +67,8 @@ export class ResourceNotFoundError extends DatabaseError {
 
 export type WorkspaceWithCounts = Workspace & {
   _count: {
-    memberships: number
-    challenges: number
+    WorkspaceMembership: number
+    Challenge: number
   }
 }
 
@@ -114,8 +114,8 @@ export async function getWorkspaceBySlug(slug: string): Promise<WorkspaceWithCou
       include: {
         _count: {
           select: {
-            memberships: true,
-            challenges: true
+            WorkspaceMembership: true,
+            Challenge: true
           }
         }
       }
@@ -136,12 +136,12 @@ export async function getOptimizedWorkspaceDashboardData(userId: string) {
     const memberships = await prisma.workspaceMembership.findMany({
       where: { userId },
       include: {
-        workspace: {
+        Workspace: {
           include: {
             _count: {
               select: {
-                memberships: true,
-                challenges: true
+                WorkspaceMembership: true,
+                Challenge: true
               }
             }
           }
@@ -155,8 +155,8 @@ export async function getOptimizedWorkspaceDashboardData(userId: string) {
 
     // Calculate aggregate totals in-memory (already fetched data)
     const totalWorkspaces = memberships.length
-    const totalMembers = memberships.reduce((sum, m) => sum + (m.workspace._count?.memberships || 0), 0)
-    const totalChallenges = memberships.reduce((sum, m) => sum + (m.workspace._count?.challenges || 0), 0)
+    const totalMembers = memberships.reduce((sum, m) => sum + (m.Workspace._count?.WorkspaceMembership || 0), 0)
+    const totalChallenges = memberships.reduce((sum, m) => sum + (m.Workspace._count?.Challenge || 0), 0)
 
     // Get points balance for all workspaces in a single query
     const pointsBalances = await prisma.pointsBalance.findMany({
@@ -935,69 +935,69 @@ export async function upsertWorkspaceEmailTemplate(
 // PARTICIPANT SEGMENTS & MEMBERSHIP PREFERENCES
 // =============================================================================
 
-export async function listSegments(workspaceId: WorkspaceId): Promise<WorkspaceParticipantSegment[]> {
-  try {
-    return await prisma.workspaceParticipantSegment.findMany({
-      where: { workspaceId },
-      orderBy: { updatedAt: 'desc' }
-    })
-  } catch (error) {
-    throw new DatabaseError(`Failed to list segments: ${error}`)
-  }
-}
-
-export async function createSegment(
-  workspaceId: WorkspaceId,
-  data: { name: string; description?: string | null; filterJson?: any },
-  createdBy: string
-): Promise<WorkspaceParticipantSegment> {
-  try {
-    const seg = await prisma.workspaceParticipantSegment.create({
-      data: {
-        workspaceId,
-        name: data.name,
-        description: data.description || null,
-        filterJson: data.filterJson ?? null,
-        createdBy
-      }
-    })
-    return seg
-  } catch (error) {
-    throw new DatabaseError(`Failed to create segment: ${error}`)
-  }
-}
-
-export async function updateSegment(
-  id: string,
-  workspaceId: WorkspaceId,
-  data: { name?: string; description?: string | null; filterJson?: any }
-): Promise<WorkspaceParticipantSegment> {
-  const seg = await prisma.workspaceParticipantSegment.findFirst({ where: { id, workspaceId } })
-  if (!seg) throw new ResourceNotFoundError('WorkspaceParticipantSegment', id)
-  try {
-    return await prisma.workspaceParticipantSegment.update({
-      where: { id },
-      data: {
-        name: data.name ?? seg.name,
-        description: data.description === undefined ? seg.description : data.description,
-        filterJson: data.filterJson === undefined ? seg.filterJson : data.filterJson
-      }
-    })
-  } catch (error) {
-    throw new DatabaseError(`Failed to update segment: ${error}`)
-  }
-}
-
-export async function deleteSegment(id: string, workspaceId: WorkspaceId): Promise<void> {
-  const seg = await prisma.workspaceParticipantSegment.findFirst({ where: { id, workspaceId } })
-  if (!seg) throw new ResourceNotFoundError('WorkspaceParticipantSegment', id)
-  try {
-    await prisma.workspaceParticipantSegment.delete({ where: { id } })
-  } catch (error) {
-    throw new DatabaseError(`Failed to delete segment: ${error}`)
-  }
-}
-
+// export async function listSegments(workspaceId: WorkspaceId): Promise<WorkspaceParticipantSegment[]> {
+//   try {
+//     return await prisma.workspaceParticipantSegment.findMany({
+//       where: { workspaceId },
+//       orderBy: { updatedAt: 'desc' }
+//     })
+//   } catch (error) {
+//     throw new DatabaseError(`Failed to list segments: ${error}`)
+//   }
+// }
+// 
+// export async function createSegment(
+//   workspaceId: WorkspaceId,
+//   data: { name: string; description?: string | null; filterJson?: any },
+//   createdBy: string
+// ): Promise<WorkspaceParticipantSegment> {
+//   try {
+//     const seg = await prisma.workspaceParticipantSegment.create({
+//       data: {
+//         workspaceId,
+//         name: data.name,
+//         description: data.description || null,
+//         filterJson: data.filterJson ?? null,
+//         createdBy
+//       }
+//     })
+//     return seg
+//   } catch (error) {
+//     throw new DatabaseError(`Failed to create segment: ${error}`)
+//   }
+// }
+// 
+// export async function updateSegment(
+//   id: string,
+//   workspaceId: WorkspaceId,
+//   data: { name?: string; description?: string | null; filterJson?: any }
+// ): Promise<WorkspaceParticipantSegment> {
+//   const seg = await prisma.workspaceParticipantSegment.findFirst({ where: { id, workspaceId } })
+//   if (!seg) throw new ResourceNotFoundError('WorkspaceParticipantSegment', id)
+//   try {
+//     return await prisma.workspaceParticipantSegment.update({
+//       where: { id },
+//       data: {
+//         name: data.name ?? seg.name,
+//         description: data.description === undefined ? seg.description : data.description,
+//         filterJson: data.filterJson === undefined ? seg.filterJson : data.filterJson
+//       }
+//     })
+//   } catch (error) {
+//     throw new DatabaseError(`Failed to update segment: ${error}`)
+//   }
+// }
+// 
+// export async function deleteSegment(id: string, workspaceId: WorkspaceId): Promise<void> {
+//   const seg = await prisma.workspaceParticipantSegment.findFirst({ where: { id, workspaceId } })
+//   if (!seg) throw new ResourceNotFoundError('WorkspaceParticipantSegment', id)
+//   try {
+//     await prisma.workspaceParticipantSegment.delete({ where: { id } })
+//   } catch (error) {
+//     throw new DatabaseError(`Failed to delete segment: ${error}`)
+//   }
+// }
+// 
 export function resolveSegmentWhere(filterJson: any, workspaceId: WorkspaceId) {
   // Very simple MVP resolver: handle enrollment status and points range
   const where: any = {

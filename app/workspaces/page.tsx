@@ -44,7 +44,7 @@ export default async function WorkspacesPage() {
     name: string;
     slug: string;
     createdAt: Date;
-    _count: { memberships: number; challenges: number }
+    _count: { WorkspaceMembership: number; Challenge: number }
   }[] = []
 
   if (userIsPlatformAdmin) {
@@ -56,7 +56,7 @@ export default async function WorkspacesPage() {
         name: true,
         slug: true,
         createdAt: true,
-        _count: { select: { memberships: true, challenges: true } }
+        _count: { select: { WorkspaceMembership: true, Challenge: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -80,7 +80,7 @@ export default async function WorkspacesPage() {
           name: true,
           slug: true,
           createdAt: true,
-          _count: { select: { memberships: true, challenges: true } }
+          _count: { select: { WorkspaceMembership: true, Challenge: true } }
         },
         orderBy: { createdAt: 'desc' }
       })
@@ -118,7 +118,7 @@ export default async function WorkspacesPage() {
           memberships={memberships.map(m => ({
             workspaceId: m.workspaceId,
             role: m.role,
-            workspace: m.workspace
+            workspace: m.Workspace
           }))}
           currentView="my-workspaces"
           userRole={primaryMembership?.role || 'PARTICIPANT'}
@@ -197,13 +197,13 @@ export default async function WorkspacesPage() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {memberships.map((membership) => {
                   const workspace = {
-                    ...membership.workspace,
+                    ...membership.Workspace,
                     _count: {
-                      users: membership.workspace._count?.memberships || 0,
-                      challenges: membership.workspace._count?.challenges || 0
+                      users: membership.Workspace._count?.WorkspaceMembership || 0,
+                      challenges: membership.Workspace._count?.Challenge || 0
                     }
                   }
-                  
+
                   return (
                     <WorkspaceCard
                       key={workspace.id}
@@ -269,8 +269,8 @@ export default async function WorkspacesPage() {
                     workspace={{
                       ...workspace,
                       _count: {
-                        users: workspace._count.memberships,
-                        challenges: workspace._count.challenges
+                        users: workspace._count.WorkspaceMembership,
+                        challenges: workspace._count.Challenge
                       }
                     }}
                     isUserWorkspace={isUserWorkspace}

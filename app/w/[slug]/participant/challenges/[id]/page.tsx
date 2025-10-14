@@ -63,7 +63,7 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
           enrollmentDeadline: true,
           rewardType: true,
           rewardConfig: true,
-          enrollments: {
+          Enrollment: {
             where: {
               userId: userId,
             },
@@ -74,14 +74,14 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
               createdAt: true,
             },
           },
-          activities: {
+          Activity: {
             select: {
               id: true,
               pointsValue: true,
               maxSubmissions: true,
               deadline: true,
               isRequired: true,
-              template: {
+              ActivityTemplate: {
                 select: {
                   name: true,
                   description: true,
@@ -89,7 +89,7 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
                   requiresApproval: true,
                 },
               },
-              submissions: {
+              ActivitySubmission: {
                 where: {
                   userId: userId,
                 },
@@ -105,14 +105,14 @@ async function getChallengeForParticipant(workspaceSlug: string, challengeId: st
               },
               _count: {
                 select: {
-                  submissions: true,
+                  ActivitySubmission: true,
                 },
               },
             },
           },
           _count: {
             select: {
-              enrollments: true,
+              Enrollment: true,
             },
           },
         },
@@ -378,8 +378,8 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
 
     // Gate visibility: require published status AND user is invited/enrolled
     const status: ChallengeStatus | undefined = challenge?.status
-    const isEnrolled = Boolean(challenge?.enrollments && challenge.enrollments.length > 0);
-    const enrollmentStatus = isEnrolled ? challenge!.enrollments![0]?.status : undefined
+    const isEnrolled = Boolean(challenge?.Enrollment && challenge.Enrollment.length > 0);
+    const enrollmentStatus = isEnrolled ? challenge!.Enrollment![0]?.status : undefined
     const hasAccess = (enrollmentStatus === 'INVITED' || enrollmentStatus === 'ENROLLED')
     if ((status && status !== 'PUBLISHED') || !hasAccess) {
       notFound();
@@ -387,8 +387,8 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
 
     // Define variables with explicit typing and null checks
     // isEnrolled computed above for consistency
-    const enrollment = challenge?.enrollments?.[0];
-    const hasActivities = Boolean(challenge?.activities && challenge.activities.length > 0);
+    const enrollment = challenge?.Enrollment?.[0];
+    const hasActivities = Boolean(challenge?.Activity && challenge.Activity.length > 0);
 
     return (
     <div className="space-y-6">
@@ -403,7 +403,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
           </Link>
           <div className="space-y-2 md:space-y-0">
             <h1 className="text-2xl md:text-3xl font-bold text-navy-900">{challenge.title}</h1>
-            <p className="text-gray-600 md:hidden">{challenge._count.enrollments} participants enrolled</p>
+            <p className="text-gray-600 md:hidden">{challenge._count.Enrollment} participants enrolled</p>
           </div>
         </div>
         <div className="flex items-center justify-between md:justify-end md:space-x-3">
@@ -438,7 +438,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{challenge._count.enrollments}</div>
+            <div className="text-2xl font-bold text-blue-900">{challenge._count.Enrollment}</div>
             <p className="text-xs text-blue-700">Total enrolled</p>
           </CardContent>
         </Card>
@@ -490,13 +490,13 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                   {formatRewardValue(challenge.rewardType as any, pointsBalance?.totalPoints || 0)}
                 </div>
                 <p className="text-xs text-amber-700">
-                  / {formatRewardValue(challenge.rewardType as any, challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0)} available
+                  / {formatRewardValue(challenge.rewardType as any, challenge.Activity?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0)} available
                 </p>
               </div>
             ) : (
               <div>
                 <div className="text-xl md:text-2xl font-bold text-amber-900">
-                  {formatRewardValue(challenge.rewardType as any, challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0)}
+                  {formatRewardValue(challenge.rewardType as any, challenge.Activity?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 0)}
                 </div>
                 <p className="text-xs text-amber-700">
                   {getRewardLabel(challenge.rewardType as any).split(' ')[0]} available
@@ -513,9 +513,9 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
           <TabsTrigger value="overview" className="text-xs md:text-sm py-2">Overview</TabsTrigger>
           <TabsTrigger value="activities" className="text-xs md:text-sm py-2">
             Activities
-            {isEnrolled && challenge.activities && challenge.activities.length > 0 && (
+            {isEnrolled && challenge.Activity && challenge.Activity.length > 0 && (
               <Badge className="ml-1 bg-coral-500 text-white text-[10px] px-1.5 py-0.5">
-                {challenge.activities.length}
+                {challenge.Activity.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -589,14 +589,14 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                     <Users className="h-4 w-4 mr-2 text-blue-500" />
                     <div>
                       <span className="font-medium block text-xs text-gray-500">Participants</span>
-                      <span className="text-gray-700">{challenge._count.enrollments} enrolled</span>
+                      <span className="text-gray-700">{challenge._count.Enrollment} enrolled</span>
                     </div>
                   </div>
                   <div className="flex items-center text-sm">
                     <Star className="h-4 w-4 mr-2 text-amber-500" />
                     <div>
                       <span className="font-medium block text-xs text-gray-500">Total Points</span>
-                      <span className="text-gray-700">{challenge.activities?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 100} points</span>
+                      <span className="text-gray-700">{challenge.Activity?.reduce((sum, activity) => sum + activity.pointsValue, 0) || 100} points</span>
                     </div>
                   </div>
                 </CardContent>
@@ -608,7 +608,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
         {/* Activities Tab */}
         <TabsContent value="activities" className="space-y-4">
           {isEnrolled ? (
-            challenge.activities && challenge.activities.length > 0 ? (
+            challenge.Activity && challenge.Activity.length > 0 ? (
               <>
                 {/* Activities Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-coral-50 to-amber-50 rounded-lg border border-coral-200">
@@ -617,13 +617,13 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                     <p className="text-sm text-coral-700">Complete activities to earn points and progress</p>
                   </div>
                   <Badge className="bg-coral-500 text-white w-fit">
-                    {challenge.activities.length} activities available
+                    {challenge.Activity.length} activities available
                   </Badge>
                 </div>
 
                 <div className="space-y-4">
-                  {challenge.activities.map((activity) => {
-                    const userSubmissions = activity.submissions || [];
+                  {challenge.Activity.map((activity) => {
+                    const userSubmissions = activity.ActivitySubmission || [];
                     const submissionCount = userSubmissions.length;
                     const canSubmit = submissionCount < activity.maxSubmissions;
                     const hasDeadlinePassed = activity.deadline && new Date() > new Date(activity.deadline);
@@ -635,7 +635,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                           <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
                             <div className="flex-1 space-y-2">
                               <CardTitle className="flex flex-wrap items-center gap-2">
-                                <span className="text-lg">{activity.template.name}</span>
+                                <span className="text-lg">{activity.ActivityTemplate.name}</span>
                                 {activity.isRequired && (
                                   <Badge variant="destructive" className="text-xs">Required</Badge>
                                 )}
@@ -644,7 +644,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                                 </Badge>
                               </CardTitle>
                               <CardDescription className="text-sm leading-relaxed">
-                                {activity.template.description}
+                                {activity.ActivityTemplate.description}
                               </CardDescription>
                             </div>
                             
@@ -668,9 +668,9 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                           <div className="flex flex-wrap gap-3 text-xs bg-gray-50 p-3 rounded-lg">
                             <span className="flex items-center gap-1">
                               <Activity className="h-3 w-3 text-coral-500" />
-                              {activity.template.type.replace('_', ' ').toLowerCase()}
+                              {activity.ActivityTemplate.type.replace('_', ' ').toLowerCase()}
                             </span>
-                            {activity.template.requiresApproval && (
+                            {activity.ActivityTemplate.requiresApproval && (
                               <span className="flex items-center gap-1">
                                 <CheckCircle className="h-3 w-3 text-blue-500" />
                                 Requires approval
@@ -719,14 +719,14 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                             {canSubmit && !hasDeadlinePassed ? (
                               <SimpleSubmissionDialog 
                                 activityId={activity.id}
-                                activityName={activity.template.name}
-                                activityType={activity.template.type}
+                                activityName={activity.ActivityTemplate.name}
+                                activityType={activity.ActivityTemplate.type}
                                 pointsValue={activity.pointsValue}
                                 maxSubmissions={activity.maxSubmissions}
                                 deadline={activity.deadline ? activity.deadline.toISOString() : null}
                                 isRequired={activity.isRequired}
-                                requiresApproval={activity.template.requiresApproval}
-                                submissionCount={activity._count.submissions}
+                                requiresApproval={activity.ActivityTemplate.requiresApproval}
+                                submissionCount={activity._count.ActivitySubmission}
                                 challengeId={challenge.id}
                                 challengeTitle={challenge.title}
                                 workspaceSlug={slug}
@@ -797,30 +797,30 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center p-3 bg-white rounded-lg border">
                       <div className="text-2xl font-bold text-coral-600">
-                        {challenge.activities?.reduce((count, activity) => 
-                          count + (activity.submissions && activity.submissions.length > 0 ? 1 : 0), 0) || 0}
+                        {challenge.Activity?.reduce((count, activity) => 
+                          count + (activity.ActivitySubmission && activity.ActivitySubmission.length > 0 ? 1 : 0), 0) || 0}
                       </div>
                       <div className="text-xs text-gray-600">Activities Attempted</div>
                     </div>
                     <div className="text-center p-3 bg-white rounded-lg border">
                       <div className="text-2xl font-bold text-green-600">
-                        {challenge.activities?.reduce((count, activity) => 
-                          count + (activity.submissions?.filter(s => s.status === 'APPROVED').length || 0), 0) || 0}
+                        {challenge.Activity?.reduce((count, activity) => 
+                          count + (activity.ActivitySubmission?.filter(s => s.status === 'APPROVED').length || 0), 0) || 0}
                       </div>
                       <div className="text-xs text-gray-600">Approved</div>
                     </div>
                     <div className="text-center p-3 bg-white rounded-lg border">
                       <div className="text-2xl font-bold text-amber-600">
-                        {challenge.activities?.reduce((count, activity) => 
-                          count + (activity.submissions?.reduce((sum, s) => sum + (s.pointsAwarded || 0), 0) || 0), 0) || 0}
+                        {challenge.Activity?.reduce((count, activity) => 
+                          count + (activity.ActivitySubmission?.reduce((sum, s) => sum + (s.pointsAwarded || 0), 0) || 0), 0) || 0}
                       </div>
                       <div className="text-xs text-gray-600">Points Earned</div>
                     </div>
                     <div className="text-center p-3 bg-white rounded-lg border">
                       <div className="text-2xl font-bold text-blue-600">
-                        {challenge.activities?.length ? 
-                          Math.round(((challenge.activities.reduce((count, activity) => 
-                            count + (activity.submissions && activity.submissions.length > 0 ? 1 : 0), 0)) / challenge.activities.length) * 100) : 0}%
+                        {challenge.Activity?.length ? 
+                          Math.round(((challenge.Activity.reduce((count, activity) => 
+                            count + (activity.ActivitySubmission && activity.ActivitySubmission.length > 0 ? 1 : 0), 0)) / challenge.Activity.length) * 100) : 0}%
                       </div>
                       <div className="text-xs text-gray-600">Completion</div>
                     </div>
@@ -853,21 +853,21 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                     </div>
 
                     {/* Activities Progress */}
-                    {challenge.activities && challenge.activities.length > 0 ? (
+                    {challenge.Activity && challenge.Activity.length > 0 ? (
                       <>
                         <div className="flex items-start gap-4 p-4 border rounded-lg bg-blue-50 border-blue-200">
                           <Activity className="h-6 w-6 text-blue-500 mt-1 flex-shrink-0" />
                           <div className="flex-1">
                             <p className="font-medium text-blue-800">Activities Available</p>
                             <p className="text-sm text-blue-700">
-                              {challenge.activities.length} activities to complete
+                              {challenge.Activity.length} activities to complete
                             </p>
                           </div>
                         </div>
 
                         {/* Individual Activity Progress */}
-                        {challenge.activities.map((activity) => {
-                          const userSubmissions = activity.submissions || [];
+                        {challenge.Activity.map((activity) => {
+                          const userSubmissions = activity.ActivitySubmission || [];
                           const latestSubmission = userSubmissions[0];
                           const hasSubmitted = userSubmissions.length > 0;
                           
@@ -882,7 +882,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                               )}
                               <div className="flex-1">
                                 <p className="font-medium">
-                                  {activity.template.name}
+                                  {activity.ActivityTemplate.name}
                                   {activity.isRequired && (
                                     <Badge className="ml-2 bg-red-100 text-red-800 text-xs">Required</Badge>
                                   )}

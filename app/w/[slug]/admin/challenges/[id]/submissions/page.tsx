@@ -38,7 +38,7 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
   const sp = (await (searchParams || Promise.resolve({} as any))) as { status?: string }
 
   const challenge = await prisma.challenge.findFirst({
-    where: { id, workspace: { slug } },
+    where: { id, Workspace: { slug } },
     select: { id: true, title: true },
   })
 
@@ -54,20 +54,20 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
   const [statusStats, submissions, oldestPending] = await Promise.all([
     prisma.activitySubmission.groupBy({
       by: ['status'],
-      where: { activity: { challengeId: challenge.id } },
+      where: { Activity: { challengeId: challenge.id } },
       _count: true,
     }),
     prisma.activitySubmission.findMany({
       where: {
-        activity: { challengeId: challenge.id },
+        Activity: { challengeId: challenge.id },
         ...statusWhere,
       },
       orderBy: statusFilter === 'PENDING' ? { submittedAt: 'asc' } : { submittedAt: 'desc' },
       include: {
-        user: { select: { email: true } },
-        activity: {
+        User: { select: { email: true } },
+        Activity: {
           include: {
-            template: {
+            ActivityTemplate: {
               select: {
                 name: true,
                 type: true,
@@ -80,7 +80,7 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
     }),
     prisma.activitySubmission.findFirst({
       where: {
-        activity: { challengeId: challenge.id },
+        Activity: { challengeId: challenge.id },
         status: 'PENDING',
       },
       orderBy: { submittedAt: 'asc' },
@@ -169,7 +169,7 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
               <p className="mt-2 text-2xl font-semibold text-purple-600">
                 {submissions.length
                   ? Math.round(
-                      submissions.reduce((sum, submission) => sum + submission.activity.pointsValue, 0) /
+                      submissions.reduce((sum, submission) => sum + submission.Activity.pointsValue, 0) /
                         submissions.length,
                     )
                   : 0}
@@ -230,12 +230,12 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
                 <CardHeader className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <CardTitle className="text-lg font-semibold">
-                      {submission.activity.template.name || 'Activity Submission'}
+                      {submission.Activity.ActivityTemplate.name || 'Activity Submission'}
                     </CardTitle>
                     <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                       <span className="inline-flex items-center gap-1">
                         <Mail className="h-3.5 w-3.5 text-coral-500" />
-                        {submission.user.email}
+                        {submission.User.email}
                       </span>
                       <span>•</span>
                       <span className="inline-flex items-center gap-1">
@@ -254,9 +254,9 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
                       {config.label}
                     </Badge>
                     <Badge variant="outline" className="text-xs">
-                      {submission.activity.pointsValue} pts
+                      {submission.Activity.pointsValue} pts
                     </Badge>
-                    {submission.activity.template.requiresApproval && (
+                    {submission.Activity.ActivityTemplate.requiresApproval && (
                       <Badge variant="outline" className="text-xs">
                         Requires approval
                       </Badge>
@@ -336,13 +336,13 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
                               submissionId={submission.id}
                               action="approve"
                               workspaceSlug={slug}
-                              pointsValue={submission.activity.pointsValue}
+                              pointsValue={submission.Activity.pointsValue}
                             />
                             <SubmissionReviewButton
                               submissionId={submission.id}
                               action="reject"
                               workspaceSlug={slug}
-                              pointsValue={submission.activity.pointsValue}
+                              pointsValue={submission.Activity.pointsValue}
                             />
                           </>
                         ) : (
