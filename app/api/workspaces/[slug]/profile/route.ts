@@ -24,7 +24,7 @@ export const GET = withErrorHandling(async (
     fullName,
     workspace: { id: workspace.id, slug: workspace.slug, name: workspace.name },
     points: balance,
-    enrollments: enrollments.map(e => ({ id: e.id, status: e.status, challenge: e.challenge }))
+    enrollments: enrollments.map(e => ({ id: e.id, status: e.status, challenge: e.Challenge }))
   })
 })
 
