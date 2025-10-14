@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
           include: { WorkspaceMembership: true }
         });
 
+        let isNewUser = false;
         if (!dbUser) {
           // Create user via Supabase Auth
           const adminSupabase = createClient();
@@ -94,6 +95,8 @@ export async function POST(request: NextRequest) {
             },
             include: { WorkspaceMembership: true }
           });
+
+          isNewUser = true;
         }
 
         if (!dbUser) {
@@ -136,6 +139,24 @@ export async function POST(request: NextRequest) {
             isPrimary
           }
         });
+
+        // Send invitation email for new users
+        if (isNewUser) {
+          try {
+            const adminSupabase = createClient();
+            const { error: resetError } = await (await adminSupabase).auth.resetPasswordForEmail(email, {
+              redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password`
+            });
+
+            if (resetError) {
+              console.error(`Failed to send invitation email to ${email}:`, resetError);
+              // Don't fail the whole operation, just log it
+            }
+          } catch (emailError) {
+            console.error(`Error sending invitation email to ${email}:`, emailError);
+            // Don't fail the whole operation
+          }
+        }
 
         created++;
       } catch (error) {
