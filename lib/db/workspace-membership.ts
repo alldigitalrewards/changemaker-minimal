@@ -42,13 +42,13 @@ export async function listMemberships(userId: string): Promise<WorkspaceMembersh
         userId
       },
       include: {
-        user: true,
-        workspace: {
+        User: true,
+        Workspace: {
           include: {
             _count: {
               select: {
-                memberships: true,
-                challenges: true
+                WorkspaceMembership: true,
+                Challenge: true
               }
             }
           }
@@ -77,13 +77,13 @@ export async function listWorkspaceMemberships(workspaceId: string): Promise<Wor
         workspaceId
       },
       include: {
-        user: true,
-        workspace: {
+        User: true,
+        Workspace: {
           include: {
             _count: {
               select: {
-                memberships: true,
-                challenges: true
+                WorkspaceMembership: true,
+                Challenge: true
               }
             }
           }
@@ -161,13 +161,13 @@ export async function getPrimaryMembership(userId: string): Promise<WorkspaceMem
         isPrimary: true
       },
       include: {
-        user: true,
-        workspace: {
+        User: true,
+        Workspace: {
           include: {
             _count: {
               select: {
-                memberships: true,
-                challenges: true
+                WorkspaceMembership: true,
+                Challenge: true
               }
             }
           }
