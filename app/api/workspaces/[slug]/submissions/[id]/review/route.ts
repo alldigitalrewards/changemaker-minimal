@@ -22,9 +22,10 @@ export const POST = withErrorHandling(async (
     const existingSubmission = await prisma.activitySubmission.findUnique({
       where: { id },
       include: {
-        activity: {
+        Activity: {
           include: {
-            challenge: true
+            Challenge: true,
+            ActivityTemplate: true
           }
         }
       }
@@ -71,11 +72,11 @@ export const POST = withErrorHandling(async (
         // Points awarded provided (legacy)
         rewardType = 'points'
         rewardAmount = pointsAwarded
-      } else if (existingSubmission.activity.challenge.rewardType) {
+      } else if (existingSubmission.Activity.Challenge.rewardType) {
         // Use challenge reward configuration - normalize to lowercase
-        const challengeRewardType = existingSubmission.activity.challenge.rewardType as string
+        const challengeRewardType = existingSubmission.Activity.Challenge.rewardType as string
         rewardType = challengeRewardType.toLowerCase() as 'points' | 'sku' | 'monetary'
-        const config = existingSubmission.activity.challenge.rewardConfig as any
+        const config = existingSubmission.Activity.Challenge.rewardConfig as any
         if (config) {
           rewardAmount = config.pointsAmount || config.amount || null
           rewardCurrency = config.currency || null
@@ -89,7 +90,7 @@ export const POST = withErrorHandling(async (
         await issueReward({
           workspaceId: workspace.id,
           userId: submission.userId,
-          challengeId: submission.activity.challengeId,
+          challengeId: existingSubmission.Activity.challengeId,
           submissionId: submission.id,
           type: rewardType,
           amount: rewardAmount ?? undefined,
@@ -103,7 +104,7 @@ export const POST = withErrorHandling(async (
     // Log review event
     await logActivityEvent({
       workspaceId: workspace.id,
-      challengeId: submission.activity.challengeId,
+      challengeId: existingSubmission.Activity.challengeId,
       userId: submission.userId,
       actorUserId: user.dbUser.id,
       type: status === 'APPROVED' ? 'SUBMISSION_APPROVED' : 'SUBMISSION_REJECTED',
@@ -111,7 +112,7 @@ export const POST = withErrorHandling(async (
         submissionId: submission.id,
         pointsAwarded: pointsAwarded || reward?.amount || 0,
         activityId: submission.activityId,
-        activityName: submission.activity?.template?.name,
+        activityName: existingSubmission.Activity?.ActivityTemplate?.name,
         reviewNotes: reviewNotes || undefined
       }
     })
