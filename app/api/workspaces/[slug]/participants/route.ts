@@ -15,13 +15,13 @@ export const GET = withErrorHandling(async (
 
   const memberships = await prisma.workspaceMembership.findMany({
     where: { workspaceId: workspace.id },
-    include: { user: { select: { id: true, email: true } } },
+    include: { User: { select: { id: true, email: true } } },
     orderBy: { createdAt: 'asc' }
   })
 
   const participants = memberships.map(m => ({
-    id: m.user.id,
-    email: m.user.email,
+    id: m.User.id,
+    email: m.User.email,
     role: m.role,
   }));
 
