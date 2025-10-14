@@ -37,6 +37,13 @@ import { type Workspace, type User, type Challenge, type Enrollment, type Activi
 import { type Role, type ActivityType, type RewardType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { randomBytes } from 'crypto'
+import type {
+  EnrollmentWithDetails as CanonicalEnrollmentWithDetails,
+  ChallengeWithDetails as CanonicalChallengeWithDetails,
+  WorkspaceWithDetails as CanonicalWorkspaceWithDetails,
+  UserWithWorkspace as CanonicalUserWithWorkspace,
+  ActivitySubmissionWithDetails as CanonicalActivitySubmissionWithDetails
+} from './types'
 
 // =============================================================================
 // ERROR TYPES
@@ -65,6 +72,10 @@ export class ResourceNotFoundError extends DatabaseError {
 // RESULT TYPES (with optimized includes)
 // =============================================================================
 
+/**
+ * @deprecated This local type will be migrated. Prefer WorkspaceWithDetails from './types'
+ * NOTE: This has different includes than canonical - used for lightweight counts only
+ */
 export type WorkspaceWithCounts = Workspace & {
   _count: {
     WorkspaceMembership: number
@@ -72,6 +83,11 @@ export type WorkspaceWithCounts = Workspace & {
   }
 }
 
+/**
+ * @deprecated This local type has different includes than canonical WorkspaceWithDetails from './types'
+ * This version includes User and Challenge arrays for admin details view
+ * TODO: Consider creating separate canonical type for this use case
+ */
 export type WorkspaceWithDetails = Workspace & {
   User: (User & { Enrollment: { challengeId: string }[] })[]
   Challenge: Challenge[]
@@ -81,10 +97,20 @@ export type WorkspaceWithDetails = Workspace & {
   }
 }
 
+/**
+ * @deprecated Use UserWithWorkspace from './types' instead
+ * Local type for backward compatibility only
+ */
 export type UserWithWorkspace = User & {
   Workspace: Workspace | null
 }
 
+/**
+ * @deprecated This local type has minimal includes compared to canonical ChallengeWithDetails
+ * This version is for lightweight challenge lists without Activity relations
+ * Canonical type includes full Activity and ActivityTemplate nesting
+ * TODO: Consider creating separate canonical type for list views
+ */
 export type ChallengeWithDetails = Challenge & {
   Workspace: Workspace
   Enrollment: (Enrollment & { User: Pick<User, 'id' | 'email'> })[]
@@ -93,9 +119,15 @@ export type ChallengeWithDetails = Challenge & {
   }
 }
 
+/**
+ * @deprecated This local type has minimal includes compared to canonical EnrollmentWithDetails
+ * This version is for lightweight enrollment lists - includes minimal User and Challenge selects
+ * Canonical type includes full ActivitySubmission nesting
+ * TODO: Migrate queries to use canonical type or create separate lightweight type
+ */
 export type EnrollmentWithDetails = Enrollment & {
-  user: Pick<User, 'id' | 'email'>
-  challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId' | 'status' | 'enrollmentDeadline'>
+  User: Pick<User, 'id' | 'email'>
+  Challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId' | 'status' | 'enrollmentDeadline'>
 }
 
 export type WorkspaceEmailTemplateDTO = Pick<WorkspaceEmailTemplate, 'type' | 'subject' | 'html' | 'enabled' | 'updatedAt'>
@@ -1106,6 +1138,7 @@ export async function createActivityTemplate(
   try {
     return await prisma.activityTemplate.create({
       data: {
+        id: crypto.randomUUID(),
         name: data.name,
         description: data.description,
         type: data.type,
@@ -1248,6 +1281,7 @@ export async function createActivity(
   try {
     return await prisma.activity.create({
       data: {
+        id: crypto.randomUUID(),
         templateId: data.templateId,
         challengeId: data.challengeId,
         pointsValue: data.pointsValue ?? template.basePoints,
@@ -1275,7 +1309,7 @@ export async function getChallengeActivities(
         challengeId,
         Challenge: { workspaceId }
       },
-      include: { Template: true },
+      include: { ActivityTemplate: true },
       orderBy: { createdAt: 'asc' }
     })
   } catch (error) {
@@ -1300,7 +1334,7 @@ export async function updateActivity(
   // Verify activity belongs to a challenge in this workspace
   const activity = await prisma.activity.findFirst({
     where: { id: activityId, Challenge: { workspaceId } },
-    include: { Challenge: true, Template: true }
+    include: { Challenge: true, ActivityTemplate: true }
   })
 
   if (!activity) {
@@ -1317,7 +1351,7 @@ export async function updateActivity(
         isRequired: data.isRequired ?? activity.isRequired,
         rewardRules: data.rewardRules ?? activity.rewardRules
       },
-      include: { Template: true, Challenge: true }
+      include: { ActivityTemplate: true, Challenge: true }
     })
 
     return updated
@@ -1369,6 +1403,7 @@ export async function createActivitySubmission(
   try {
     return await prisma.activitySubmission.create({
       data: {
+        id: crypto.randomUUID(),
         activityId: data.activityId,
         userId: data.userId,
         enrollmentId: data.enrollmentId,
@@ -1404,7 +1439,7 @@ export async function getWorkspaceSubmissionsForReview(
       include: {
         Activity: {
           include: {
-            Template: true,
+            ActivityTemplate: true,
             Challenge: true
           }
         },
@@ -1449,7 +1484,7 @@ export async function reviewActivitySubmission(
       include: {
         Activity: {
           include: {
-            Template: true,
+            ActivityTemplate: true,
             Challenge: true
           }
         }
@@ -1481,6 +1516,7 @@ export async function getOrCreatePointsBalance(
       },
       update: {},
       create: {
+        id: crypto.randomUUID(),
         userId,
         workspaceId,
         totalPoints: 0,
@@ -1514,6 +1550,7 @@ export async function updatePointsBalance(
         availablePoints: { increment: pointsToAdd }
       },
       create: {
+        id: crypto.randomUUID(),
         userId,
         workspaceId,
         totalPoints: Math.max(0, pointsToAdd),
@@ -1614,7 +1651,7 @@ export async function awardPointsWithBudget(params: {
     await tx.pointsBalance.upsert({
       where: { userId_workspaceId: { userId: toUserId, workspaceId } },
       update: { totalPoints: { increment: amount }, availablePoints: { increment: amount } },
-      create: { userId: toUserId, workspaceId, totalPoints: amount, availablePoints: amount }
+      create: { id: crypto.randomUUID(), userId: toUserId, workspaceId, totalPoints: amount, availablePoints: amount }
     })
 
     // Ledger entry
@@ -1683,7 +1720,7 @@ export async function getUserActivitySubmissions(
       include: {
         Activity: {
           include: {
-            Template: true,
+            ActivityTemplate: true,
             Challenge: true
           }
         },
@@ -1730,14 +1767,14 @@ export async function getChallengeLeaderboard(
         User: {
           select: { id: true, email: true }
         },
-        activitySubmissions: {
+        ActivitySubmission: {
           where: {
             Activity: {
               challengeId
             }
           },
           include: {
-            activity: true
+            Activity: true
           }
         }
       }
@@ -1745,14 +1782,14 @@ export async function getChallengeLeaderboard(
 
     // Calculate leaderboard data
     const leaderboardData = enrollments.map(enrollment => {
-      const submissions = enrollment.activitySubmissions
-      const approvedSubmissions = submissions.filter(s => s.status === 'APPROVED')
-      const totalPoints = approvedSubmissions.reduce((sum, s) => sum + (s.pointsAwarded || 0), 0)
-      const uniqueActivities = new Set(approvedSubmissions.map(s => s.activityId))
+      const submissions = enrollment.ActivitySubmission
+      const approvedSubmissions = submissions.filter((s: any) => s.status === 'APPROVED')
+      const totalPoints = approvedSubmissions.reduce((sum: number, s: any) => sum + (s.pointsAwarded || 0), 0)
+      const uniqueActivities = new Set(approvedSubmissions.map((s: any) => s.activityId))
 
       return {
-        userId: enrollment.user.id,
-        email: enrollment.user.email,
+        userId: enrollment.User.id,
+        email: enrollment.User.email,
         totalPoints,
         submissions: submissions.length,
         completedActivities: uniqueActivities.size
@@ -1853,7 +1890,7 @@ export async function getRecentWorkspaceActivities(
         include: {
           Activity: {
             include: {
-              Template: true,
+              ActivityTemplate: true,
               Challenge: true
             }
           },
@@ -2325,6 +2362,7 @@ export async function issueReward(params: {
   try {
     const reward = await prisma.rewardIssuance.create({
       data: {
+        id: crypto.randomUUID(),
         userId,
         workspaceId,
         challengeId: challengeId || null,
