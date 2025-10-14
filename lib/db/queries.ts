@@ -414,7 +414,7 @@ export async function updateUserRole(
 /**
  * Get all challenges in workspace with enrollment data
  */
-export async function getWorkspaceChallenges(workspaceId: WorkspaceId): Promise<(Challenge & { enrollments: Enrollment[], _count: { enrollments: number } })[]> {
+export async function getWorkspaceChallenges(workspaceId: WorkspaceId): Promise<(Challenge & { Enrollment: Enrollment[], _count: { Enrollment: number } })[]> {
   try {
     return await prisma.challenge.findMany({
       where: { workspaceId },
@@ -1302,7 +1302,7 @@ export async function createActivity(
 export async function getChallengeActivities(
   challengeId: ChallengeId,
   workspaceId: WorkspaceId
-): Promise<(Activity & { template: ActivityTemplate })[]> {
+): Promise<(Activity & { ActivityTemplate: ActivityTemplate })[]> {
   try {
     return await prisma.activity.findMany({
       where: {
@@ -1330,7 +1330,7 @@ export async function updateActivity(
     isRequired: boolean
     rewardRules: any[]
   }>
-): Promise<Activity & { template: ActivityTemplate, challenge: Challenge }> {
+): Promise<Activity & { ActivityTemplate: ActivityTemplate, Challenge: Challenge }> {
   // Verify activity belongs to a challenge in this workspace
   const activity = await prisma.activity.findFirst({
     where: { id: activityId, Challenge: { workspaceId } },
@@ -1424,9 +1424,9 @@ export async function createActivitySubmission(
 export async function getWorkspaceSubmissionsForReview(
   workspaceId: WorkspaceId
 ): Promise<(ActivitySubmission & {
-  activity: Activity & { template: ActivityTemplate, challenge: Challenge }
-  user: User
-  enrollment: Enrollment
+  Activity: Activity & { ActivityTemplate: ActivityTemplate, Challenge: Challenge }
+  User: User
+  Enrollment: Enrollment
 })[]> {
   try {
     return await prisma.activitySubmission.findMany({
@@ -1465,7 +1465,7 @@ export async function reviewActivitySubmission(
     reviewedBy: UserId
   },
   workspaceId: WorkspaceId
-): Promise<ActivitySubmission & { activity: Activity & { template: ActivityTemplate, challenge: Challenge } }> {
+): Promise<ActivitySubmission & { Activity: Activity & { ActivityTemplate: ActivityTemplate, Challenge: Challenge } }> {
   try {
     return await prisma.activitySubmission.update({
       where: {
@@ -1675,7 +1675,7 @@ export async function awardPointsWithBudget(params: {
 export async function getWorkspaceLeaderboard(
   workspaceId: WorkspaceId,
   limit: number = 10
-): Promise<(PointsBalance & { user: Pick<User, 'id' | 'email'> })[]> {
+): Promise<(PointsBalance & { User: Pick<User, 'id' | 'email'> })[]> {
   try {
     return await prisma.pointsBalance.findMany({
       where: { workspaceId },
@@ -1700,11 +1700,11 @@ export async function getUserActivitySubmissions(
   workspaceId: WorkspaceId,
   status?: SubmissionStatus
 ): Promise<(ActivitySubmission & {
-  activity: Activity & {
-    template: ActivityTemplate
-    challenge: Challenge
+  Activity: Activity & {
+    ActivityTemplate: ActivityTemplate
+    Challenge: Challenge
   }
-  enrollment: Enrollment
+  Enrollment: Enrollment
 })[]> {
   try {
     return await prisma.activitySubmission.findMany({
@@ -1859,9 +1859,9 @@ export async function getRecentWorkspaceActivities(
 ): Promise<{
   events: any[]
   pendingSubmissions: (ActivitySubmission & {
-    activity: Activity & { template: ActivityTemplate, challenge: Challenge }
-    user: User
-    enrollment: Enrollment
+    Activity: Activity & { ActivityTemplate: ActivityTemplate, Challenge: Challenge }
+    User: User
+    Enrollment: Enrollment
   })[]
   pendingSubmissionCount: number
   oldestPendingSubmission?: Pick<ActivitySubmission, 'submittedAt'> | null
@@ -2032,8 +2032,8 @@ export async function getWorkspaceCommunications(
       where: whereClause,
       include: {
         sender: { select: { id: true, email: true } },
-        Challenge: { select: { id: true, title: true } },
-        Activity: { select: { id: true, templateId: true } }
+        challenge: { select: { id: true, title: true } },
+        activity: { select: { id: true, templateId: true } }
       },
       orderBy: { sentAt: 'desc' },
       take: filters.limit ?? 50
@@ -2121,31 +2121,33 @@ export async function getInviteByCode(code: string): Promise<InviteCodeWithDetai
     const row = await prisma.inviteCode.findUnique({
       where: { code },
       include: {
-        workspace: true,
-        challenge: true,
-        creator: {
+        Workspace: true,
+        Challenge: true,
+        User: {
           select: { id: true, email: true }
         }
       }
     }) as any
     if (!row) return null
-    const normalizedChallenge = row.challenge
+    const normalizedChallenge = row.Challenge
       ? {
-          id: row.challenge.id,
-          title: row.challenge.title,
-          description: row.challenge.description,
-          startDate: row.challenge.startDate,
-          endDate: row.challenge.endDate,
-          enrollmentDeadline: row.challenge.enrollmentDeadline ?? null,
-          workspaceId: row.challenge.workspaceId,
-          rewardType: row.challenge.rewardType ?? undefined,
-          rewardConfig: row.challenge.rewardConfig,
-          emailEditAllowed: row.challenge.emailEditAllowed,
+          id: row.Challenge.id,
+          title: row.Challenge.title,
+          description: row.Challenge.description,
+          startDate: row.Challenge.startDate,
+          endDate: row.Challenge.endDate,
+          enrollmentDeadline: row.Challenge.enrollmentDeadline ?? null,
+          workspaceId: row.Challenge.workspaceId,
+          rewardType: row.Challenge.rewardType ?? undefined,
+          rewardConfig: row.Challenge.rewardConfig,
+          emailEditAllowed: row.Challenge.emailEditAllowed,
         }
-      : row.challenge
+      : row.Challenge
     return {
       ...row,
+      workspace: row.Workspace,
       challenge: normalizedChallenge,
+      creator: row.User
     }
   } catch (error) {
     throw new DatabaseError(`Failed to fetch invite code: ${error}`)
@@ -2284,9 +2286,9 @@ export async function getWorkspaceInviteCodes(
     const rows = await prisma.inviteCode.findMany({
       where: { workspaceId },
       include: {
-        workspace: true,
-        challenge: true,
-        creator: {
+        Workspace: true,
+        Challenge: true,
+        User: {
           select: { id: true, email: true }
         }
       },
@@ -2294,7 +2296,9 @@ export async function getWorkspaceInviteCodes(
     }) as any
     return rows.map((i: any) => ({
       ...i,
-      challenge: i.challenge ? { ...i.challenge, rewardType: i.challenge.rewardType ?? undefined } : i.challenge
+      workspace: i.Workspace,
+      challenge: i.Challenge ? { ...i.Challenge, rewardType: i.Challenge.rewardType ?? undefined } : i.Challenge,
+      creator: i.User
     }))
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace invite codes: ${error}`)
@@ -2600,12 +2604,12 @@ export async function getPlatformStats(tenantId: string = 'default'): Promise<{
  */
 export async function getAllWorkspacesWithDetails(tenantId: string = 'default'): Promise<(Workspace & {
   _count: {
-    memberships: number
-    challenges: number
-    users: number
+    WorkspaceMembership: number
+    Challenge: number
+    User: number
   }
-  memberships: {
-    user: Pick<User, 'id' | 'email'>
+  WorkspaceMembership: {
+    User: Pick<User, 'id' | 'email'>
     role: Role
   }[]
 })[]> {
@@ -2615,12 +2619,12 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
       include: {
         _count: {
           select: {
-            memberships: true,
-            challenges: true,
-            users: true
+            WorkspaceMembership: true,
+            Challenge: true,
+            User: true
           }
         },
-        memberships: {
+        WorkspaceMembership: {
           where: { role: 'ADMIN' },
           include: {
             User: {
@@ -2642,8 +2646,8 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
  * Returns user data with workspace memberships
  */
 export async function getAllPlatformUsers(): Promise<(User & {
-  memberships: {
-    workspace: Pick<Workspace, 'id' | 'slug' | 'name'>
+  WorkspaceMembership: {
+    Workspace: Pick<Workspace, 'id' | 'slug' | 'name'>
     role: Role
     isPrimary: boolean
   }[]
@@ -2651,7 +2655,7 @@ export async function getAllPlatformUsers(): Promise<(User & {
   try {
     return await prisma.user.findMany({
       include: {
-        memberships: {
+        WorkspaceMembership: {
           include: {
             Workspace: {
               select: { id: true, slug: true, name: true }
