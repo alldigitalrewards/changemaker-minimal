@@ -32,14 +32,14 @@ export const POST = withErrorHandling(async (
     try {
       // Verify user is enrolled in the challenge that contains this activity
       const activity = await prisma.activity.findFirst({
-        where: { 
+        where: {
           id: activityId,
-          challenge: { workspaceId: workspace.id }
+          Challenge: { workspaceId: workspace.id }
         },
         include: {
-          template: true,
-          challenge: true,
-          submissions: {
+          ActivityTemplate: true,
+          Challenge: true,
+          ActivitySubmission: {
             where: { userId: user.dbUser.id },
             orderBy: { submittedAt: 'desc' }
           }
@@ -64,7 +64,7 @@ export const POST = withErrorHandling(async (
       }
 
       // Check submission limits
-      const existingSubmissions = activity.submissions.length
+      const existingSubmissions = activity.ActivitySubmission.length
       if (existingSubmissions >= activity.maxSubmissions) {
         return NextResponse.json({ error: 'Maximum submissions reached for this activity' }, { status: 400 })
       }
@@ -75,7 +75,7 @@ export const POST = withErrorHandling(async (
       }
 
       // Determine initial status based on template settings
-      const initialStatus = activity.template.requiresApproval ? 'PENDING' : 'APPROVED'
+      const initialStatus = activity.ActivityTemplate.requiresApproval ? 'PENDING' : 'APPROVED'
       
       // Create the submission
       const submission = await createActivitySubmission({
@@ -121,6 +121,7 @@ export const POST = withErrorHandling(async (
             availablePoints: { increment: activity.pointsValue }
           },
           create: {
+            id: crypto.randomUUID(),
             userId: user.dbUser.id,
             workspaceId: workspace.id,
             totalPoints: activity.pointsValue,
