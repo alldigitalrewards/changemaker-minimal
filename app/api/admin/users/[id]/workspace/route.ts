@@ -47,7 +47,7 @@ export async function POST(
     // Check if user exists
     const targetUser = await prisma.user.findUnique({
       where: { id },
-      include: { memberships: true }
+      include: { WorkspaceMembership: true }
     });
 
     if (!targetUser) {
@@ -72,7 +72,7 @@ export async function POST(
     }
 
     // Create membership
-    const isPrimary = targetUser.memberships.length === 0;
+    const isPrimary = targetUser.WorkspaceMembership.length === 0;
 
     await prisma.workspaceMembership.create({
       data: {
