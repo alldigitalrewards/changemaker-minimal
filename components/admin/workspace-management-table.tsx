@@ -37,11 +37,11 @@ interface Workspace {
   published: boolean;
   createdAt: Date;
   _count: {
-    memberships: number;
-    challenges: number;
+    WorkspaceMembership: number;
+    Challenge: number;
   };
-  memberships: {
-    user: {
+  WorkspaceMembership: {
+    User: {
       id: string;
       email: string;
     };
@@ -92,10 +92,10 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
           comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
         case 'members':
-          comparison = a._count.memberships - b._count.memberships;
+          comparison = a._count.WorkspaceMembership - b._count.WorkspaceMembership;
           break;
         case 'challenges':
-          comparison = a._count.challenges - b._count.challenges;
+          comparison = a._count.Challenge - b._count.Challenge;
           break;
       }
 
@@ -245,7 +245,7 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
               </TableRow>
             ) : (
               filteredWorkspaces.map((workspace) => {
-                const admin = workspace.memberships.find((m) => m.role === 'ADMIN');
+                const admin = workspace.WorkspaceMembership.find((m) => m.role === 'ADMIN');
                 const status = getWorkspaceStatus(workspace);
 
                 return (
@@ -274,18 +274,18 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
                     <TableCell>
                       <div className="flex items-center gap-1 text-gray-700">
                         <Users className="h-4 w-4 text-gray-500" />
-                        <span>{workspace._count.memberships}</span>
+                        <span>{workspace._count.WorkspaceMembership}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-gray-700">
                         <Trophy className="h-4 w-4 text-gray-500" />
-                        <span>{workspace._count.challenges}</span>
+                        <span>{workspace._count.Challenge}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       {admin ? (
-                        <span className="text-sm text-gray-600">{admin.user.email}</span>
+                        <span className="text-sm text-gray-600">{admin.User.email}</span>
                       ) : (
                         <span className="text-sm text-gray-400">No admin</span>
                       )}

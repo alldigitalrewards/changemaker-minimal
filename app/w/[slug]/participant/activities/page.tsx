@@ -54,15 +54,15 @@ interface ActivitySubmissionCardProps {
     pointsAwarded: number | null
     reviewNotes: string | null
     submittedAt: Date
-    activity: {
+    Activity: {
       id: string
       pointsValue: number
-      template: {
+      ActivityTemplate: {
         name: string
         type: string
         requiresApproval: boolean
       }
-      challenge: {
+      Challenge: {
         id: string
         title: string
       }
@@ -104,7 +104,7 @@ function ActivitySubmissionCard({ submission, workspaceSlug }: ActivitySubmissio
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <CardTitle className="text-lg truncate">{submission.activity.template.name}</CardTitle>
+              <CardTitle className="text-lg truncate">{submission.Activity.ActivityTemplate.name}</CardTitle>
               <Badge variant="outline" className={config.color}>
                 <StatusIcon className="w-3 h-3 mr-1" />
                 {config.label}
@@ -112,12 +112,12 @@ function ActivitySubmissionCard({ submission, workspaceSlug }: ActivitySubmissio
             </div>
             <CardDescription className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-coral-500" />
-              <span>{submission.activity.challenge.title}</span>
+              <span>{submission.Activity.Challenge.title}</span>
             </CardDescription>
           </div>
           <div className="text-right text-sm text-gray-500">
             <div className="font-medium">
-              {submission.pointsAwarded ? `${submission.pointsAwarded}` : submission.activity.pointsValue} pts
+              {submission.pointsAwarded ? `${submission.pointsAwarded}` : submission.Activity.pointsValue} pts
             </div>
             <div className="text-xs">
               {format(new Date(submission.submittedAt), 'MMM d, yyyy')}
@@ -129,9 +129,9 @@ function ActivitySubmissionCard({ submission, workspaceSlug }: ActivitySubmissio
         <div className="flex flex-wrap gap-3 text-xs bg-gray-50 p-3 rounded-lg">
           <span className="flex items-center gap-1">
             <Activity className="h-3 w-3 text-coral-500" />
-            {submission.activity.template.type.replace('_', ' ').toLowerCase()}
+            {submission.Activity.ActivityTemplate.type.replace('_', ' ').toLowerCase()}
           </span>
-          {submission.activity.template.requiresApproval && (
+          {submission.Activity.ActivityTemplate.requiresApproval && (
             <span className="flex items-center gap-1">
               <CheckCircle className="h-3 w-3 text-blue-500" />
               Requires approval
@@ -188,7 +188,7 @@ function ActivitySubmissionCard({ submission, workspaceSlug }: ActivitySubmissio
         {/* Actions */}
         <div className="flex justify-between items-center pt-2 border-t">
           <Link
-            href={`/w/${workspaceSlug}/participant/challenges/${submission.activity.challenge.id}`}
+            href={`/w/${workspaceSlug}/participant/challenges/${submission.Activity.Challenge.id}`}
             className="inline-flex items-center text-sm text-coral-600 hover:text-coral-700 font-medium transition-colors"
           >
             <Eye className="w-4 h-4 mr-1" />

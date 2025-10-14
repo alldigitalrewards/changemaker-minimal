@@ -31,8 +31,8 @@ interface User {
   id: string;
   email: string;
   createdAt: Date;
-  memberships: {
-    workspace: {
+  WorkspaceMembership: {
+    Workspace: {
       id: string;
       slug: string;
       name: string;
@@ -59,8 +59,8 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
   const allWorkspaces = Array.from(
     new Map(
       users
-        .flatMap((u) => u.memberships)
-        .map((m) => [m.workspace.id, m.workspace])
+        .flatMap((u) => u.WorkspaceMembership)
+        .map((m) => [m.Workspace.id, m.Workspace])
     ).values()
   ).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -72,12 +72,12 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
     // Role filter
     const matchesRole =
       roleFilter === 'ALL' ||
-      user.memberships.some((m) => m.role === roleFilter);
+      user.WorkspaceMembership.some((m) => m.role === roleFilter);
 
     // Workspace filter
     const matchesWorkspace =
       workspaceFilter === 'ALL' ||
-      user.memberships.some((m) => m.workspace.id === workspaceFilter);
+      user.WorkspaceMembership.some((m) => m.Workspace.id === workspaceFilter);
 
     return matchesSearch && matchesRole && matchesWorkspace;
   });
@@ -260,7 +260,7 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
               </TableRow>
             ) : (
               filteredUsers.map((user) => {
-                const primaryWorkspace = user.memberships.find((m) => m.isPrimary);
+                const primaryWorkspace = user.WorkspaceMembership.find((m) => m.isPrimary);
                 const isSuperAdmin = isPlatformSuperAdmin([], user.email);
 
                 return (
@@ -319,16 +319,16 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
-                        {user.memberships.length === 0 ? (
+                        {user.WorkspaceMembership.length === 0 ? (
                           <span className="text-sm text-gray-400">No workspaces</span>
                         ) : (
-                          user.memberships.map((membership) => (
+                          user.WorkspaceMembership.map((membership) => (
                             <Link
-                              key={membership.workspace.id}
-                              href={`/w/${membership.workspace.slug}/admin/participants`}
+                              key={membership.Workspace.id}
+                              href={`/w/${membership.Workspace.slug}/admin/participants`}
                               className="text-sm text-purple-600 hover:text-purple-800 hover:underline flex items-center gap-1"
                             >
-                              {membership.workspace.name}
+                              {membership.Workspace.name}
                               {membership.isPrimary && (
                                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                               )}
@@ -339,7 +339,7 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
                         <WorkspaceManagerDialog
                           userId={user.id}
                           userEmail={user.email}
-                          currentWorkspaces={user.memberships.map(m => m.workspace)}
+                          currentWorkspaces={user.WorkspaceMembership.map(m => m.Workspace)}
                           allWorkspaces={allWorkspaces}
                           onUpdate={handleRefresh}
                         />
@@ -347,14 +347,14 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {user.memberships.length === 0 ? (
+                        {user.WorkspaceMembership.length === 0 ? (
                           <span className="text-sm text-gray-400">-</span>
                         ) : (
-                          user.memberships.map((membership) => (
+                          user.WorkspaceMembership.map((membership) => (
                             <RoleEditor
-                              key={membership.workspace.id}
+                              key={membership.Workspace.id}
                               userId={user.id}
-                              workspaceId={membership.workspace.id}
+                              workspaceId={membership.Workspace.id}
                               currentRole={membership.role as 'ADMIN' | 'PARTICIPANT'}
                               onUpdate={handleRefresh}
                             />

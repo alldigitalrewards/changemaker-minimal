@@ -85,7 +85,7 @@ export default async function AdminDashboard({
                 </div>
               </div>
               <Button asChild size="lg" className="bg-coral-500 hover:bg-coral-600">
-                <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].activity.challengeId}/submissions?status=pending`}>
+                <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].Activity.challengeId}/submissions?status=pending`}>
                   Review Now
                 </Link>
               </Button>
@@ -140,7 +140,7 @@ export default async function AdminDashboard({
         </Card>
 
         {pendingSubmissionCount > 0 && pendingSubmissions.length > 0 ? (
-          <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].activity.challengeId}/submissions?status=pending`}>
+          <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].Activity.challengeId}/submissions?status=pending`}>
             <Card className="border-amber-200 bg-amber-50/50 hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-amber-700 transition-colors">Pending Review</CardTitle>
