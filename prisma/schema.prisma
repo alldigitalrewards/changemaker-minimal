@@ -145,7 +145,7 @@ model ChallengePointsBudget {
 }
 
 model Enrollment {
-  id                 String               @id @db.Uuid
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId             String               @db.Uuid
   challengeId        String               @db.Uuid
   status             EnrollmentStatus     @default(INVITED)
@@ -269,7 +269,7 @@ model TenantSku {
 }
 
 model User {
-  id                                            String                           @id @db.Uuid
+  id                                            String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                                         String                           @unique
   supabaseUserId                                String?                          @unique @db.Uuid
   role                                          Role
