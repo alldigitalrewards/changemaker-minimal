@@ -73,23 +73,23 @@ export type WorkspaceWithCounts = Workspace & {
 }
 
 export type WorkspaceWithDetails = Workspace & {
-  users: (User & { enrollments: { challengeId: string }[] })[]
-  challenges: Challenge[]
+  User: (User & { Enrollment: { challengeId: string }[] })[]
+  Challenge: Challenge[]
   _count: {
-    users: number
-    challenges: number
+    User: number
+    Challenge: number
   }
 }
 
 export type UserWithWorkspace = User & {
-  workspace: Workspace | null
+  Workspace: Workspace | null
 }
 
 export type ChallengeWithDetails = Challenge & {
-  workspace: Workspace
-  enrollments: (Enrollment & { user: Pick<User, 'id' | 'email'> })[]
+  Workspace: Workspace
+  Enrollment: (Enrollment & { User: Pick<User, 'id' | 'email'> })[]
   _count: {
-    enrollments: number
+    Enrollment: number
   }
 }
 
@@ -200,18 +200,18 @@ export async function getWorkspaceWithDetails(
     return await prisma.workspace.findUnique({
       where: { id: workspaceId },
       include: {
-        users: {
+        User: {
           include: {
-            enrollments: {
+            Enrollment: {
               select: { challengeId: true }
             }
           }
         },
-        challenges: true,
+        Challenge: true,
         _count: {
           select: {
-            users: true,
-            challenges: true
+            User: true,
+            Challenge: true
           }
         }
       }
@@ -231,6 +231,7 @@ export async function createWorkspace(data: {
   try {
     return await prisma.workspace.create({
       data: {
+        id: crypto.randomUUID(),
         slug: data.slug,
         name: data.name
       }
@@ -272,7 +273,7 @@ export async function getUserWithWorkspace(userId: UserId): Promise<UserWithWork
     return await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        workspace: true
+        Workspace: true
       }
     })
   } catch (error) {
@@ -288,7 +289,7 @@ export async function getUserBySupabaseId(supabaseUserId: string): Promise<UserW
     return await prisma.user.findUnique({
       where: { supabaseUserId },
       include: {
-        workspace: true
+        Workspace: true
       }
     })
   } catch (error) {
@@ -303,10 +304,10 @@ export async function getWorkspaceUsers(workspaceId: WorkspaceId): Promise<User[
   try {
     const memberships = await prisma.workspaceMembership.findMany({
       where: { workspaceId },
-      include: { user: true },
+      include: { User: true },
       orderBy: { createdAt: 'asc' }
     })
-    return memberships.map(m => m.user)
+    return memberships.map(m => m.User)
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace users: ${error}`)
   }
@@ -386,10 +387,10 @@ export async function getWorkspaceChallenges(workspaceId: WorkspaceId): Promise<
     return await prisma.challenge.findMany({
       where: { workspaceId },
       include: {
-        enrollments: true,
+        Enrollment: true,
         _count: {
           select: {
-            enrollments: true
+            Enrollment: true
           }
         }
       },
@@ -414,16 +415,16 @@ export async function getChallengeWithDetails(
         workspaceId // Enforce workspace isolation
       },
       include: {
-        workspace: true,
-        enrollments: {
+        Workspace: true,
+        Enrollment: {
           include: {
-            user: {
+            User: {
               select: { id: true, email: true }
             }
           }
         },
         _count: {
-          select: { enrollments: true }
+          select: { Enrollment: true }
         }
       }
     })
@@ -452,6 +453,7 @@ export async function createChallenge(
   try {
     return await prisma.challenge.create({
       data: {
+        id: crypto.randomUUID(),
         title: data.title,
         description: data.description,
         startDate: data.startDate,
@@ -542,16 +544,16 @@ export async function getUserEnrollments(
     return await prisma.enrollment.findMany({
       where: {
         userId,
-        challenge: {
+        Challenge: {
           workspaceId,
           status: 'PUBLISHED'
         }
       },
       include: {
-        user: {
+        User: {
           select: { id: true, email: true }
         },
-        challenge: {
+        Challenge: {
           select: { id: true, title: true, description: true, workspaceId: true, status: true, enrollmentDeadline: true }
         }
       }
@@ -581,10 +583,10 @@ export async function getChallengeEnrollments(
     return await prisma.enrollment.findMany({
       where: { challengeId },
       include: {
-        user: {
+        User: {
           select: { id: true, email: true }
         },
-        challenge: {
+        Challenge: {
           select: { id: true, title: true, description: true, workspaceId: true }
         }
       }
@@ -720,7 +722,7 @@ export async function updateEnrollmentStatus(
   const enrollment = await prisma.enrollment.findFirst({
     where: {
       id: enrollmentId,
-      challenge: {
+      Challenge: {
         workspaceId
       }
     }
@@ -751,7 +753,7 @@ export async function deleteEnrollment(
   const enrollment = await prisma.enrollment.findFirst({
     where: {
       id: enrollmentId,
-      challenge: {
+      Challenge: {
         workspaceId
       }
     }
@@ -779,15 +781,15 @@ export async function getAllWorkspaceEnrollments(
   try {
     return await prisma.enrollment.findMany({
       where: {
-        challenge: {
+        Challenge: {
           workspaceId
         }
       },
       include: {
-        user: {
+        User: {
           select: { id: true, email: true }
         },
-        challenge: {
+        Challenge: {
           select: { id: true, title: true, description: true, workspaceId: true }
         }
       },
@@ -846,7 +848,7 @@ export async function getWorkspaceStats(workspaceId: WorkspaceId) {
       prisma.challenge.count({ where: { workspaceId } }),
       prisma.enrollment.count({
         where: {
-          challenge: { workspaceId }
+          Challenge: { workspaceId }
         }
       })
     ])
@@ -881,7 +883,7 @@ export async function upsertWorkspaceEmailSettings(
   try {
     return await prisma.workspaceEmailSettings.upsert({
       where: { workspaceId },
-      create: { workspaceId, ...data, updatedBy: updatedBy || null },
+      create: { id: crypto.randomUUID(), workspaceId, ...data, updatedBy: updatedBy || null },
       update: { ...data, updatedBy: updatedBy || null }
     })
   } catch (error) {
@@ -923,7 +925,7 @@ export async function upsertWorkspaceEmailTemplate(
   try {
     return await prisma.workspaceEmailTemplate.upsert({
       where: { workspaceId_type: { workspaceId, type } },
-      create: { workspaceId, type, subject: data.subject || null, html: data.html || null, enabled: data.enabled ?? false, updatedBy: updatedBy || null },
+      create: { id: crypto.randomUUID(), workspaceId, type, subject: data.subject || null, html: data.html || null, enabled: data.enabled ?? false, updatedBy: updatedBy || null },
       update: { subject: data.subject ?? undefined, html: data.html ?? undefined, enabled: data.enabled ?? undefined, updatedBy: updatedBy || null }
     })
   } catch (error) {
@@ -1005,10 +1007,10 @@ export function resolveSegmentWhere(filterJson: any, workspaceId: WorkspaceId) {
   }
   if (filterJson?.status) {
     where.user = {
-      enrollments: {
+      Enrollment: {
         some: {
           status: filterJson.status,
-          challenge: { workspaceId }
+          Challenge: { workspaceId }
         }
       }
     }
@@ -1269,11 +1271,11 @@ export async function getChallengeActivities(
 ): Promise<(Activity & { template: ActivityTemplate })[]> {
   try {
     return await prisma.activity.findMany({
-      where: { 
+      where: {
         challengeId,
-        challenge: { workspaceId }
+        Challenge: { workspaceId }
       },
-      include: { template: true },
+      include: { Template: true },
       orderBy: { createdAt: 'asc' }
     })
   } catch (error) {
@@ -1297,8 +1299,8 @@ export async function updateActivity(
 ): Promise<Activity & { template: ActivityTemplate, challenge: Challenge }> {
   // Verify activity belongs to a challenge in this workspace
   const activity = await prisma.activity.findFirst({
-    where: { id: activityId, challenge: { workspaceId } },
-    include: { challenge: true, template: true }
+    where: { id: activityId, Challenge: { workspaceId } },
+    include: { Challenge: true, Template: true }
   })
 
   if (!activity) {
@@ -1315,7 +1317,7 @@ export async function updateActivity(
         isRequired: data.isRequired ?? activity.isRequired,
         rewardRules: data.rewardRules ?? activity.rewardRules
       },
-      include: { template: true, challenge: true }
+      include: { Template: true, Challenge: true }
     })
 
     return updated
@@ -1333,7 +1335,7 @@ export async function deleteActivity(
 ): Promise<void> {
   // Verify activity belongs to a challenge in this workspace
   const activity = await prisma.activity.findFirst({
-    where: { id: activityId, challenge: { workspaceId } }
+    where: { id: activityId, Challenge: { workspaceId } }
   })
 
   if (!activity) {
@@ -1395,19 +1397,19 @@ export async function getWorkspaceSubmissionsForReview(
     return await prisma.activitySubmission.findMany({
       where: {
         status: 'PENDING',
-        activity: {
-          challenge: { workspaceId }
+        Activity: {
+          Challenge: { workspaceId }
         }
       },
       include: {
-        activity: {
+        Activity: {
           include: {
-            template: true,
-            challenge: true
+            Template: true,
+            Challenge: true
           }
         },
-        user: true,
-        enrollment: true
+        User: true,
+        Enrollment: true
       },
       orderBy: { submittedAt: 'asc' }
     })
@@ -1433,8 +1435,8 @@ export async function reviewActivitySubmission(
     return await prisma.activitySubmission.update({
       where: {
         id: submissionId,
-        activity: {
-          challenge: { workspaceId }
+        Activity: {
+          Challenge: { workspaceId }
         }
       },
       data: {
@@ -1445,10 +1447,10 @@ export async function reviewActivitySubmission(
         reviewedAt: new Date()
       },
       include: {
-        activity: {
+        Activity: {
           include: {
-            template: true,
-            challenge: true
+            Template: true,
+            Challenge: true
           }
         }
       }
@@ -1641,7 +1643,7 @@ export async function getWorkspaceLeaderboard(
     return await prisma.pointsBalance.findMany({
       where: { workspaceId },
       include: {
-        user: {
+        User: {
           select: { id: true, email: true }
         }
       },
@@ -1671,21 +1673,21 @@ export async function getUserActivitySubmissions(
     return await prisma.activitySubmission.findMany({
       where: {
         userId,
-        activity: {
-          challenge: {
+        Activity: {
+          Challenge: {
             workspaceId
           }
         },
         ...(status && { status })
       },
       include: {
-        activity: {
+        Activity: {
           include: {
-            template: true,
-            challenge: true
+            Template: true,
+            Challenge: true
           }
         },
-        enrollment: true
+        Enrollment: true
       },
       orderBy: { submittedAt: 'desc' }
     })
@@ -1725,12 +1727,12 @@ export async function getChallengeLeaderboard(
         status: 'ENROLLED'
       },
       include: {
-        user: {
+        User: {
           select: { id: true, email: true }
         },
         activitySubmissions: {
           where: {
-            activity: {
+            Activity: {
               challengeId
             }
           },
@@ -1802,7 +1804,7 @@ export async function getChallengeEvents(challengeId: string) {
   return await (prisma as any).activityEvent.findMany({
     where: { challengeId },
     include: {
-      user: { select: { email: true } },
+      User: { select: { email: true } },
       actor: { select: { email: true } }
     },
     orderBy: { createdAt: 'desc' },
@@ -1833,9 +1835,9 @@ export async function getRecentWorkspaceActivities(
       (prisma as any).activityEvent.findMany({
         where: { workspaceId },
         include: {
-          user: { select: { id: true, email: true } },
+          User: { select: { id: true, email: true } },
           actor: { select: { id: true, email: true } },
-          challenge: { select: { id: true, title: true } }
+          Challenge: { select: { id: true, title: true } }
         },
         orderBy: { createdAt: 'desc' },
         take: limit
@@ -1844,19 +1846,19 @@ export async function getRecentWorkspaceActivities(
       prisma.activitySubmission.findMany({
         where: {
           status: 'PENDING',
-          activity: {
-            challenge: { workspaceId }
+          Activity: {
+            Challenge: { workspaceId }
           }
         },
         include: {
-          activity: {
+          Activity: {
             include: {
-              template: true,
-              challenge: true
+              Template: true,
+              Challenge: true
             }
           },
-          user: true,
-          enrollment: true
+          User: true,
+          Enrollment: true
         },
         orderBy: { submittedAt: 'desc' },
         take: limit
@@ -1864,16 +1866,16 @@ export async function getRecentWorkspaceActivities(
       prisma.activitySubmission.count({
         where: {
           status: 'PENDING',
-          activity: {
-            challenge: { workspaceId }
+          Activity: {
+            Challenge: { workspaceId }
           }
         }
       }),
       prisma.activitySubmission.findFirst({
         where: {
           status: 'PENDING',
-          activity: {
-            challenge: { workspaceId }
+          Activity: {
+            Challenge: { workspaceId }
           }
         },
         orderBy: { submittedAt: 'asc' },
@@ -1941,7 +1943,7 @@ export async function createWorkspaceCommunication(
     const activity = await prisma.activity.findFirst({
       where: {
         id: input.activityId,
-        challenge: { workspaceId }
+        Challenge: { workspaceId }
       },
       select: { id: true, challengeId: true }
     })
@@ -1993,8 +1995,8 @@ export async function getWorkspaceCommunications(
       where: whereClause,
       include: {
         sender: { select: { id: true, email: true } },
-        challenge: { select: { id: true, title: true } },
-        activity: { select: { id: true, templateId: true } }
+        Challenge: { select: { id: true, title: true } },
+        Activity: { select: { id: true, templateId: true } }
       },
       orderBy: { sentAt: 'desc' },
       take: filters.limit ?? 50
@@ -2583,7 +2585,7 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
         memberships: {
           where: { role: 'ADMIN' },
           include: {
-            user: {
+            User: {
               select: { id: true, email: true }
             }
           },
@@ -2613,7 +2615,7 @@ export async function getAllPlatformUsers(): Promise<(User & {
       include: {
         memberships: {
           include: {
-            workspace: {
+            Workspace: {
               select: { id: true, slug: true, name: true }
             }
           }
