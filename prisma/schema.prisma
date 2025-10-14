@@ -9,20 +9,21 @@ datasource db {
 }
 
 model Activity {
-  id                 String               @id @db.Uuid
-  templateId         String               @db.Uuid
-  challengeId        String               @db.Uuid
-  pointsValue        Int
-  maxSubmissions     Int                  @default(1)
-  deadline           DateTime?
-  isRequired         Boolean              @default(false)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @default(now())
-  position           Int                  @default(0)
-  rewardRules        Json[]               @default([])
-  Challenge          Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  ActivityTemplate   ActivityTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  ActivitySubmission ActivitySubmission[]
+  id                      String                    @id @db.Uuid
+  templateId              String                    @db.Uuid
+  challengeId             String                    @db.Uuid
+  pointsValue             Int
+  maxSubmissions          Int                       @default(1)
+  deadline                DateTime?
+  isRequired              Boolean                   @default(false)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @default(now())
+  position                Int                       @default(0)
+  rewardRules             Json[]                    @default([])
+  Challenge               Challenge                 @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  ActivityTemplate        ActivityTemplate          @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ActivitySubmission      ActivitySubmission[]
+  WorkspaceCommunication  WorkspaceCommunication[]
 
   @@index([challengeId])
   @@index([challengeId, position])
@@ -100,27 +101,28 @@ model ActivityTemplate {
 }
 
 model Challenge {
-  id                    String                 @id @db.Uuid
-  title                 String
-  description           String
-  startDate             DateTime
-  endDate               DateTime
-  enrollmentDeadline    DateTime?
-  workspaceId           String                 @db.Uuid
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @default(now())
-  status                ChallengeStatus        @default(DRAFT)
-  emailEditAllowed      Boolean                @default(true)
-  rewardConfig          Json?
-  rewardType            RewardType?
-  Activity              Activity[]
-  ActivityEvent         ActivityEvent[]
-  Workspace             Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  ChallengePointsBudget ChallengePointsBudget?
-  Enrollment            Enrollment[]
-  InviteCode            InviteCode[]
-  PointsLedger          PointsLedger[]
-  RewardIssuance        RewardIssuance[]
+  id                      String                   @id @db.Uuid
+  title                   String
+  description             String
+  startDate               DateTime
+  endDate                 DateTime
+  enrollmentDeadline      DateTime?
+  workspaceId             String                   @db.Uuid
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @default(now())
+  status                  ChallengeStatus          @default(DRAFT)
+  emailEditAllowed        Boolean                  @default(true)
+  rewardConfig            Json?
+  rewardType              RewardType?
+  Activity                Activity[]
+  ActivityEvent           ActivityEvent[]
+  Workspace               Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ChallengePointsBudget   ChallengePointsBudget?
+  Enrollment              Enrollment[]
+  InviteCode              InviteCode[]
+  PointsLedger            PointsLedger[]
+  RewardIssuance          RewardIssuance[]
+  WorkspaceCommunication  WorkspaceCommunication[]
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId])
@@ -299,6 +301,7 @@ model User {
   WorkspaceMembership                           WorkspaceMembership[]
   WorkspaceMembershipPreferences                WorkspaceMembershipPreferences[]
   WorkspacePointsBudget                         WorkspacePointsBudget[]
+  WorkspaceCommunication                        WorkspaceCommunication[]         @relation("CommunicationSender")
 
   @@index([tenantId])
   @@index([workspaceId])
@@ -328,6 +331,7 @@ model Workspace {
   WorkspaceMembership            WorkspaceMembership[]
   WorkspaceMembershipPreferences WorkspaceMembershipPreferences[]
   WorkspacePointsBudget          WorkspacePointsBudget?
+  WorkspaceCommunication         WorkspaceCommunication[]
 
   @@index([tenantId])
 }
@@ -408,6 +412,30 @@ model WorkspacePointsBudget {
   Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
+model WorkspaceCommunication {
+  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String                @db.Uuid
+  challengeId String?               @db.Uuid
+  activityId  String?               @db.Uuid
+  scope       CommunicationScope
+  audience    CommunicationAudience @default(ALL)
+  subject     String
+  message     String
+  sentBy      String                @db.Uuid
+  sentAt      DateTime              @default(now())
+  updatedAt   DateTime              @default(now()) @updatedAt
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge   Challenge?            @relation(fields: [challengeId], references: [id])
+  activity    Activity?             @relation(fields: [activityId], references: [id])
+  sender      User                  @relation("CommunicationSender", fields: [sentBy], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([challengeId])
+  @@index([activityId])
+  @@index([sentBy])
+  @@index([scope, audience])
+}
+
 enum ActivityEventType {
   INVITE_SENT
   INVITE_REDEEMED
@@ -481,4 +509,17 @@ enum SubmissionStatus {
   APPROVED
   REJECTED
   DRAFT
+}
+
+enum CommunicationScope {
+  WORKSPACE
+  CHALLENGE
+  ACTIVITY
+}
+
+enum CommunicationAudience {
+  ALL
+  ENROLLED
+  INVITED
+  COMPLETED
 }
