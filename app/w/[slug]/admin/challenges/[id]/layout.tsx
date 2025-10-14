@@ -12,7 +12,7 @@ interface LayoutProps {
 
 async function getChallengeHeader(slug: string, id: string) {
   const challenge = await prisma.challenge.findFirst({
-    where: { id, workspace: { slug } },
+    where: { id, Workspace: { slug } },
     select: {
       id: true,
       title: true,
@@ -21,8 +21,8 @@ async function getChallengeHeader(slug: string, id: string) {
       endDate: true,
       enrollmentDeadline: true,
       status: true,
-      workspace: { select: { id: true } },
-      _count: { select: { enrollments: true, activities: true } }
+      Workspace: { select: { id: true } },
+      _count: { select: { Enrollment: true, Activity: true } }
     }
   })
   return challenge
