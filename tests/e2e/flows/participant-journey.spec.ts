@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../support/auth';
 import { prisma } from '../../../lib/prisma';
+import { randomUUID } from 'crypto';
 
 test.describe('Participant Journey - End to End', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
@@ -64,6 +65,7 @@ test.describe('Participant Journey - End to End', () => {
 
       const invite = await prisma.inviteCode.create({
         data: {
+        id: randomUUID(),
           code: `JOURNEY-${Date.now()}`,
           workspaceId,
           maxUses: 1,
@@ -121,6 +123,7 @@ test.describe('Participant Journey - End to End', () => {
     // Create a test challenge for participant to join
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Participant Journey Challenge ${Date.now()}`,
         description: 'Complete activities to earn rewards',
         startDate: new Date(Date.now() - 86400000),
@@ -175,6 +178,7 @@ test.describe('Participant Journey - End to End', () => {
 
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId,
         pointsValue: 50
@@ -199,6 +203,7 @@ test.describe('Participant Journey - End to End', () => {
       // Submit via database
       await prisma.activitySubmission.create({
         data: {
+        id: randomUUID(),
           activityId: activity.id,
           userId: participantId,
           enrollmentId: enrollment!.id,
@@ -272,6 +277,7 @@ test.describe('Participant Journey - End to End', () => {
 
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Dashboard Test ${Date.now()}`,
         description: 'For testing dashboard',
         startDate: new Date(Date.now() - 86400000),
@@ -316,6 +322,7 @@ test.describe('Participant Journey - End to End', () => {
 
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `View Test ${Date.now()}`,
         description: 'Detailed challenge view test',
         startDate: new Date(Date.now() - 86400000),

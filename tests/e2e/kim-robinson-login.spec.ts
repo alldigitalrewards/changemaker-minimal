@@ -58,7 +58,7 @@ test('Kim Robinson login and superadmin access', async ({ page }) => {
   expect(memberTable).toBeGreaterThan(0);
   
   // Check console for database errors
-  const logs = [];
+  const logs: string[] = [];
   page.on('console', msg => {
     if (msg.type() === 'error') {
       logs.push(msg.text());

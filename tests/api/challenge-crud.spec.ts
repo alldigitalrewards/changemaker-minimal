@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
 import { ChallengeStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 test.describe('Challenge CRUD API', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
@@ -125,6 +126,7 @@ test.describe('Challenge CRUD API', () => {
     // Create challenge
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Update Test ${Date.now()}`,
         description: 'Original description',
         startDate: new Date(Date.now() + 86400000),
@@ -165,23 +167,25 @@ test.describe('Challenge CRUD API', () => {
     // Create challenge with activity
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Update Activities Test ${Date.now()}`,
         description: 'Test updating activities',
         startDate: new Date(Date.now() + 86400000),
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
-        activities: {
+        Activity: {
           create: {
+            id: randomUUID(),
             templateId: template!.id,
             pointsValue: 30,
             maxSubmissions: 1
           }
         }
       },
-      include: { activities: true }
+      include: { Activity: true }
     });
 
-    const originalActivityId = challenge.activities[0].id;
+    const originalActivityId = challenge.Activity[0].id;
 
     // Update activity points
     const updateData = {
@@ -214,6 +218,7 @@ test.describe('Challenge CRUD API', () => {
   test('PUT /api/workspaces/[slug]/challenges/[id] - update reward config', async ({ page }) => {
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Reward Update Test ${Date.now()}`,
         description: 'Test reward config update',
         startDate: new Date(Date.now() + 86400000),
@@ -253,6 +258,7 @@ test.describe('Challenge CRUD API', () => {
   test('DELETE /api/workspaces/[slug]/challenges/[id] - delete challenge', async ({ page }) => {
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Delete Test ${Date.now()}`,
         description: 'Will be deleted',
         startDate: new Date(Date.now() + 86400000),
@@ -281,22 +287,23 @@ test.describe('Challenge CRUD API', () => {
 
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Cascade Delete Test ${Date.now()}`,
         description: 'Test cascade deletion',
         startDate: new Date(Date.now() + 86400000),
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
-        enrollments: {
+        Enrollment: {
           create: {
             userId: participant!.id,
             status: 'ENROLLED'
           }
         }
       },
-      include: { enrollments: true }
+      include: { Enrollment: true }
     });
 
-    const enrollmentId = challenge.enrollments[0].id;
+    const enrollmentId = challenge.Enrollment[0].id;
 
     // Delete challenge
     const response = await page.request.delete(`/api/workspaces/${WORKSPACE_SLUG}/challenges/${challenge.id}`);
@@ -314,12 +321,13 @@ test.describe('Challenge CRUD API', () => {
   test('GET /api/workspaces/[slug]/challenges/[id] - with budget info', async ({ page }) => {
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Budget Test ${Date.now()}`,
         description: 'Test challenge with budget',
         startDate: new Date(Date.now() + 86400000),
         endDate: new Date(Date.now() + 30 * 86400000),
         workspaceId,
-        pointsBudget: {
+        ChallengePointsBudget: {
           create: {
             totalBudget: 10000,
             allocated: 2000,
@@ -364,6 +372,7 @@ test.describe('Challenge CRUD API', () => {
     // Create challenge in workspace
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Isolation Test ${Date.now()}`,
         description: 'Test workspace isolation',
         startDate: new Date(Date.now() + 86400000),

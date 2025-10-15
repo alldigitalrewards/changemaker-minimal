@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, PARTICIPANT_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
 import { SubmissionStatus, RewardType, RewardStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 test.describe('Submissions and Review API', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
@@ -37,6 +38,7 @@ test.describe('Submissions and Review API', () => {
     // Create test challenge
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Submission Test Challenge ${Date.now()}`,
         description: 'Test challenge for submissions',
         startDate: new Date(Date.now() - 86400000),
@@ -56,6 +58,7 @@ test.describe('Submissions and Review API', () => {
       where: { workspaceId }
     }) || await prisma.activityTemplate.create({
       data: {
+        id: randomUUID(),
         name: 'Test Activity Template',
         description: 'For testing',
         type: 'TEXT_SUBMISSION',
@@ -65,6 +68,7 @@ test.describe('Submissions and Review API', () => {
 
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template.id,
         challengeId: challenge.id,
         pointsValue: 50,
@@ -102,6 +106,7 @@ test.describe('Submissions and Review API', () => {
     // Create submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
         enrollmentId,
@@ -139,6 +144,7 @@ test.describe('Submissions and Review API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
         enrollmentId,
@@ -171,6 +177,7 @@ test.describe('Submissions and Review API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
         enrollmentId,
@@ -213,6 +220,7 @@ test.describe('Submissions and Review API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
         enrollmentId,
@@ -234,14 +242,14 @@ test.describe('Submissions and Review API', () => {
     // Get the updated submission with reward
     const updatedSubmission = await prisma.activitySubmission.findUnique({
       where: { id: submission.id },
-      include: { rewardIssuance: true }
+      include: { RewardIssuance: true }
     });
 
     expect(updatedSubmission?.rewardIssued).toBe(true);
     expect(updatedSubmission?.rewardIssuanceId).toBeTruthy();
-    expect(updatedSubmission?.rewardIssuance).toBeTruthy();
-    expect(updatedSubmission?.rewardIssuance?.type).toBe('points');
-    expect(updatedSubmission?.rewardIssuance?.amount).toBe(50);
+    expect(updatedSubmission?.RewardIssuance).toBeTruthy();
+    expect(updatedSubmission?.RewardIssuance?.type).toBe('points');
+    expect(updatedSubmission?.RewardIssuance?.amount).toBe(50);
 
     // Cleanup
     await prisma.rewardIssuance.deleteMany({ where: { challengeId } });
@@ -254,6 +262,7 @@ test.describe('Submissions and Review API', () => {
     // Create SKU-based challenge and activity
     const skuChallenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `SKU Challenge ${Date.now()}`,
         description: 'SKU reward test',
         startDate: new Date(Date.now() - 86400000),
@@ -273,6 +282,7 @@ test.describe('Submissions and Review API', () => {
 
     const skuActivity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId: skuChallenge.id,
         pointsValue: 0,
@@ -293,6 +303,7 @@ test.describe('Submissions and Review API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: skuActivity.id,
         userId: participantId,
         enrollmentId: skuEnrollment.id,
@@ -340,6 +351,7 @@ test.describe('Submissions and Review API', () => {
 
     const monetaryChallenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Monetary Challenge ${Date.now()}`,
         description: 'Monetary reward test',
         startDate: new Date(Date.now() - 86400000),
@@ -360,6 +372,7 @@ test.describe('Submissions and Review API', () => {
 
     const monetaryActivity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId: monetaryChallenge.id,
         pointsValue: 0,
@@ -381,6 +394,7 @@ test.describe('Submissions and Review API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: monetaryActivity.id,
         userId: participantId,
         enrollmentId: monetaryEnrollment.id,
@@ -430,6 +444,7 @@ test.describe('Submissions and Review API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
         enrollmentId,
@@ -475,6 +490,7 @@ test.describe('Submissions and Review API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
         enrollmentId,
@@ -502,6 +518,7 @@ test.describe('Submissions and Review API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
         enrollmentId,

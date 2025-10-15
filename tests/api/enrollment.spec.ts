@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, PARTICIPANT_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
 import { EnrollmentStatus, SubmissionStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 test.describe('Enrollment API', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
@@ -30,6 +31,7 @@ test.describe('Enrollment API', () => {
     // Create a test challenge
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Enrollment Test Challenge ${Date.now()}`,
         description: 'Test challenge for enrollments',
         startDate: new Date(Date.now() - 86400000), // Yesterday (active)
@@ -151,6 +153,7 @@ test.describe('Enrollment API', () => {
     // Create multiple enrollments
     const challenge2 = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Second Test Challenge ${Date.now()}`,
         description: 'Another test challenge',
         startDate: new Date(Date.now() - 86400000),
@@ -235,6 +238,7 @@ test.describe('Enrollment API', () => {
 
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId,
         pointsValue: 25
@@ -281,6 +285,7 @@ test.describe('Enrollment API', () => {
 
     const activity1 = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId,
         pointsValue: 25,
@@ -290,6 +295,7 @@ test.describe('Enrollment API', () => {
 
     const activity2 = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId,
         pointsValue: 50,
@@ -300,6 +306,7 @@ test.describe('Enrollment API', () => {
     // Submit first activity
     const submission1 = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: activity1.id,
         userId: participantId,
         enrollmentId: enrollment.id,
@@ -332,6 +339,7 @@ test.describe('Enrollment API', () => {
     // Create challenge with past enrollment deadline
     const expiredChallenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Expired Enrollment ${Date.now()}`,
         description: 'Challenge with past enrollment deadline',
         startDate: new Date(Date.now() - 7 * 86400000),
@@ -362,6 +370,7 @@ test.describe('Enrollment API', () => {
     // This test demonstrates how to enforce participant limits
     const limitedChallenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Limited Capacity ${Date.now()}`,
         description: 'Challenge with participant limit',
         startDate: new Date(Date.now() + 86400000),

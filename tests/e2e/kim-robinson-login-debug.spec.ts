@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test('Kim Robinson login debug', async ({ page }) => {
   const deploymentUrl = 'https://changemaker-minimal-481hv49sr-alldigitalrewards.vercel.app';
-  const logs = [];
-  const errors = [];
+  const logs: Array<{ type: string; text: string }> = [];
+  const errors: string[] = [];
   
   // Capture console messages
   page.on('console', msg => {

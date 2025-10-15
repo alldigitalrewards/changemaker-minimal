@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
+import { randomUUID } from 'crypto';
 
 test.describe('Participants API', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
@@ -342,6 +343,7 @@ test.describe('Participants API', () => {
     // Create challenge and enrollment
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Detail Test ${Date.now()}`,
         description: 'Test challenge',
         startDate: new Date(),
