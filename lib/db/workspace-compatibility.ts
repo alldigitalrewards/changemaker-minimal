@@ -96,7 +96,7 @@ export async function getUserPrimaryWorkspace(supabaseUserId: string): Promise<W
     // First, try to get primary membership
     const primaryMembership = await getPrimaryMembership(dbUser.id)
     if (primaryMembership) {
-      return primaryMembership.Workspace
+      return primaryMembership.workspace
     }
 
     // Fall back to legacy workspace relationship
@@ -147,7 +147,7 @@ export async function getUserWorkspaces(supabaseUserId: string): Promise<Workspa
 
     // Get workspaces where user has explicit membership
     const memberships = await listMemberships(dbUser.id)
-    let workspaces = memberships.map(m => m.Workspace as Workspace)
+    let workspaces = memberships.map(m => m.workspace as Workspace)
 
     // Add legacy workspace if not already included (backward compatibility)
     if (dbUser.workspaceId && dbUser.Workspace) {

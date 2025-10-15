@@ -60,7 +60,12 @@ export async function listMemberships(userId: string): Promise<WorkspaceMembersh
       ]
     })
 
-    return memberships as WorkspaceMembershipWithDetails[]
+    // Map Prisma's PascalCase relations to interface's lowercase properties
+    return memberships.map(m => ({
+      ...m,
+      user: m.User,
+      workspace: m.Workspace
+    }) as unknown as WorkspaceMembershipWithDetails)
   } catch (error) {
     console.error('Error listing user memberships:', error)
     return []
@@ -95,7 +100,12 @@ export async function listWorkspaceMemberships(workspaceId: string): Promise<Wor
       ]
     })
 
-    return memberships as WorkspaceMembershipWithDetails[]
+    // Map Prisma's PascalCase relations to interface's lowercase properties
+    return memberships.map(m => ({
+      ...m,
+      user: m.User,
+      workspace: m.Workspace
+    }) as unknown as WorkspaceMembershipWithDetails)
   } catch (error) {
     console.error('Error listing workspace memberships:', error)
     return []
@@ -175,7 +185,14 @@ export async function getPrimaryMembership(userId: string): Promise<WorkspaceMem
       }
     })
 
-    return membership as WorkspaceMembershipWithDetails | null
+    if (!membership) return null
+
+    // Map Prisma's PascalCase relations to interface's lowercase properties
+    return {
+      ...membership,
+      user: membership.User,
+      workspace: membership.Workspace
+    } as unknown as WorkspaceMembershipWithDetails
   } catch (error) {
     console.error('Error fetching primary membership:', error)
     return null
