@@ -301,6 +301,7 @@ model User {
   WorkspaceMembership                           WorkspaceMembership[]
   WorkspaceMembershipPreferences                WorkspaceMembershipPreferences[]
   WorkspacePointsBudget                         WorkspacePointsBudget[]
+  WorkspaceParticipantSegment                   WorkspaceParticipantSegment[]    @relation("SegmentCreator")
   WorkspaceCommunication                        WorkspaceCommunication[]         @relation("CommunicationSender")
 
   @@index([tenantId])
@@ -331,6 +332,7 @@ model Workspace {
   WorkspaceMembership            WorkspaceMembership[]
   WorkspaceMembershipPreferences WorkspaceMembershipPreferences[]
   WorkspacePointsBudget          WorkspacePointsBudget?
+  WorkspaceParticipantSegment    WorkspaceParticipantSegment[]
   WorkspaceCommunication         WorkspaceCommunication[]
 
   @@index([tenantId])
@@ -410,6 +412,21 @@ model WorkspacePointsBudget {
   updatedAt   DateTime  @default(now())
   User        User?     @relation(fields: [updatedBy], references: [id])
   Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceParticipantSegment {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @db.Uuid
+  name        String
+  description String?
+  filterJson  Json?
+  createdBy   String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  User        User      @relation("SegmentCreator", fields: [createdBy], references: [id])
+
+  @@index([workspaceId])
 }
 
 model WorkspaceCommunication {
