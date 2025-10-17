@@ -7,6 +7,7 @@ import {
   getWorkspaceUsers,
   createActivitySubmission,
   DatabaseError,
+  ValidationError,
   WorkspaceAccessError,
   ResourceNotFoundError
 } from "@/lib/db/queries"
@@ -147,14 +148,17 @@ export const POST = withErrorHandling(async (
   }
 
   // Handle regular enrollment
-  const { challengeId } = await request.json()
+  const { challengeId, userId, status } = await request.json()
 
   // Require workspace access
   const { workspace, user } = await requireWorkspaceAccess(slug)
 
+  // Determine enrollment status: use provided status or default to 'ENROLLED'
+  const enrollmentStatus = status || 'ENROLLED'
+
   // Create enrollment using standardized query (includes validation)
   try {
-    const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id, 'ENROLLED')
+    const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id, enrollmentStatus)
     // Log enrollment event
       await logActivityEvent({
       workspaceId: workspace.id,
@@ -165,23 +169,25 @@ export const POST = withErrorHandling(async (
         type: 'ENROLLED',
         metadata: { method: 'self_enroll' }
     })
-    return NextResponse.json(enrollment)
+    return NextResponse.json({ enrollment })
   } catch (error) {
+    if (error instanceof ValidationError) {
+      // Validation errors should return 400
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
     if (error instanceof DatabaseError) {
-      if (error.message.includes('already enrolled')) {
-        return NextResponse.json({ error: "Already enrolled" }, { status: 400 })
-      }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-    
+
     if (error instanceof WorkspaceAccessError) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 })
     }
-    
+
     if (error instanceof ResourceNotFoundError) {
       return NextResponse.json({ error: error.message }, { status: 404 })
     }
-    
+
     throw error // Let withErrorHandling handle other errors
   }
 })

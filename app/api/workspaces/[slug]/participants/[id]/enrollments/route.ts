@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from "next/server"
-import { withErrorHandling, requireWorkspaceAdmin } from "@/lib/auth/api-auth"
+import { withErrorHandling, requireWorkspaceAdmin, requireWorkspaceAccess } from "@/lib/auth/api-auth"
 import { prisma } from "@/lib/prisma"
-import { createEnrollment, DatabaseError, ResourceNotFoundError, logActivityEvent } from "@/lib/db/queries"
+import { createEnrollment, getUserEnrollments, DatabaseError, ResourceNotFoundError, logActivityEvent } from "@/lib/db/queries"
+
+export const GET = withErrorHandling(async (
+  request: NextRequest,
+  context: { params: Promise<{ slug: string; id: string }> }
+) => {
+  const { slug, id: participantId } = await context.params
+  const { workspace } = await requireWorkspaceAccess(slug)
+
+  // Verify participant belongs to this workspace
+  const membership = await prisma.workspaceMembership.findUnique({
+    where: { userId_workspaceId: { userId: participantId, workspaceId: workspace.id } }
+  })
+  if (!membership) {
+    return NextResponse.json({ error: "Participant not found in this workspace" }, { status: 404 })
+  }
+
+  try {
+    const enrollments = await getUserEnrollments(participantId, workspace.id)
+    return NextResponse.json({ enrollments })
+  } catch (error) {
+    if (error instanceof DatabaseError) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    throw error
+  }
+})
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
