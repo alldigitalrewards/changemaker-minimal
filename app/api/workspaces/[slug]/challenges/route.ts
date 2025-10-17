@@ -124,16 +124,52 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Validate input with type safety
-    if (!validateChallengeData(body)) {
-      console.error('Challenge validation failed', { body })
+    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId } = body;
+
+    // Validate required fields
+    if (!title || typeof title !== 'string' || title.trim().length === 0 ||
+        !description || typeof description !== 'string' || description.trim().length === 0) {
       return NextResponse.json(
         { error: 'Title and description are required and must be non-empty strings' },
         { status: 400 }
       );
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId } = body;
+    // Validate dates
+    if (!startDate || !endDate) {
+      return NextResponse.json(
+        { error: 'Start date and end date are required' },
+        { status: 400 }
+      );
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return NextResponse.json(
+        { error: 'Invalid date format' },
+        { status: 400 }
+      );
+    }
+
+    if (end <= start) {
+      return NextResponse.json(
+        { error: 'Challenge end date must be after start date' },
+        { status: 400 }
+      );
+    }
+
+    // Validate enrollment deadline if provided
+    if (enrollmentDeadline) {
+      const deadline = new Date(enrollmentDeadline);
+      if (isNaN(deadline.getTime()) || deadline > start) {
+        return NextResponse.json(
+          { error: 'Enrollment deadline must be before or equal to start date' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);

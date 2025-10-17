@@ -60,8 +60,8 @@ export default async function AdminSettingsPage({
     include: {
       _count: {
         select: {
-          memberships: true,
-          challenges: true
+          WorkspaceMembership: true,
+          Challenge: true
         }
       }
     }
@@ -197,11 +197,11 @@ export default async function AdminSettingsPage({
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold">{stats?._count.memberships || 0}</p>
+                <p className="text-2xl font-bold">{stats?._count.WorkspaceMembership || 0}</p>
                 <p className="text-sm text-gray-600">Total Members</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-2xl font-bold">{stats?._count.challenges || 0}</p>
+                <p className="text-2xl font-bold">{stats?._count.Challenge || 0}</p>
                 <p className="text-sm text-gray-600">Active Challenges</p>
               </div>
             </div>

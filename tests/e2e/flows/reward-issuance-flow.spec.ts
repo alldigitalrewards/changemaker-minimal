@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, PARTICIPANT_EMAIL, DEFAULT_PASSWORD, logout } from '../support/auth';
 import { prisma } from '../../../lib/prisma';
 import { RewardType, RewardStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 test.describe('Reward Issuance Flow - End to End', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
@@ -33,7 +34,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
     if (challengeId) {
       await prisma.rewardIssuance.deleteMany({ where: { challengeId } });
       await prisma.activitySubmission.deleteMany({
-        where: { enrollment: { challengeId } }
+        where: { Enrollment: { challengeId } }
       });
       await prisma.enrollment.deleteMany({ where: { challengeId } });
       await prisma.activity.deleteMany({ where: { challengeId } });
@@ -108,6 +109,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
       where: { workspaceId }
     }) || await prisma.activityTemplate.create({
       data: {
+        id: randomUUID(),
         name: 'Test Activity',
         description: 'Test',
         type: 'TEXT_SUBMISSION',
@@ -117,6 +119,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
 
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template.id,
         challengeId,
         pointsValue: 100,
@@ -145,6 +148,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
       // Create submission via API if UI not available
       await prisma.activitySubmission.create({
         data: {
+        id: randomUUID(),
           activityId: activity.id,
           userId: participantId,
           enrollmentId: enrollment!.id,
@@ -220,12 +224,12 @@ test.describe('Reward Issuance Flow - End to End', () => {
     // 7. Verify submission is linked to reward
     const updatedSubmission = await prisma.activitySubmission.findUnique({
       where: { id: submission!.id },
-      include: { rewardIssuance: true }
+      include: { RewardIssuance: true }
     });
 
     expect(updatedSubmission?.rewardIssued).toBe(true);
     expect(updatedSubmission?.rewardIssuanceId).toBe(rewardIssuance?.id);
-    expect(updatedSubmission?.rewardIssuance).toBeTruthy();
+    expect(updatedSubmission?.RewardIssuance).toBeTruthy();
 
     // 8. Participant sees reward
     await logout(page);
@@ -243,6 +247,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
 
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `SKU Reward E2E ${Date.now()}`,
         description: 'Win a product!',
         startDate: new Date(Date.now() - 86400000),
@@ -265,6 +270,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
 
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId,
         pointsValue: 0,
@@ -287,6 +293,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
     // 4. Participant submits
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: activity.id,
         userId: participantId,
         enrollmentId: enrollment.id,
@@ -337,6 +344,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
     // Create a reward in PENDING state
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Status Test ${Date.now()}`,
         description: 'Test status transitions',
         startDate: new Date(),
@@ -350,6 +358,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
 
     const reward = await prisma.rewardIssuance.create({
       data: {
+        id: randomUUID(),
         userId: participantId,
         workspaceId,
         challengeId,

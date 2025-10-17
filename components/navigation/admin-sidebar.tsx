@@ -15,6 +15,9 @@ import {
   Link2,
   User as UserIcon,
   Coins,
+  Crown,
+  Globe,
+  UserCog,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -22,9 +25,10 @@ interface AdminSidebarProps {
     name: string;
     slug: string;
   };
+  isSuperAdmin?: boolean;
 }
 
-const navigation = [
+const workspaceNavigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Participants', href: '/admin/participants', icon: Users },
   { name: 'Challenges', href: '/admin/challenges', icon: Trophy },
@@ -36,7 +40,14 @@ const navigation = [
   { name: 'Profile', href: '/admin/profile', icon: UserIcon },
 ];
 
-export default function AdminSidebar({ workspace }: AdminSidebarProps) {
+const superAdminNavigation = [
+  { name: 'Platform Overview', href: '/admin/dashboard', icon: Crown, superAdminOnly: true },
+  { name: 'All Workspaces', href: '/admin/workspaces', icon: Globe, superAdminOnly: true },
+  { name: 'Manage Members', href: '/admin/users', icon: UserCog, superAdminOnly: true },
+  { name: 'Platform Settings', href: '/admin/platform-settings', icon: Settings, superAdminOnly: true },
+];
+
+export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -78,34 +89,81 @@ export default function AdminSidebar({ workspace }: AdminSidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            {navigation.map((item) => {
-              const href = `/w/${workspace.slug}${item.href}`;
-              const isActive = pathname === href;
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <div className="space-y-6">
+            {/* Superadmin Section */}
+            {isSuperAdmin && (
+              <div>
+                {!collapsed && (
+                  <h3 className="px-3 text-xs font-semibold text-purple-600 uppercase tracking-wider mb-2">
+                    Platform Admin
+                  </h3>
+                )}
+                <ul className="space-y-2">
+                  {superAdminNavigation.map((item) => {
+                    const isActive = pathname === item.href;
 
-              return (
-                <li key={item.name}>
-                  <Link
-                    href={href}
-                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-coral-50 text-coral-700 border border-coral-200'
-                        : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
-                    }`}
-                    title={collapsed ? item.name : undefined}
-                  >
-                    <item.icon
-                      className={`flex-shrink-0 h-5 w-5 ${
-                        isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
-                      } ${collapsed ? 'mx-auto' : 'mr-3'}`}
-                    />
-                    {!collapsed && <span>{item.name}</span>}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          href={item.href}
+                          className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            isActive
+                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                              : 'text-gray-700 hover:bg-purple-50 hover:text-purple-600'
+                          }`}
+                          title={collapsed ? item.name : undefined}
+                        >
+                          <item.icon
+                            className={`flex-shrink-0 h-5 w-5 ${
+                              isActive ? 'text-purple-600' : 'text-purple-500 group-hover:text-purple-600'
+                            } ${collapsed ? 'mx-auto' : 'mr-3'}`}
+                          />
+                          {!collapsed && <span>{item.name}</span>}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {/* Workspace Section */}
+            <div>
+              {!collapsed && isSuperAdmin && (
+                <h3 className="px-3 text-xs font-semibold text-coral-600 uppercase tracking-wider mb-2">
+                  Workspace Admin
+                </h3>
+              )}
+              <ul className="space-y-2">
+                {workspaceNavigation.map((item) => {
+                  const href = `/w/${workspace.slug}${item.href}`;
+                  const isActive = pathname === href;
+
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        href={href}
+                        className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-coral-50 text-coral-700 border border-coral-200'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
+                        }`}
+                        title={collapsed ? item.name : undefined}
+                      >
+                        <item.icon
+                          className={`flex-shrink-0 h-5 w-5 ${
+                            isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
+                          } ${collapsed ? 'mx-auto' : 'mr-3'}`}
+                        />
+                        {!collapsed && <span>{item.name}</span>}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
         </nav>
       </div>
     </aside>

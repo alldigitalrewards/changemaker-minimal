@@ -66,9 +66,9 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
         workspaceId: workspace.id,
       },
       include: {
-        enrollments: {
+        Enrollment: {
           include: {
-            user: {
+            User: {
               select: {
                 id: true,
                 email: true,
@@ -77,18 +77,18 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
             },
           },
         },
-        activities: {
+        Activity: {
           include: {
-            template: true,
-            submissions: {
+            ActivityTemplate: true,
+            ActivitySubmission: {
               include: {
-                user: {
+                User: {
                   select: {
                     id: true,
                     email: true,
                   }
                 },
-                enrollment: true,
+                Enrollment: true,
               },
               orderBy: {
                 submittedAt: 'desc'
@@ -98,7 +98,7 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
         },
         _count: {
           select: {
-            enrollments: true,
+            Enrollment: true,
           },
         },
       },
@@ -122,7 +122,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
     notFound();
   }
 
-  const enrolledUsers = challenge.enrollments || [];
+  const enrolledUsers = challenge.Enrollment || [];
   const activeEnrollments = enrolledUsers.filter(e => e.status === 'ENROLLED').length;
   const completedEnrollments = enrolledUsers.filter(e => e.status === 'WITHDRAWN').length;
   
@@ -165,32 +165,32 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   // Compute quick metrics for insights
   const invitedCount = enrolledUsers.filter(e => e.status === 'INVITED').length;
   const enrolledCount = enrolledUsers.filter(e => e.status === 'ENROLLED').length;
-  const totalSubmissions = (challenge.activities || []).reduce((sum, a) => sum + (a.submissions?.length || 0), 0);
-  const approvedSubmissions = (challenge.activities || []).reduce((sum, a) => sum + (a.submissions?.filter(s => s.status === 'APPROVED').length || 0), 0);
+  const totalSubmissions = (challenge.Activity || []).reduce((sum, a) => sum + (a.ActivitySubmission?.length || 0), 0);
+  const approvedSubmissions = (challenge.Activity || []).reduce((sum, a) => sum + (a.ActivitySubmission?.filter(s => s.status === 'APPROVED').length || 0), 0);
   const completionPct = enrolledCount > 0 ? Math.round((approvedSubmissions / Math.max(enrolledCount, 1)) * 100) : 0;
   const avgScore = (() => {
-    const approved = (challenge.activities || []).flatMap(a => (a.submissions || []).filter(s => s.status === 'APPROVED'));
+    const approved = (challenge.Activity || []).flatMap(a => (a.ActivitySubmission || []).filter(s => s.status === 'APPROVED'));
     const pts = approved.map(s => s.pointsAwarded || 0);
     if (pts.length === 0) return 0;
     return Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
   })();
   const lastActivityAt = (() => {
-    const all = (challenge.activities || []).flatMap(a => a.submissions || []);
+    const all = (challenge.Activity || []).flatMap(a => a.ActivitySubmission || []);
     if (all.length === 0) return null;
     const latest = all.reduce((acc, s) => (acc && acc.submittedAt > s.submittedAt ? acc : s));
     return latest.submittedAt;
   })();
-  const anySubmissions = (challenge.activities || []).some(a => (a.submissions || []).length > 0);
+  const anySubmissions = (challenge.Activity || []).some(a => (a.ActivitySubmission || []).length > 0);
 
   // Attention metrics
-  const pendingSubmissionCount = (challenge.activities || []).reduce((sum, a) => sum + ((a.submissions || []).filter(s => s.status === 'PENDING').length), 0)
+  const pendingSubmissionCount = (challenge.Activity || []).reduce((sum, a) => sum + ((a.ActivitySubmission || []).filter(s => s.status === 'PENDING').length), 0)
   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
   const stalledInvitesCount = enrolledUsers.filter(e => e.status === 'INVITED' && (now.getTime() - new Date((e as any).createdAt).getTime()) > sevenDaysMs).length
   const isUnpublished = statusForActions !== 'PUBLISHED'
 
-  const activityOptions = (challenge.activities || []).map(a => ({
+  const activityOptions = (challenge.Activity || []).map(a => ({
     id: a.id,
-    name: a.template?.name || 'Activity'
+    name: a.ActivityTemplate?.name || 'Activity'
   }))
 
   // Fetch timeline events (server-side)
@@ -439,11 +439,11 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
                 {(() => {
                   // compute points per user in this challenge similar to API util
                   const byUser: Record<string, { email: string; points: number }> = {}
-                  ;(challenge.activities || []).forEach(a => {
-                    (a.submissions || []).filter(s => s.status === 'APPROVED').forEach(s => {
-                      const key = s.user.id
+                  ;(challenge.Activity || []).forEach(a => {
+                    (a.ActivitySubmission || []).filter(s => s.status === 'APPROVED').forEach(s => {
+                      const key = s.User.id
                       const pts = s.pointsAwarded || a.pointsValue || 0
-                      if (!byUser[key]) byUser[key] = { email: s.user.email, points: 0 }
+                      if (!byUser[key]) byUser[key] = { email: s.User.email, points: 0 }
                       byUser[key].points += pts
                     })
                   })

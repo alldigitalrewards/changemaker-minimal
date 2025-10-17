@@ -14,7 +14,7 @@ interface EnrollmentCardProps {
   enrollment: {
     id: string
     status: string
-    challenge: {
+    Challenge: {
       id: string
       title: string
       description: string
@@ -51,7 +51,7 @@ function EnrollmentCard({ enrollment, workspaceSlug }: EnrollmentCardProps) {
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="font-semibold text-gray-900 truncate">{enrollment.challenge.title}</h3>
+              <h3 className="font-semibold text-gray-900 truncate">{enrollment.Challenge.title}</h3>
               <Badge variant="outline" className={config.color}>
                 <StatusIcon className="w-3 h-3 mr-1" />
                 {config.label}
@@ -62,10 +62,10 @@ function EnrollmentCard({ enrollment, workspaceSlug }: EnrollmentCardProps) {
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical'
             }}>
-              {enrollment.challenge.description}
+              {enrollment.Challenge.description}
             </p>
             <Link
-              href={`/w/${workspaceSlug}/participant/challenges/${enrollment.challenge.id}`}
+              href={`/w/${workspaceSlug}/participant/challenges/${enrollment.Challenge.id}`}
               className="inline-flex items-center text-sm text-coral-600 hover:text-coral-700 font-medium transition-colors"
             >
               <Eye className="w-4 h-4 mr-1" />
@@ -130,7 +130,7 @@ export default async function ParticipantDashboard({
   const enrollments = await getUserEnrollments(dbUser.id, workspace.id)
 
   const communications = await getWorkspaceCommunications(workspace.id, { limit: 25 })
-  const enrollmentChallengeIds = new Set(enrollments.map(e => e.challenge.id))
+  const enrollmentChallengeIds = new Set(enrollments.map(e => e.Challenge.id))
   const relevantCommunications = communications.filter(comm => {
     if (comm.scope === 'WORKSPACE') return true
     if ((comm.scope === 'CHALLENGE' || comm.scope === 'ACTIVITY') && comm.challengeId) {

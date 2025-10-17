@@ -16,9 +16,9 @@ export const GET = withErrorHandling(async (
       workspaceId: workspace.id,
     },
     include: {
-      enrollments: {
+      Enrollment: {
         include: {
-          user: {
+          User: {
             select: {
               id: true,
               email: true,
@@ -29,7 +29,7 @@ export const GET = withErrorHandling(async (
       },
       _count: {
         select: {
-          enrollments: true,
+          Enrollment: true,
         },
       },
     },
@@ -53,7 +53,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, status } = body;
 
   // Basic validation
   if (!title || !description) {
@@ -62,6 +62,11 @@ export const PUT = withErrorHandling(async (
 
   // Prepare update data - only include fields that are provided
   const updateData: any = { title, description };
+
+  // Handle status field if provided
+  if (status !== undefined) {
+    updateData.status = status;
+  }
 
   // Handle timeline fields if provided
   if (startDate || endDate || enrollmentDeadline !== undefined) {
@@ -141,7 +146,7 @@ export const PUT = withErrorHandling(async (
       // Snapshot previous enrollments to compute diffs for event logs
       const previousEnrollments = await prisma.enrollment.findMany({
         where: { challengeId: id },
-        include: { user: true }
+        include: { User: true }
       })
 
       const prevByUserId = new Map(previousEnrollments.map(e => [e.userId, e]))
@@ -347,7 +352,7 @@ export const PATCH = withErrorHandling(async (
     try {
       const memberships = await prisma.enrollment.findMany({
         where: { challengeId: id, status: 'INVITED' },
-        include: { user: true }
+        include: { User: true }
       })
       if (memberships.length > 0) {
         const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
@@ -358,26 +363,26 @@ export const PATCH = withErrorHandling(async (
           try {
             // Generate a targeted, single-use invite code for this participant and challenge
             const { createInviteCode } = await import('@/lib/db/queries')
-            const invite = await createInviteCode({ challengeId: id, role: m.user.role as any, maxUses: 1, targetEmail: m.user.email }, workspace.id, user.dbUser.id)
+            const invite = await createInviteCode({ challengeId: id, role: m.User.role as any, maxUses: 1, targetEmail: m.User.email }, workspace.id, user.dbUser.id)
             const html = (await import('@/lib/email/templates/invite')).renderInviteEmail({
               workspaceName: workspace.name,
               inviterEmail: user.dbUser.email,
-              role: m.user.role,
+              role: m.User.role,
               inviteUrl: `${inviteUrlBase}${invite.code}`,
               expiresAt: invite.expiresAt,
               challengeTitle: (updated as any).title || null
             })
-            await (await import('@/lib/email/smtp')).sendInviteEmail({ to: m.user.email, subject: `You're invited to join ${workspace.name}`, html })
+            await (await import('@/lib/email/smtp')).sendInviteEmail({ to: m.User.email, subject: `You're invited to join ${workspace.name}`, html })
             await logActivityEvent({
               workspaceId: workspace.id,
               challengeId: id,
               actorUserId: user.dbUser.id,
-              userId: m.user.id,
+              userId: m.User.id,
               type: 'INVITE_SENT' as any,
               metadata: { via: 'publish', inviteCode: invite.code }
             })
           } catch (e) {
-            console.error('Failed sending invite on publish for', m.user.email, e)
+            console.error('Failed sending invite on publish for', m.User.email, e)
           }
         }
       }

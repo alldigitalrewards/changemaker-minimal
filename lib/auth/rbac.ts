@@ -74,9 +74,16 @@ export function isParticipant(userRole: Role): boolean {
 
 // Platform-level authorization
 // Detect elevated, cross-tenant capability via user permissions or specific email
+const PLATFORM_SUPERADMIN_EMAILS = [
+  'krobinson@alldigitalrewards.com',
+  'jhoughtelin@alldigitalrewards.com',
+  'kfelke@alldigitalrewards.com',
+  'jfelke@alldigitalrewards.com',
+];
+
 export function isPlatformSuperAdmin(input: { permissions?: string[] } | string[] | null | undefined, email?: string): boolean {
-  // Check for PM superadmin email
-  if (email === 'krobinson@alldigitalrewards.com') {
+  // Check for superadmin emails
+  if (email && PLATFORM_SUPERADMIN_EMAILS.includes(email)) {
     return true;
   }
 

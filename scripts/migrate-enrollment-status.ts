@@ -13,12 +13,12 @@ async function migrateEnrollmentStatus() {
       select: {
         id: true,
         status: true,
-        user: {
+        User: {
           select: {
             email: true
           }
         },
-        challenge: {
+        Challenge: {
           select: {
             title: true
           }

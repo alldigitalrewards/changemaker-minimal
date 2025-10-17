@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, PARTICIPANT_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
 import { RewardType, RewardStatus, SubmissionStatus } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 test.describe('Multi-Reward System API', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
@@ -129,6 +130,7 @@ test.describe('Multi-Reward System API', () => {
     // 1. Create challenge with reward
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `E2E Reward Test ${Date.now()}`,
         description: 'Test end-to-end reward flow',
         startDate: new Date(Date.now() - 86400000), // Yesterday (active)
@@ -145,6 +147,7 @@ test.describe('Multi-Reward System API', () => {
     // 2. Create activity template and activity
     const template = await prisma.activityTemplate.create({
       data: {
+        id: randomUUID(),
         name: 'Test Activity',
         description: 'Test activity for reward',
         type: 'TEXT_SUBMISSION',
@@ -155,6 +158,7 @@ test.describe('Multi-Reward System API', () => {
 
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template.id,
         challengeId: challenge.id,
         pointsValue: 50,
@@ -177,6 +181,7 @@ test.describe('Multi-Reward System API', () => {
     // 4. Submit activity
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: activity.id,
         userId: participantId,
         enrollmentId: enrollment.id,
@@ -213,7 +218,7 @@ test.describe('Multi-Reward System API', () => {
     // 7. Verify submission is linked to reward
     const updatedSubmission = await prisma.activitySubmission.findUnique({
       where: { id: submission.id },
-      include: { rewardIssuance: true }
+      include: { RewardIssuance: true }
     });
 
     expect(updatedSubmission?.rewardIssued).toBe(true);
@@ -232,6 +237,7 @@ test.describe('Multi-Reward System API', () => {
     // Setup challenge with SKU reward
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `SKU Reward Test ${Date.now()}`,
         description: 'Test SKU reward issuance',
         startDate: new Date(Date.now() - 86400000),
@@ -251,6 +257,7 @@ test.describe('Multi-Reward System API', () => {
 
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId: challenge.id,
         pointsValue: 0,
@@ -271,6 +278,7 @@ test.describe('Multi-Reward System API', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: activity.id,
         userId: participantId,
         enrollmentId: enrollment.id,
@@ -318,6 +326,7 @@ test.describe('Multi-Reward System API', () => {
     // Create a reward issuance
     const reward = await prisma.rewardIssuance.create({
       data: {
+        id: randomUUID(),
         userId: participantId,
         workspaceId,
         type: 'points',
@@ -349,6 +358,7 @@ test.describe('Multi-Reward System API', () => {
     // Create a TenantSku mapping
     const tenantSku = await prisma.tenantSku.create({
       data: {
+        id: randomUUID(),
         tenantId: 'default',
         skuId: 'TEST-SKU-001',
         label: 'Test Product',
@@ -363,6 +373,7 @@ test.describe('Multi-Reward System API', () => {
     // Test unique constraint (tenantId + skuId)
     const duplicateAttempt = prisma.tenantSku.create({
       data: {
+        id: randomUUID(),
         tenantId: 'default',
         skuId: 'TEST-SKU-001', // Same skuId for same tenant
         label: 'Different Label',

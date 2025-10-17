@@ -43,7 +43,7 @@ export async function deleteWorkspace(formData: FormData) {
     // Delete all enrollments for challenges in this workspace
     await prisma.enrollment.deleteMany({
       where: {
-        challenge: {
+        Challenge: {
           workspaceId
         }
       }
@@ -122,7 +122,7 @@ export async function setPointsBalance(formData: FormData) {
   await prisma.pointsBalance.upsert({
     where: { userId_workspaceId: { userId, workspaceId } },
     update: { totalPoints: safeTotal, availablePoints: safeAvailable },
-    create: { userId, workspaceId, totalPoints: safeTotal, availablePoints: safeAvailable }
+    create: { id: crypto.randomUUID(), userId, workspaceId, totalPoints: safeTotal, availablePoints: safeAvailable }
   })
 
   // Revalidate settings page path

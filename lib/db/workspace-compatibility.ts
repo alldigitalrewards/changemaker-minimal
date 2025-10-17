@@ -100,8 +100,8 @@ export async function getUserPrimaryWorkspace(supabaseUserId: string): Promise<W
     }
 
     // Fall back to legacy workspace relationship
-    if (dbUser.workspaceId && dbUser.workspace) {
-      return dbUser.workspace
+    if (dbUser.workspaceId && dbUser.Workspace) {
+      return dbUser.Workspace
     }
 
     return null
@@ -150,10 +150,10 @@ export async function getUserWorkspaces(supabaseUserId: string): Promise<Workspa
     let workspaces = memberships.map(m => m.workspace as Workspace)
 
     // Add legacy workspace if not already included (backward compatibility)
-    if (dbUser.workspaceId && dbUser.workspace) {
+    if (dbUser.workspaceId && dbUser.Workspace) {
       const hasLegacyInWorkspaces = workspaces.some(w => w.id === dbUser.workspaceId)
       if (!hasLegacyInWorkspaces) {
-        workspaces.push(dbUser.workspace)
+        workspaces.push(dbUser.Workspace)
       }
     }
 

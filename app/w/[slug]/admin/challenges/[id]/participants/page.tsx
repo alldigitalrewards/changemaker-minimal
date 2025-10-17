@@ -18,15 +18,15 @@ export default async function ParticipantsPage({ params, searchParams }: PagePro
   const challenge = await prisma.challenge.findUnique({
     where: { id },
     include: {
-      enrollments: {
+      Enrollment: {
         include: {
-          user: { select: { id: true, email: true, role: true } }
+          User: { select: { id: true, email: true, role: true } }
         }
       }
     }
   })
 
-  const enrolledUsers = challenge?.enrollments || []
+  const enrolledUsers = challenge?.Enrollment || []
   const invitedCount = enrolledUsers.filter(e => e.status === 'INVITED').length
   const enrolledCount = enrolledUsers.filter(e => e.status === 'ENROLLED').length
   const participantsFilterParam = typeof sp.participants === 'string' ? (sp.participants as string).toLowerCase() : undefined
@@ -67,8 +67,8 @@ export default async function ParticipantsPage({ params, searchParams }: PagePro
             <ParticipantsManager
               workspaceSlug={slug}
               challengeId={id}
-              initialInvitedIds={enrolledUsers.filter(e => e.status === 'INVITED').map(e => e.user.id)}
-              initialEnrolledIds={enrolledUsers.filter(e => e.status === 'ENROLLED').map(e => e.user.id)}
+              initialInvitedIds={enrolledUsers.filter(e => e.status === 'INVITED').map(e => e.User.id)}
+              initialEnrolledIds={enrolledUsers.filter(e => e.status === 'ENROLLED').map(e => e.User.id)}
               challengeTitle={challenge?.title || ''}
               challengeDescription={challenge?.description || ''}
               startDate={challenge ? new Date(challenge.startDate).toISOString() : ''}
@@ -88,9 +88,9 @@ export default async function ParticipantsPage({ params, searchParams }: PagePro
                 return list.map((enrollment) => (
                 <div key={enrollment.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
-                    <p className="font-medium">{enrollment.user.email}</p>
+                    <p className="font-medium">{enrollment.User.email}</p>
                     <p className="text-sm text-gray-500">
-                      Role: {enrollment.user.role} | Status: {enrollment.status}
+                      Role: {enrollment.User.role} | Status: {enrollment.status}
                     </p>
                     <p className="text-xs text-gray-400">
                       Joined: {new Date(enrollment.createdAt).toLocaleDateString()}

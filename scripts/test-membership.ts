@@ -113,7 +113,7 @@ async function main() {
     const usersWithoutMembership = await prisma.user.findMany({
       where: {
         workspaceId: { not: null },
-        memberships: { none: {} }
+        WorkspaceMembership: { none: {} }
       }
     })
     

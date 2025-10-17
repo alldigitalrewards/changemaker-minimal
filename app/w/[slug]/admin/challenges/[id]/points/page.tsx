@@ -21,7 +21,7 @@ export default async function PointsPage({ params }: PageProps) {
     where: { challengeId: id },
     orderBy: { createdAt: 'desc' },
     take: 20,
-    include: { toUser: { select: { email: true } } }
+    include: { User_PointsLedger_toUserIdToUser: { select: { email: true } } }
   })
 
   const workspaceRemaining = Math.max(0, (workspaceBudget?.totalBudget || 0) - (workspaceBudget?.allocated || 0))
@@ -109,7 +109,7 @@ export default async function PointsPage({ params }: PageProps) {
               {recent.map((e) => (
                 <div key={e.id} className="flex items-center justify-between border rounded p-2 text-sm">
                   <div>
-                    <div className="font-medium">{e.toUser.email}</div>
+                    <div className="font-medium">{e.User_PointsLedger_toUserIdToUser.email}</div>
                     <div className="text-gray-500">{new Date(e.createdAt).toLocaleString()}</div>
                   </div>
                   <div className="font-medium">+{e.amount}</div>

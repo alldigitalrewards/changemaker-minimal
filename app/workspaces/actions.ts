@@ -22,6 +22,7 @@ export async function createWorkspace(formData: FormData, userId: string) {
     // Create workspace with a unique tenant scope
     const workspace = await prisma.workspace.create({
       data: {
+        id: crypto.randomUUID(),
         name,
         slug,
         tenantId: `tenant_${nanoid(12)}`

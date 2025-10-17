@@ -1,11 +1,12 @@
 import { prisma } from '../../../lib/prisma'
 import { Role, EnrollmentStatus, SubmissionStatus, ActivityType } from '@prisma/client'
+import { randomUUID } from 'crypto'
 
 export async function ensureWorkspace(slug: string, name?: string) {
   const workspace = await prisma.workspace.upsert({
     where: { slug },
     update: { name: name || slug },
-    create: { slug, name: name || slug }
+    create: { id: randomUUID(), slug, name: name || slug }
   })
   return workspace
 }
@@ -28,7 +29,8 @@ export async function ensureChallenge(slug: string, title: string, description: 
   const startDate = new Date(now.getTime() + 24 * 3600 * 1000)
   const endDate = new Date(startDate.getTime() + 30 * 24 * 3600 * 1000)
   return prisma.challenge.create({
-    data: { title, description, startDate, endDate, workspaceId: workspace.id }
+    data: {
+        id: randomUUID(), title, description, startDate, endDate, workspaceId: workspace.id }
   })
 }
 
@@ -54,19 +56,22 @@ export async function ensurePendingSubmission(params: { slug: string; title: str
   const template = await prisma.activityTemplate.upsert({
     where: { id: (await (async () => null as any)()) || '00000000-0000-0000-0000-000000000000' },
     update: {},
-    create: { name: 'Text Submission', description: 'Text', type: ActivityType.TEXT_SUBMISSION, workspaceId: workspace.id }
+    create: { id: randomUUID(), name: 'Text Submission', description: 'Text', type: ActivityType.TEXT_SUBMISSION, workspaceId: workspace.id }
   }).catch(async () => {
     return prisma.activityTemplate.create({
-      data: { name: 'Text Submission', description: 'Text', type: ActivityType.TEXT_SUBMISSION, workspaceId: workspace.id }
+      data: {
+        id: randomUUID(), name: 'Text Submission', description: 'Text', type: ActivityType.TEXT_SUBMISSION, workspaceId: workspace.id }
     })
   })
 
   const activity = await prisma.activity.create({
-    data: { templateId: template.id, challengeId: challenge.id, pointsValue: 10 }
+    data: {
+        id: randomUUID(), templateId: template.id, challengeId: challenge.id, pointsValue: 10 }
   })
 
   const submission = await prisma.activitySubmission.create({
     data: {
+        id: randomUUID(),
       activityId: activity.id,
       userId: user.id,
       enrollmentId: enrollment.id,

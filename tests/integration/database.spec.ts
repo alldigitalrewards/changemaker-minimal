@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { prisma } from '../../lib/prisma';
+import { randomUUID } from 'crypto';
 
 test.describe('Database Integration Tests', () => {
   test('Migration verification - all tables exist', async () => {
@@ -37,6 +38,7 @@ test.describe('Database Integration Tests', () => {
     // Test Workspace.slug unique constraint
     const duplicateWorkspace = prisma.workspace.create({
       data: {
+    id: randomUUID(),
         slug: workspace!.slug,
         name: 'Duplicate Test'
       }
@@ -63,6 +65,7 @@ test.describe('Database Integration Tests', () => {
     // Workspace name is required
     const invalidWorkspace = prisma.workspace.create({
       data: {
+    id: randomUUID(),
         slug: 'test-slug',
         // @ts-expect-error - Testing validation
         name: null
@@ -74,6 +77,7 @@ test.describe('Database Integration Tests', () => {
     // Challenge title is required
     const invalidChallenge = prisma.challenge.create({
       data: {
+        id: randomUUID(),
         // @ts-expect-error - Testing validation
         title: null,
         description: 'Test',
@@ -92,6 +96,7 @@ test.describe('Database Integration Tests', () => {
     // Create challenge with enrollment
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Cascade Test ${Date.now()}`,
         description: 'Testing cascades',
         startDate: new Date(),
@@ -134,6 +139,7 @@ test.describe('Database Integration Tests', () => {
 
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Activity Cascade ${Date.now()}`,
         description: 'Test',
         startDate: new Date(),
@@ -144,6 +150,7 @@ test.describe('Database Integration Tests', () => {
 
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         templateId: template!.id,
         challengeId: challenge.id,
         pointsValue: 10
@@ -164,6 +171,7 @@ test.describe('Database Integration Tests', () => {
 
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: activity.id,
         userId: user!.id,
         enrollmentId: enrollment.id,
@@ -228,6 +236,7 @@ test.describe('Database Integration Tests', () => {
     // Create workspace without optional fields
     const newWorkspace = await prisma.workspace.create({
       data: {
+    id: randomUUID(),
         slug: `default-test-${Date.now()}`,
         name: 'Default Test'
       }
@@ -297,6 +306,7 @@ test.describe('Database Integration Tests', () => {
     // Test Challenge.rewardConfig JSON field
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `JSON Test ${Date.now()}`,
         description: 'Testing JSON fields',
         startDate: new Date(),
@@ -361,6 +371,7 @@ test.describe('Database Integration Tests', () => {
 
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Timestamp Test ${Date.now()}`,
         description: 'Testing timestamps',
         startDate: new Date(),
@@ -392,6 +403,7 @@ test.describe('Database Integration Tests', () => {
     // Create two workspaces with different tenantIds
     const tenant1Workspace = await prisma.workspace.create({
       data: {
+    id: randomUUID(),
         slug: `tenant1-${Date.now()}`,
         name: 'Tenant 1',
         tenantId: 'tenant-1'
@@ -400,6 +412,7 @@ test.describe('Database Integration Tests', () => {
 
     const tenant2Workspace = await prisma.workspace.create({
       data: {
+    id: randomUUID(),
         slug: `tenant2-${Date.now()}`,
         name: 'Tenant 2',
         tenantId: 'tenant-2'

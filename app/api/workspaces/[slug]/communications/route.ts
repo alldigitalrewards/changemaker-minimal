@@ -39,15 +39,15 @@ async function getRecipientsForCommunication(params: {
     const members = await prisma.workspaceMembership.findMany({
       where: { workspaceId },
       include: {
-        user: {
+        User: {
           select: { email: true, isPending: true }
         }
       }
     })
     return normalizeEmails(
       members
-        .filter(member => !!member.user?.email && !member.user.isPending)
-        .map(member => member.user.email)
+        .filter(member => !!member.User?.email && !member.User.isPending)
+        .map(member => member.User.email)
     )
   }
 
@@ -69,14 +69,14 @@ async function getRecipientsForCommunication(params: {
         status: { in: statusFilters[audience] }
       },
       include: {
-        user: { select: { email: true, isPending: true } }
+        User: { select: { email: true, isPending: true } }
       }
     })
 
     return normalizeEmails(
       enrollments
-        .filter(enrollment => !!enrollment.user?.email && !enrollment.user.isPending)
-        .map(enrollment => enrollment.user.email)
+        .filter(enrollment => !!enrollment.User?.email && !enrollment.User.isPending)
+        .map(enrollment => enrollment.User.email)
     )
   }
 
@@ -90,14 +90,14 @@ async function getRecipientsForCommunication(params: {
       status: { in: statusFilters[audience] }
     },
     include: {
-      user: { select: { email: true, isPending: true } }
+      User: { select: { email: true, isPending: true } }
     }
   })
 
   return normalizeEmails(
     enrollments
-      .filter(enrollment => !!enrollment.user?.email && !enrollment.user.isPending)
-      .map(enrollment => enrollment.user.email)
+      .filter(enrollment => !!enrollment.User?.email && !enrollment.User.isPending)
+      .map(enrollment => enrollment.User.email)
   )
 }
 

@@ -7,6 +7,8 @@ import { getWorkspacePointsBudget } from "@/lib/db/queries"
 import AdminSidebar from "@/components/navigation/admin-sidebar"
 import { WorkspaceProvider } from "@/providers/workspace-provider"
 import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
+import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
+import { prisma } from "@/lib/prisma"
 import { ReactNode } from "react"
 
 interface AdminLayoutProps {
@@ -37,6 +39,13 @@ export default async function AdminLayout({
   }
 
   const budget = await getWorkspacePointsBudget(workspace.id)
+
+  // Check if user is platform superadmin
+  const dbUser = await prisma.user.findUnique({
+    where: { email: user.email! }
+  })
+  const isSuperAdmin = isPlatformSuperAdmin(dbUser?.permissions, user.email!)
+
   const header = (
     <DashboardHeader
       title="Admin Dashboard"
@@ -48,7 +57,7 @@ export default async function AdminLayout({
     />
   )
 
-  const sidebar = <AdminSidebar workspace={workspace} />
+  const sidebar = <AdminSidebar workspace={workspace} isSuperAdmin={isSuperAdmin} />
 
   // Get all user workspaces for the provider
   const userWorkspaces = await getUserWorkspacesServer()

@@ -146,7 +146,7 @@ export default async function ParticipantProfilePage({
               {enrollments.map(e => (
                 <li key={e.id} className="flex items-center justify-between border rounded p-3">
                   <div>
-                    <p className="font-medium">{e.challenge.title}</p>
+                    <p className="font-medium">{e.Challenge.title}</p>
                     <p className="text-sm text-gray-500">Status: {e.status}</p>
                   </div>
                 </li>

@@ -24,7 +24,7 @@ test.describe('Approvals with multi-reward issuance', () => {
     })
     expect(res.ok()).toBeTruthy()
 
-    const ri = await prisma.rewardIssuance.findFirst({ where: { submission: { id: submissionId }, type: 'points' } })
+    const ri = await prisma.rewardIssuance.findFirst({ where: { ActivitySubmission: { id: submissionId }, type: 'points' } })
     expect(ri?.status).toBe('ISSUED')
   })
 
@@ -36,7 +36,7 @@ test.describe('Approvals with multi-reward issuance', () => {
     })
     expect(res.ok()).toBeTruthy()
 
-    const ri = await prisma.rewardIssuance.findFirst({ where: { submission: { id: submissionId }, type: 'sku' } })
+    const ri = await prisma.rewardIssuance.findFirst({ where: { ActivitySubmission: { id: submissionId }, type: 'sku' } })
     expect(ri?.status).toBe('ISSUED')
   })
 
@@ -48,7 +48,7 @@ test.describe('Approvals with multi-reward issuance', () => {
     })
     expect(res.ok()).toBeTruthy()
 
-    const ri = await prisma.rewardIssuance.findFirst({ where: { submission: { id: submissionId }, type: 'monetary' } })
+    const ri = await prisma.rewardIssuance.findFirst({ where: { ActivitySubmission: { id: submissionId }, type: 'monetary' } })
     expect(ri?.status).toBe('ISSUED')
   })
 })
