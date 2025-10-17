@@ -53,7 +53,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, status } = body;
 
   // Basic validation
   if (!title || !description) {
@@ -62,6 +62,11 @@ export const PUT = withErrorHandling(async (
 
   // Prepare update data - only include fields that are provided
   const updateData: any = { title, description };
+
+  // Handle status field if provided
+  if (status !== undefined) {
+    updateData.status = status;
+  }
 
   // Handle timeline fields if provided
   if (startDate || endDate || enrollmentDeadline !== undefined) {
