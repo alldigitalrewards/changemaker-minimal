@@ -897,7 +897,7 @@ async function seed() {
         await (prisma as any).tenantSku.upsert({
           where: { tenantId_skuId: { tenantId, skuId: sku.skuId } },
           update: { label: sku.label, provider: sku.provider },
-          create: { tenantId, skuId: sku.skuId, label: sku.label, provider: sku.provider }
+          create: { id: randomUUID(), tenantId, skuId: sku.skuId, label: sku.label, provider: sku.provider }
         })
       }
       console.log(`✓ Seeded ${skus.length} SKUs for tenant '${tenantId}'`)

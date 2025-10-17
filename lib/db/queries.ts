@@ -56,6 +56,13 @@ export class DatabaseError extends Error {
   }
 }
 
+export class ValidationError extends DatabaseError {
+  constructor(message: string) {
+    super(message, 'VALIDATION_ERROR')
+    this.name = 'ValidationError'
+  }
+}
+
 export class WorkspaceAccessError extends DatabaseError {
   constructor(workspaceId: string) {
     super(`Access denied to workspace: ${workspaceId}`, 'WORKSPACE_ACCESS_DENIED')
@@ -656,10 +663,10 @@ export async function createEnrollment(
 
   // Enforce only that challenge is not archived; allow enrollment for inactive/unpublished challenges
   if ((challenge as any).status === 'ARCHIVED') {
-    throw new DatabaseError('Enrollment is not allowed for archived challenges')
+    throw new ValidationError('Enrollment is not allowed for archived challenges')
   }
   if ((challenge as any).enrollmentDeadline && new Date() > new Date((challenge as any).enrollmentDeadline)) {
-    throw new DatabaseError('Enrollment deadline has passed')
+    throw new ValidationError('Enrollment deadline has passed')
   }
 
   const existing = await prisma.enrollment.findFirst({
@@ -667,7 +674,7 @@ export async function createEnrollment(
   })
 
   if (existing) {
-    throw new DatabaseError('User already enrolled in this challenge')
+    throw new ValidationError('User already enrolled in this challenge')
   }
 
   try {
