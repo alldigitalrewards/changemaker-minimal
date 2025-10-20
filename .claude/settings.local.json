@@ -55,7 +55,13 @@
       "mcp__browserbasehq-mcp-browserbase__browserbase_stagehand_navigate",
       "mcp__browserbasehq-mcp-browserbase__browserbase_stagehand_extract",
       "mcp__browserbasehq-mcp-browserbase__browserbase_stagehand_act",
-      "mcp__browserbasehq-mcp-browserbase__browserbase_screenshot"
+      "mcp__browserbasehq-mcp-browserbase__browserbase_screenshot",
+      "Bash(timeout 60 npx playwright test tests/api/challenge-crud.spec.ts:353 --reporter=list)",
+      "Read(//private/tmp/**)",
+      "Bash(npx playwright test tests/api/participants.spec.ts --reporter=list)",
+      "Bash(npx playwright test tests/api/participants.spec.ts:21 --reporter=json)",
+      "Bash(npx playwright test tests/api/participants.spec.ts -g \"create participant\" --reporter=line)",
+      "Bash(npx playwright test tests/api/challenge-crud.spec.ts --reporter=list)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",
