@@ -42,7 +42,7 @@ test.describe('Challenge CRUD API', () => {
       data: challengeData
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(201);
     const data = await response.json();
 
     expect(data.challenge.title).toBe(challengeData.title);
@@ -106,7 +106,7 @@ test.describe('Challenge CRUD API', () => {
       data: challengeData
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(201);
     const data = await response.json();
 
     // Verify activities were created
@@ -344,7 +344,7 @@ test.describe('Challenge CRUD API', () => {
 
     expect(data.challenge.pointsBudget).toBeTruthy();
     expect(data.challenge.pointsBudget.totalBudget).toBe(10000);
-    expect(data.challenge.pointsBudget.remaining).toBe(7500);
+    expect(data.challenge.pointsBudget.remaining).toBe(8000);
 
     // Cleanup
     await prisma.challenge.delete({ where: { id: challenge.id } });

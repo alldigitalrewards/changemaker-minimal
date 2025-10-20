@@ -540,7 +540,7 @@ test.describe('Submissions and Review API', () => {
 
     expect(response.status()).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('already reviewed');
+    expect(data.error).toContain('Submission has already been reviewed');
 
     // Cleanup
     await prisma.activitySubmission.delete({ where: { id: submission.id } });

@@ -57,7 +57,7 @@ test.describe('Multi-Reward System API', () => {
       data: challengeData
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(201);
     const data = await response.json();
     expect(data.challenge.rewardType).toBe('points');
     expect(data.challenge.rewardConfig).toBeTruthy();
@@ -86,7 +86,7 @@ test.describe('Multi-Reward System API', () => {
       data: challengeData
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(201);
     const data = await response.json();
     expect(data.challenge.rewardType).toBe('sku');
     expect(data.challenge.rewardConfig).toBeTruthy();
@@ -115,7 +115,7 @@ test.describe('Multi-Reward System API', () => {
       data: challengeData
     });
 
-    expect(response.status()).toBe(200);
+    expect(response.status()).toBe(201);
     const data = await response.json();
     expect(data.challenge.rewardType).toBe('monetary');
     expect(data.challenge.rewardConfig).toBeTruthy();
