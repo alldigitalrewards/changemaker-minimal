@@ -141,6 +141,11 @@ export const PUT = withErrorHandling(async (
     challenge = await prisma.challenge.findUnique({ where: { id } });
   }
 
+  // Verify challenge exists after update/fetch
+  if (!challenge) {
+    return NextResponse.json({ error: 'Challenge not found after update' }, { status: 404 });
+  }
+
   // Log challenge updated with minimal diff
   try {
     const changed: Record<string, any> = {}

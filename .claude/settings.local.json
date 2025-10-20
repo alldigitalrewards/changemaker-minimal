@@ -76,5 +76,6 @@
     "supabase-production",
     "supabase-staging",
     "task-master-ai"
-  ]
+  ],
+  "spinnerTipsEnabled": false
 }

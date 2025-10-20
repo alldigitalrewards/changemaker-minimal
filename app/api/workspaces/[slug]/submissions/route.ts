@@ -60,7 +60,7 @@ export const POST = withErrorHandling(async (
       enrollmentId: enrollment.id,
       userId: user.dbUser.id,
       actorUserId: user.dbUser.id,
-      type: 'ACTIVITY_SUBMITTED',
+      type: 'SUBMISSION_CREATED',
       metadata: {
         submissionId: submission.id,
         activityId
