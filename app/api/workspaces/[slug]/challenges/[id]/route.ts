@@ -27,6 +27,7 @@ export const GET = withErrorHandling(async (
           },
         },
       },
+      ChallengePointsBudget: true,
       _count: {
         select: {
           Enrollment: true,
@@ -42,7 +43,20 @@ export const GET = withErrorHandling(async (
   // Also get activities for this challenge
   const activities = await getChallengeActivities(id, workspace.id);
 
-  return NextResponse.json({ challenge, activities });
+  // Transform the challenge to include pointsBudget with calculated remaining
+  const challengeResponse: any = {
+    ...challenge,
+    pointsBudget: challenge.ChallengePointsBudget ? {
+      totalBudget: challenge.ChallengePointsBudget.totalBudget,
+      allocated: challenge.ChallengePointsBudget.allocated,
+      remaining: challenge.ChallengePointsBudget.totalBudget - challenge.ChallengePointsBudget.allocated
+    } : undefined
+  };
+
+  // Remove the raw ChallengePointsBudget relation to avoid duplication
+  delete challengeResponse.ChallengePointsBudget;
+
+  return NextResponse.json({ challenge: challengeResponse, activities });
 });
 
 export const PUT = withErrorHandling(async (
@@ -53,15 +67,17 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, status } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, status, activities } = body;
 
-  // Basic validation
-  if (!title || !description) {
-    return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
+  // Basic validation - only validate if provided
+  if ((title !== undefined && !title) || (description !== undefined && !description)) {
+    return NextResponse.json({ error: 'Title and description cannot be empty if provided' }, { status: 400 });
   }
 
   // Prepare update data - only include fields that are provided
-  const updateData: any = { title, description };
+  const updateData: any = {};
+  if (title !== undefined) updateData.title = title;
+  if (description !== undefined) updateData.description = description;
 
   // Handle status field if provided
   if (status !== undefined) {
@@ -110,12 +126,20 @@ export const PUT = withErrorHandling(async (
   }
 
   const before = await prisma.challenge.findUnique({ where: { id } })
-  const challenge = await prisma.challenge.update({
-    where: {
-      id,
-    },
-    data: updateData,
-  });
+
+  // Only update challenge if there are fields to update
+  let challenge = before;
+  if (Object.keys(updateData).length > 0) {
+    challenge = await prisma.challenge.update({
+      where: {
+        id,
+      },
+      data: updateData,
+    });
+  } else {
+    // If no update data, just fetch the challenge
+    challenge = await prisma.challenge.findUnique({ where: { id } });
+  }
 
   // Log challenge updated with minimal diff
   try {
@@ -277,6 +301,48 @@ export const PUT = withErrorHandling(async (
     } catch (error) {
       console.error('Error updating challenge participants:', error);
       // Continue even if participant update fails - challenge was updated successfully
+    }
+  }
+
+  // Handle activities update if provided
+  if (activities !== undefined && Array.isArray(activities)) {
+    try {
+      // Update existing activities
+      for (const activity of activities) {
+        if (activity.id) {
+          // Update existing activity
+          const updateData: any = {};
+          if (activity.pointsValue !== undefined) updateData.pointsValue = activity.pointsValue;
+          if (activity.maxSubmissions !== undefined) updateData.maxSubmissions = activity.maxSubmissions;
+          if (activity.isRequired !== undefined) updateData.isRequired = activity.isRequired;
+          if (activity.deadline !== undefined) updateData.deadline = activity.deadline ? new Date(activity.deadline) : null;
+          if (activity.position !== undefined) updateData.position = activity.position;
+
+          if (Object.keys(updateData).length > 0) {
+            await prisma.activity.update({
+              where: { id: activity.id },
+              data: updateData
+            });
+          }
+        } else if (activity.templateId) {
+          // Create new activity
+          await prisma.activity.create({
+            data: {
+              id: (await import('crypto')).randomUUID(),
+              templateId: activity.templateId,
+              challengeId: id,
+              pointsValue: activity.pointsValue || 0,
+              maxSubmissions: activity.maxSubmissions || 1,
+              isRequired: activity.isRequired !== undefined ? activity.isRequired : false,
+              position: activity.position || 0,
+              deadline: activity.deadline ? new Date(activity.deadline) : null
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating activities:', error);
+      // Continue even if activities update fails
     }
   }
 

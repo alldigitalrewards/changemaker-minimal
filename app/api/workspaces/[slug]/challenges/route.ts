@@ -124,7 +124,7 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId, activities } = body;
 
     // Validate required fields
     if (!title || typeof title !== 'string' || title.trim().length === 0 ||
@@ -222,6 +222,30 @@ export async function POST(
       type: sourceChallengeId ? 'CHALLENGE_DUPLICATED' : 'CHALLENGE_CREATED',
       metadata: sourceChallengeId ? { sourceChallengeId, title } : { title }
     })
+
+    // Handle activities if provided
+    if (activities && Array.isArray(activities) && activities.length > 0) {
+      try {
+        const { prisma } = await import('@/lib/db');
+        const activityCreateData = activities.map((activity, index) => ({
+          id: crypto.randomUUID(),
+          templateId: activity.templateId,
+          challengeId: challenge.id,
+          pointsValue: activity.pointsValue || 0,
+          maxSubmissions: activity.maxSubmissions || 1,
+          isRequired: activity.isRequired !== undefined ? activity.isRequired : false,
+          position: index,
+          deadline: activity.deadline ? new Date(activity.deadline) : null
+        }));
+
+        await prisma.activity.createMany({
+          data: activityCreateData
+        });
+      } catch (error) {
+        console.error('Error creating activities:', error);
+        // Continue even if activities fail - challenge was created successfully
+      }
+    }
 
     // Handle participant enrollments
     try {
