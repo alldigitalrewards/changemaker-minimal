@@ -486,6 +486,7 @@ export async function createChallenge(
     enrollmentDeadline?: Date
     rewardType?: 'points' | 'sku' | 'monetary'
     rewardConfig?: any
+    emailEditAllowed?: boolean
   },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {
@@ -500,6 +501,7 @@ export async function createChallenge(
         enrollmentDeadline: data.enrollmentDeadline || data.startDate,
         rewardType: data.rewardType,
         rewardConfig: data.rewardConfig,
+        emailEditAllowed: data.emailEditAllowed ?? true, // Default to true if not specified
         workspaceId
       }
     })

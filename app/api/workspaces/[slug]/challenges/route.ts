@@ -124,7 +124,7 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId, activities } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, emailEditAllowed, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId, activities } = body;
 
     // Validate required fields
     if (!title || typeof title !== 'string' || title.trim().length === 0 ||
@@ -209,7 +209,8 @@ export async function POST(
         endDate: new Date(endDate),
         enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined,
         rewardType: normalizedRewardType,
-        rewardConfig
+        rewardConfig,
+        emailEditAllowed
       },
       workspace.id
     );

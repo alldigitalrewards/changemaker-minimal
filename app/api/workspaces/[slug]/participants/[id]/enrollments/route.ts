@@ -20,7 +20,13 @@ export const GET = withErrorHandling(async (
 
   try {
     const enrollments = await getUserEnrollments(participantId, workspace.id)
-    return NextResponse.json({ enrollments })
+    // Transform Challenge (Prisma relation) to challenge (API field) for consistency
+    const transformedEnrollments = enrollments.map(enrollment => ({
+      ...enrollment,
+      challenge: enrollment.Challenge,
+      Challenge: undefined
+    }))
+    return NextResponse.json({ enrollments: transformedEnrollments })
   } catch (error) {
     if (error instanceof DatabaseError) {
       return NextResponse.json({ error: error.message }, { status: 500 })
