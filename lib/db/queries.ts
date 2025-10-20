@@ -2103,6 +2103,7 @@ export async function createInviteCode(
   try {
     return await prisma.inviteCode.create({
       data: {
+        id: crypto.randomUUID(),
         code,
         workspaceId,
         challengeId: data.challengeId || null,
@@ -2382,8 +2383,8 @@ export async function issueReward(params: {
         currency: currency || null,
         skuId: skuId || null,
         provider: provider || null,
-        status: 'ISSUED',
-        issuedAt: new Date(),
+        status: 'PENDING',
+        issuedAt: null,
         metadata: metadata as any || null
       }
     })
