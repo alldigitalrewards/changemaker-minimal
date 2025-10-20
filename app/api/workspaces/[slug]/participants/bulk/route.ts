@@ -18,6 +18,7 @@ type BulkInviteResult = {
   status: 'invited' | 'skipped' | 'error'
   message?: string
   inviteCode?: string
+  userId?: string
 }
 
 function parseTextList(bodyText: string): BulkInviteItem[] {
@@ -40,6 +41,7 @@ function parseTextList(bodyText: string): BulkInviteItem[] {
 function parseJson(body: any): BulkInviteItem[] {
   if (Array.isArray(body)) return body as BulkInviteItem[]
   if (Array.isArray(body?.items)) return body.items as BulkInviteItem[]
+  if (Array.isArray(body?.participants)) return body.participants as BulkInviteItem[]
   return []
 }
 
@@ -98,6 +100,19 @@ export const POST = withErrorHandling(async (
     }
 
     try {
+      // Check if user already has membership in this workspace (duplicate detection)
+      const existingUser = await prisma.user.findUnique({ where: { email: item.email } })
+      if (existingUser) {
+        const existingMembership = await prisma.workspaceMembership.findUnique({
+          where: { userId_workspaceId: { userId: existingUser.id, workspaceId: workspace.id } }
+        })
+        if (existingMembership) {
+          // Skip duplicate - user is already a member of this workspace
+          results.push({ email: item.email, role: item.role!, status: 'skipped', message: 'already_member' })
+          continue
+        }
+      }
+
       const { userRecord, invite } = await prisma.$transaction(async (tx) => {
         const existingByEmail = await tx.user.findUnique({ where: { email: item.email } })
         const userRecord = existingByEmail || await tx.user.create({
@@ -141,18 +156,33 @@ export const POST = withErrorHandling(async (
         console.error('Bulk invite email failure for', item.email, e)
       }
 
-      results.push({ email: item.email, role: item.role!, status: 'invited', inviteCode: invite.code })
+      results.push({ email: item.email, role: item.role!, status: 'invited', inviteCode: invite.code, userId: userRecord.id })
     } catch (e: any) {
       console.error('Bulk invite error for', item.email, e)
       results.push({ email: item.email, role: item.role!, status: 'error', message: 'db_error' })
     }
   }
 
-  const invited = results.filter(r => r.status === 'invited').length
+  const created = results.filter(r => r.status === 'invited').length
   const skipped = results.filter(r => r.status === 'skipped').length
-  const errors = results.filter(r => r.status === 'error').length
+  const errorResults = results.filter(r => r.status === 'error' || r.status === 'skipped')
 
-  return NextResponse.json({ summary: { invited, skipped, errors, total: results.length }, results })
+  // Extract participants from successful invitations
+  const participants = results
+    .filter(r => r.status === 'invited')
+    .map(r => ({
+      id: r.userId!,
+      email: r.email,
+      role: r.role,
+      workspaceId: workspace.id
+    }))
+
+  return NextResponse.json({
+    created,
+    skipped,
+    errors: errorResults.map(e => ({ email: e.email, message: e.message })),
+    participants
+  })
 })
 
 

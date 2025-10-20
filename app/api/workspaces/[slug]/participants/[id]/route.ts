@@ -76,7 +76,14 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ participant })
+    // Transform Enrollment to enrollments for API consistency
+    const { Enrollment, ...rest } = participant
+    return NextResponse.json({
+      participant: {
+        ...rest,
+        enrollments: Enrollment
+      }
+    })
   } catch (error) {
     console.error("Error fetching participant:", error)
     return NextResponse.json(
