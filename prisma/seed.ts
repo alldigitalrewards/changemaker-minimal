@@ -206,7 +206,7 @@ async function seed() {
     await prisma.user.deleteMany()
     await prisma.workspace.deleteMany()
 
-    // Create workspaces (default tenantId is set by schema default; override per slug if desired)
+    // Create workspaces with unique tenantId per workspace (multi-tenancy)
     console.log('🏢 Creating workspaces...')
     const createdWorkspaces = []
     for (const workspace of workspaces) {
@@ -214,11 +214,12 @@ async function seed() {
         data: {
           id: randomUUID(),
           slug: workspace.slug,
-          name: workspace.name
+          name: workspace.name,
+          tenantId: workspace.slug // Each workspace is its own tenant
         }
       })
       createdWorkspaces.push(created)
-      console.log(`✓ Created workspace: ${workspace.name}`)
+      console.log(`✓ Created workspace: ${workspace.name} (tenant: ${workspace.slug})`)
     }
 
     // Create admin users with WorkspaceMemberships
@@ -245,7 +246,7 @@ async function seed() {
             )?.id,
             // Grant platform_super_admin to designated super admins for testing
             permissions: (admin.email === 'jfelke@alldigitalrewards.com' || admin.email === 'krobinson@alldigitalrewards.com') ? { set: ['platform_super_admin'] } : undefined,
-            tenantId: 'default',
+            tenantId: admin.workspaceMemberships.find(m => m.isPrimary)?.workspace || 'default',
             lastWorkspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id || null
@@ -260,7 +261,7 @@ async function seed() {
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id,
             permissions: (admin.email === 'jfelke@alldigitalrewards.com' || admin.email === 'krobinson@alldigitalrewards.com') ? ['platform_super_admin'] : [],
-            tenantId: 'default',
+            tenantId: admin.workspaceMemberships.find(m => m.isPrimary)?.workspace || 'default',
             lastWorkspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id || null
@@ -493,7 +494,7 @@ async function seed() {
             role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id,
-            tenantId: 'default'
+            tenantId: workspace?.slug || 'default' // Use workspace slug as tenantId
           } as any,
           create: {
             email: participant.email,
@@ -501,7 +502,7 @@ async function seed() {
             role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id,
-            tenantId: 'default'
+            tenantId: workspace?.slug || 'default' // Use workspace slug as tenantId
           } as any
         })
         
