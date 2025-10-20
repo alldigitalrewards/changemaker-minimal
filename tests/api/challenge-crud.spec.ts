@@ -23,9 +23,9 @@ test.describe('Challenge CRUD API', () => {
     const challengeData = {
       title: `Complete Challenge ${Date.now()}`,
       description: 'Full test challenge with all fields',
-      startDate: new Date(Date.now() + 86400000).toISOString(),
+      startDate: new Date(Date.now() + 7 * 86400000).toISOString(), // Start in 7 days
       endDate: new Date(Date.now() + 30 * 86400000).toISOString(),
-      enrollmentDeadline: new Date(Date.now() + 7 * 86400000).toISOString(),
+      enrollmentDeadline: new Date(Date.now() + 5 * 86400000).toISOString(), // Enroll deadline in 5 days (before start)
       rewardType: 'points',
       rewardConfig: {
         pointsAmount: 200,

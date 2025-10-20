@@ -31,6 +31,11 @@ test.describe('Email Change API', () => {
     // Clean up: Remove test email if created
     const testUser = await prisma.user.findUnique({ where: { email: NEW_EMAIL } });
     if (testUser) {
+      // Delete all related records first (foreign key constraints)
+      await prisma.inviteCode.deleteMany({ where: { createdBy: testUser.id } });
+      await prisma.segment.deleteMany({ where: { createdBy: testUser.id } });
+      await prisma.segmentMembership.deleteMany({ where: { createdBy: testUser.id } });
+      await prisma.workspaceMembership.deleteMany({ where: { userId: testUser.id } });
       await prisma.user.delete({ where: { id: testUser.id } });
     }
   });
