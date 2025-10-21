@@ -27,7 +27,7 @@ async function getParticipantChallenges(workspaceSlug: string, userId: string) {
       where: {
         workspaceId: workspace.id,
         status: 'PUBLISHED',
-        enrollments: {
+        Enrollment: {
           some: {
             userId,
             status: { in: ['INVITED', 'ENROLLED'] }
@@ -35,11 +35,11 @@ async function getParticipantChallenges(workspaceSlug: string, userId: string) {
         }
       },
       include: {
-        enrollments: {
+        Enrollment: {
           where: { userId },
         },
         _count: {
-          select: { enrollments: true }
+          select: { Enrollment: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -84,7 +84,7 @@ export default async function ParticipantChallengesPage({ params }: PageProps) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="challenges-grid">
             {challenges.map((challenge) => {
-              const enrollment = challenge.enrollments[0];
+              const enrollment = challenge.Enrollment[0];
               const isEnrolled = enrollment?.status === 'ENROLLED';
               const isInvited = enrollment?.status === 'INVITED';
               
@@ -119,7 +119,7 @@ export default async function ParticipantChallengesPage({ params }: PageProps) {
                     <div className="flex items-center justify-between text-sm text-gray-500">
                       <div className="flex items-center">
                         <Users className="h-4 w-4 mr-1" />
-                        <span>{challenge._count.enrollments} participants</span>
+                        <span>{challenge._count.Enrollment} participants</span>
                       </div>
                       <Badge variant="default">
                         ACTIVE

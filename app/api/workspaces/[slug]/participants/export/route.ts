@@ -21,7 +21,7 @@ export async function GET(
 
   const memberships = await prisma.workspaceMembership.findMany({
     where: { workspaceId: workspace.id },
-    include: { user: true },
+    include: { User: true },
     orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }]
   })
 
@@ -35,7 +35,7 @@ export async function GET(
   const rows = memberships.map(m => {
     const b = byId[m.userId]
     return {
-      email: m.user.email,
+      email: m.User.email,
       role: m.role,
       joinedAt: m.joinedAt.toISOString(),
       totalPoints: b?.totalPoints ?? 0,

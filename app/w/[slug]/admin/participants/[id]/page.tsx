@@ -44,21 +44,21 @@ export default async function ParticipantDetailPage({
   const participant = await prisma.user.findFirst({
     where: {
       id,
-      memberships: {
+      WorkspaceMembership: {
         some: {
           workspaceId: workspace.id
         }
       }
     },
     include: {
-      enrollments: {
+      Enrollment: {
         where: {
-          challenge: {
+          Challenge: {
             workspaceId: workspace.id
           }
         },
         include: {
-          challenge: {
+          Challenge: {
             select: {
               id: true,
               title: true,
@@ -78,10 +78,10 @@ export default async function ParticipantDetailPage({
   }
 
   const enrollmentStats = {
-    total: participant.enrollments.length,
-    enrolled: participant.enrollments.filter(e => e.status === 'ENROLLED').length,
-    withdrawn: participant.enrollments.filter(e => e.status === 'WITHDRAWN').length,
-    invited: participant.enrollments.filter(e => e.status === 'INVITED').length
+    total: participant.Enrollment.length,
+    enrolled: participant.Enrollment.filter(e => e.status === 'ENROLLED').length,
+    withdrawn: participant.Enrollment.filter(e => e.status === 'WITHDRAWN').length,
+    invited: participant.Enrollment.filter(e => e.status === 'INVITED').length
   }
 
   // Points balance in this workspace
@@ -163,7 +163,7 @@ export default async function ParticipantDetailPage({
                 <BulkChallengeAssignment
                   slug={slug}
                   participantId={participant.id}
-                  alreadyEnrolledIds={participant.enrollments.map((e: any) => e.challenge.id)}
+                  alreadyEnrolledIds={participant.Enrollment.map((e: any) => e.Challenge.id)}
                 />
               </div>
             </div>
@@ -253,9 +253,9 @@ export default async function ParticipantDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {participant.enrollments.length > 0 ? (
+            {participant.Enrollment.length > 0 ? (
               <div className="space-y-4">
-                {participant.enrollments.map((enrollment) => (
+                {participant.Enrollment.map((enrollment) => (
                   <div
                     key={enrollment.id}
                     className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -263,7 +263,7 @@ export default async function ParticipantDetailPage({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg">{enrollment.challenge.title}</h3>
+                          <h3 className="font-semibold text-lg">{enrollment.Challenge.title}</h3>
                           <Badge
                             variant={
                               enrollment.status === 'ENROLLED' ? 'default' :
@@ -271,7 +271,7 @@ export default async function ParticipantDetailPage({
                               'outline'
                             }
                             className={
-                              enrollment.status === 'ENROLLED' 
+                              enrollment.status === 'ENROLLED'
                                 ? "bg-green-100 text-green-800 border-green-200"
                                 : enrollment.status === 'INVITED'
                                 ? "bg-yellow-100 text-yellow-800 border-yellow-200"
@@ -282,14 +282,14 @@ export default async function ParticipantDetailPage({
                           </Badge>
                         </div>
                         <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                          {enrollment.challenge.description}
+                          {enrollment.Challenge.description}
                         </p>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
                             <span>
-                              {new Date(enrollment.challenge.startDate).toLocaleDateString()} - {' '}
-                              {new Date(enrollment.challenge.endDate).toLocaleDateString()}
+                              {new Date(enrollment.Challenge.startDate).toLocaleDateString()} - {' '}
+                              {new Date(enrollment.Challenge.endDate).toLocaleDateString()}
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -298,7 +298,7 @@ export default async function ParticipantDetailPage({
                         </div>
                       </div>
                       <div className="ml-4">
-                        <Link href={`/w/${slug}/admin/challenges/${enrollment.challenge.id}`}>
+                        <Link href={`/w/${slug}/admin/challenges/${enrollment.Challenge.id}`}>
                           <Button variant="outline" size="sm">
                             View Challenge
                           </Button>

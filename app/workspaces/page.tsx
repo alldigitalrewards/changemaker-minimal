@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
@@ -8,12 +9,13 @@ import CreateWorkspaceDialog from "./create-workspace-dialog"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
 import WorkspaceCard from "./workspace-card-client"
 import { RedeemInviteDialog } from "./redeem-invite-dialog"
-import { getUserBySupabaseId } from "@/lib/db/queries"
+import { getUserBySupabaseId, getOptimizedWorkspaceDashboardData } from "@/lib/db/queries"
 import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
-import { listMemberships, getPrimaryMembership } from "@/lib/db/workspace-membership"
+import { getPrimaryMembership } from "@/lib/db/workspace-membership"
 import { Plus, Search, Building, Users, Trophy, TrendingUp, BarChart } from "lucide-react"
 import DashboardHeader from "@/components/layout/dashboard-header"
 import WorkspacesSidebar from "@/components/workspaces/workspaces-sidebar"
+import { WorkspacesSummaryStatsSkeleton, WorkspacesSectionSkeleton } from "./loading-states"
 
 export default async function WorkspacesPage() {
   const supabase = await createClient()
@@ -29,8 +31,9 @@ export default async function WorkspacesPage() {
     redirect("/auth/login")
   }
 
-  // Get user's workspace memberships (new system)
-  const memberships = await listMemberships(dbUser.id)
+  // Get user's workspace data with optimized single query
+  const dashboardData = await getOptimizedWorkspaceDashboardData(dbUser.id)
+  const memberships = dashboardData.memberships
 
   const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
   const userIsWorkspaceAdmin = memberships.some(m => m.role === 'ADMIN')
@@ -41,7 +44,7 @@ export default async function WorkspacesPage() {
     name: string;
     slug: string;
     createdAt: Date;
-    _count: { memberships: number; challenges: number }
+    _count: { WorkspaceMembership: number; Challenge: number }
   }[] = []
 
   if (userIsPlatformAdmin) {
@@ -53,7 +56,7 @@ export default async function WorkspacesPage() {
         name: true,
         slug: true,
         createdAt: true,
-        _count: { select: { memberships: true, challenges: true } }
+        _count: { select: { WorkspaceMembership: true, Challenge: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -77,17 +80,15 @@ export default async function WorkspacesPage() {
           name: true,
           slug: true,
           createdAt: true,
-          _count: { select: { memberships: true, challenges: true } }
+          _count: { select: { WorkspaceMembership: true, Challenge: true } }
         },
         orderBy: { createdAt: 'desc' }
       })
     }
   }
 
-  // Calculate summary stats
-  const totalWorkspaces = memberships.length
-  const totalMembers = memberships.reduce((sum, m) => sum + (m.workspace._count?.memberships || 0), 0)
-  const totalChallenges = memberships.reduce((sum, m) => sum + (m.workspace._count?.challenges || 0), 0)
+  // Use pre-calculated summary stats from optimized query
+  const { totalWorkspaces, totalMembers, totalChallenges } = dashboardData.summary
 
   // Get primary membership for header
   const primaryMembership = await getPrimaryMembership(dbUser.id)
@@ -102,6 +103,12 @@ export default async function WorkspacesPage() {
         role={primaryMembership?.role || 'PARTICIPANT'}
         showRoleSwitcher={false}
         showWorkspaceSwitcher={false}
+        isGlobalPage={true}
+        customBadge={userIsPlatformAdmin ? {
+          label: 'Platform Admin',
+          value: '🔱 Superadmin',
+          variant: 'purple' as const
+        } : undefined}
       />
 
       {/* Main content with sidebar */}
@@ -111,11 +118,12 @@ export default async function WorkspacesPage() {
           memberships={memberships.map(m => ({
             workspaceId: m.workspaceId,
             role: m.role,
-            workspace: m.workspace
+            workspace: m.Workspace
           }))}
           currentView="my-workspaces"
           userRole={primaryMembership?.role || 'PARTICIPANT'}
           isAdmin={userIsWorkspaceAdmin}
+          isSuperAdmin={userIsPlatformAdmin}
         />
 
         {/* Main content area */}
@@ -123,48 +131,50 @@ export default async function WorkspacesPage() {
           <div className="container mx-auto py-8 px-6">
 
       {/* Summary Stats */}
-      {memberships.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-gradient-to-br from-coral-50 to-white border-coral-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Your Workspaces</p>
-                  <p className="text-3xl font-bold text-coral-600">{totalWorkspaces}</p>
-                  <p className="text-xs text-gray-500 mt-1">Active memberships</p>
+      <Suspense fallback={<WorkspacesSummaryStatsSkeleton />}>
+        {memberships.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card className="bg-gradient-to-br from-coral-50 to-white border-coral-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Your Workspaces</p>
+                    <p className="text-3xl font-bold text-coral-600">{totalWorkspaces}</p>
+                    <p className="text-xs text-gray-500 mt-1">Active memberships</p>
+                  </div>
+                  <Building className="h-10 w-10 text-coral-500 opacity-75" />
                 </div>
-                <Building className="h-10 w-10 text-coral-500 opacity-75" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Members</p>
-                  <p className="text-3xl font-bold text-blue-600">{totalMembers}</p>
-                  <p className="text-xs text-gray-500 mt-1">Across all workspaces</p>
+            <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Members</p>
+                    <p className="text-3xl font-bold text-blue-600">{totalMembers}</p>
+                    <p className="text-xs text-gray-500 mt-1">Across all workspaces</p>
+                  </div>
+                  <Users className="h-10 w-10 text-blue-500 opacity-75" />
                 </div>
-                <Users className="h-10 w-10 text-blue-500 opacity-75" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Challenges</p>
-                  <p className="text-3xl font-bold text-amber-600">{totalChallenges}</p>
-                  <p className="text-xs text-gray-500 mt-1">Available to join</p>
+            <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Challenges</p>
+                    <p className="text-3xl font-bold text-amber-600">{totalChallenges}</p>
+                    <p className="text-xs text-gray-500 mt-1">Available to join</p>
+                  </div>
+                  <Trophy className="h-10 w-10 text-amber-500 opacity-75" />
                 </div>
-                <Trophy className="h-10 w-10 text-amber-500 opacity-75" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </Suspense>
 
       <div className="grid gap-8">
         {/* User's Workspaces */}
@@ -187,13 +197,13 @@ export default async function WorkspacesPage() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {memberships.map((membership) => {
                   const workspace = {
-                    ...membership.workspace,
+                    ...membership.Workspace,
                     _count: {
-                      users: membership.workspace._count?.memberships || 0,
-                      challenges: membership.workspace._count?.challenges || 0
+                      users: membership.Workspace._count?.WorkspaceMembership || 0,
+                      challenges: membership.Workspace._count?.Challenge || 0
                     }
                   }
-                  
+
                   return (
                     <WorkspaceCard
                       key={workspace.id}
@@ -259,8 +269,8 @@ export default async function WorkspacesPage() {
                     workspace={{
                       ...workspace,
                       _count: {
-                        users: workspace._count.memberships,
-                        challenges: workspace._count.challenges
+                        users: workspace._count.WorkspaceMembership,
+                        challenges: workspace._count.Challenge
                       }
                     }}
                     isUserWorkspace={isUserWorkspace}

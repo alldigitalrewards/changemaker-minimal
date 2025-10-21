@@ -19,6 +19,7 @@ export async function issueReward(params: {
   // Create RewardIssuance in PENDING
   const issuance = await prisma.rewardIssuance.create({
     data: {
+      id: crypto.randomUUID(),
       userId,
       workspaceId,
       challengeId: challengeId || null,

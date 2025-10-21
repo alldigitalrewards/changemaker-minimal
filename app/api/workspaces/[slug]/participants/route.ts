@@ -15,13 +15,13 @@ export const GET = withErrorHandling(async (
 
   const memberships = await prisma.workspaceMembership.findMany({
     where: { workspaceId: workspace.id },
-    include: { user: { select: { id: true, email: true } } },
+    include: { User: { select: { id: true, email: true } } },
     orderBy: { createdAt: 'asc' }
   })
 
   const participants = memberships.map(m => ({
-    id: m.user.id,
-    email: m.user.email,
+    id: m.User.id,
+    email: m.User.email,
     role: m.role,
   }));
 
@@ -139,16 +139,16 @@ export const POST = withErrorHandling(async (
     }
 
     return NextResponse.json(
-      { 
-        user: {
+      {
+        participant: {
           id: result.userRecord.id,
           email: result.userRecord.email,
           role: result.userRecord.role,
-          workspaceId: result.userRecord.workspaceId,
+          workspaceId: workspace.id,
         },
         invite: { code: result.invite.code, url: inviteUrl }
       },
-      { status: 201 }
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error creating user:', error);

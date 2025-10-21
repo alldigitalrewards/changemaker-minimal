@@ -13,10 +13,10 @@ export default async function ActivitiesPage({ params }: PageProps) {
   const { slug, id } = await params
   const challenge = await prisma.challenge.findUnique({
     where: { id },
-    include: { activities: true }
+    include: { Activity: true }
   })
 
-  const hasActivities = !!(challenge?.activities && challenge.activities.length > 0)
+  const hasActivities = !!(challenge?.Activity && challenge.Activity.length > 0)
 
   return (
     <div className="space-y-4">

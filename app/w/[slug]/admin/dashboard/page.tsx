@@ -38,18 +38,18 @@ export default async function AdminDashboard({
   const stats = await prisma.workspace.findUnique({
     where: { slug },
     include: {
-      users: true,
-      challenges: {
+      User: true,
+      Challenge: {
         include: {
-          enrollments: true
+          Enrollment: true
         }
       }
     }
   })
 
-  const participantCount = stats?.users.filter(u => u.role === "PARTICIPANT").length || 0
-  const challengeCount = stats?.challenges.length || 0
-  const totalEnrollments = stats?.challenges.reduce((acc, c) => acc + c.enrollments.length, 0) || 0
+  const participantCount = stats?.User.filter(u => u.role === "PARTICIPANT").length || 0
+  const challengeCount = stats?.Challenge.length || 0
+  const totalEnrollments = stats?.Challenge.reduce((acc, c) => acc + c.Enrollment.length, 0) || 0
 
   // Get recent activities
   const { 
@@ -85,7 +85,7 @@ export default async function AdminDashboard({
                 </div>
               </div>
               <Button asChild size="lg" className="bg-coral-500 hover:bg-coral-600">
-                <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].activity.challengeId}/submissions?status=pending`}>
+                <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].Activity.challengeId}/submissions?status=pending`}>
                   Review Now
                 </Link>
               </Button>
@@ -140,7 +140,7 @@ export default async function AdminDashboard({
         </Card>
 
         {pendingSubmissionCount > 0 && pendingSubmissions.length > 0 ? (
-          <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].activity.challengeId}/submissions?status=pending`}>
+          <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].Activity.challengeId}/submissions?status=pending`}>
             <Card className="border-amber-200 bg-amber-50/50 hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-amber-700 transition-colors">Pending Review</CardTitle>
@@ -208,7 +208,7 @@ export default async function AdminDashboard({
           </div>
         </CardHeader>
         <CardContent>
-          {stats?.challenges.length === 0 ? (
+          {stats?.Challenge.length === 0 ? (
             <div className="text-center py-12 px-4">
               <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <Trophy className="h-8 w-8 text-gray-400" />
@@ -226,7 +226,7 @@ export default async function AdminDashboard({
             </div>
           ) : (
             <div className="space-y-3">
-              {stats?.challenges.slice(0, 3).map((challenge) => (
+              {stats?.Challenge.slice(0, 3).map((challenge) => (
                 <div
                   key={challenge.id}
                   className="group p-4 border border-gray-200 rounded-lg hover:border-coral-300 hover:shadow-sm transition-all"
@@ -238,7 +238,7 @@ export default async function AdminDashboard({
                           {challenge.title}
                         </h3>
                         <span className="shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                          {challenge.enrollments.length} enrolled
+                          {challenge.Enrollment.length} enrolled
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 line-clamp-1">{challenge.description}</p>
@@ -251,10 +251,10 @@ export default async function AdminDashboard({
                   </div>
                 </div>
               ))}
-              {stats?.challenges && stats.challenges.length > 3 && (
+              {stats?.Challenge && stats.Challenge.length > 3 && (
                 <Button variant="outline" size="sm" className="w-full mt-2" asChild>
                   <Link href={`/w/${slug}/admin/challenges`}>
-                    View all {stats.challenges.length} challenges
+                    View all {stats.Challenge.length} challenges
                   </Link>
                 </Button>
               )}

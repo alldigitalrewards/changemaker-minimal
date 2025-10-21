@@ -146,17 +146,17 @@ async function seedProduction() {
       const user = await prisma.user.findUnique({
         where: { email: config.email },
         include: {
-          memberships: {
-            include: { workspace: true },
+          WorkspaceMembership: {
+            include: { Workspace: true },
           },
         },
       });
 
       if (user) {
-        console.log(`  ${user.email}: ${user.memberships.length} workspace(s)`);
-        user.memberships.forEach((m) => {
+        console.log(`  ${user.email}: ${user.WorkspaceMembership.length} workspace(s)`);
+        user.WorkspaceMembership.forEach((m: any) => {
           console.log(
-            `    - ${m.workspace.name}${m.isPrimary ? " (primary)" : ""}`,
+            `    - ${m.Workspace.name}${m.isPrimary ? " (primary)" : ""}`,
           );
         });
       }

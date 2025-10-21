@@ -9,6 +9,7 @@ import { type Role, ROLE_ADMIN, ROLE_PARTICIPANT } from '../lib/types'
 import { awardPointsWithBudget } from '../lib/db/queries'
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
+import { randomUUID } from 'crypto'
 
 // Load environment variables
 dotenv.config({ path: '.env.local' })
@@ -205,18 +206,20 @@ async function seed() {
     await prisma.user.deleteMany()
     await prisma.workspace.deleteMany()
 
-    // Create workspaces (default tenantId is set by schema default; override per slug if desired)
+    // Create workspaces with unique tenantId per workspace (multi-tenancy)
     console.log('🏢 Creating workspaces...')
     const createdWorkspaces = []
     for (const workspace of workspaces) {
       const created = await prisma.workspace.create({
         data: {
+          id: randomUUID(),
           slug: workspace.slug,
-          name: workspace.name
+          name: workspace.name,
+          tenantId: workspace.slug // Each workspace is its own tenant
         }
       })
       createdWorkspaces.push(created)
-      console.log(`✓ Created workspace: ${workspace.name}`)
+      console.log(`✓ Created workspace: ${workspace.name} (tenant: ${workspace.slug})`)
     }
 
     // Create admin users with WorkspaceMemberships
@@ -243,7 +246,7 @@ async function seed() {
             )?.id,
             // Grant platform_super_admin to designated super admins for testing
             permissions: (admin.email === 'jfelke@alldigitalrewards.com' || admin.email === 'krobinson@alldigitalrewards.com') ? { set: ['platform_super_admin'] } : undefined,
-            tenantId: 'default',
+            tenantId: admin.workspaceMemberships.find(m => m.isPrimary)?.workspace || 'default',
             lastWorkspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id || null
@@ -258,7 +261,7 @@ async function seed() {
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id,
             permissions: (admin.email === 'jfelke@alldigitalrewards.com' || admin.email === 'krobinson@alldigitalrewards.com') ? ['platform_super_admin'] : [],
-            tenantId: 'default',
+            tenantId: admin.workspaceMemberships.find(m => m.isPrimary)?.workspace || 'default',
             lastWorkspaceId: createdWorkspaces.find(w =>
               w.slug === admin.workspaceMemberships.find(m => m.isPrimary)?.workspace
             )?.id || null
@@ -354,6 +357,7 @@ async function seed() {
       for (const workspace of createdWorkspaces) {
         await prisma.workspaceEmailSettings.create({
           data: {
+            id: randomUUID(),
             workspaceId: workspace.id,
             fromName: `${workspace.name} Team`,
             fromEmail: `no-reply@${workspace.slug}.com`,
@@ -368,6 +372,7 @@ async function seed() {
         // Create sample email templates
         await prisma.workspaceEmailTemplate.create({
           data: {
+            id: randomUUID(),
             workspaceId: workspace.id,
             type: 'INVITE',
             subject: `Welcome to ${workspace.name} Challenges!`,
@@ -379,6 +384,7 @@ async function seed() {
 
         await prisma.workspaceEmailTemplate.create({
           data: {
+            id: randomUUID(),
             workspaceId: workspace.id,
             type: 'ENROLLMENT_UPDATE',
             subject: `Your enrollment status has been updated`,
@@ -436,6 +442,7 @@ async function seed() {
         // Create a general invite code
         await prisma.inviteCode.create({
           data: {
+            id: randomUUID(),
             code: `${workspace.slug.toUpperCase()}-WELCOME-2025`,
             workspaceId: workspace.id,
             createdBy: adminUserId!,
@@ -450,6 +457,7 @@ async function seed() {
         // Create a targeted invite code for testing
         await prisma.inviteCode.create({
           data: {
+            id: randomUUID(),
             code: `${workspace.slug.toUpperCase()}-VIP-2025`,
             workspaceId: workspace.id,
             createdBy: adminUserId!,
@@ -486,7 +494,7 @@ async function seed() {
             role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id,
-            tenantId: 'default'
+            tenantId: workspace?.slug || 'default' // Use workspace slug as tenantId
           } as any,
           create: {
             email: participant.email,
@@ -494,7 +502,7 @@ async function seed() {
             role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id,
-            tenantId: 'default'
+            tenantId: workspace?.slug || 'default' // Use workspace slug as tenantId
           } as any
         })
         
@@ -551,6 +559,7 @@ async function seed() {
 
         const challenge = await prisma.challenge.create({
           data: {
+            id: randomUUID(),
             title: `${template.title} - ${workspace.name}`,
             description: template.description,
             startDate,
@@ -633,6 +642,7 @@ async function seed() {
       for (const template of activityTemplates) {
         const activityTemplate = await prisma.activityTemplate.create({
           data: {
+            id: randomUUID(),
             name: template.name,
             description: template.description,
             type: template.type as any,
@@ -650,6 +660,7 @@ async function seed() {
         for (const challenge of workspaceChallenges.slice(0, 2)) {
           await prisma.activity.create({
             data: {
+              id: randomUUID(),
               templateId: activityTemplate.id,
               challengeId: challenge.id,
               pointsValue: template.points,
@@ -713,7 +724,7 @@ async function seed() {
     let submissionCount = 0
     const enrolledEnrollments = await prisma.enrollment.findMany({
       where: { status: EnrollmentStatus.ENROLLED },
-      include: { challenge: true },
+      include: { Challenge: true },
       take: 10 // Limit to 10 for sample data
     })
 
@@ -721,7 +732,7 @@ async function seed() {
       // Find an activity for this challenge
       const activity = await prisma.activity.findFirst({
         where: { challengeId: enrollment.challengeId },
-        include: { template: true }
+        include: { ActivityTemplate: true }
       })
 
       if (activity) {
@@ -731,6 +742,7 @@ async function seed() {
 
         const submission = await prisma.activitySubmission.create({
           data: {
+            id: randomUUID(),
             activityId: activity.id,
             userId: enrollment.userId,
             enrollmentId: enrollment.id,
@@ -747,7 +759,7 @@ async function seed() {
         if (status === 'APPROVED') {
           try {
             await awardPointsWithBudget({
-              workspaceId: enrollment.challenge.workspaceId,
+              workspaceId: enrollment.Challenge.workspaceId,
               challengeId: enrollment.challengeId,
               toUserId: enrollment.userId,
               amount: activity.pointsValue,
@@ -759,7 +771,7 @@ async function seed() {
             // Create submission approved event
             await prisma.activityEvent.create({
               data: {
-                workspaceId: enrollment.challenge.workspaceId,
+                workspaceId: enrollment.Challenge.workspaceId,
                 challengeId: enrollment.challengeId,
                 enrollmentId: enrollment.id,
                 userId: enrollment.userId,
@@ -775,7 +787,7 @@ async function seed() {
           // Create submission rejected event
           await prisma.activityEvent.create({
             data: {
-              workspaceId: enrollment.challenge.workspaceId,
+              workspaceId: enrollment.Challenge.workspaceId,
               challengeId: enrollment.challengeId,
               enrollmentId: enrollment.id,
               userId: enrollment.userId,
@@ -788,7 +800,7 @@ async function seed() {
           // Create submission created event for pending
           await prisma.activityEvent.create({
             data: {
-              workspaceId: enrollment.challenge.workspaceId,
+              workspaceId: enrollment.Challenge.workspaceId,
               challengeId: enrollment.challengeId,
               enrollmentId: enrollment.id,
               userId: enrollment.userId,
@@ -886,7 +898,7 @@ async function seed() {
         await (prisma as any).tenantSku.upsert({
           where: { tenantId_skuId: { tenantId, skuId: sku.skuId } },
           update: { label: sku.label, provider: sku.provider },
-          create: { tenantId, skuId: sku.skuId, label: sku.label, provider: sku.provider }
+          create: { id: randomUUID(), tenantId, skuId: sku.skuId, label: sku.label, provider: sku.provider }
         })
       }
       console.log(`✓ Seeded ${skus.length} SKUs for tenant '${tenantId}'`)
@@ -899,9 +911,9 @@ async function seed() {
       if (anyParticipant) {
         await prisma.rewardIssuance.createMany({
           data: [
-            { userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.points, amount: 15, status: 'ISSUED', issuedAt: new Date() },
-            { userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.sku, skuId: 'SKU-GIFT-10', status: 'ISSUED', issuedAt: new Date() },
-            { userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.monetary, amount: 5, currency: 'USD', status: 'PENDING' },
+            { id: randomUUID(), userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.points, amount: 15, status: 'ISSUED', issuedAt: new Date() },
+            { id: randomUUID(), userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.sku, skuId: 'SKU-GIFT-10', status: 'ISSUED', issuedAt: new Date() },
+            { id: randomUUID(), userId: anyParticipant.id, workspaceId: workspace.id, type: RewardType.monetary, amount: 5, currency: 'USD', status: 'PENDING' },
           ]
         })
         console.log(`✓ RewardIssuance samples created for ${workspace.name}`)
@@ -997,6 +1009,7 @@ async function seed() {
         for (const participant of workspaceParticipants.slice(0, 2)) {
           await prisma.inviteRedemption.create({
             data: {
+              id: randomUUID(),
               inviteId: generalInvite.id,
               userId: participant.id
             }

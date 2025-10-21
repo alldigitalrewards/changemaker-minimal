@@ -35,7 +35,7 @@ function LeaderboardSkeleton() {
 
 interface LeaderboardEntryProps {
   entry: {
-    user: { id: string; email: string }
+    User: { id: string; email: string }
     totalPoints: number
   }
   rank: number
@@ -56,7 +56,7 @@ function LeaderboardTile({ entry, rank, isCurrentUser }: LeaderboardEntryProps) 
     }
   }
 
-  const displayName = entry.user.email.split('@')[0]
+  const displayName = entry.User.email.split('@')[0]
 
   // Special styling for top 3
   const isTopThree = rank <= 3
@@ -110,7 +110,7 @@ export default async function ParticipantLeaderboardPage({ params }: { params: P
 
   const leaderboard = await getWorkspaceLeaderboard(workspace.id, 50)
 
-  const userIndex = leaderboard.findIndex(entry => entry.user.id === dbUser.id)
+  const userIndex = leaderboard.findIndex(entry => entry.User.id === dbUser.id)
   const userRank = userIndex >= 0 ? userIndex + 1 : 0
 
   return (
@@ -148,10 +148,10 @@ export default async function ParticipantLeaderboardPage({ params }: { params: P
 
           {leaderboard.map((entry, index) => (
             <LeaderboardTile
-              key={entry.user.id}
+              key={entry.User.id}
               entry={entry as any}
               rank={index + 1}
-              isCurrentUser={entry.user.id === dbUser.id}
+              isCurrentUser={entry.User.id === dbUser.id}
             />
           ))}
         </div>

@@ -69,6 +69,7 @@ export async function createWorkspaceInvite(params: {
 
     const invite = await prisma.inviteCode.create({
       data: {
+        id: crypto.randomUUID(),
         code,
         workspaceId,
         createdBy,
@@ -105,8 +106,8 @@ export async function redeemInviteCode(
     const invite = await prisma.inviteCode.findUnique({
       where: { code: code.toUpperCase() },
       include: {
-        workspace: true,
-        redemptions: true
+        Workspace: true,
+        InviteRedemption: true
       }
     })
 
@@ -133,7 +134,7 @@ export async function redeemInviteCode(
     }
 
     // Check if user already redeemed this invite
-    const existingRedemption = invite.redemptions.find(r => r.userId === userId)
+    const existingRedemption = invite.InviteRedemption.find(r => r.userId === userId)
     if (existingRedemption) {
       return { success: false, error: 'You have already redeemed this invite code' }
     }
@@ -167,6 +168,7 @@ export async function redeemInviteCode(
       // Record redemption
       await tx.inviteRedemption.create({
         data: {
+          id: crypto.randomUUID(),
           inviteId: invite.id,
           userId
         }
@@ -223,8 +225,8 @@ export async function listPendingInvites(userEmail: string): Promise<Array<{
         usedCount: { lt: prisma.inviteCode.fields.maxUses }
       },
       include: {
-        workspace: { select: { name: true, slug: true } },
-        creator: { select: { email: true } }
+        Workspace: { select: { name: true, slug: true } },
+        User: { select: { email: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -232,11 +234,11 @@ export async function listPendingInvites(userEmail: string): Promise<Array<{
     return invites.map(invite => ({
       id: invite.id,
       code: invite.code,
-      workspaceName: invite.workspace.name,
-      workspaceSlug: invite.workspace.slug,
+      workspaceName: invite.Workspace.name,
+      workspaceSlug: invite.Workspace.slug,
       role: invite.role,
       expiresAt: invite.expiresAt,
-      creatorEmail: invite.creator.email
+      creatorEmail: invite.User.email
     }))
   } catch (error) {
     console.error('Error listing pending invites:', error)
@@ -281,7 +283,7 @@ export async function listWorkspaceInvites(workspaceId: string): Promise<Array<{
     const invites = await prisma.inviteCode.findMany({
       where: { workspaceId },
       include: {
-        challenge: { select: { title: true } }
+        Challenge: { select: { title: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -295,7 +297,7 @@ export async function listWorkspaceInvites(workspaceId: string): Promise<Array<{
       maxUses: invite.maxUses,
       usedCount: invite.usedCount,
       createdAt: invite.createdAt,
-      challengeTitle: invite.challenge?.title
+      challengeTitle: invite.Challenge?.title
     }))
   } catch (error) {
     console.error('Error listing workspace invites:', error)

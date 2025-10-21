@@ -55,16 +55,16 @@ export default async function AdminParticipantsPage({
       workspaceId: workspace.id
     },
     include: {
-      user: {
+      User: {
         include: {
-          enrollments: {
+          Enrollment: {
             where: {
-              challenge: {
+              Challenge: {
                 workspaceId: workspace.id
               }
             },
             include: {
-              challenge: {
+              Challenge: {
                 select: {
                   title: true
                 }
@@ -81,12 +81,12 @@ export default async function AdminParticipantsPage({
   })
 
   const participants = memberships.map(m => ({
-    id: m.user.id,
-    email: m.user.email,
+    id: m.User.id,
+    email: m.User.email,
     role: m.role,
-    enrollments: m.user.enrollments,
+    enrollments: m.User.Enrollment,
     createdAt: m.joinedAt,
-    isPending: m.user.isPending
+    isPending: m.User.isPending
   }))
 
   // Fetch points balances for all listed participants in this workspace
@@ -136,7 +136,7 @@ export default async function AdminParticipantsPage({
   const enrollmentStats = await prisma.enrollment.groupBy({
     by: ["status"],
     where: {
-      challenge: {
+      Challenge: {
         workspaceId: workspace.id
       }
     },

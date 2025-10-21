@@ -10,7 +10,10 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Home
+  Home,
+  Crown,
+  Globe,
+  UserCog
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,6 +33,7 @@ interface WorkspacesSidebarProps {
   currentView?: 'my-workspaces' | 'discover' | 'invitations';
   userRole: 'ADMIN' | 'PARTICIPANT';
   isAdmin: boolean;
+  isSuperAdmin?: boolean;
   className?: string;
 }
 
@@ -38,10 +42,35 @@ export default function WorkspacesSidebar({
   currentView = 'my-workspaces',
   userRole,
   isAdmin,
+  isSuperAdmin = false,
   className
 }: WorkspacesSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+
+  const superAdminNavItems = [
+    {
+      label: 'Platform Overview',
+      icon: Crown,
+      href: '/admin/dashboard',
+      active: pathname === '/admin/dashboard',
+      show: isSuperAdmin
+    },
+    {
+      label: 'All Workspaces',
+      icon: Globe,
+      href: '/admin/workspaces',
+      active: pathname === '/admin/workspaces',
+      show: isSuperAdmin
+    },
+    {
+      label: 'Manage Members',
+      icon: UserCog,
+      href: '/admin/users',
+      active: pathname === '/admin/users',
+      show: isSuperAdmin
+    },
+  ];
 
   const navItems = [
     {
@@ -101,7 +130,56 @@ export default function WorkspacesSidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1">
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+        {/* Superadmin Section */}
+        {isSuperAdmin && (
+          <>
+            {!collapsed && (
+              <div className="px-3 pt-2 pb-2">
+                <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">
+                  Platform Admin
+                </span>
+              </div>
+            )}
+            {superAdminNavItems.map((item) => {
+              if (!item.show) return null;
+              const Icon = item.icon;
+
+              return (
+                <Link key={item.href} href={item.href}>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      'w-full justify-start',
+                      item.active && 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200',
+                      !item.active && 'hover:bg-purple-50 hover:text-purple-600',
+                      collapsed && 'justify-center px-2'
+                    )}
+                  >
+                    <Icon className={cn('h-4 w-4', item.active ? 'text-purple-600' : 'text-purple-500', !collapsed && 'mr-3')} />
+                    {!collapsed && (
+                      <span className="flex-1 text-left">{item.label}</span>
+                    )}
+                  </Button>
+                </Link>
+              );
+            })}
+
+            {/* Divider */}
+            <div className="py-2">
+              <div className="border-t border-gray-200" />
+            </div>
+
+            {!collapsed && (
+              <div className="px-3 pb-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  My Workspaces
+                </span>
+              </div>
+            )}
+          </>
+        )}
+
         {navItems.map((item) => {
           if (!item.show) return null;
 

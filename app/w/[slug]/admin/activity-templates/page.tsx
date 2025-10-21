@@ -184,7 +184,7 @@ async function WorkspaceActivities({ workspaceId }: { workspaceId: string }) {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {activities.map(a => (
                     <div key={a.id} className="border rounded-lg p-4">
-                      <div className="font-medium">{a.template.name}</div>
+                      <div className="font-medium">{a.ActivityTemplate.name}</div>
                       <div className="text-sm text-gray-600">Points: {a.pointsValue}</div>
                       {a.deadline && (
                         <div className="text-xs text-gray-500">Deadline: {new Date(a.deadline).toLocaleString()}</div>

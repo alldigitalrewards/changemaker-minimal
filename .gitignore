@@ -99,3 +99,10 @@ AGENTS.md
 .kiro/
 .gemini/settings.json
 .zed/settings.json
+
+*storybook.log
+storybook-static
+.fixes/
+
+
+docs/

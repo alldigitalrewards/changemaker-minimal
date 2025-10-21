@@ -8,455 +8,449 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model Workspace {
-  id                String                @id @default(uuid()) @db.Uuid
-  slug              String                @unique
-  name              String
-  tenantId          String               @default("default")
-  published         Boolean               @default(true)
-  active            Boolean               @default(true)
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @default(now()) @updatedAt
-  activityTemplates ActivityTemplate[]
-  challenges        Challenge[]
-  inviteCodes       InviteCode[]
-  pointsBalances    PointsBalance[]
-  users             User[]
-  memberships       WorkspaceMembership[]
-  activityEvents    ActivityEvent[]
-  emailSettings     WorkspaceEmailSettings?
-  emailTemplates    WorkspaceEmailTemplate[]
-  segments          WorkspaceParticipantSegment[]
-  pointsBudget      WorkspacePointsBudget?
-  challengeBudgets  ChallengePointsBudget[]
-  pointsLedger      PointsLedger[]
-  rewardIssuances   RewardIssuance[]
-  communications    WorkspaceCommunication[]
+model Activity {
+  id                      String                    @id @db.Uuid
+  templateId              String                    @db.Uuid
+  challengeId             String                    @db.Uuid
+  pointsValue             Int
+  maxSubmissions          Int                       @default(1)
+  deadline                DateTime?
+  isRequired              Boolean                   @default(false)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @default(now())
+  position                Int                       @default(0)
+  rewardRules             Json[]                    @default([])
+  Challenge               Challenge                 @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  ActivityTemplate        ActivityTemplate          @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ActivitySubmission      ActivitySubmission[]
+  WorkspaceCommunication  WorkspaceCommunication[]
 
-  @@index([tenantId])
-}
-
-model User {
-  id                  String                @id @default(uuid()) @db.Uuid
-  email               String                @unique
-  supabaseUserId      String?               @unique @db.Uuid
-  role                Role
-  isPending           Boolean               @default(false)
-  workspaceId         String?               @db.Uuid
-  primaryWorkspaceId  String?               @db.Uuid
-  permissions         String[]              @default([])
-  lastWorkspaceId     String?               @db.Uuid
-  tenantId            String                @default("default")
-  emailChangePending  Json?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @default(now()) @updatedAt
-  activitySubmissions ActivitySubmission[]
-  enrollments         Enrollment[]
-  createdInvites      InviteCode[]          @relation("InviteCreator")
-  pointsBalances      PointsBalance[]
-  workspace           Workspace?            @relation(fields: [workspaceId], references: [id])
-  memberships         WorkspaceMembership[]
-  activityEvents      ActivityEvent[]
-  actedEvents         ActivityEvent[]       @relation("EventActor")
-  inviteRedemptions   InviteRedemption[]
-  // Back-relations for workspace email settings/templates updatedBy
-  updatedWorkspaceEmailSettings WorkspaceEmailSettings[] @relation("SettingsUpdatedBy")
-  updatedWorkspaceEmailTemplates WorkspaceEmailTemplate[] @relation("TemplateUpdatedBy")
-  createdParticipantSegments WorkspaceParticipantSegment[] @relation("SegmentCreator")
-  workspaceBudgetsUpdated WorkspacePointsBudget[] @relation("WorkspaceBudgetUpdatedBy")
-  challengeBudgetsUpdated ChallengePointsBudget[] @relation("ChallengeBudgetUpdatedBy")
-  pointsLedgerTo          PointsLedger[] @relation("PointsLedgerToUser")
-  pointsLedgerActor       PointsLedger[] @relation("PointsLedgerActor")
-  rewardIssuances         RewardIssuance[]
-  sentCommunications      WorkspaceCommunication[] @relation("CommunicationSender")
-
-  @@index([workspaceId])
-  @@index([workspaceId, role])
-  @@index([tenantId])
-}
-
-model Challenge {
-  id                 String       @id @default(uuid()) @db.Uuid
-  title              String
-  description        String
-  startDate          DateTime
-  endDate            DateTime
-  enrollmentDeadline DateTime?
-  status             ChallengeStatus @default(DRAFT)
-  workspaceId        String       @db.Uuid
-  rewardType         RewardType?
-  rewardConfig       Json?
-  emailEditAllowed   Boolean      @default(true)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @default(now()) @updatedAt
-  activities         Activity[]
-  workspace          Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  enrollments        Enrollment[]
-  inviteCodes        InviteCode[]
-  activityEvents     ActivityEvent[]
-  pointsBudget       ChallengePointsBudget?
-  pointsLedger       PointsLedger[]
-  rewardIssuances    RewardIssuance[]
-  communications     WorkspaceCommunication[]
-
-  @@index([workspaceId])
-  @@index([workspaceId, createdAt])
-  @@index([workspaceId, startDate])
-  @@index([workspaceId, status])
-}
-
-model Enrollment {
-  id                  String               @id @default(uuid()) @db.Uuid
-  userId              String               @db.Uuid
-  challengeId         String               @db.Uuid
-  status              EnrollmentStatus     @default(INVITED)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
-  activitySubmissions ActivitySubmission[]
-  challenge           Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  activityEvents      ActivityEvent[]
-
-  @@unique([userId, challengeId])
-  @@index([userId])
   @@index([challengeId])
+  @@index([challengeId, position])
+  @@index([templateId])
+}
+
+model ActivityEvent {
+  id                                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId                          String            @db.Uuid
+  challengeId                          String?           @db.Uuid
+  enrollmentId                         String?           @db.Uuid
+  userId                               String?           @db.Uuid
+  actorUserId                          String?           @db.Uuid
+  type                                 ActivityEventType
+  metadata                             Json?
+  createdAt                            DateTime          @default(now())
+  User_ActivityEvent_actorUserIdToUser User?             @relation("ActivityEvent_actorUserIdToUser", fields: [actorUserId], references: [id])
+  Challenge                            Challenge?        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  Enrollment                           Enrollment?       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  User_ActivityEvent_userIdToUser      User?             @relation("ActivityEvent_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
+  Workspace                            Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId, createdAt])
+  @@index([type, createdAt])
+  @@index([userId, createdAt])
+  @@index([workspaceId, createdAt])
+}
+
+model ActivitySubmission {
+  id               String           @id @db.Uuid
+  activityId       String           @db.Uuid
+  userId           String           @db.Uuid
+  enrollmentId     String           @db.Uuid
+  textContent      String?
+  fileUrls         String[]
+  linkUrl          String?
+  status           SubmissionStatus @default(PENDING)
+  pointsAwarded    Int?
+  reviewNotes      String?
+  reviewedBy       String?          @db.Uuid
+  reviewedAt       DateTime?
+  submittedAt      DateTime         @default(now())
+  updatedAt        DateTime         @default(now())
+  rewardIssuanceId String?          @unique @db.Uuid
+  rewardIssued     Boolean          @default(false)
+  Activity         Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  Enrollment       Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  RewardIssuance   RewardIssuance?  @relation(fields: [rewardIssuanceId], references: [id])
+  User             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+  @@index([enrollmentId])
   @@index([status])
+  @@index([userId])
 }
 
 model ActivityTemplate {
-  id               String       @id @default(uuid()) @db.Uuid
+  id               String       @id @db.Uuid
   name             String
   description      String
   type             ActivityType
   basePoints       Int          @default(10)
-  rewardType       RewardType?
-  rewardConfig     Json?
   workspaceId      String       @db.Uuid
   requiresApproval Boolean      @default(true)
   allowMultiple    Boolean      @default(false)
   createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @default(now()) @updatedAt
-  activities       Activity[]
-  workspace        Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  updatedAt        DateTime     @default(now())
+  rewardType       RewardType?
+  rewardConfig     Json?
+  Activity         Activity[]
+  Workspace        Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([workspaceId, type])
 }
 
-model Activity {
-  id             String               @id @default(uuid()) @db.Uuid
-  templateId     String               @db.Uuid
-  challengeId    String               @db.Uuid
-  pointsValue    Int
-  maxSubmissions Int                  @default(1)
-  deadline       DateTime?
-  isRequired     Boolean              @default(false)
-  rewardRules    Json[]                @default([])
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @default(now()) @updatedAt
-  challenge      Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  template       ActivityTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  submissions    ActivitySubmission[]
-  communications WorkspaceCommunication[]
+model Challenge {
+  id                      String                   @id @db.Uuid
+  title                   String
+  description             String
+  startDate               DateTime
+  endDate                 DateTime
+  enrollmentDeadline      DateTime?
+  workspaceId             String                   @db.Uuid
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @default(now())
+  status                  ChallengeStatus          @default(DRAFT)
+  emailEditAllowed        Boolean                  @default(true)
+  rewardConfig            Json?
+  rewardType              RewardType?
+  Activity                Activity[]
+  ActivityEvent           ActivityEvent[]
+  Workspace               Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ChallengePointsBudget   ChallengePointsBudget?
+  Enrollment              Enrollment[]
+  InviteCode              InviteCode[]
+  PointsLedger            PointsLedger[]
+  RewardIssuance          RewardIssuance[]
+  WorkspaceCommunication  WorkspaceCommunication[]
 
-  @@index([challengeId])
-  @@index([templateId])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId])
+  @@index([workspaceId, startDate])
+  @@index([workspaceId, status])
 }
 
-model ActivitySubmission {
-  id            String           @id @default(uuid()) @db.Uuid
-  activityId    String           @db.Uuid
-  userId        String           @db.Uuid
-  enrollmentId  String           @db.Uuid
-  textContent   String?
-  fileUrls      String[]
-  linkUrl       String?
-  status        SubmissionStatus @default(PENDING)
-  pointsAwarded Int?
-  reviewNotes   String?
-  reviewedBy    String?          @db.Uuid
-  reviewedAt    DateTime?
-  submittedAt   DateTime         @default(now())
-  updatedAt     DateTime         @default(now()) @updatedAt
-  rewardIssuanceId String?        @db.Uuid @unique
-  rewardIssued     Boolean        @default(false)
-  activity      Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  enrollment    Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rewardIssuance RewardIssuance? @relation("SubmissionReward", fields: [rewardIssuanceId], references: [id])
+model ChallengePointsBudget {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  challengeId String    @unique @db.Uuid
+  workspaceId String    @db.Uuid
+  totalBudget Int       @default(0)
+  allocated   Int       @default(0)
+  updatedBy   String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  Challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User        User?     @relation(fields: [updatedBy], references: [id])
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@index([activityId])
-  @@index([userId])
-  @@index([enrollmentId])
+  @@index([workspaceId])
+}
+
+model Enrollment {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String               @db.Uuid
+  challengeId        String               @db.Uuid
+  status             EnrollmentStatus     @default(INVITED)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @default(now())
+  ActivityEvent      ActivityEvent[]
+  ActivitySubmission ActivitySubmission[]
+  Challenge          Challenge            @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@index([challengeId])
   @@index([status])
+  @@index([userId])
+}
+
+model InviteCode {
+  id               String             @id @db.Uuid
+  code             String             @unique
+  workspaceId      String             @db.Uuid
+  challengeId      String?            @db.Uuid
+  role             Role               @default(PARTICIPANT)
+  expiresAt        DateTime
+  maxUses          Int                @default(1)
+  usedCount        Int                @default(0)
+  createdBy        String             @db.Uuid
+  createdAt        DateTime           @default(now())
+  targetEmail      String?
+  Challenge        Challenge?         @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User             User               @relation(fields: [createdBy], references: [id])
+  Workspace        Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  InviteRedemption InviteRedemption[]
+
+  @@index([code])
+  @@index([targetEmail])
+  @@index([workspaceId])
+}
+
+model InviteRedemption {
+  id         String     @id @db.Uuid
+  inviteId   String     @db.Uuid
+  userId     String     @db.Uuid
+  redeemedAt DateTime   @default(now())
+  InviteCode InviteCode @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  User       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([inviteId, userId])
+  @@index([userId])
+}
+
+model PointsBalance {
+  id              String    @id @db.Uuid
+  userId          String    @db.Uuid
+  workspaceId     String    @db.Uuid
+  totalPoints     Int       @default(0)
+  availablePoints Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
+  User            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model PointsLedger {
+  id                                  String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId                         String     @db.Uuid
+  challengeId                         String?    @db.Uuid
+  toUserId                            String     @db.Uuid
+  amount                              Int
+  reason                              String?
+  submissionId                        String?    @db.Uuid
+  actorUserId                         String?    @db.Uuid
+  createdAt                           DateTime   @default(now())
+  User_PointsLedger_actorUserIdToUser User?      @relation("PointsLedger_actorUserIdToUser", fields: [actorUserId], references: [id])
+  Challenge                           Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User_PointsLedger_toUserIdToUser    User       @relation("PointsLedger_toUserIdToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+  Workspace                           Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([challengeId, createdAt])
+  @@index([toUserId, createdAt])
+  @@index([workspaceId, createdAt])
 }
 
 model RewardIssuance {
-  id           String       @id @default(uuid()) @db.Uuid
-  userId       String       @db.Uuid
-  workspaceId  String       @db.Uuid
-  challengeId  String?      @db.Uuid
-  type         RewardType
-  amount       Int?
-  currency     String?
-  skuId        String?
-  provider     String?
-  status       RewardStatus  @default(PENDING)
-  issuedAt     DateTime?
-  error        String?
-  metadata     Json?
+  id                 String              @id @db.Uuid
+  userId             String              @db.Uuid
+  workspaceId        String              @db.Uuid
+  challengeId        String?             @db.Uuid
+  type               RewardType
+  amount             Int?
+  currency           String?
+  skuId              String?
+  provider           String?
+  status             RewardStatus        @default(PENDING)
+  issuedAt           DateTime?
+  error              String?
+  metadata           Json?
+  ActivitySubmission ActivitySubmission?
+  Challenge          Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  challenge    Challenge?   @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  submission   ActivitySubmission? @relation("SubmissionReward")
-
-  @@index([userId])
-  @@index([workspaceId])
   @@index([challengeId])
   @@index([status])
+  @@index([userId])
+  @@index([workspaceId])
 }
 
-/// Tenant-scoped SKU catalog for exemplar integrations
 model TenantSku {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @db.Uuid
   tenantId  String
   skuId     String
   label     String
   provider  String?
   createdAt DateTime @default(now())
 
-  @@index([tenantId])
   @@unique([tenantId, skuId])
+  @@index([tenantId])
 }
 
-model PointsBalance {
-  id              String    @id @default(uuid()) @db.Uuid
-  userId          String    @db.Uuid
-  workspaceId     String    @db.Uuid
-  totalPoints     Int       @default(0)
-  availablePoints Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+model User {
+  id                                            String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                         String                           @unique
+  supabaseUserId                                String?                          @unique @db.Uuid
+  role                                          Role
+  workspaceId                                   String?                          @db.Uuid
+  createdAt                                     DateTime                         @default(now())
+  updatedAt                                     DateTime                         @default(now())
+  primaryWorkspaceId                            String?                          @db.Uuid
+  isPending                                     Boolean                          @default(false)
+  emailChangePending                            Json?
+  lastWorkspaceId                               String?                          @db.Uuid
+  permissions                                   String[]                         @default([])
+  tenantId                                      String                           @default("default")
+  ActivityEvent_ActivityEvent_actorUserIdToUser ActivityEvent[]                  @relation("ActivityEvent_actorUserIdToUser")
+  ActivityEvent_ActivityEvent_userIdToUser      ActivityEvent[]                  @relation("ActivityEvent_userIdToUser")
+  ActivitySubmission                            ActivitySubmission[]
+  ChallengePointsBudget                         ChallengePointsBudget[]
+  Enrollment                                    Enrollment[]
+  InviteCode                                    InviteCode[]
+  InviteRedemption                              InviteRedemption[]
+  PointsBalance                                 PointsBalance[]
+  PointsLedger_PointsLedger_actorUserIdToUser   PointsLedger[]                   @relation("PointsLedger_actorUserIdToUser")
+  PointsLedger_PointsLedger_toUserIdToUser      PointsLedger[]                   @relation("PointsLedger_toUserIdToUser")
+  RewardIssuance                                RewardIssuance[]
+  Workspace                                     Workspace?                       @relation(fields: [workspaceId], references: [id])
+  WorkspaceEmailSettings                        WorkspaceEmailSettings[]
+  WorkspaceEmailTemplate                        WorkspaceEmailTemplate[]
+  WorkspaceMembership                           WorkspaceMembership[]
+  WorkspaceMembershipPreferences                WorkspaceMembershipPreferences[]
+  WorkspacePointsBudget                         WorkspacePointsBudget[]
+  WorkspaceParticipantSegment                   WorkspaceParticipantSegment[]    @relation("SegmentCreator")
+  WorkspaceCommunication                        WorkspaceCommunication[]         @relation("CommunicationSender")
 
-  @@unique([userId, workspaceId])
+  @@index([tenantId])
   @@index([workspaceId])
+  @@index([workspaceId, role])
 }
 
-/// Workspace-level points budget for awarding
-model WorkspacePointsBudget {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @unique @db.Uuid
-  totalBudget Int      @default(0)
-  allocated   Int      @default(0)
-  updatedBy   String?  @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+model Workspace {
+  id                             String                           @id @db.Uuid
+  slug                           String                           @unique
+  name                           String
+  createdAt                      DateTime                         @default(now())
+  updatedAt                      DateTime                         @default(now())
+  active                         Boolean                          @default(true)
+  published                      Boolean                          @default(true)
+  tenantId                       String                           @default("default")
+  ActivityEvent                  ActivityEvent[]
+  ActivityTemplate               ActivityTemplate[]
+  Challenge                      Challenge[]
+  ChallengePointsBudget          ChallengePointsBudget[]
+  InviteCode                     InviteCode[]
+  PointsBalance                  PointsBalance[]
+  PointsLedger                   PointsLedger[]
+  RewardIssuance                 RewardIssuance[]
+  User                           User[]
+  WorkspaceEmailSettings         WorkspaceEmailSettings?
+  WorkspaceEmailTemplate         WorkspaceEmailTemplate[]
+  WorkspaceMembership            WorkspaceMembership[]
+  WorkspaceMembershipPreferences WorkspaceMembershipPreferences[]
+  WorkspacePointsBudget          WorkspacePointsBudget?
+  WorkspaceParticipantSegment    WorkspaceParticipantSegment[]
+  WorkspaceCommunication         WorkspaceCommunication[]
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  updatedByUser User?   @relation("WorkspaceBudgetUpdatedBy", fields: [updatedBy], references: [id])
+  @@index([tenantId])
 }
 
-/// Per-challenge points budget for awarding
-model ChallengePointsBudget {
-  id          String   @id @default(uuid()) @db.Uuid
-  challengeId String   @unique @db.Uuid
-  workspaceId String   @db.Uuid
-  totalBudget Int      @default(0)
-  allocated   Int      @default(0)
-  updatedBy   String?  @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+model WorkspaceEmailSettings {
+  id          String    @id @db.Uuid
+  workspaceId String    @unique @db.Uuid
+  fromName    String?
+  fromEmail   String?
+  replyTo     String?
+  footerHtml  String?
+  brandColor  String?
+  updatedBy   String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  User        User?     @relation(fields: [updatedBy], references: [id])
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
 
-  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  updatedByUser User?   @relation("ChallengeBudgetUpdatedBy", fields: [updatedBy], references: [id])
+model WorkspaceEmailTemplate {
+  id          String            @id @db.Uuid
+  workspaceId String            @db.Uuid
+  type        EmailTemplateType
+  subject     String?
+  html        String?
+  enabled     Boolean           @default(false)
+  updatedBy   String?           @db.Uuid
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now())
+  User        User?             @relation(fields: [updatedBy], references: [id])
+  Workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@unique([workspaceId, type])
   @@index([workspaceId])
-}
-
-/// Ledger of points awards for auditability
-model PointsLedger {
-  id           String   @id @default(uuid()) @db.Uuid
-  workspaceId  String   @db.Uuid
-  challengeId  String?  @db.Uuid
-  toUserId     String   @db.Uuid
-  amount       Int
-  reason       String?
-  submissionId String?  @db.Uuid
-  actorUserId  String?  @db.Uuid
-  createdAt    DateTime @default(now())
-
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  challenge    Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  toUser       User      @relation("PointsLedgerToUser", fields: [toUserId], references: [id], onDelete: Cascade)
-  actor        User?     @relation("PointsLedgerActor", fields: [actorUserId], references: [id])
-
-  @@index([workspaceId, createdAt])
-  @@index([challengeId, createdAt])
-  @@index([toUserId, createdAt])
-}
-
-model InviteCode {
-  id          String     @id @default(uuid()) @db.Uuid
-  code        String     @unique
-  workspaceId String     @db.Uuid
-  challengeId String?    @db.Uuid
-  role        Role       @default(PARTICIPANT)
-  expiresAt   DateTime
-  maxUses     Int        @default(1)
-  usedCount   Int        @default(0)
-  createdBy   String     @db.Uuid
-  createdAt   DateTime   @default(now())
-  targetEmail String?
-  challenge   Challenge? @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  creator     User       @relation("InviteCreator", fields: [createdBy], references: [id])
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  redemptions InviteRedemption[]
-
-  @@index([code])
-  @@index([workspaceId])
-  @@index([targetEmail])
-}
-
-model InviteRedemption {
-  id        String   @id @default(uuid()) @db.Uuid
-  inviteId  String   @db.Uuid
-  userId    String   @db.Uuid
-  redeemedAt DateTime @default(now())
-
-  invite    InviteCode @relation(fields: [inviteId], references: [id], onDelete: Cascade)
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([inviteId, userId])
-  @@index([userId])
 }
 
 model WorkspaceMembership {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String    @db.Uuid
   workspaceId String    @db.Uuid
   role        Role
   isPrimary   Boolean   @default(false)
   joinedAt    DateTime  @default(now())
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now())
   preferences Json?
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
   @@index([userId])
-  @@index([workspaceId])
   @@index([userId, isPrimary])
+  @@index([workspaceId])
 }
 
-enum Role {
-  ADMIN
-  PARTICIPANT
+model WorkspaceMembershipPreferences {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String    @db.Uuid
+  workspaceId String    @db.Uuid
+  defaultRole Role      @default(PARTICIPANT)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
 }
 
-enum EnrollmentStatus {
-  INVITED
-  ENROLLED
-  WITHDRAWN
+model WorkspacePointsBudget {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @unique @db.Uuid
+  totalBudget Int       @default(0)
+  allocated   Int       @default(0)
+  updatedBy   String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  User        User?     @relation(fields: [updatedBy], references: [id])
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }
 
-enum ActivityType {
-  TEXT_SUBMISSION
-  FILE_UPLOAD
-  PHOTO_UPLOAD
-  LINK_SUBMISSION
-  MULTIPLE_CHOICE
-  VIDEO_SUBMISSION
-}
+model WorkspaceParticipantSegment {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @db.Uuid
+  name        String
+  description String?
+  filterJson  Json?
+  createdBy   String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  User        User      @relation("SegmentCreator", fields: [createdBy], references: [id])
 
-enum SubmissionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  DRAFT
-}
-
-enum ChallengeStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-enum RewardType {
-  points
-  sku
-  monetary
-}
-
-enum RewardStatus {
-  PENDING
-  ISSUED
-  FAILED
-  CANCELLED
-}
-
-enum CommunicationScope {
-  WORKSPACE
-  CHALLENGE
-  ACTIVITY
-}
-
-enum CommunicationAudience {
-  ALL
-  ENROLLED
-  INVITED
-  COMPLETED
+  @@index([workspaceId])
 }
 
 model WorkspaceCommunication {
-  id           String                @id @default(uuid()) @db.Uuid
-  workspaceId  String                @db.Uuid
-  challengeId  String?               @db.Uuid
-  activityId   String?               @db.Uuid
-  scope        CommunicationScope
-  audience     CommunicationAudience @default(ALL)
-  subject      String
-  message      String
-  sentBy       String                @db.Uuid
-  sentAt       DateTime              @default(now())
-  updatedAt    DateTime              @default(now()) @updatedAt
-  workspace    Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  challenge    Challenge?            @relation(fields: [challengeId], references: [id])
-  activity     Activity?             @relation(fields: [activityId], references: [id])
-  sender       User                  @relation("CommunicationSender", fields: [sentBy], references: [id], onDelete: Cascade)
+  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String                @db.Uuid
+  challengeId String?               @db.Uuid
+  activityId  String?               @db.Uuid
+  scope       CommunicationScope
+  audience    CommunicationAudience @default(ALL)
+  subject     String
+  message     String
+  sentBy      String                @db.Uuid
+  sentAt      DateTime              @default(now())
+  updatedAt   DateTime              @default(now()) @updatedAt
+  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge   Challenge?            @relation(fields: [challengeId], references: [id])
+  activity    Activity?             @relation(fields: [activityId], references: [id])
+  sender      User                  @relation("CommunicationSender", fields: [sentBy], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([challengeId])
   @@index([activityId])
   @@index([sentBy])
   @@index([scope, audience])
-}
-
-model ActivityEvent {
-  id           String            @id @default(uuid()) @db.Uuid
-  workspaceId  String            @db.Uuid
-  challengeId  String?           @db.Uuid
-  enrollmentId String?           @db.Uuid
-  userId       String?           @db.Uuid
-  actorUserId  String?           @db.Uuid
-  type         ActivityEventType
-  metadata     Json?
-  createdAt    DateTime          @default(now())
-
-  workspace    Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  challenge    Challenge?        @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  enrollment   Enrollment?       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  user         User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  actor        User?             @relation("EventActor", fields: [actorUserId], references: [id])
-
-  @@index([workspaceId, createdAt])
-  @@index([challengeId, createdAt])
-  @@index([userId, createdAt])
-  @@index([type, createdAt])
 }
 
 enum ActivityEventType {
@@ -478,14 +472,23 @@ enum ActivityEventType {
   ACTIVITY_CREATED
   ACTIVITY_UPDATED
   BULK_UNENROLL
-  EMAIL_TEMPLATE_UPDATED
-  WORKSPACE_SETTINGS_UPDATED
-  PARTICIPANT_SEGMENT_CREATED
-  PARTICIPANT_SEGMENT_UPDATED
-  PARTICIPANT_SEGMENT_DELETED
 }
 
-/// Workspace-scoped email template types
+enum ActivityType {
+  TEXT_SUBMISSION
+  FILE_UPLOAD
+  PHOTO_UPLOAD
+  LINK_SUBMISSION
+  MULTIPLE_CHOICE
+  VIDEO_SUBMISSION
+}
+
+enum ChallengeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 enum EmailTemplateType {
   INVITE
   EMAIL_RESENT
@@ -494,55 +497,46 @@ enum EmailTemplateType {
   GENERIC
 }
 
-/// Per-workspace sender/brand defaults used by all emails
-model WorkspaceEmailSettings {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @unique @db.Uuid
-  fromName    String?
-  fromEmail   String?
-  replyTo     String?
-  footerHtml  String?  @db.Text
-  brandColor  String?
-  updatedBy   String?  @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
-
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  updatedByUser User?   @relation("SettingsUpdatedBy", fields: [updatedBy], references: [id])
+enum EnrollmentStatus {
+  INVITED
+  ENROLLED
+  WITHDRAWN
 }
 
-/// Per-workspace overrides for specific email types
-model WorkspaceEmailTemplate {
-  id          String            @id @default(uuid()) @db.Uuid
-  workspaceId String            @db.Uuid
-  type        EmailTemplateType
-  subject     String?
-  html        String?           @db.Text
-  enabled     Boolean           @default(false)
-  updatedBy   String?           @db.Uuid
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @default(now()) @updatedAt
-
-  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  updatedByUser User?           @relation("TemplateUpdatedBy", fields: [updatedBy], references: [id])
-
-  @@unique([workspaceId, type])
-  @@index([workspaceId])
+enum RewardStatus {
+  PENDING
+  ISSUED
+  FAILED
+  CANCELLED
 }
 
-/// Saved participant filters for management
-model WorkspaceParticipantSegment {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @db.Uuid
-  name        String
-  description String?
-  filterJson  Json?
-  createdBy   String   @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+enum RewardType {
+  points
+  sku
+  monetary
+}
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  creator     User      @relation("SegmentCreator", fields: [createdBy], references: [id])
+enum Role {
+  ADMIN
+  PARTICIPANT
+}
 
-  @@index([workspaceId])
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DRAFT
+}
+
+enum CommunicationScope {
+  WORKSPACE
+  CHALLENGE
+  ACTIVITY
+}
+
+enum CommunicationAudience {
+  ALL
+  ENROLLED
+  INVITED
+  COMPLETED
 }

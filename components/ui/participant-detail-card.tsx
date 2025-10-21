@@ -10,7 +10,7 @@ interface ParticipantDetailCardProps {
     email: string
     role: Role
     createdAt: Date
-    enrollments: any[]
+    Enrollment: any[]
   }
   slug?: string
 }
@@ -77,7 +77,7 @@ export function ParticipantDetailCard({ participant, slug }: ParticipantDetailCa
             <UserCheck className="h-5 w-5 text-gray-500" />
             <div>
               <p className="font-medium">
-                {participant.enrollments.length} challenge{participant.enrollments.length !== 1 ? 's' : ''}
+                {participant.Enrollment.length} challenge{participant.Enrollment.length !== 1 ? 's' : ''}
               </p>
               <p className="text-sm text-gray-500">Total enrollments</p>
             </div>

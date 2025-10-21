@@ -16,9 +16,9 @@ export const GET = withErrorHandling(async (
       workspaceId: workspace.id,
     },
     include: {
-      enrollments: {
+      Enrollment: {
         include: {
-          user: {
+          User: {
             select: {
               id: true,
               email: true,
@@ -27,9 +27,10 @@ export const GET = withErrorHandling(async (
           },
         },
       },
+      ChallengePointsBudget: true,
       _count: {
         select: {
-          enrollments: true,
+          Enrollment: true,
         },
       },
     },
@@ -42,7 +43,20 @@ export const GET = withErrorHandling(async (
   // Also get activities for this challenge
   const activities = await getChallengeActivities(id, workspace.id);
 
-  return NextResponse.json({ challenge, activities });
+  // Transform the challenge to include pointsBudget with calculated remaining
+  const challengeResponse: any = {
+    ...challenge,
+    pointsBudget: challenge.ChallengePointsBudget ? {
+      totalBudget: challenge.ChallengePointsBudget.totalBudget,
+      allocated: challenge.ChallengePointsBudget.allocated,
+      remaining: challenge.ChallengePointsBudget.totalBudget - challenge.ChallengePointsBudget.allocated
+    } : undefined
+  };
+
+  // Remove the raw ChallengePointsBudget relation to avoid duplication
+  delete challengeResponse.ChallengePointsBudget;
+
+  return NextResponse.json({ challenge: challengeResponse, activities });
 });
 
 export const PUT = withErrorHandling(async (
@@ -53,15 +67,22 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, status, activities } = body;
 
-  // Basic validation
-  if (!title || !description) {
-    return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
+  // Basic validation - only validate if provided
+  if ((title !== undefined && !title) || (description !== undefined && !description)) {
+    return NextResponse.json({ error: 'Title and description cannot be empty if provided' }, { status: 400 });
   }
 
   // Prepare update data - only include fields that are provided
-  const updateData: any = { title, description };
+  const updateData: any = {};
+  if (title !== undefined) updateData.title = title;
+  if (description !== undefined) updateData.description = description;
+
+  // Handle status field if provided
+  if (status !== undefined) {
+    updateData.status = status;
+  }
 
   // Handle timeline fields if provided
   if (startDate || endDate || enrollmentDeadline !== undefined) {
@@ -105,12 +126,25 @@ export const PUT = withErrorHandling(async (
   }
 
   const before = await prisma.challenge.findUnique({ where: { id } })
-  const challenge = await prisma.challenge.update({
-    where: {
-      id,
-    },
-    data: updateData,
-  });
+
+  // Only update challenge if there are fields to update
+  let challenge = before;
+  if (Object.keys(updateData).length > 0) {
+    challenge = await prisma.challenge.update({
+      where: {
+        id,
+      },
+      data: updateData,
+    });
+  } else {
+    // If no update data, just fetch the challenge
+    challenge = await prisma.challenge.findUnique({ where: { id } });
+  }
+
+  // Verify challenge exists after update/fetch
+  if (!challenge) {
+    return NextResponse.json({ error: 'Challenge not found after update' }, { status: 404 });
+  }
 
   // Log challenge updated with minimal diff
   try {
@@ -141,7 +175,7 @@ export const PUT = withErrorHandling(async (
       // Snapshot previous enrollments to compute diffs for event logs
       const previousEnrollments = await prisma.enrollment.findMany({
         where: { challengeId: id },
-        include: { user: true }
+        include: { User: true }
       })
 
       const prevByUserId = new Map(previousEnrollments.map(e => [e.userId, e]))
@@ -275,6 +309,48 @@ export const PUT = withErrorHandling(async (
     }
   }
 
+  // Handle activities update if provided
+  if (activities !== undefined && Array.isArray(activities)) {
+    try {
+      // Update existing activities
+      for (const activity of activities) {
+        if (activity.id) {
+          // Update existing activity
+          const updateData: any = {};
+          if (activity.pointsValue !== undefined) updateData.pointsValue = activity.pointsValue;
+          if (activity.maxSubmissions !== undefined) updateData.maxSubmissions = activity.maxSubmissions;
+          if (activity.isRequired !== undefined) updateData.isRequired = activity.isRequired;
+          if (activity.deadline !== undefined) updateData.deadline = activity.deadline ? new Date(activity.deadline) : null;
+          if (activity.position !== undefined) updateData.position = activity.position;
+
+          if (Object.keys(updateData).length > 0) {
+            await prisma.activity.update({
+              where: { id: activity.id },
+              data: updateData
+            });
+          }
+        } else if (activity.templateId) {
+          // Create new activity
+          await prisma.activity.create({
+            data: {
+              id: (await import('crypto')).randomUUID(),
+              templateId: activity.templateId,
+              challengeId: id,
+              pointsValue: activity.pointsValue || 0,
+              maxSubmissions: activity.maxSubmissions || 1,
+              isRequired: activity.isRequired !== undefined ? activity.isRequired : false,
+              position: activity.position || 0,
+              deadline: activity.deadline ? new Date(activity.deadline) : null
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating activities:', error);
+      // Continue even if activities update fails
+    }
+  }
+
   return NextResponse.json({ challenge });
 });
 
@@ -347,7 +423,7 @@ export const PATCH = withErrorHandling(async (
     try {
       const memberships = await prisma.enrollment.findMany({
         where: { challengeId: id, status: 'INVITED' },
-        include: { user: true }
+        include: { User: true }
       })
       if (memberships.length > 0) {
         const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
@@ -358,26 +434,26 @@ export const PATCH = withErrorHandling(async (
           try {
             // Generate a targeted, single-use invite code for this participant and challenge
             const { createInviteCode } = await import('@/lib/db/queries')
-            const invite = await createInviteCode({ challengeId: id, role: m.user.role as any, maxUses: 1, targetEmail: m.user.email }, workspace.id, user.dbUser.id)
+            const invite = await createInviteCode({ challengeId: id, role: m.User.role as any, maxUses: 1, targetEmail: m.User.email }, workspace.id, user.dbUser.id)
             const html = (await import('@/lib/email/templates/invite')).renderInviteEmail({
               workspaceName: workspace.name,
               inviterEmail: user.dbUser.email,
-              role: m.user.role,
+              role: m.User.role,
               inviteUrl: `${inviteUrlBase}${invite.code}`,
               expiresAt: invite.expiresAt,
               challengeTitle: (updated as any).title || null
             })
-            await (await import('@/lib/email/smtp')).sendInviteEmail({ to: m.user.email, subject: `You're invited to join ${workspace.name}`, html })
+            await (await import('@/lib/email/smtp')).sendInviteEmail({ to: m.User.email, subject: `You're invited to join ${workspace.name}`, html })
             await logActivityEvent({
               workspaceId: workspace.id,
               challengeId: id,
               actorUserId: user.dbUser.id,
-              userId: m.user.id,
+              userId: m.User.id,
               type: 'INVITE_SENT' as any,
               metadata: { via: 'publish', inviteCode: invite.code }
             })
           } catch (e) {
-            console.error('Failed sending invite on publish for', m.user.email, e)
+            console.error('Failed sending invite on publish for', m.User.email, e)
           }
         }
       }

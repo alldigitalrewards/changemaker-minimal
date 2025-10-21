@@ -49,7 +49,20 @@
       "Bash(tee:*)",
       "Bash(export PROD_DB=\"postgresql://postgres.naptpgyrdaoachpmbyaq:Changemaker2025!@aws-1-us-east-2.pooler.supabase.com:5432/postgres\")",
       "Bash(vercel logs:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "mcp__zen__consensus",
+      "mcp__browserbasehq-mcp-browserbase__browserbase_session_create",
+      "mcp__browserbasehq-mcp-browserbase__browserbase_stagehand_navigate",
+      "mcp__browserbasehq-mcp-browserbase__browserbase_stagehand_extract",
+      "mcp__browserbasehq-mcp-browserbase__browserbase_stagehand_act",
+      "mcp__browserbasehq-mcp-browserbase__browserbase_screenshot",
+      "Bash(timeout 60 npx playwright test tests/api/challenge-crud.spec.ts:353 --reporter=list)",
+      "Read(//private/tmp/**)",
+      "Bash(npx playwright test tests/api/participants.spec.ts --reporter=list)",
+      "Bash(npx playwright test tests/api/participants.spec.ts:21 --reporter=json)",
+      "Bash(npx playwright test tests/api/participants.spec.ts -g \"create participant\" --reporter=line)",
+      "Bash(npx playwright test tests/api/challenge-crud.spec.ts --reporter=list)",
+      "Bash(npx playwright test tests/api/challenge-crud.spec.ts:22 --reporter=line)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",
@@ -63,5 +76,6 @@
     "supabase-production",
     "supabase-staging",
     "task-master-ai"
-  ]
+  ],
+  "spinnerTipsEnabled": false
 }

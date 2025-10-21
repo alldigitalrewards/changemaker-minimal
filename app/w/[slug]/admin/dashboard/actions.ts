@@ -50,10 +50,10 @@ export async function quickApproveSubmission(
     if ((pointsAwarded ?? 0) > 0) {
       rewardType = 'points'
       rewardAmount = pointsAwarded
-    } else if (reviewed.activity.challenge.rewardType) {
-      const challengeRewardType = reviewed.activity.challenge.rewardType as string
+    } else if (reviewed.Activity.Challenge.rewardType) {
+      const challengeRewardType = reviewed.Activity.Challenge.rewardType as string
       rewardType = challengeRewardType.toLowerCase() as 'points' | 'sku' | 'monetary'
-      const config = reviewed.activity.challenge.rewardConfig as any
+      const config = reviewed.Activity.Challenge.rewardConfig as any
       if (config) {
         rewardAmount = config.pointsAmount || config.amount || null
         rewardCurrency = config.currency || null
@@ -65,7 +65,7 @@ export async function quickApproveSubmission(
     if (rewardType === 'points' && (rewardAmount ?? 0) > 0) {
       await awardPointsWithBudget({
         workspaceId,
-        challengeId: reviewed.activity.challengeId,
+        challengeId: reviewed.Activity.challengeId,
         toUserId: reviewed.userId,
         amount: rewardAmount!,
         actorUserId: dbUser.id,
@@ -77,7 +77,7 @@ export async function quickApproveSubmission(
       await issueReward({
         workspaceId,
         userId: reviewed.userId,
-        challengeId: reviewed.activity.challengeId,
+        challengeId: reviewed.Activity.challengeId,
         submissionId: reviewed.id,
         type: rewardType,
         amount: rewardAmount,
@@ -88,7 +88,7 @@ export async function quickApproveSubmission(
 
     await logActivityEvent({
       workspaceId,
-      challengeId: reviewed.activity.challengeId,
+      challengeId: reviewed.Activity.challengeId,
       userId: reviewed.userId,
       actorUserId: dbUser.id,
       type: 'SUBMISSION_APPROVED',
@@ -96,13 +96,13 @@ export async function quickApproveSubmission(
         submissionId: reviewed.id,
         pointsAwarded: rewardAmount || 0,
         activityId: reviewed.activityId,
-        activityName: reviewed.activity.template?.name,
+        activityName: reviewed.Activity.ActivityTemplate?.name,
         reviewNotes: 'Quick approved from dashboard'
       }
     })
 
     revalidatePath(`/w/${slug}/admin/dashboard`)
-    revalidatePath(`/w/${slug}/admin/challenges/${reviewed.activity.challengeId}/submissions`)
+    revalidatePath(`/w/${slug}/admin/challenges/${reviewed.Activity.challengeId}/submissions`)
     return { success: true, submission: reviewed }
   } catch (error) {
     console.error('Error approving submission:', error)
@@ -149,20 +149,20 @@ export async function quickRejectSubmission(
 
     await logActivityEvent({
       workspaceId,
-      challengeId: reviewed.activity.challengeId,
+      challengeId: reviewed.Activity.challengeId,
       userId: reviewed.userId,
       actorUserId: dbUser.id,
       type: 'SUBMISSION_REJECTED',
       metadata: {
         submissionId: reviewed.id,
         activityId: reviewed.activityId,
-        activityName: reviewed.activity.template?.name,
+        activityName: reviewed.Activity.ActivityTemplate?.name,
         reviewNotes: reviewNotes || 'Rejected from dashboard'
       }
     })
 
     revalidatePath(`/w/${slug}/admin/dashboard`)
-    revalidatePath(`/w/${slug}/admin/challenges/${reviewed.activity.challengeId}/submissions`)
+    revalidatePath(`/w/${slug}/admin/challenges/${reviewed.Activity.challengeId}/submissions`)
     return { success: true, submission: reviewed }
   } catch (error) {
     console.error('Error rejecting submission:', error)

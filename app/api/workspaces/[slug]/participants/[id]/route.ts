@@ -42,19 +42,19 @@ export async function GET(
 
     // Get participant with enrollments (must be a member of this workspace to view)
     const participant = await prisma.user.findFirst({
-      where: { 
+      where: {
         id,
-        memberships: { some: { workspaceId: workspace.id } }
+        WorkspaceMembership: { some: { workspaceId: workspace.id } }
       },
       include: {
-        enrollments: {
+        Enrollment: {
           where: {
-            challenge: {
+            Challenge: {
               workspaceId: workspace.id
             }
           },
           include: {
-            challenge: {
+            Challenge: {
               select: {
                 id: true,
                 title: true,
@@ -76,7 +76,14 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ participant })
+    // Transform Enrollment to enrollments for API consistency
+    const { Enrollment, ...rest } = participant
+    return NextResponse.json({
+      participant: {
+        ...rest,
+        enrollments: Enrollment
+      }
+    })
   } catch (error) {
     console.error("Error fetching participant:", error)
     return NextResponse.json(
@@ -274,7 +281,7 @@ export async function DELETE(
     await prisma.enrollment.deleteMany({
       where: {
         userId: id,
-        challenge: {
+        Challenge: {
           workspaceId: workspace.id
         }
       }

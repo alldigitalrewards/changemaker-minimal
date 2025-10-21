@@ -15,7 +15,7 @@ export const DELETE = withErrorHandling(async (
     where: {
       id: enrollmentId,
       userId: participantId,
-      challenge: { workspaceId: workspace.id }
+      Challenge: { workspaceId: workspace.id }
     }
   })
   if (!enrollment) {

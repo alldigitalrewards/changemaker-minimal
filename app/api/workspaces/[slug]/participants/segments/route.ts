@@ -1,42 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { getWorkspaceBySlug, getUserBySupabaseId, verifyWorkspaceAdmin, listSegments, createSegment } from '@/lib/db/queries'
+import { NextRequest, NextResponse } from 'next/server';
+import { requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
+import { prisma } from '@/lib/prisma';
 
-export async function GET(
+export const GET = withErrorHandling(async (
   request: NextRequest,
-  context: { params: Promise<{ slug: string }> }
-) {
-  const { slug } = await context.params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-  const workspace = await getWorkspaceBySlug(slug)
-  if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
-  const dbUser = await getUserBySupabaseId(user.id)
-  if (!dbUser || dbUser.workspaceId !== workspace.id) return NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 })
-  const isAdmin = await verifyWorkspaceAdmin(dbUser.id, workspace.id)
-  if (!isAdmin) return NextResponse.json({ error: 'Admin privileges required' }, { status: 403 })
-  const segments = await listSegments(workspace.id)
-  return NextResponse.json({ segments })
-}
+  { params }: { params: Promise<{ slug: string }> }
+) => {
+  const { slug } = await params;
+  const { workspace } = await requireWorkspaceAccess(slug);
 
-export async function POST(
+  const segments = await prisma.workspaceParticipantSegment.findMany({
+    where: { workspaceId: workspace.id },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  return NextResponse.json({ segments });
+});
+
+export const POST = withErrorHandling(async (
   request: NextRequest,
-  context: { params: Promise<{ slug: string }> }
-) {
-  const { slug } = await context.params
-  const body = await request.json().catch(() => ({}))
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-  const workspace = await getWorkspaceBySlug(slug)
-  if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
-  const dbUser = await getUserBySupabaseId(user.id)
-  if (!dbUser || dbUser.workspaceId !== workspace.id) return NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 })
-  const isAdmin = await verifyWorkspaceAdmin(dbUser.id, workspace.id)
-  if (!isAdmin) return NextResponse.json({ error: 'Admin privileges required' }, { status: 403 })
-  const seg = await createSegment(workspace.id, { name: body?.name, description: body?.description, filterJson: body?.filterJson }, dbUser.id)
-  return NextResponse.json({ segment: seg }, { status: 201 })
-}
+  { params }: { params: Promise<{ slug: string }> }
+) => {
+  const { slug } = await params;
+  const { workspace, user } = await requireWorkspaceAdmin(slug);
 
+  const body = await request.json();
+  const { name, description, filterJson } = body;
 
+  if (!name) {
+    return NextResponse.json(
+      { error: 'Segment name is required' },
+      { status: 400 }
+    );
+  }
+
+  const segment = await prisma.workspaceParticipantSegment.create({
+    data: {
+      name,
+      description: description || null,
+      filterJson: filterJson || {},
+      workspaceId: workspace.id,
+      createdBy: user.dbUser.id
+    }
+  });
+
+  return NextResponse.json({ segment });
+});

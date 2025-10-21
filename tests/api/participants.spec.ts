@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
+import { randomUUID } from 'crypto';
 
 test.describe('Participants API', () => {
   const WORKSPACE_SLUG = 'alldigitalrewards';
@@ -48,6 +49,16 @@ test.describe('Participants API', () => {
       }
     });
 
+    // Create workspace membership for the participant
+    await prisma.workspaceMembership.create({
+      data: {
+        userId: participant.id,
+        workspaceId,
+        role: 'PARTICIPANT',
+        isPrimary: false
+      }
+    });
+
     const response = await page.request.get(`/api/workspaces/${WORKSPACE_SLUG}/participants/${participant.id}`);
 
     expect(response.status()).toBe(200);
@@ -57,6 +68,7 @@ test.describe('Participants API', () => {
     expect(data.participant.email).toBe(participant.email);
 
     // Cleanup
+    await prisma.workspaceMembership.deleteMany({ where: { userId: participant.id } });
     await prisma.user.delete({ where: { id: participant.id } });
   });
 
@@ -97,12 +109,22 @@ test.describe('Participants API', () => {
   test('POST /api/workspaces/[slug]/participants/bulk - handle duplicates', async ({ page }) => {
     const existingEmail = `existing_${Date.now()}@test.com`;
 
-    // Create one participant first
-    await prisma.user.create({
+    // Create one participant first with membership
+    const existingUser = await prisma.user.create({
       data: {
         email: existingEmail,
         role: 'PARTICIPANT',
         workspaceId
+      }
+    });
+
+    // Create workspace membership to make them a true member
+    await prisma.workspaceMembership.create({
+      data: {
+        userId: existingUser.id,
+        workspaceId,
+        role: 'PARTICIPANT',
+        isPrimary: false
       }
     });
 
@@ -127,6 +149,9 @@ test.describe('Participants API', () => {
     expect(data.errors.length).toBe(1);
 
     // Cleanup
+    await prisma.workspaceMembership.deleteMany({
+      where: { userId: existingUser.id }
+    });
     await prisma.user.deleteMany({
       where: {
         email: { in: [existingEmail, bulkData.participants[1].email] }
@@ -339,9 +364,20 @@ test.describe('Participants API', () => {
       }
     });
 
+    // Create workspace membership for the participant
+    await prisma.workspaceMembership.create({
+      data: {
+        userId: participant.id,
+        workspaceId,
+        role: 'PARTICIPANT',
+        isPrimary: false
+      }
+    });
+
     // Create challenge and enrollment
     const challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Detail Test ${Date.now()}`,
         description: 'Test challenge',
         startDate: new Date(),
@@ -369,6 +405,7 @@ test.describe('Participants API', () => {
     // Cleanup
     await prisma.enrollment.deleteMany({ where: { userId: participant.id } });
     await prisma.challenge.delete({ where: { id: challenge.id } });
+    await prisma.workspaceMembership.deleteMany({ where: { userId: participant.id } });
     await prisma.user.delete({ where: { id: participant.id } });
   });
 });

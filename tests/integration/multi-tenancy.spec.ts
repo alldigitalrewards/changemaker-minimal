@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
 import { prisma } from '../../lib/prisma';
 import { canAccessWorkspace } from '../../lib/auth/api-auth';
+import { randomUUID } from 'crypto';
 
 test.describe('Multi-Tenancy Integration Tests', () => {
   let tenant1WorkspaceId: string;
@@ -13,6 +14,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Create two separate tenant workspaces
     const tenant1 = await prisma.workspace.create({
       data: {
+    id: randomUUID(),
         slug: `tenant1-test-${Date.now()}`,
         name: 'Tenant 1 Workspace',
         tenantId: 'tenant-1-test'
@@ -22,6 +24,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
 
     const tenant2 = await prisma.workspace.create({
       data: {
+    id: randomUUID(),
         slug: `tenant2-test-${Date.now()}`,
         name: 'Tenant 2 Workspace',
         tenantId: 'tenant-2-test'
@@ -65,6 +68,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     const tenantId = `tenant-membership-${Date.now()}`;
     const workspace = await prisma.workspace.create({
       data: {
+    id: randomUUID(),
         slug: `membership-test-${Date.now()}`,
         name: 'Membership Gate Workspace',
         tenantId
@@ -104,6 +108,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Create records in tenant 1
     const challenge1 = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Tenant 1 Challenge ${Date.now()}`,
         description: 'Tenant 1 only',
         startDate: new Date(),
@@ -128,6 +133,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Create records in tenant 2
     const challenge2 = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Tenant 2 Challenge ${Date.now()}`,
         description: 'Tenant 2 only',
         startDate: new Date(),
@@ -209,6 +215,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Create identical data in both tenants
     const template1 = await prisma.activityTemplate.create({
       data: {
+        id: randomUUID(),
         name: 'Test Template',
         description: 'Same name, different tenant',
         type: 'TEXT_SUBMISSION',
@@ -218,6 +225,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
 
     const template2 = await prisma.activityTemplate.create({
       data: {
+        id: randomUUID(),
         name: 'Test Template',
         description: 'Same name, different tenant',
         type: 'TEXT_SUBMISSION',
@@ -262,6 +270,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Create challenge in tenant 2
     const tenant2Challenge = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Protected Challenge ${Date.now()}`,
         description: 'Should not be accessible from tenant 1',
         startDate: new Date(),
@@ -340,6 +349,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Create comprehensive data set for tenant 1
     const challenge1 = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Tenant 1 Full Test ${Date.now()}`,
         description: 'Complete tenant test',
         startDate: new Date(),
@@ -368,6 +378,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Create similar data for tenant 2
     const challenge2 = await prisma.challenge.create({
       data: {
+        id: randomUUID(),
         title: `Tenant 2 Full Test ${Date.now()}`,
         description: 'Complete tenant test',
         startDate: new Date(),
@@ -396,7 +407,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Verify tenant 1 queries only return tenant 1 data
     const t1Challenges = await prisma.challenge.findMany({
       where: {
-        workspace: { tenantId: 'tenant-1-test' }
+        Workspace: { tenantId: 'tenant-1-test' }
       }
     });
 
@@ -413,7 +424,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Verify tenant 2 queries only return tenant 2 data
     const t2Challenges = await prisma.challenge.findMany({
       where: {
-        workspace: { tenantId: 'tenant-2-test' }
+        Workspace: { tenantId: 'tenant-2-test' }
       }
     });
 
@@ -436,6 +447,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
     // Create rewards in both tenants
     const reward1 = await prisma.rewardIssuance.create({
       data: {
+        id: randomUUID(),
         userId: tenant1UserId,
         workspaceId: tenant1WorkspaceId,
         type: 'points',
@@ -446,6 +458,7 @@ test.describe('Multi-Tenancy Integration Tests', () => {
 
     const reward2 = await prisma.rewardIssuance.create({
       data: {
+        id: randomUUID(),
         userId: tenant2UserId,
         workspaceId: tenant2WorkspaceId,
         type: 'points',
