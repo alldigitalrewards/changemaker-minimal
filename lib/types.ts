@@ -11,11 +11,12 @@
 import { type User } from '@supabase/supabase-js'
 
 // Role type matching Prisma schema
-export type Role = 'ADMIN' | 'PARTICIPANT'
+export type Role = 'ADMIN' | 'PARTICIPANT' | 'MANAGER'
 
 // Role constants for runtime usage
 export const ROLE_ADMIN = 'ADMIN' as const
 export const ROLE_PARTICIPANT = 'PARTICIPANT' as const
+export const ROLE_MANAGER = 'MANAGER' as const
 
 // =============================================================================
 // TYPE ALIASES FOR CLARITY (can be upgraded to branded types later)
@@ -99,7 +100,7 @@ export type EnrollmentStatus = 'INVITED' | 'ENROLLED' | 'WITHDRAWN'
 
 // Activity types
 export type ActivityType = 'TEXT_SUBMISSION' | 'FILE_UPLOAD' | 'PHOTO_UPLOAD' | 'LINK_SUBMISSION' | 'MULTIPLE_CHOICE' | 'VIDEO_SUBMISSION'
-export type SubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DRAFT'
+export type SubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DRAFT' | 'MANAGER_APPROVED' | 'NEEDS_REVISION'
 
 export interface ActivityTemplate {
   readonly id: string
@@ -431,14 +432,21 @@ export function isParticipant(role: Role): boolean {
   return role === 'PARTICIPANT'
 }
 
+/**
+ * Type guard to check if user has manager role
+ */
+export function isManager(role: Role): boolean {
+  return role === 'MANAGER'
+}
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
 
 export const ENROLLMENT_STATUSES = ['INVITED', 'ENROLLED', 'WITHDRAWN'] as const
-export const USER_ROLES = ['ADMIN', 'PARTICIPANT'] as const
+export const USER_ROLES = ['ADMIN', 'PARTICIPANT', 'MANAGER'] as const
 export const ACTIVITY_TYPES = ['TEXT_SUBMISSION', 'FILE_UPLOAD', 'PHOTO_UPLOAD', 'LINK_SUBMISSION', 'MULTIPLE_CHOICE', 'VIDEO_SUBMISSION'] as const
-export const SUBMISSION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'DRAFT'] as const
+export const SUBMISSION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'MANAGER_APPROVED', 'NEEDS_REVISION'] as const
 
 // =============================================================================
 // DETAILED ENTITY TYPES WITH RELATIONS

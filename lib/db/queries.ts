@@ -2679,3 +2679,346 @@ export async function getAllPlatformUsers(): Promise<(User & {
     throw new DatabaseError(`Failed to fetch all platform users: ${error}`)
   }
 }
+
+// =============================================================================
+// MANAGER ROLE OPERATIONS
+// =============================================================================
+
+/**
+ * Type definition for ChallengeAssignment with user details
+ */
+export type ChallengeAssignmentWithDetails = {
+  id: string
+  challengeId: string
+  managerId: string
+  workspaceId: string
+  assignedBy: string
+  assignedAt: Date
+  Manager: Pick<User, 'id' | 'email'>
+  Challenge: Pick<Challenge, 'id' | 'title' | 'description'>
+}
+
+/**
+ * Get all manager assignments for a challenge
+ */
+export async function getChallengeAssignments(
+  challengeId: string,
+  workspaceId: string
+): Promise<ChallengeAssignmentWithDetails[]> {
+  try {
+    return await prisma.challengeAssignment.findMany({
+      where: {
+        challengeId,
+        workspaceId
+      },
+      include: {
+        Manager: {
+          select: { id: true, email: true }
+        },
+        Challenge: {
+          select: { id: true, title: true, description: true }
+        }
+      },
+      orderBy: { assignedAt: 'desc' }
+    })
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch challenge assignments: ${error}`)
+  }
+}
+
+/**
+ * Assign a manager to a challenge
+ */
+export async function assignManagerToChallenge(data: {
+  challengeId: string
+  managerId: string
+  assignedBy: string
+  workspaceId: string
+}): Promise<ChallengeAssignmentWithDetails> {
+  try {
+    // Verify challenge belongs to workspace
+    const challenge = await prisma.challenge.findFirst({
+      where: {
+        id: data.challengeId,
+        workspaceId: data.workspaceId
+      }
+    })
+
+    if (!challenge) {
+      throw new ResourceNotFoundError('Challenge', data.challengeId)
+    }
+
+    // Verify user has MANAGER role in workspace
+    const membership = await prisma.workspaceMembership.findFirst({
+      where: {
+        userId: data.managerId,
+        workspaceId: data.workspaceId,
+        role: 'MANAGER'
+      }
+    })
+
+    if (!membership) {
+      throw new WorkspaceAccessError('User is not a manager in this workspace')
+    }
+
+    // Check if assignment already exists
+    const existing = await prisma.challengeAssignment.findFirst({
+      where: {
+        challengeId: data.challengeId,
+        managerId: data.managerId
+      }
+    })
+
+    if (existing) {
+      throw new DatabaseError('Manager is already assigned to this challenge')
+    }
+
+    // Create assignment
+    const assignment = await prisma.challengeAssignment.create({
+      data: {
+        challengeId: data.challengeId,
+        managerId: data.managerId,
+        assignedBy: data.assignedBy,
+        workspaceId: data.workspaceId
+      },
+      include: {
+        Manager: {
+          select: { id: true, email: true }
+        },
+        Challenge: {
+          select: { id: true, title: true, description: true }
+        }
+      }
+    })
+
+    return assignment
+  } catch (error) {
+    if (error instanceof DatabaseError || error instanceof ResourceNotFoundError || error instanceof WorkspaceAccessError) {
+      throw error
+    }
+    throw new DatabaseError(`Failed to assign manager to challenge: ${error}`)
+  }
+}
+
+/**
+ * Remove a manager from a challenge
+ */
+export async function removeManagerFromChallenge(
+  challengeId: string,
+  managerId: string,
+  workspaceId: string
+): Promise<void> {
+  try {
+    // Verify challenge belongs to workspace
+    const challenge = await prisma.challenge.findFirst({
+      where: {
+        id: challengeId,
+        workspaceId
+      }
+    })
+
+    if (!challenge) {
+      throw new ResourceNotFoundError('Challenge', challengeId)
+    }
+
+    // Delete assignment
+    const deleted = await prisma.challengeAssignment.deleteMany({
+      where: {
+        challengeId,
+        managerId
+      }
+    })
+
+    if (deleted.count === 0) {
+      throw new ResourceNotFoundError('ChallengeAssignment', `${challengeId}/${managerId}`)
+    }
+  } catch (error) {
+    if (error instanceof ResourceNotFoundError) {
+      throw error
+    }
+    throw new DatabaseError(`Failed to remove manager from challenge: ${error}`)
+  }
+}
+
+/**
+ * Get all challenges assigned to a manager
+ */
+export async function getManagerChallenges(
+  managerId: string,
+  workspaceId: string
+): Promise<Challenge[]> {
+  try {
+    // Verify user is a manager in workspace
+    const membership = await prisma.workspaceMembership.findFirst({
+      where: {
+        userId: managerId,
+        workspaceId,
+        role: 'MANAGER'
+      }
+    })
+
+    if (!membership) {
+      throw new WorkspaceAccessError('User is not a manager in this workspace')
+    }
+
+    const challenges = await prisma.challenge.findMany({
+      where: {
+        workspaceId,
+        ChallengeAssignment: {
+          some: {
+            managerId
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return challenges
+  } catch (error) {
+    if (error instanceof WorkspaceAccessError) {
+      throw error
+    }
+    throw new DatabaseError(`Failed to fetch manager challenges: ${error}`)
+  }
+}
+
+/**
+ * Get submissions pending manager review for assigned challenges
+ */
+export async function getManagerPendingSubmissions(
+  managerId: string,
+  workspaceId: string
+): Promise<(ActivitySubmission & {
+  User: Pick<User, 'id' | 'email'>
+  Activity: Activity & {
+    ActivityTemplate: Pick<ActivityTemplate, 'id' | 'name' | 'type'>
+    Challenge: Pick<Challenge, 'id' | 'title'>
+  }
+})[]> {
+  try {
+    // Get all challenges assigned to this manager
+    const assignments = await prisma.challengeAssignment.findMany({
+      where: {
+        managerId,
+        workspaceId
+      },
+      select: { challengeId: true }
+    })
+
+    const assignedChallengeIds = assignments.map(a => a.challengeId)
+
+    if (assignedChallengeIds.length === 0) {
+      return []
+    }
+
+    // Get pending submissions for assigned challenges
+    const submissions = await prisma.activitySubmission.findMany({
+      where: {
+        Activity: {
+          challengeId: { in: assignedChallengeIds }
+        },
+        status: 'PENDING'
+      },
+      include: {
+        User: {
+          select: { id: true, email: true }
+        },
+        Activity: {
+          include: {
+            ActivityTemplate: {
+              select: { id: true, name: true, type: true }
+            },
+            Challenge: {
+              select: { id: true, title: true }
+            }
+          }
+        }
+      },
+      orderBy: { submittedAt: 'desc' }
+    })
+
+    return submissions
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch manager pending submissions: ${error}`)
+  }
+}
+
+/**
+ * Manager review submission (approve, request revision, or reject)
+ */
+export async function managerReviewSubmission(data: {
+  submissionId: string
+  managerId: string
+  workspaceId: string
+  status: 'MANAGER_APPROVED' | 'NEEDS_REVISION' | 'REJECTED'
+  managerNotes?: string
+  pointsAwarded?: number
+}): Promise<ActivitySubmission> {
+  try {
+    // Verify submission exists and manager has access
+    const submission = await prisma.activitySubmission.findFirst({
+      where: {
+        id: data.submissionId,
+        Activity: {
+          Challenge: {
+            workspaceId: data.workspaceId,
+            ChallengeAssignment: {
+              some: {
+                managerId: data.managerId
+              }
+            }
+          }
+        }
+      },
+      include: {
+        Activity: true
+      }
+    })
+
+    if (!submission) {
+      throw new ResourceNotFoundError('ActivitySubmission', data.submissionId)
+    }
+
+    // Update submission with manager review
+    const updated = await prisma.activitySubmission.update({
+      where: { id: data.submissionId },
+      data: {
+        status: data.status,
+        managerNotes: data.managerNotes,
+        pointsAwarded: data.pointsAwarded,
+        managerReviewedBy: data.managerId,
+        managerReviewedAt: new Date()
+      }
+    })
+
+    // If manager approved, award points
+    if (data.status === 'MANAGER_APPROVED' && data.pointsAwarded && data.pointsAwarded > 0) {
+      await prisma.pointsBalance.upsert({
+        where: {
+          userId_workspaceId: {
+            userId: submission.userId,
+            workspaceId: data.workspaceId
+          }
+        },
+        create: {
+          id: crypto.randomUUID(),
+          userId: submission.userId,
+          workspaceId: data.workspaceId,
+          totalPoints: data.pointsAwarded,
+          availablePoints: data.pointsAwarded
+        },
+        update: {
+          totalPoints: { increment: data.pointsAwarded },
+          availablePoints: { increment: data.pointsAwarded }
+        }
+      })
+    }
+
+    return updated
+  } catch (error) {
+    if (error instanceof ResourceNotFoundError) {
+      throw error
+    }
+    throw new DatabaseError(`Failed to review submission: ${error}`)
+  }
+}
