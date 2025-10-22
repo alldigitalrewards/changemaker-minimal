@@ -28,43 +28,43 @@
 
 ### Database Schema Changes (Tasks 1-3)
 
-- [ ] **Task 1**: Schema Design & Review ⏱️ 2h
-  - Status: Not Started
+- [x] **Task 1**: Schema Design & Review ⏱️ 2h
+  - Status: Complete
   - File: `prisma/schema.prisma`
   - Deliverable: Updated schema file
   - Risk: Breaking changes to existing enums
 
-- [ ] **Task 2**: Migration Generation ⏱️ 0.5h
-  - Status: Not Started
+- [x] **Task 2**: Migration Generation ⏱️ 0.5h
+  - Status: Complete
   - File: `prisma/migrations/XXX_*/migration.sql`
   - Deliverable: Migration file
   - Risk: Auto-generated SQL might not match expectations
   - Depends on: Task 1
 
-- [ ] **Task 3**: Migration Testing - Staging Clone ⏱️ 2h **CRITICAL**
-  - Status: Not Started
+- [x] **Task 3**: Migration Testing - Staging Clone ⏱️ 2h **CRITICAL**
+  - Status: Complete
   - Deliverable: Verified migration + rollback script
   - Risk: CRITICAL - Staging might not match production schema
   - Depends on: Task 2
 
 ### Authorization & Permissions (Tasks 4-6)
 
-- [ ] **Task 4**: Backward Compatibility Layer ⏱️ 3h
-  - Status: Not Started
+- [x] **Task 4**: Backward Compatibility Layer ⏱️ 3h
+  - Status: Complete
   - File: `lib/workspace-context.ts`
   - Deliverable: Updated workspace context utilities
   - Risk: Missing role checks in existing code
   - Depends on: Task 3
 
-- [ ] **Task 5**: RBAC Permission Mapping ⏱️ 2h
-  - Status: Not Started
+- [x] **Task 5**: RBAC Permission Mapping ⏱️ 2h
+  - Status: Complete
   - File: `lib/auth/rbac.ts`
   - Deliverable: Complete MANAGER role permissions
   - Risk: Over-permissioning or under-permissioning managers
   - Depends on: Task 4
 
-- [ ] **Task 6**: Middleware Authorization Updates ⏱️ 2h
-  - Status: Not Started
+- [x] **Task 6**: Middleware Authorization Updates ⏱️ 2h
+  - Status: Complete
   - File: `lib/auth/api-auth.ts`
   - Deliverable: Updated API authentication middleware
   - Risk: Authorization bypass vulnerabilities
@@ -72,14 +72,14 @@
 
 ### Type System & Testing (Tasks 7-8)
 
-- [ ] **Task 7**: Type Generation & Validation ⏱️ 1h
-  - Status: Not Started
+- [x] **Task 7**: Type Generation & Validation ⏱️ 1h
+  - Status: Complete
   - Deliverable: Updated Prisma Client types
   - Risk: Type mismatches in existing code
   - Depends on: Task 3
 
-- [ ] **Task 8**: Existing Test Suite Verification ⏱️ 3h
-  - Status: Not Started
+- [x] **Task 8**: Existing Test Suite Verification ⏱️ 3h
+  - Status: Complete
   - Deliverable: 100% tests passing (51/51 → 58/58)
   - Risk: Cascading test failures
   - Depends on: Tasks 3, 7
@@ -93,9 +93,9 @@
   - Risk: Seed script conflicts with existing data
   - Depends on: Task 3
 
-- [ ] **Task 10**: ChallengeAssignment Helper Functions ⏱️ 3h
-  - Status: Not Started
-  - File: `lib/db/challenge-assignments.ts` (NEW)
+- [x] **Task 10**: ChallengeAssignment Helper Functions ⏱️ 3h
+  - Status: Complete
+  - File: `lib/db/queries.ts` (integrated into existing file)
   - Deliverable: Complete assignment CRUD functions
   - Risk: N+1 query performance issues
   - Depends on: Task 7
@@ -120,9 +120,9 @@
   - Risk: Silent failures in edge cases
   - Depends on: Task 12
 
-- [ ] **Task 14**: Documentation - Schema Changes ⏱️ 2h
-  - Status: Not Started
-  - File: `docs/schema/manager-role.md` (NEW)
+- [x] **Task 14**: Documentation - Schema Changes ⏱️ 2h
+  - Status: Complete
+  - File: `docs/schema/manager-role.md`
   - Deliverable: Complete schema documentation
   - Risk: Outdated docs if schema changes again
   - Depends on: Task 3
