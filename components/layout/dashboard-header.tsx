@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
-import { LogOut, Settings, User, ChevronDown, Target } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { LogoutButton } from '@/components/auth/logout-button';
-import WorkspaceSwitcher from '@/components/workspace-switcher';
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { LogOut, Settings, User, ChevronDown, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { LogoutButton } from "@/components/auth/logout-button";
+import WorkspaceSwitcher from "@/components/workspace-switcher";
 
 interface User {
   email?: string;
@@ -21,12 +21,16 @@ interface DashboardHeaderProps {
     slug: string;
   };
   user: User;
-  role: 'ADMIN' | 'PARTICIPANT';
+  role: "ADMIN" | "PARTICIPANT" | "MANAGER";
   showRoleSwitcher?: boolean;
   showWorkspaceSwitcher?: boolean;
   pointsBadge?: { label: string; value: string } | null;
   budgetBadge?: { label: string; value: string } | null;
-  customBadge?: { label: string; value: string; variant?: 'purple' | 'default' } | null;
+  customBadge?: {
+    label: string;
+    value: string;
+    variant?: "purple" | "default";
+  } | null;
   isGlobalPage?: boolean; // Set to true for /workspaces and other non-workspace pages
 }
 
@@ -54,13 +58,20 @@ export default function DashboardHeader({
     }
 
     if (showUserMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showUserMenu]);
 
-  const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
-  const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const userName =
+    user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
+  const userInitials = userName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -75,7 +86,9 @@ export default function DashboardHeader({
               <div className="w-8 h-8 bg-gradient-to-r from-coral-500 to-terracotta-600 rounded-lg flex items-center justify-center">
                 <Target className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-navy-900">Changemaker</span>
+              <span className="text-xl font-bold text-navy-900">
+                Changemaker
+              </span>
             </Link>
 
             <div className="border-l border-gray-200 pl-6">
@@ -92,12 +105,14 @@ export default function DashboardHeader({
             {showWorkspaceSwitcher && <WorkspaceSwitcher />}
 
             {/* Role badge */}
-            <div className={`px-3 py-1 text-xs font-medium rounded-full ${
-              role === 'ADMIN'
-                ? 'bg-coral-100 text-coral-800'
-                : 'bg-blue-100 text-blue-800'
-            }`}>
-              {role === 'ADMIN' ? 'Admin' : 'Participant'}
+            <div
+              className={`px-3 py-1 text-xs font-medium rounded-full ${
+                role === "ADMIN"
+                  ? "bg-coral-100 text-coral-800"
+                  : "bg-blue-100 text-blue-800"
+              }`}
+            >
+              {role === "ADMIN" ? "Admin" : "Participant"}
             </div>
 
             {/* Optional points/budget badges */}
@@ -112,11 +127,13 @@ export default function DashboardHeader({
               </div>
             )}
             {customBadge && (
-              <div className={`px-3 py-1.5 text-xs font-semibold rounded-full border ${
-                customBadge.variant === 'purple'
-                  ? 'bg-purple-50 text-purple-700 border-purple-300'
-                  : 'bg-gray-50 text-gray-700 border-gray-300'
-              }`}>
+              <div
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full border ${
+                  customBadge.variant === "purple"
+                    ? "bg-purple-50 text-purple-700 border-purple-300"
+                    : "bg-gray-50 text-gray-700 border-gray-300"
+                }`}
+              >
                 {customBadge.value}
               </div>
             )}
@@ -128,24 +145,34 @@ export default function DashboardHeader({
                 className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="w-8 h-8 bg-gradient-to-r from-coral-400 to-terracotta-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">{userInitials}</span>
+                  <span className="text-white text-sm font-medium">
+                    {userInitials}
+                  </span>
                 </div>
-                <span className="text-sm font-medium text-gray-700">{userName}</span>
-                <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${
-                  showUserMenu ? 'rotate-180' : ''
-                }`} />
+                <span className="text-sm font-medium text-gray-700">
+                  {userName}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-500 transition-transform ${
+                    showUserMenu ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {/* Dropdown menu */}
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                   <div className="px-4 py-2 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">{userName}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {userName}
+                    </p>
                     <p className="text-xs text-gray-500">{user.email}</p>
                   </div>
 
                   <div className="px-4 py-2">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Workspace</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                      Workspace
+                    </p>
                     <p className="text-sm text-gray-900">{workspace.name}</p>
                     <p className="text-xs text-gray-500">{workspace.slug}</p>
                   </div>
@@ -159,7 +186,9 @@ export default function DashboardHeader({
                     </Link>
 
                     {!isGlobalPage && (
-                      <Link href={`/w/${workspace.slug}/${role === 'ADMIN' ? 'admin' : 'participant'}/profile`}>
+                      <Link
+                        href={`/w/${workspace.slug}/${role === "ADMIN" ? "admin" : "participant"}/profile`}
+                      >
                         <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
                           <User className="h-4 w-4" />
                           <span>Workspace Profile</span>
@@ -168,7 +197,10 @@ export default function DashboardHeader({
                     )}
 
                     <form action="/auth/logout" method="POST">
-                      <button type="submit" className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
+                      <button
+                        type="submit"
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                      >
                         <LogOut className="h-4 w-4" />
                         <span>Log out</span>
                       </button>

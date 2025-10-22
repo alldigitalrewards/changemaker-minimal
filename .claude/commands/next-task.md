@@ -35,19 +35,27 @@ ls -la .claude/sessions/ | grep "session-.*-task-" | awk '{print $9}'
   - Seed data → grep prisma/seed.ts for specific users
 - Mark as COMPLETE if code evidence found, NOT FOUND otherwise
 
-5. **Update PROGRESS.md**:
-- For tasks with code evidence but no session: mark `[x]`
+5. **Run build to verify code compiles**:
+```bash
+pnpm build
+```
+- If build fails, note the errors
+- Do NOT update PROGRESS.md for tasks that cause build errors
+- Only mark tasks complete if build succeeds
+
+6. **Update PROGRESS.md**:
+- For tasks with code evidence but no session: mark `[x]` (only if build succeeded)
 - For tasks without sessions or evidence: keep `[ ]`
 - Use Edit tool to update checkboxes
 - This keeps PROGRESS.md accurate with reality
 
-6. **Identify next task**:
+7. **Identify next task**:
 - Find lowest unchecked `[ ]` task number in PROGRESS.md
 - Read dependencies from task-list.md
 - Check if dependencies are met (all dependency tasks checked in PROGRESS.md)
 - If blocked, find the blocking unchecked dependency
 
-7. **Present summary**:
+8. **Present summary**:
 ```
 ## Session Status
 
@@ -60,6 +68,8 @@ Sessions missing: [list of task numbers]
 Code verification results:
 - Task X: COMPLETE (code found)
 - Task Y: NOT FOUND (missing)
+
+Build status: ✅ PASSED / ❌ FAILED ([error summary if failed])
 
 PROGRESS.md updated:
 - Marked complete: [tasks with code evidence]
@@ -74,7 +84,7 @@ Ready to start: [YES/NO]
 [If NO] Blocked by Task [X], working on blocker instead...
 ```
 
-8. **Start implementation immediately**:
+9. **Start implementation immediately**:
 - Read full task details from task-list.md
 - Create session file: `.claude/sessions/session-YYYYMMDD-task-XX-[name].md`
 - Implement task following instructions in task-list.md
