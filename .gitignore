@@ -65,16 +65,7 @@ node_modules/
 *.sw?
 # OS specific
 
-.cursor
-.claude
-.notes.txt
-.mcp.json
-.mcp
-.mcp.json
-.mcp.json
 
-.serena
-.claude/settings.local.json
 .jack/
 
 playwright-report/
@@ -88,7 +79,7 @@ button-issues-report.json
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
 .github/instructions
 opencode.json
 
