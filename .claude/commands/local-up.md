@@ -1,0 +1,2 @@
+- start services pnpm dev
+- check login and db work correctly, connecting to local Supabase services

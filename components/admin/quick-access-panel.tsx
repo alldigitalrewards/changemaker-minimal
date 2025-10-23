@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { RoleBadge } from '@/components/ui/role-badge';
-import { Building2, Star, ArrowRight, Users, Trophy } from 'lucide-react';
-import { getRoleColorsByString } from '@/lib/theme/role-colors';
+import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RoleBadge } from "@/components/ui/role-badge";
+import { Building2, Star, ArrowRight, Users, Trophy } from "lucide-react";
+import { getRoleColorsByString } from "@/lib/theme/role-colors";
 
 interface WorkspaceMembership {
   workspace: {
@@ -13,7 +13,7 @@ interface WorkspaceMembership {
     slug: string;
     name: string;
   };
-  role: 'ADMIN' | 'PARTICIPANT';
+  role: "ADMIN" | "PARTICIPANT" | "MANAGER";
   isPrimary: boolean;
 }
 
@@ -22,11 +22,14 @@ interface QuickAccessPanelProps {
   userEmail: string;
 }
 
-export function QuickAccessPanel({ memberships, userEmail }: QuickAccessPanelProps) {
+export function QuickAccessPanel({
+  memberships,
+  userEmail,
+}: QuickAccessPanelProps) {
   // Sort memberships: primary first, then by role (ADMIN before PARTICIPANT), then by name
   const sortedMemberships = [...memberships].sort((a, b) => {
     if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
-    if (a.role !== b.role) return a.role === 'ADMIN' ? -1 : 1;
+    if (a.role !== b.role) return a.role === "ADMIN" ? -1 : 1;
     return a.workspace.name.localeCompare(b.workspace.name);
   });
 
@@ -42,7 +45,7 @@ export function QuickAccessPanel({ memberships, userEmail }: QuickAccessPanelPro
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sortedMemberships.map((membership) => {
           const colors = getRoleColorsByString(membership.role);
-          const isAdmin = membership.role === 'ADMIN';
+          const isAdmin = membership.role === "ADMIN";
           const dashboardUrl = isAdmin
             ? `/w/${membership.workspace.slug}/admin/dashboard`
             : `/w/${membership.workspace.slug}/participant/dashboard`;
@@ -57,7 +60,7 @@ export function QuickAccessPanel({ memberships, userEmail }: QuickAccessPanelPro
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div
                       className={`w-10 h-10 ${
-                        isAdmin ? 'bg-coral-500' : 'bg-blue-500'
+                        isAdmin ? "bg-coral-500" : "bg-blue-500"
                       } rounded-lg flex items-center justify-center flex-shrink-0`}
                     >
                       <Building2 className="h-5 w-5 text-white" />
@@ -87,7 +90,9 @@ export function QuickAccessPanel({ memberships, userEmail }: QuickAccessPanelPro
                     className={`w-full justify-between ${colors.border} ${colors.text} hover:${colors.hover}`}
                   >
                     <Link href={dashboardUrl}>
-                      <span>{isAdmin ? 'Admin Dashboard' : 'My Dashboard'}</span>
+                      <span>
+                        {isAdmin ? "Admin Dashboard" : "My Dashboard"}
+                      </span>
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -100,7 +105,9 @@ export function QuickAccessPanel({ memberships, userEmail }: QuickAccessPanelPro
                         size="sm"
                         className="w-full justify-between text-gray-600 hover:text-gray-900"
                       >
-                        <Link href={`/w/${membership.workspace.slug}/admin/participants`}>
+                        <Link
+                          href={`/w/${membership.workspace.slug}/admin/participants`}
+                        >
                           <span className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
                             Manage Members
@@ -114,7 +121,9 @@ export function QuickAccessPanel({ memberships, userEmail }: QuickAccessPanelPro
                         size="sm"
                         className="w-full justify-between text-gray-600 hover:text-gray-900"
                       >
-                        <Link href={`/w/${membership.workspace.slug}/admin/challenges`}>
+                        <Link
+                          href={`/w/${membership.workspace.slug}/admin/challenges`}
+                        >
                           <span className="flex items-center gap-1">
                             <Trophy className="h-3 w-3" />
                             Manage Challenges
@@ -132,7 +141,9 @@ export function QuickAccessPanel({ memberships, userEmail }: QuickAccessPanelPro
                       size="sm"
                       className="w-full justify-between text-gray-600 hover:text-gray-900"
                     >
-                      <Link href={`/w/${membership.workspace.slug}/participant/challenges`}>
+                      <Link
+                        href={`/w/${membership.workspace.slug}/participant/challenges`}
+                      >
                         <span className="flex items-center gap-1">
                           <Trophy className="h-3 w-3" />
                           View Challenges
@@ -152,7 +163,9 @@ export function QuickAccessPanel({ memberships, userEmail }: QuickAccessPanelPro
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Building2 className="h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-gray-600 text-center mb-2">No workspace memberships yet</p>
+            <p className="text-gray-600 text-center mb-2">
+              No workspace memberships yet
+            </p>
             <p className="text-sm text-gray-500 text-center">
               You'll see your workspaces here once you join or create one
             </p>

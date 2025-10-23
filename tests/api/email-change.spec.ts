@@ -1,14 +1,18 @@
-import { test, expect } from '@playwright/test';
-import { loginWithCredentials, ADMIN_EMAIL, DEFAULT_PASSWORD } from '../e2e/support/auth';
-import { prisma } from '../../lib/prisma';
-import { Prisma } from '@prisma/client';
+import { test, expect } from "@playwright/test";
+import {
+  loginWithCredentials,
+  ADMIN_EMAIL,
+  DEFAULT_PASSWORD,
+} from "../e2e/support/auth";
+import { prisma } from "../../lib/prisma";
+import { Prisma } from "@prisma/client";
 
 // Run tests serially to avoid race conditions with shared user state
-test.describe.configure({ mode: 'serial' });
+test.describe.configure({ mode: "serial" });
 
-test.describe('Email Change API', () => {
-  const WORKSPACE_SLUG = 'alldigitalrewards';
-  const NEW_EMAIL = 'newemail@alldigitalrewards.com';
+test.describe("Email Change API", () => {
+  const WORKSPACE_SLUG = "alldigitalrewards";
+  const NEW_EMAIL = "newemail@alldigitalrewards.com";
 
   test.beforeEach(async ({ page }) => {
     // Login as admin user
@@ -17,43 +21,52 @@ test.describe('Email Change API', () => {
 
   test.afterEach(async () => {
     // Clean up: Reset email if changed during test
-    const user = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+    const user = await prisma.user.findUnique({
+      where: { email: ADMIN_EMAIL },
+    });
     if (user) {
       await prisma.user.update({
         where: { id: user.id },
         data: {
           email: ADMIN_EMAIL,
-          emailChangePending: Prisma.JsonNull
-        }
+          emailChangePending: Prisma.JsonNull,
+        },
       });
     }
 
     // Clean up: Remove test email if created
-    const testUser = await prisma.user.findUnique({ where: { email: NEW_EMAIL } });
+    const testUser = await prisma.user.findUnique({
+      where: { email: NEW_EMAIL },
+    });
     if (testUser) {
       // Delete all related records first (foreign key constraints)
       await prisma.inviteCode.deleteMany({ where: { createdBy: testUser.id } });
-      await prisma.segment.deleteMany({ where: { createdBy: testUser.id } });
-      await prisma.segmentMembership.deleteMany({ where: { createdBy: testUser.id } });
-      await prisma.workspaceMembership.deleteMany({ where: { userId: testUser.id } });
+      await prisma.workspaceMembership.deleteMany({
+        where: { userId: testUser.id },
+      });
       await prisma.user.delete({ where: { id: testUser.id } });
     }
   });
 
-  test('POST /api/account/email/start-change - valid email change request', async ({ page }) => {
-    const response = await page.request.post('/api/account/email/start-change', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { newEmail: NEW_EMAIL }
-    });
+  test("POST /api/account/email/start-change - valid email change request", async ({
+    page,
+  }) => {
+    const response = await page.request.post(
+      "/api/account/email/start-change",
+      {
+        headers: { "Content-Type": "application/json" },
+        data: { newEmail: NEW_EMAIL },
+      },
+    );
 
     expect(response.status()).toBe(200);
     const data = await response.json();
-    expect(data.message).toContain('verification email sent');
+    expect(data.message).toContain("verification email sent");
 
     // Verify token was stored in database
     const user = await prisma.user.findUnique({
       where: { email: ADMIN_EMAIL },
-      select: { emailChangePending: true }
+      select: { emailChangePending: true },
     });
 
     expect(user?.emailChangePending).toBeTruthy();
@@ -63,124 +76,144 @@ test.describe('Email Change API', () => {
     expect(pendingData.expiresAt).toBeTruthy();
   });
 
-  test('POST /api/account/email/start-change - duplicate email validation', async ({ page }) => {
+  test("POST /api/account/email/start-change - duplicate email validation", async ({
+    page,
+  }) => {
     // Try to change to an existing user's email
     const existingUser = await prisma.user.findFirst({
       where: {
-        email: { not: ADMIN_EMAIL }
-      }
+        email: { not: ADMIN_EMAIL },
+      },
     });
 
     if (!existingUser) {
-      test.skip(true, 'No other user found to test duplicate email');
+      test.skip(true, "No other user found to test duplicate email");
       return;
     }
 
-    const response = await page.request.post('/api/account/email/start-change', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { newEmail: existingUser.email }
-    });
+    const response = await page.request.post(
+      "/api/account/email/start-change",
+      {
+        headers: { "Content-Type": "application/json" },
+        data: { newEmail: existingUser.email },
+      },
+    );
 
     expect(response.status()).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('already in use');
+    expect(data.error).toContain("already in use");
   });
 
-  test('POST /api/account/email/start-change - invalid email format', async ({ page }) => {
-    const response = await page.request.post('/api/account/email/start-change', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { newEmail: 'invalid-email' }
-    });
+  test("POST /api/account/email/start-change - invalid email format", async ({
+    page,
+  }) => {
+    const response = await page.request.post(
+      "/api/account/email/start-change",
+      {
+        headers: { "Content-Type": "application/json" },
+        data: { newEmail: "invalid-email" },
+      },
+    );
 
     expect(response.status()).toBe(400);
   });
 
-  test('POST /api/account/email/confirm - valid token confirmation', async ({ page }) => {
+  test("POST /api/account/email/confirm - valid token confirmation", async ({
+    page,
+  }) => {
     // First, start an email change
-    await page.request.post('/api/account/email/start-change', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { newEmail: NEW_EMAIL }
+    await page.request.post("/api/account/email/start-change", {
+      headers: { "Content-Type": "application/json" },
+      data: { newEmail: NEW_EMAIL },
     });
 
     // Get the token from database
     const user = await prisma.user.findUnique({
       where: { email: ADMIN_EMAIL },
-      select: { emailChangePending: true }
+      select: { emailChangePending: true },
     });
     const pendingData = user?.emailChangePending as any;
     const token = pendingData.token;
 
     // Confirm email change with valid token
-    const response = await page.request.post('/api/account/email/confirm', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token }
+    const response = await page.request.post("/api/account/email/confirm", {
+      headers: { "Content-Type": "application/json" },
+      data: { token },
     });
 
     expect(response.status()).toBe(200);
     const data = await response.json();
-    expect(data.message).toContain('successfully updated');
+    expect(data.message).toContain("successfully updated");
 
     // Verify email was changed in database
     const updatedUser = await prisma.user.findUnique({
-      where: { email: NEW_EMAIL }
+      where: { email: NEW_EMAIL },
     });
     expect(updatedUser).toBeTruthy();
     expect(updatedUser?.emailChangePending).toBeNull();
   });
 
-  test('POST /api/account/email/confirm - expired token handling', async ({ page }) => {
+  test("POST /api/account/email/confirm - expired token handling", async ({
+    page,
+  }) => {
     // Create expired token manually
-    const user = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+    const user = await prisma.user.findUnique({
+      where: { email: ADMIN_EMAIL },
+    });
 
     if (!user) {
-      test.skip(true, 'User not found');
+      test.skip(true, "User not found");
       return;
     }
 
-    const expiredToken = 'expired-token-12345';
+    const expiredToken = "expired-token-12345";
     await prisma.user.update({
       where: { id: user.id },
       data: {
         emailChangePending: {
           newEmail: NEW_EMAIL,
           token: expiredToken,
-          expiresAt: new Date(Date.now() - 1000 * 60 * 60) // 1 hour ago
-        }
-      }
+          expiresAt: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
+        },
+      },
     });
 
-    const response = await page.request.post('/api/account/email/confirm', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token: expiredToken }
-    });
-
-    expect(response.status()).toBe(400);
-    const data = await response.json();
-    expect(data.error).toContain('expired');
-  });
-
-  test('POST /api/account/email/confirm - invalid token handling', async ({ page }) => {
-    const response = await page.request.post('/api/account/email/confirm', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token: 'invalid-token-xyz' }
+    const response = await page.request.post("/api/account/email/confirm", {
+      headers: { "Content-Type": "application/json" },
+      data: { token: expiredToken },
     });
 
     expect(response.status()).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('Invalid');
+    expect(data.error).toContain("expired");
   });
 
-  test('POST /api/account/email/confirm - email uniqueness check', async ({ page }) => {
+  test("POST /api/account/email/confirm - invalid token handling", async ({
+    page,
+  }) => {
+    const response = await page.request.post("/api/account/email/confirm", {
+      headers: { "Content-Type": "application/json" },
+      data: { token: "invalid-token-xyz" },
+    });
+
+    expect(response.status()).toBe(400);
+    const data = await response.json();
+    expect(data.error).toContain("Invalid");
+  });
+
+  test("POST /api/account/email/confirm - email uniqueness check", async ({
+    page,
+  }) => {
     // Start email change
-    await page.request.post('/api/account/email/start-change', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { newEmail: NEW_EMAIL }
+    await page.request.post("/api/account/email/start-change", {
+      headers: { "Content-Type": "application/json" },
+      data: { newEmail: NEW_EMAIL },
     });
 
     // Get token
     const user = await prisma.user.findUnique({
       where: { email: ADMIN_EMAIL },
-      select: { emailChangePending: true }
+      select: { emailChangePending: true },
     });
     const pendingData = user?.emailChangePending as any;
     const token = pendingData.token;
@@ -189,69 +222,75 @@ test.describe('Email Change API', () => {
     await prisma.user.create({
       data: {
         email: NEW_EMAIL,
-        role: 'PARTICIPANT',
-        workspaceId: (await prisma.workspace.findFirst())?.id
-      }
+        role: "PARTICIPANT",
+        workspaceId: (await prisma.workspace.findFirst())?.id,
+      },
     });
 
     // Try to confirm - should fail due to duplicate
-    const response = await page.request.post('/api/account/email/confirm', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token }
+    const response = await page.request.post("/api/account/email/confirm", {
+      headers: { "Content-Type": "application/json" },
+      data: { token },
     });
 
     expect(response.status()).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('already in use');
+    expect(data.error).toContain("already in use");
   });
 
-  test('POST /api/account/email/cancel - cancel pending change', async ({ page }) => {
+  test("POST /api/account/email/cancel - cancel pending change", async ({
+    page,
+  }) => {
     // Start email change
-    await page.request.post('/api/account/email/start-change', {
-      headers: { 'Content-Type': 'application/json' },
-      data: { newEmail: NEW_EMAIL }
+    await page.request.post("/api/account/email/start-change", {
+      headers: { "Content-Type": "application/json" },
+      data: { newEmail: NEW_EMAIL },
     });
 
     // Verify pending change exists
     const userBefore = await prisma.user.findUnique({
       where: { email: ADMIN_EMAIL },
-      select: { emailChangePending: true }
+      select: { emailChangePending: true },
     });
     expect(userBefore?.emailChangePending).toBeTruthy();
 
     // Cancel the change
-    const response = await page.request.post('/api/account/email/cancel', {
-      headers: { 'Content-Type': 'application/json' }
+    const response = await page.request.post("/api/account/email/cancel", {
+      headers: { "Content-Type": "application/json" },
     });
 
     expect(response.status()).toBe(200);
     const data = await response.json();
-    expect(data.message).toContain('cancelled');
+    expect(data.message).toContain("cancelled");
 
     // Verify emailChangePending is cleared
     const userAfter = await prisma.user.findUnique({
       where: { email: ADMIN_EMAIL },
-      select: { emailChangePending: true }
+      select: { emailChangePending: true },
     });
     expect(userAfter?.emailChangePending).toBeNull();
   });
 
-  test('POST /api/account/email/cancel - no pending change', async ({ page }) => {
+  test("POST /api/account/email/cancel - no pending change", async ({
+    page,
+  }) => {
     // Ensure no pending change
-    const user = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+    const user = await prisma.user.findUnique({
+      where: { email: ADMIN_EMAIL },
+    });
     if (user) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { emailChangePending: Prisma.JsonNull }
+        data: { emailChangePending: Prisma.JsonNull },
       });
     }
 
-    const response = await page.request.post('/api/account/email/cancel', {
-      headers: { 'Content-Type': 'application/json' }
+    const response = await page.request.post("/api/account/email/cancel", {
+      headers: { "Content-Type": "application/json" },
     });
 
     expect(response.status()).toBe(400);
     const data = await response.json();
-    expect(data.error).toContain('No pending');
+    expect(data.error).toContain("No pending");
   });
 });

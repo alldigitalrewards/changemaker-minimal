@@ -1,13 +1,26 @@
 import { cookies } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
-import { getWorkspaceBySlug } from "@/lib/db/queries"
+import { getWorkspaceBySlug, getManagerChallenges, getUserBySupabaseId } from "@/lib/db/queries"
 import { getUserWorkspaceRole as getCompatibleWorkspaceRole } from "@/lib/db/workspace-compatibility"
+import { getMembership } from "@/lib/db/workspace-membership"
+import { type Role } from "@/lib/types"
+import { type Challenge } from "@prisma/client"
 
+// Re-export Role type for convenience
+export { type Role } from "@/lib/types"
+
+/**
+ * Get workspace by slug
+ */
 export async function getCurrentWorkspace(slug: string) {
   return await getWorkspaceBySlug(slug)
 }
 
-export async function getUserWorkspaceRole(slug: string) {
+/**
+ * Get user's role in a workspace by slug
+ * Returns ADMIN, MANAGER, or PARTICIPANT based on WorkspaceMembership
+ */
+export async function getUserWorkspaceRole(slug: string): Promise<Role | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -17,6 +30,46 @@ export async function getUserWorkspaceRole(slug: string) {
   return await getCompatibleWorkspaceRole(user.id, slug)
 }
 
+/**
+ * Check if user is a workspace manager
+ */
+export async function isWorkspaceManager(userId: string, workspaceId: string): Promise<boolean> {
+  try {
+    const dbUser = await getUserBySupabaseId(userId)
+    if (!dbUser) return false
+
+    const membership = await getMembership(dbUser.id, workspaceId)
+    return membership?.role === 'MANAGER'
+  } catch (error) {
+    console.error('Error checking if user is manager:', error)
+    return false
+  }
+}
+
+/**
+ * Get challenges assigned to a manager
+ * Uses the getManagerChallenges query which handles ChallengeManager assignments
+ */
+export async function getManagerAssignedChallenges(
+  managerId: string,
+  workspaceId: string
+): Promise<Challenge[]> {
+  try {
+    const dbUser = await getUserBySupabaseId(managerId)
+    if (!dbUser) return []
+
+    // Use the dedicated query function which handles manager verification
+    // and ChallengeManager assignments
+    return await getManagerChallenges(dbUser.id, workspaceId)
+  } catch (error) {
+    console.error('Error getting manager assigned challenges:', error)
+    return []
+  }
+}
+
+/**
+ * Set workspace context in cookies
+ */
 export async function setWorkspaceContext(slug: string) {
   const cookieStore = await cookies()
   cookieStore.set("current-workspace", slug, {
@@ -27,11 +80,17 @@ export async function setWorkspaceContext(slug: string) {
   })
 }
 
+/**
+ * Get current workspace slug from cookies
+ */
 export async function getWorkspaceContext() {
   const cookieStore = await cookies()
   return cookieStore.get("current-workspace")?.value
 }
 
+/**
+ * Clear workspace context cookie
+ */
 export async function clearWorkspaceContext() {
   const cookieStore = await cookies()
   cookieStore.delete("current-workspace")

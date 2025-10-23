@@ -4,6 +4,7 @@ import { type Role } from '@/lib/types';
 export const ROLES = {
   ADMIN: 'ADMIN' as const,
   PARTICIPANT: 'PARTICIPANT' as const,
+  MANAGER: 'MANAGER' as const,
 } satisfies Record<string, Role>;
 
 // Permission definitions
@@ -11,21 +12,25 @@ export const PERMISSIONS = {
   // Workspace permissions
   WORKSPACE_MANAGE: 'workspace:manage',
   WORKSPACE_VIEW: 'workspace:view',
-  
+
   // Challenge permissions
   CHALLENGE_CREATE: 'challenge:create',
   CHALLENGE_EDIT: 'challenge:edit',
   CHALLENGE_DELETE: 'challenge:delete',
   CHALLENGE_VIEW: 'challenge:view',
-  
+
   // User permissions
   USER_MANAGE: 'user:manage',
   USER_VIEW: 'user:view',
-  
+
   // Enrollment permissions
   ENROLLMENT_CREATE: 'enrollment:create',
   ENROLLMENT_VIEW: 'enrollment:view',
   ENROLLMENT_MANAGE: 'enrollment:manage',
+
+  // Submission permissions
+  SUBMISSION_REVIEW: 'submission:review',
+  SUBMISSION_VIEW: 'submission:view',
 } as const;
 
 type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -44,6 +49,17 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.ENROLLMENT_CREATE,
     PERMISSIONS.ENROLLMENT_VIEW,
     PERMISSIONS.ENROLLMENT_MANAGE,
+    PERMISSIONS.SUBMISSION_REVIEW,
+    PERMISSIONS.SUBMISSION_VIEW,
+  ],
+  [ROLES.MANAGER]: [
+    PERMISSIONS.WORKSPACE_VIEW,
+    PERMISSIONS.CHALLENGE_VIEW,
+    PERMISSIONS.CHALLENGE_EDIT, // Can edit assigned challenges
+    PERMISSIONS.USER_VIEW,
+    PERMISSIONS.ENROLLMENT_VIEW,
+    PERMISSIONS.SUBMISSION_REVIEW, // Can review submissions
+    PERMISSIONS.SUBMISSION_VIEW,
   ],
   [ROLES.PARTICIPANT]: [
     PERMISSIONS.WORKSPACE_VIEW,
@@ -51,6 +67,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     PERMISSIONS.USER_VIEW,
     PERMISSIONS.ENROLLMENT_CREATE,
     PERMISSIONS.ENROLLMENT_VIEW,
+    PERMISSIONS.SUBMISSION_VIEW, // Can view own submissions
   ],
 };
 
@@ -70,6 +87,10 @@ export function isAdmin(userRole: Role): boolean {
 
 export function isParticipant(userRole: Role): boolean {
   return userRole === ROLES.PARTICIPANT;
+}
+
+export function isManager(userRole: Role): boolean {
+  return userRole === ROLES.MANAGER;
 }
 
 // Platform-level authorization
@@ -96,8 +117,12 @@ export function canAccessAdminRoutes(userRole: Role): boolean {
   return isAdmin(userRole);
 }
 
+export function canAccessManagerRoutes(userRole: Role): boolean {
+  return isManager(userRole) || isAdmin(userRole);
+}
+
 export function canAccessParticipantRoutes(userRole: Role): boolean {
-  return isParticipant(userRole) || isAdmin(userRole);
+  return isParticipant(userRole) || isAdmin(userRole) || isManager(userRole);
 }
 
 // Workspace ownership checks
@@ -122,17 +147,28 @@ export function canDeleteWorkspace(userRole: Role, userId: string, workspaceOwne
 // Path-based access control for workspace routes
 export function getAccessiblePaths(userRole: Role, workspaceSlug: string) {
   const basePath = `/w/${workspaceSlug}`;
-  
+
   if (isAdmin(userRole)) {
     return {
       admin: `${basePath}/admin`,
+      manager: `${basePath}/manager`,
       participant: `${basePath}/participant`,
       dashboard: `${basePath}/admin/dashboard`,
       challenges: `${basePath}/admin/challenges`,
       users: `${basePath}/admin/users`,
     };
   }
-  
+
+  if (isManager(userRole)) {
+    return {
+      manager: `${basePath}/manager`,
+      participant: `${basePath}/participant`,
+      dashboard: `${basePath}/manager/dashboard`,
+      challenges: `${basePath}/manager/challenges`,
+      submissions: `${basePath}/manager/submissions`,
+    };
+  }
+
   if (isParticipant(userRole)) {
     return {
       participant: `${basePath}/participant`,
@@ -140,6 +176,6 @@ export function getAccessiblePaths(userRole: Role, workspaceSlug: string) {
       challenges: `${basePath}/participant/challenges`,
     };
   }
-  
+
   return {};
 }

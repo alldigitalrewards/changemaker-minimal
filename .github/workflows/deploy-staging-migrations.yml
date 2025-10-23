@@ -1,0 +1,53 @@
+name: Deploy Staging Migrations
+
+on:
+  push:
+    branches:
+      - staging
+
+jobs:
+  deploy-migrations:
+    name: Deploy Migrations to Staging Database
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm prisma generate
+
+      - name: Check migration status
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Checking migration status..."
+          pnpm prisma migrate status
+
+      - name: Deploy migrations
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Deploying pending migrations to staging database..."
+          pnpm prisma migrate deploy
+
+      - name: Verify deployment
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Verifying migrations were applied..."
+          pnpm prisma migrate status
+          echo "✅ Staging database migrations deployed successfully!"

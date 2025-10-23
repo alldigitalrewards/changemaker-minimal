@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Building,
   Search,
@@ -13,14 +13,14 @@ import {
   Home,
   Crown,
   Globe,
-  UserCog
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+  UserCog,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface WorkspaceMembership {
   workspaceId: string;
-  role: 'ADMIN' | 'PARTICIPANT';
+  role: "ADMIN" | "PARTICIPANT" | "MANAGER";
   workspace: {
     id: string;
     name: string;
@@ -30,8 +30,8 @@ interface WorkspaceMembership {
 
 interface WorkspacesSidebarProps {
   memberships: WorkspaceMembership[];
-  currentView?: 'my-workspaces' | 'discover' | 'invitations';
-  userRole: 'ADMIN' | 'PARTICIPANT';
+  currentView?: "my-workspaces" | "discover" | "invitations";
+  userRole: "ADMIN" | "PARTICIPANT" | "MANAGER";
   isAdmin: boolean;
   isSuperAdmin?: boolean;
   className?: string;
@@ -39,70 +39,70 @@ interface WorkspacesSidebarProps {
 
 export default function WorkspacesSidebar({
   memberships,
-  currentView = 'my-workspaces',
+  currentView = "my-workspaces",
   userRole,
   isAdmin,
   isSuperAdmin = false,
-  className
+  className,
 }: WorkspacesSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
   const superAdminNavItems = [
     {
-      label: 'Platform Overview',
+      label: "Platform Overview",
       icon: Crown,
-      href: '/admin/dashboard',
-      active: pathname === '/admin/dashboard',
-      show: isSuperAdmin
+      href: "/admin/dashboard",
+      active: pathname === "/admin/dashboard",
+      show: isSuperAdmin,
     },
     {
-      label: 'All Workspaces',
+      label: "All Workspaces",
       icon: Globe,
-      href: '/admin/workspaces',
-      active: pathname === '/admin/workspaces',
-      show: isSuperAdmin
+      href: "/admin/workspaces",
+      active: pathname === "/admin/workspaces",
+      show: isSuperAdmin,
     },
     {
-      label: 'Manage Members',
+      label: "Manage Members",
       icon: UserCog,
-      href: '/admin/users',
-      active: pathname === '/admin/users',
-      show: isSuperAdmin
+      href: "/admin/users",
+      active: pathname === "/admin/users",
+      show: isSuperAdmin,
     },
   ];
 
   const navItems = [
     {
-      label: 'My Workspaces',
+      label: "My Workspaces",
       icon: Building,
-      href: '/workspaces',
-      active: currentView === 'my-workspaces',
-      show: true
-    },
-    {
-      label: 'Invitations',
-      icon: Mail,
-      href: '/workspaces?view=invitations',
-      active: currentView === 'invitations',
+      href: "/workspaces",
+      active: currentView === "my-workspaces",
       show: true,
-      badge: 0 // TODO: Add pending invitation count
     },
     {
-      label: 'Discover',
+      label: "Invitations",
+      icon: Mail,
+      href: "/workspaces?view=invitations",
+      active: currentView === "invitations",
+      show: true,
+      badge: 0, // TODO: Add pending invitation count
+    },
+    {
+      label: "Discover",
       icon: Search,
-      href: '/workspaces?view=discover',
-      active: currentView === 'discover',
-      show: isAdmin
+      href: "/workspaces?view=discover",
+      active: currentView === "discover",
+      show: isAdmin,
     },
   ];
 
   return (
     <aside
       className={cn(
-        'bg-white border-r border-gray-200 transition-all duration-300 flex flex-col',
-        collapsed ? 'w-16' : 'w-64',
-        className
+        "bg-white border-r border-gray-200 transition-all duration-300 flex flex-col",
+        collapsed ? "w-16" : "w-64",
+        className,
       )}
     >
       {/* Sidebar Header */}
@@ -150,13 +150,21 @@ export default function WorkspacesSidebar({
                   <Button
                     variant="ghost"
                     className={cn(
-                      'w-full justify-start',
-                      item.active && 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200',
-                      !item.active && 'hover:bg-purple-50 hover:text-purple-600',
-                      collapsed && 'justify-center px-2'
+                      "w-full justify-start",
+                      item.active &&
+                        "bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200",
+                      !item.active &&
+                        "hover:bg-purple-50 hover:text-purple-600",
+                      collapsed && "justify-center px-2",
                     )}
                   >
-                    <Icon className={cn('h-4 w-4', item.active ? 'text-purple-600' : 'text-purple-500', !collapsed && 'mr-3')} />
+                    <Icon
+                      className={cn(
+                        "h-4 w-4",
+                        item.active ? "text-purple-600" : "text-purple-500",
+                        !collapsed && "mr-3",
+                      )}
+                    />
                     {!collapsed && (
                       <span className="flex-1 text-left">{item.label}</span>
                     )}
@@ -190,12 +198,13 @@ export default function WorkspacesSidebar({
               <Button
                 variant="ghost"
                 className={cn(
-                  'w-full justify-start',
-                  item.active && 'bg-coral-50 text-coral-700 hover:bg-coral-100',
-                  collapsed && 'justify-center px-2'
+                  "w-full justify-start",
+                  item.active &&
+                    "bg-coral-50 text-coral-700 hover:bg-coral-100",
+                  collapsed && "justify-center px-2",
                 )}
               >
-                <Icon className={cn('h-4 w-4', !collapsed && 'mr-3')} />
+                <Icon className={cn("h-4 w-4", !collapsed && "mr-3")} />
                 {!collapsed && (
                   <span className="flex-1 text-left">{item.label}</span>
                 )}
@@ -227,7 +236,7 @@ export default function WorkspacesSidebar({
                 <Link
                   key={membership.workspaceId}
                   href={`/w/${membership.workspace.slug}/${
-                    membership.role === 'ADMIN' ? 'admin' : 'participant'
+                    membership.role === "ADMIN" ? "admin" : "participant"
                   }/dashboard`}
                 >
                   <Button
@@ -236,7 +245,9 @@ export default function WorkspacesSidebar({
                     className="w-full justify-start text-sm"
                   >
                     <Home className="h-3 w-3 mr-2" />
-                    <span className="truncate">{membership.workspace.name}</span>
+                    <span className="truncate">
+                      {membership.workspace.name}
+                    </span>
                   </Button>
                 </Link>
               ))}
@@ -251,13 +262,13 @@ export default function WorkspacesSidebar({
           <Button
             variant="default"
             className={cn(
-              'w-full bg-coral-500 hover:bg-coral-600',
-              collapsed && 'px-2'
+              "w-full bg-coral-500 hover:bg-coral-600",
+              collapsed && "px-2",
             )}
             size="sm"
           >
-            <Plus className={cn('h-4 w-4', !collapsed && 'mr-2')} />
-            {!collapsed && 'New Workspace'}
+            <Plus className={cn("h-4 w-4", !collapsed && "mr-2")} />
+            {!collapsed && "New Workspace"}
           </Button>
         </div>
       )}

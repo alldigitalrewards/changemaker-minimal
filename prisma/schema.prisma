@@ -9,21 +9,21 @@ datasource db {
 }
 
 model Activity {
-  id                      String                    @id @db.Uuid
-  templateId              String                    @db.Uuid
-  challengeId             String                    @db.Uuid
-  pointsValue             Int
-  maxSubmissions          Int                       @default(1)
-  deadline                DateTime?
-  isRequired              Boolean                   @default(false)
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @default(now())
-  position                Int                       @default(0)
-  rewardRules             Json[]                    @default([])
-  Challenge               Challenge                 @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  ActivityTemplate        ActivityTemplate          @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  ActivitySubmission      ActivitySubmission[]
-  WorkspaceCommunication  WorkspaceCommunication[]
+  id                     String                   @id @db.Uuid
+  templateId             String                   @db.Uuid
+  challengeId            String                   @db.Uuid
+  pointsValue            Int
+  maxSubmissions         Int                      @default(1)
+  deadline               DateTime?
+  isRequired             Boolean                  @default(false)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @default(now())
+  position               Int                      @default(0)
+  rewardRules            Json[]                   @default([])
+  Challenge              Challenge                @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  ActivityTemplate       ActivityTemplate         @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ActivitySubmission     ActivitySubmission[]
+  WorkspaceCommunication WorkspaceCommunication[]
 
   @@index([challengeId])
   @@index([challengeId, position])
@@ -53,26 +53,29 @@ model ActivityEvent {
 }
 
 model ActivitySubmission {
-  id               String           @id @db.Uuid
-  activityId       String           @db.Uuid
-  userId           String           @db.Uuid
-  enrollmentId     String           @db.Uuid
-  textContent      String?
-  fileUrls         String[]
-  linkUrl          String?
-  status           SubmissionStatus @default(PENDING)
-  pointsAwarded    Int?
-  reviewNotes      String?
-  reviewedBy       String?          @db.Uuid
-  reviewedAt       DateTime?
-  submittedAt      DateTime         @default(now())
-  updatedAt        DateTime         @default(now())
-  rewardIssuanceId String?          @unique @db.Uuid
-  rewardIssued     Boolean          @default(false)
-  Activity         Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  Enrollment       Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  RewardIssuance   RewardIssuance?  @relation(fields: [rewardIssuanceId], references: [id])
-  User             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String           @id @db.Uuid
+  activityId        String           @db.Uuid
+  userId            String           @db.Uuid
+  enrollmentId      String           @db.Uuid
+  textContent       String?
+  fileUrls          String[]
+  linkUrl           String?
+  status            SubmissionStatus @default(PENDING)
+  pointsAwarded     Int?
+  reviewNotes       String?
+  reviewedBy        String?          @db.Uuid
+  reviewedAt        DateTime?
+  managerReviewedBy String?          @db.Uuid
+  managerReviewedAt DateTime?
+  managerNotes      String?
+  submittedAt       DateTime         @default(now())
+  updatedAt         DateTime         @default(now())
+  rewardIssuanceId  String?          @unique @db.Uuid
+  rewardIssued      Boolean          @default(false)
+  Activity          Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  Enrollment        Enrollment       @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  RewardIssuance    RewardIssuance?  @relation(fields: [rewardIssuanceId], references: [id])
+  User              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([activityId])
   @@index([enrollmentId])
@@ -101,33 +104,52 @@ model ActivityTemplate {
 }
 
 model Challenge {
-  id                      String                   @id @db.Uuid
-  title                   String
-  description             String
-  startDate               DateTime
-  endDate                 DateTime
-  enrollmentDeadline      DateTime?
-  workspaceId             String                   @db.Uuid
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @default(now())
-  status                  ChallengeStatus          @default(DRAFT)
-  emailEditAllowed        Boolean                  @default(true)
-  rewardConfig            Json?
-  rewardType              RewardType?
-  Activity                Activity[]
-  ActivityEvent           ActivityEvent[]
-  Workspace               Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  ChallengePointsBudget   ChallengePointsBudget?
-  Enrollment              Enrollment[]
-  InviteCode              InviteCode[]
-  PointsLedger            PointsLedger[]
-  RewardIssuance          RewardIssuance[]
-  WorkspaceCommunication  WorkspaceCommunication[]
+  id                     String                   @id @db.Uuid
+  title                  String
+  description            String
+  startDate              DateTime
+  endDate                DateTime
+  enrollmentDeadline     DateTime?
+  workspaceId            String                   @db.Uuid
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @default(now())
+  status                 ChallengeStatus          @default(DRAFT)
+  emailEditAllowed       Boolean                  @default(true)
+  rewardConfig           Json?
+  rewardType             RewardType?
+  Activity               Activity[]
+  ActivityEvent          ActivityEvent[]
+  Workspace              Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ChallengeAssignment    ChallengeAssignment[]
+  ChallengePointsBudget  ChallengePointsBudget?
+  Enrollment             Enrollment[]
+  InviteCode             InviteCode[]
+  PointsLedger           PointsLedger[]
+  RewardIssuance         RewardIssuance[]
+  WorkspaceCommunication WorkspaceCommunication[]
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId])
   @@index([workspaceId, startDate])
   @@index([workspaceId, status])
+}
+
+model ChallengeAssignment {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  challengeId String    @db.Uuid
+  managerId   String    @db.Uuid
+  workspaceId String    @db.Uuid
+  assignedBy  String    @db.Uuid
+  assignedAt  DateTime  @default(now())
+  Challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  Manager     User      @relation("ManagerAssignments", fields: [managerId], references: [id], onDelete: Cascade)
+  AssignedBy  User      @relation("AssignmentCreator", fields: [assignedBy], references: [id])
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, managerId])
+  @@index([managerId, workspaceId])
+  @@index([challengeId])
+  @@index([workspaceId])
 }
 
 model ChallengePointsBudget {
@@ -234,23 +256,26 @@ model PointsLedger {
 }
 
 model RewardIssuance {
-  id                 String              @id @db.Uuid
-  userId             String              @db.Uuid
-  workspaceId        String              @db.Uuid
-  challengeId        String?             @db.Uuid
-  type               RewardType
-  amount             Int?
-  currency           String?
-  skuId              String?
-  provider           String?
-  status             RewardStatus        @default(PENDING)
-  issuedAt           DateTime?
-  error              String?
-  metadata           Json?
-  ActivitySubmission ActivitySubmission?
-  Challenge          Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  User               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id                    String              @id @db.Uuid
+  userId                String              @db.Uuid
+  workspaceId           String              @db.Uuid
+  challengeId           String?             @db.Uuid
+  type                  RewardType
+  amount                Int?
+  currency              String?
+  skuId                 String?
+  provider              String?
+  status                RewardStatus        @default(PENDING)
+  issuedAt              DateTime?
+  error                 String?
+  metadata              Json?
+  externalTransactionId String?
+  externalStatus        String?
+  externalResponse      Json?
+  ActivitySubmission    ActivitySubmission?
+  Challenge             Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace             Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([challengeId])
   @@index([status])
@@ -287,6 +312,8 @@ model User {
   ActivityEvent_ActivityEvent_actorUserIdToUser ActivityEvent[]                  @relation("ActivityEvent_actorUserIdToUser")
   ActivityEvent_ActivityEvent_userIdToUser      ActivityEvent[]                  @relation("ActivityEvent_userIdToUser")
   ActivitySubmission                            ActivitySubmission[]
+  ChallengeAssignment_ManagerAssignments        ChallengeAssignment[]            @relation("ManagerAssignments")
+  ChallengeAssignment_AssignmentCreator         ChallengeAssignment[]            @relation("AssignmentCreator")
   ChallengePointsBudget                         ChallengePointsBudget[]
   Enrollment                                    Enrollment[]
   InviteCode                                    InviteCode[]
@@ -321,6 +348,7 @@ model Workspace {
   ActivityEvent                  ActivityEvent[]
   ActivityTemplate               ActivityTemplate[]
   Challenge                      Challenge[]
+  ChallengeAssignment            ChallengeAssignment[]
   ChallengePointsBudget          ChallengePointsBudget[]
   InviteCode                     InviteCode[]
   PointsBalance                  PointsBalance[]
@@ -519,10 +547,13 @@ enum RewardType {
 enum Role {
   ADMIN
   PARTICIPANT
+  MANAGER
 }
 
 enum SubmissionStatus {
   PENDING
+  MANAGER_APPROVED
+  NEEDS_REVISION
   APPROVED
   REJECTED
   DRAFT
