@@ -114,9 +114,10 @@
   - Risk: Staging downtime if migration fails
   - Depends on: Tasks 3, 8
 
-- [ ] **Task 13**: Smoke Test - Staging ⏱️ 2h
-  - Status: Not Started
-  - Deliverable: Smoke test report
+- [x] **Task 13**: Smoke Test - Staging ⏱️ 2h
+  - Status: Complete
+  - Deliverable: Smoke test report, automated Playwright tests
+  - Session: `.claude/sessions/session-20251022-task-13-smoke-tests.md`
   - Risk: Silent failures in edge cases
   - Depends on: Task 12
 
