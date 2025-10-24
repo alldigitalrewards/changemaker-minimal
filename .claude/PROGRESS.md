@@ -13,10 +13,10 @@
 | Phase | Tasks | Status | Progress | Hours |
 |-------|-------|--------|----------|-------|
 | Phase 1: Foundation | 15 | ✅ Complete | 15/15 (100%) | 26/26h |
-| Phase 2: Manager Role | 15 | In Progress | 1/15 (7%) | 3/56.5h |
+| Phase 2: Manager Role | 15 | In Progress | 2/15 (13%) | 5/56.5h |
 | Phase 3: RewardSTACK | 15 | Not Started | 0/15 (0%) | 0/49h |
 | Phase 4: Polish | 15 | Not Started | 0/15 (0%) | 0/43.5h |
-| **TOTAL** | **60** | **In Progress** | **16/60 (27%)** | **29/175h** |
+| **TOTAL** | **60** | **In Progress** | **17/60 (28%)** | **31/175h** |
 
 ---
 
@@ -166,12 +166,15 @@
   - Risk: Missing authorization checks (mitigated via requireWorkspaceAdmin)
   - Depends on: Task 10 ✅
 
-- [ ] **Task 17**: Assignment API Endpoints - List & Delete ⏱️ 2h
-  - Status: Not Started
-  - File: Same as Task 16
+- [x] **Task 17**: Assignment API Endpoints - List & Delete ⏱️ 2h
+  - Status: Complete
+  - Files:
+    - `app/api/workspaces/[slug]/challenges/[id]/managers/route.ts` (modified - added GET)
+    - `app/api/workspaces/[slug]/challenges/[id]/managers/[managerId]/route.ts` (NEW - DELETE)
+  - Session: `.claude/sessions/session-20251024-task-17-assignment-api-list-delete.md`
   - Deliverable: Complete assignment CRUD API
-  - Risk: N+1 queries for manager details
-  - Depends on: Task 16
+  - Risk: N+1 queries for manager details (mitigated via getChallengeAssignments includes)
+  - Depends on: Task 16 ✅
 
 - [ ] **Task 18**: Manager Queue API Endpoint ⏱️ 3h
   - Status: Not Started
