@@ -35,10 +35,14 @@ export const POST = withErrorHandling(async (
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 })
     }
 
-    // Check if already reviewed
-    if (existingSubmission.status !== 'PENDING') {
+    // Check if submission can be reviewed by admin
+    // Allow PENDING (direct admin review) or MANAGER_APPROVED (final approval after manager review)
+    if (existingSubmission.status !== 'PENDING' && existingSubmission.status !== 'MANAGER_APPROVED') {
       return NextResponse.json({ error: 'Submission has already been reviewed' }, { status: 400 })
     }
+
+    // Detect admin override: admin rejects a manager-approved submission
+    const isAdminOverride = existingSubmission.status === 'MANAGER_APPROVED' && status === 'REJECTED'
 
     // Review the submission
     const submission = await reviewActivitySubmission(
@@ -102,6 +106,7 @@ export const POST = withErrorHandling(async (
     }
 
     // Log review event
+    // Include admin override flag in metadata when admin rejects manager-approved submission
     await logActivityEvent({
       workspaceId: workspace.id,
       challengeId: existingSubmission.Activity.challengeId,
@@ -113,7 +118,9 @@ export const POST = withErrorHandling(async (
         pointsAwarded: pointsAwarded || reward?.amount || 0,
         activityId: submission.activityId,
         activityName: existingSubmission.Activity?.ActivityTemplate?.name,
-        reviewNotes: reviewNotes || undefined
+        reviewNotes: reviewNotes || undefined,
+        previousStatus: existingSubmission.status,
+        adminOverride: isAdminOverride || undefined
       }
     })
 
