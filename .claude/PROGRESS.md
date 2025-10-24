@@ -13,10 +13,10 @@
 | Phase | Tasks | Status | Progress | Hours |
 |-------|-------|--------|----------|-------|
 | Phase 1: Foundation | 15 | ✅ Complete | 15/15 (100%) | 26/26h |
-| Phase 2: Manager Role | 15 | In Progress | 6/15 (40%) | 15/56.5h |
+| Phase 2: Manager Role | 15 | In Progress | 7/15 (47%) | 17/56.5h |
 | Phase 3: RewardSTACK | 15 | Not Started | 0/15 (0%) | 0/49h |
 | Phase 4: Polish | 15 | Not Started | 0/15 (0%) | 0/43.5h |
-| **TOTAL** | **60** | **In Progress** | **21/60 (35%)** | **41/175h** |
+| **TOTAL** | **60** | **In Progress** | **22/60 (37%)** | **43/175h** |
 
 ---
 
@@ -214,12 +214,14 @@
   - Note: Backward compatible defaults ensure existing challenges opt-in to manager workflow
   - Depends on: Phase 1 complete ✅
 
-- [ ] **Task 22**: Challenge CRUD Updates - Manager Fields ⏱️ 2h
-  - Status: Not Started
-  - Files: Challenge pages and API routes
-  - Deliverable: UI + API support for manager challenge config
-  - Risk: UI confusion about what flags mean
-  - Depends on: Task 21
+- [x] **Task 22**: Challenge CRUD Updates - Manager Fields ⏱️ 2h
+  - Status: Complete (API only, UI deferred)
+  - Files: lib/db/queries.ts, app/api/workspaces/[slug]/challenges/route.ts, app/api/workspaces/[slug]/challenges/[id]/route.ts
+  - Session: `.claude/sessions/session-20251024-task-22-challenge-crud-manager-fields.md`
+  - Deliverable: API support for manager challenge config (POST/PUT accept requireManagerApproval and requireAdminReapproval)
+  - Risk: UI confusion about what flags mean (mitigated by deferring UI to follow-up)
+  - Note: UI form controls can be added during dashboard work (Tasks 23-26) or as follow-up
+  - Depends on: Task 21 ✅
 
 ### Manager Dashboard UI (Tasks 23-26)
 
