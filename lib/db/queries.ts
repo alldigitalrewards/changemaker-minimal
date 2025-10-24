@@ -487,6 +487,8 @@ export async function createChallenge(
     rewardType?: 'points' | 'sku' | 'monetary'
     rewardConfig?: any
     emailEditAllowed?: boolean
+    requireManagerApproval?: boolean
+    requireAdminReapproval?: boolean
   },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {
@@ -502,6 +504,8 @@ export async function createChallenge(
         rewardType: data.rewardType,
         rewardConfig: data.rewardConfig,
         emailEditAllowed: data.emailEditAllowed ?? true, // Default to true if not specified
+        requireManagerApproval: data.requireManagerApproval ?? false, // Default to false (opt-in)
+        requireAdminReapproval: data.requireAdminReapproval ?? true, // Default to true (safer)
         workspaceId
       }
     })
@@ -515,14 +519,16 @@ export async function createChallenge(
  */
 export async function updateChallenge(
   challengeId: ChallengeId,
-  data: { 
-    title?: string; 
+  data: {
+    title?: string;
     description?: string;
     startDate?: Date;
     endDate?: Date;
     enrollmentDeadline?: Date;
     rewardType?: 'points' | 'sku' | 'monetary';
     rewardConfig?: any;
+    requireManagerApproval?: boolean;
+    requireAdminReapproval?: boolean;
   },
   workspaceId: WorkspaceId
 ): Promise<Challenge> {

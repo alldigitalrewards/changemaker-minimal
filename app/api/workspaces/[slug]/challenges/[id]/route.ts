@@ -67,7 +67,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, status, activities } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, requireManagerApproval, requireAdminReapproval, participantIds, invitedParticipantIds, enrolledParticipantIds, status, activities } = body;
 
   // Basic validation - only validate if provided
   if ((title !== undefined && !title) || (description !== undefined && !description)) {
@@ -123,6 +123,14 @@ export const PUT = withErrorHandling(async (
   }
   if (rewardConfig !== undefined) {
     updateData.rewardConfig = rewardConfig
+  }
+
+  // Manager approval configuration (optional)
+  if (requireManagerApproval !== undefined) {
+    updateData.requireManagerApproval = requireManagerApproval
+  }
+  if (requireAdminReapproval !== undefined) {
+    updateData.requireAdminReapproval = requireAdminReapproval
   }
 
   const before = await prisma.challenge.findUnique({ where: { id } })
