@@ -13,10 +13,10 @@
 | Phase | Tasks | Status | Progress | Hours |
 |-------|-------|--------|----------|-------|
 | Phase 1: Foundation | 15 | ✅ Complete | 15/15 (100%) | 26/26h |
-| Phase 2: Manager Role | 15 | In Progress | 0/15 (0%) | 0/56.5h |
+| Phase 2: Manager Role | 15 | In Progress | 1/15 (7%) | 3/56.5h |
 | Phase 3: RewardSTACK | 15 | Not Started | 0/15 (0%) | 0/49h |
 | Phase 4: Polish | 15 | Not Started | 0/15 (0%) | 0/43.5h |
-| **TOTAL** | **60** | **In Progress** | **15/60 (25%)** | **26/151h** |
+| **TOTAL** | **60** | **In Progress** | **16/60 (27%)** | **29/175h** |
 
 ---
 
@@ -158,12 +158,13 @@
 
 ### Assignment API Endpoints (Tasks 16-20)
 
-- [ ] **Task 16**: Assignment API Endpoints - Create ⏱️ 3h
-  - Status: Not Started
+- [x] **Task 16**: Assignment API Endpoints - Create ⏱️ 3h
+  - Status: Complete
   - File: `app/api/workspaces/[slug]/challenges/[id]/managers/route.ts` (NEW)
+  - Session: `.claude/sessions/session-20251024-task-16-assignment-api-create.md`
   - Deliverable: Working assignment creation endpoint
-  - Risk: Missing authorization checks
-  - Depends on: Task 10
+  - Risk: Missing authorization checks (mitigated via requireWorkspaceAdmin)
+  - Depends on: Task 10 ✅
 
 - [ ] **Task 17**: Assignment API Endpoints - List & Delete ⏱️ 2h
   - Status: Not Started
