@@ -115,6 +115,8 @@ model Challenge {
   updatedAt              DateTime                 @default(now())
   status                 ChallengeStatus          @default(DRAFT)
   emailEditAllowed       Boolean                  @default(true)
+  requireManagerApproval Boolean                  @default(false)
+  requireAdminReapproval Boolean                  @default(true)
   rewardConfig           Json?
   rewardType             RewardType?
   Activity               Activity[]
