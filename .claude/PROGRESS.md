@@ -283,11 +283,53 @@
   - Risk: Test data conflicts with seed data
   - Depends on: Task 9
 
-**🚦 GATE 2 CRITERIA:**
+### Row-Level Security (Tasks 30.1-30.5) - CRITICAL SECURITY
+
+- [ ] **Task 30.1**: RLS Policy Design & Planning ⏱️ 2h
+  - Status: Not Started
+  - File: `docs/security/rls-policies.md` (NEW)
+  - Deliverable: Complete RLS policy specification for all models
+  - Risk: Missing critical policies leaves security gaps
+  - Depends on: Phase 2 complete
+  - **BLOCKER**: Must complete before staging merge
+
+- [ ] **Task 30.2**: Core RLS Policies - Workspace Isolation ⏱️ 3h
+  - Status: Not Started
+  - File: `prisma/migrations/XXX_enable_rls_core/migration.sql` (NEW)
+  - Deliverable: RLS policies for Workspace, Challenge, Activity models
+  - Risk: Overly restrictive policies break application
+  - Depends on: Task 30.1
+  - **CRITICAL**: Database-level workspace isolation
+
+- [ ] **Task 30.3**: Manager RLS Policies - Assignment-Based Access ⏱️ 4h
+  - Status: Not Started
+  - File: `prisma/migrations/XXX_enable_rls_manager/migration.sql` (NEW)
+  - Deliverable: RLS policies for ChallengeAssignment, ActivitySubmission (manager access)
+  - Risk: Complex policies with subqueries may have performance issues
+  - Depends on: Task 30.2
+  - **CRITICAL**: Manager can only access assigned challenge data
+
+- [ ] **Task 30.4**: RLS Testing & Verification ⏱️ 3h
+  - Status: Not Started
+  - File: `tests/security/rls-policies.spec.ts` (NEW)
+  - Deliverable: Automated tests verifying RLS policies work correctly
+  - Risk: Tests don't catch all edge cases
+  - Depends on: Tasks 30.2, 30.3
+  - **CRITICAL**: Verify policies don't break existing functionality
+
+- [ ] **Task 30.5**: RLS Performance Optimization ⏱️ 2h
+  - Status: Not Started
+  - Deliverable: Optimized indexes for RLS policy queries, query performance verification
+  - Risk: RLS policies slow down queries significantly
+  - Depends on: Task 30.4
+  - **CRITICAL**: Ensure <2 second page loads with RLS enabled
+
+**🚦 GATE 2 CRITERIA (UPDATED):**
 - [ ] Manager can review assigned submissions end-to-end
 - [ ] Two-step approval workflow working
 - [ ] Authorization tests passing (100% coverage)
 - [ ] Manager queue loads <2 seconds with 100 submissions
+- [ ] ✅ RLS policies implemented and tested (Tasks 30.1-30.5)
 - [ ] Zero critical security issues
 
 ---
