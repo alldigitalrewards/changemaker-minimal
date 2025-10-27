@@ -8,6 +8,7 @@ import { CheckCircle, Clock, ClipboardList, XCircle, Briefcase } from 'lucide-re
 import { getCurrentWorkspace } from '@/lib/workspace-context'
 import { requireAuth } from '@/lib/auth/api-auth'
 import { getUserWorkspaceRole } from '@/lib/workspace-context'
+import { ManagerReviewButton } from './manager-review-button'
 
 type SubmissionStatus = 'PENDING' | 'MANAGER_APPROVED' | 'NEEDS_REVISION' | 'APPROVED' | 'REJECTED'
 type FilterKey = 'PENDING' | 'MANAGER_APPROVED' | 'NEEDS_REVISION' | 'ALL'
@@ -261,9 +262,13 @@ export default async function ManagerQueuePage({ params, searchParams }: PagePro
                         </Button>
                       </Link>
                       {submission.status === 'PENDING' && (
-                        <Button size="sm" variant="default">
-                          Review
-                        </Button>
+                        <ManagerReviewButton
+                          submissionId={submission.id}
+                          workspaceSlug={slug}
+                          challengeTitle={challengeTitle}
+                          activityName={activityName}
+                          userEmail={userEmail}
+                        />
                       )}
                     </div>
                   </div>
