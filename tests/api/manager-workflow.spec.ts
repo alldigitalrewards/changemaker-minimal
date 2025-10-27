@@ -62,7 +62,7 @@ test.describe('Manager Approval Workflow Tests', () => {
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         status: 'PUBLISHED',
-        rewardType: 'POINTS',
+        rewardType: 'points',
         rewardConfig: {
           pointsAmount: 100
         }
@@ -109,7 +109,7 @@ test.describe('Manager Approval Workflow Tests', () => {
       data: {
         userId: participantId,
         challengeId,
-        status: 'ACTIVE'
+        status: 'ENROLLED'
       }
     });
     enrollmentId = enrollment.id;

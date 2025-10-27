@@ -73,7 +73,7 @@ test.describe('Submissions and Review API', () => {
         challengeId: challenge.id,
         pointsValue: 50,
         rewardRules: [{
-          type: 'POINTS',
+          type: 'points',
           amount: 50
         }]
       }

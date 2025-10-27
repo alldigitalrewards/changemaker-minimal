@@ -277,7 +277,7 @@ export async function createSubmissionForManager(params: {
     data: {
       userId: params.participantId,
       challengeId: params.challengeId,
-      status: 'ACTIVE'
+      status: 'ENROLLED'
     }
   });
 

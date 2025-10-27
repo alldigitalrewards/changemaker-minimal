@@ -124,7 +124,7 @@ test.describe('Reward Issuance Flow - End to End', () => {
         challengeId,
         pointsValue: 100,
         rewardRules: [{
-          type: 'POINTS',
+          type: 'points',
           amount: 100
         }]
       }

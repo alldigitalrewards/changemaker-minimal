@@ -89,6 +89,7 @@ test.describe('Manager Authorization Tests', () => {
     // Create activity template for submissions
     const activityTemplate = await prisma.activityTemplate.create({
       data: {
+        id: randomUUID(),
         name: 'Manager Auth Test Activity',
         description: 'Test activity',
         type: 'TEXT_SUBMISSION',
@@ -113,7 +114,7 @@ test.describe('Manager Authorization Tests', () => {
       data: {
         userId: participantId,
         challengeId: assignedChallengeId,
-        status: 'ACTIVE'
+        status: 'ENROLLED'
       }
     });
 
@@ -210,7 +211,7 @@ test.describe('Manager Authorization Tests', () => {
       data: {
         userId: participantId,
         challengeId: unassignedChallengeId,
-        status: 'ACTIVE'
+        status: 'ENROLLED'
       }
     });
 

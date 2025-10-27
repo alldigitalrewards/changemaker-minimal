@@ -285,36 +285,40 @@
 
 ### Row-Level Security (Tasks 30.1-30.5) - CRITICAL SECURITY
 
-- [ ] **Task 30.1**: RLS Policy Design & Planning ⏱️ 2h
-  - Status: Not Started
-  - File: `docs/security/rls-policies.md` (NEW)
+- [x] **Task 30.1**: RLS Policy Design & Planning ⏱️ 2h ✅ 2025-10-27
+  - Status: Complete
+  - File: `docs/security/rls-policies.md` (400+ lines)
+  - Session: `.claude/sessions/session-20251027-task-30.1-rls-design.md`
   - Deliverable: Complete RLS policy specification for all models
   - Risk: Missing critical policies leaves security gaps
   - Depends on: Phase 2 complete
   - **BLOCKER**: Must complete before staging merge
 
-- [ ] **Task 30.2**: Core RLS Policies - Workspace Isolation ⏱️ 3h
-  - Status: Not Started
-  - File: `prisma/migrations/XXX_enable_rls_core/migration.sql` (NEW)
-  - Deliverable: RLS policies for Workspace, Challenge, Activity models
+- [x] **Task 30.2**: Core RLS Policies - Workspace Isolation ⏱️ 3h ✅ 2025-10-27
+  - Status: Complete
+  - File: `prisma/migrations/20251027214059_enable_rls_core/migration.sql` (395 lines)
+  - Session: `.claude/sessions/session-20251027-task-30.2-rls-core.md`
+  - Deliverable: 30 RLS policies across 16 models, workspace isolation enforced
   - Risk: Overly restrictive policies break application
-  - Depends on: Task 30.1
+  - Depends on: Task 30.1 ✅
   - **CRITICAL**: Database-level workspace isolation
 
-- [ ] **Task 30.3**: Manager RLS Policies - Assignment-Based Access ⏱️ 4h
-  - Status: Not Started
-  - File: `prisma/migrations/XXX_enable_rls_manager/migration.sql` (NEW)
-  - Deliverable: RLS policies for ChallengeAssignment, ActivitySubmission (manager access)
+- [x] **Task 30.3**: Manager RLS Policies - Assignment-Based Access ⏱️ 4h ✅ 2025-10-27
+  - Status: Complete
+  - File: `prisma/migrations/20251027220000_enable_rls_manager/migration.sql` (165 lines)
+  - Session: `.claude/sessions/session-20251027-task-30.3-rls-manager.md`
+  - Deliverable: 6 manager policies, critical ActivitySubmission multi-role policy implemented
   - Risk: Complex policies with subqueries may have performance issues
-  - Depends on: Task 30.2
+  - Depends on: Task 30.2 ✅
   - **CRITICAL**: Manager can only access assigned challenge data
 
 - [ ] **Task 30.4**: RLS Testing & Verification ⏱️ 3h
-  - Status: Not Started
+  - Status: In Progress
   - File: `tests/security/rls-policies.spec.ts` (NEW)
+  - Session: `.claude/sessions/session-20251027-task-30.4-rls-testing.md`
   - Deliverable: Automated tests verifying RLS policies work correctly
   - Risk: Tests don't catch all edge cases
-  - Depends on: Tasks 30.2, 30.3
+  - Depends on: Tasks 30.2 ✅, 30.3 ✅
   - **CRITICAL**: Verify policies don't break existing functionality
 
 - [ ] **Task 30.5**: RLS Performance Optimization ⏱️ 2h
