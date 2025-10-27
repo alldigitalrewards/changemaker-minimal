@@ -172,16 +172,34 @@ All fixtures created with service role to bypass RLS during setup.
 
 **Current Status**:
 - Test suite created with comprehensive coverage (22 tests across 7 categories)
-- 4 tests failing due to beforeAll setup failing (cascading failures)
-- Schema field corrections in progress
-- Once setup succeeds, all 22 tests expected to run
+- All schema field corrections completed (8 issues fixed):
+  1. Workspace.id required
+  2. User.role required
+  3. Unique workspace slug (added timestamp)
+  4. Unique user email (added timestamp)
+  5. Activity requires both challengeId AND templateId
+  6. ActivitySubmission requires enrollmentId
+  7. ChallengeAssignment requires assignedBy
+  8. Prisma relation names must be capitalized (Activity not activity, Challenge not challenge)
+
+**Critical Discovery - RLS Testing Approach**:
+- RLS is now active in database
+- Prisma client cannot test RLS policies properly because:
+  - RLS policies use `current_user_id()` which requires Supabase auth context
+  - Prisma client doesn't set auth context
+  - Even service role gets "permission denied for schema public" errors
+- **Solution Required**: Tests must use Supabase client with `auth.setSession()` instead of Prisma client
+  - Each test needs proper auth context (admin/manager/participant JWT tokens)
+  - Service role needed only for fixture setup/cleanup
 
 **Next Steps**:
-1. Complete Activity schema field corrections
-2. Run full test suite successfully
-3. Verify all 22 tests pass
-4. Document test results and coverage
-5. Mark Task 30.4 complete
+1. Research Supabase test client setup with auth contexts
+2. Refactor tests to use Supabase client + proper auth tokens
+3. Keep Prisma client only for beforeAll/afterAll fixture management
+4. Run full test suite successfully with auth contexts
+5. Verify all 22 tests pass
+6. Document test results and coverage
+7. Mark Task 30.4 complete
 
 ## Files Created
 

@@ -191,15 +191,34 @@ test.describe('RLS Policy Tests', () => {
       },
     });
 
-    // Create activities
+    // Create activity templates (required for Activity)
+    const activityTemplate1 = await prisma.activityTemplate.create({
+      data: {
+        id: randomUUID(),
+        name: 'RLS Test Template 1',
+        description: 'Test activity template',
+        type: 'TEXT_SUBMISSION',
+        workspaceId: workspace1.id,
+      },
+    });
+
+    const activityTemplate2 = await prisma.activityTemplate.create({
+      data: {
+        id: randomUUID(),
+        name: 'RLS Test Template 2',
+        description: 'Test activity template',
+        type: 'TEXT_SUBMISSION',
+        workspaceId: workspace2.id,
+      },
+    });
+
+    // Create activities (requires both challengeId and templateId)
     activity1 = await prisma.activity.create({
       data: {
         id: randomUUID(),
         challengeId: challenge1.id,
-        title: 'RLS Test Activity 1',
-        description: 'Test activity',
+        templateId: activityTemplate1.id,
         pointsValue: 100,
-        verificationMethod: 'TEXT',
       },
     });
 
@@ -207,15 +226,13 @@ test.describe('RLS Policy Tests', () => {
       data: {
         id: randomUUID(),
         challengeId: challenge2.id,
-        title: 'RLS Test Activity 2',
-        description: 'Test activity in workspace 2',
+        templateId: activityTemplate2.id,
         pointsValue: 100,
-        verificationMethod: 'TEXT',
       },
     });
 
     // Create enrollments
-    await prisma.enrollment.create({
+    const enrollment1 = await prisma.enrollment.create({
       data: {
         id: randomUUID(),
         userId: participant1.id,
@@ -223,7 +240,7 @@ test.describe('RLS Policy Tests', () => {
       },
     });
 
-    await prisma.enrollment.create({
+    const enrollment2 = await prisma.enrollment.create({
       data: {
         id: randomUUID(),
         userId: participant2.id,
@@ -231,14 +248,15 @@ test.describe('RLS Policy Tests', () => {
       },
     });
 
-    // Create submissions
+    // Create submissions (requires enrollmentId)
     submission1 = await prisma.activitySubmission.create({
       data: {
         id: randomUUID(),
         activityId: activity1.id,
         userId: participant1.id,
+        enrollmentId: enrollment1.id,
         status: 'PENDING',
-        textResponse: 'Test submission for RLS',
+        textContent: 'Test submission for RLS',
       },
     });
 
@@ -247,18 +265,20 @@ test.describe('RLS Policy Tests', () => {
         id: randomUUID(),
         activityId: activity2.id,
         userId: participant2.id,
+        enrollmentId: enrollment2.id,
         status: 'PENDING',
-        textResponse: 'Test submission for RLS in workspace 2',
+        textContent: 'Test submission for RLS in workspace 2',
       },
     });
 
-    // Create challenge assignment (manager1 assigned to challenge1)
+    // Create challenge assignment (manager1 assigned to challenge1 by admin1)
     assignment1 = await prisma.challengeAssignment.create({
       data: {
         id: randomUUID(),
         challengeId: challenge1.id,
         managerId: manager1.id,
         workspaceId: workspace1.id,
+        assignedBy: admin1.id,
       },
     });
   });
@@ -383,7 +403,7 @@ test.describe('RLS Policy Tests', () => {
 
       const { data: submissions } = await prisma.activitySubmission.findMany({
         where: {
-          activity: {
+          Activity: {
             challengeId: challenge1.id,
           },
         },
@@ -403,7 +423,7 @@ test.describe('RLS Policy Tests', () => {
       // With RLS, this query would return empty result
       const { data: submissions } = await prisma.activitySubmission.findMany({
         where: {
-          activity: {
+          Activity: {
             challengeId: challenge2.id,
           },
         },
@@ -423,8 +443,8 @@ test.describe('RLS Policy Tests', () => {
       // Cross-workspace access should be blocked by RLS
       const { data: submissions } = await prisma.activitySubmission.findMany({
         where: {
-          activity: {
-            challenge: {
+          Activity: {
+            Challenge: {
               workspaceId: workspace1.id,
             },
           },
@@ -469,8 +489,8 @@ test.describe('RLS Policy Tests', () => {
       // Admin1 should see all submissions in workspace1
       const { data: submissions } = await prisma.activitySubmission.findMany({
         where: {
-          activity: {
-            challenge: {
+          Activity: {
+            Challenge: {
               workspaceId: workspace1.id,
             },
           },
@@ -521,6 +541,7 @@ test.describe('RLS Policy Tests', () => {
           challengeId: challenge1.id,
           managerId: manager1.id,
           workspaceId: workspace1.id,
+          assignedBy: admin1.id,
         },
       });
 
@@ -538,13 +559,14 @@ test.describe('RLS Policy Tests', () => {
     });
 
     test('only admin can delete challenge assignments', async () => {
-      // Create temporary assignment
+      // Create temporary assignment (use manager2 to avoid unique constraint with assignment1)
       const tempAssignment = await prisma.challengeAssignment.create({
         data: {
           id: randomUUID(),
           challengeId: challenge1.id,
-          managerId: manager1.id,
+          managerId: manager2.id,
           workspaceId: workspace1.id,
+          assignedBy: admin1.id,
         },
       });
 
@@ -571,13 +593,22 @@ test.describe('RLS Policy Tests', () => {
   test.describe('ActivitySubmission Multi-Role Policy', () => {
     test('participant can create own submission', async () => {
       // Participant can insert submission for themselves
+      // First need to get enrollment1 (created in beforeAll)
+      const enrollment = await prisma.enrollment.findFirst({
+        where: {
+          userId: participant1.id,
+          challengeId: challenge1.id,
+        },
+      });
+
       const newSubmission = await prisma.activitySubmission.create({
         data: {
           id: randomUUID(),
           activityId: activity1.id,
           userId: participant1.id,
+          enrollmentId: enrollment!.id,
           status: 'PENDING',
-          textResponse: 'Test multi-role policy',
+          textContent: 'Test multi-role policy',
         },
       });
 
@@ -615,7 +646,7 @@ test.describe('RLS Policy Tests', () => {
           id: submission1.id,
         },
         data: {
-          adminNotes: 'Admin review notes',
+          reviewNotes: 'Admin review notes',
         },
       });
 
@@ -699,17 +730,27 @@ test.describe('RLS Policy Tests', () => {
     });
 
     test('manager with deleted assignment loses access', async () => {
-      // Create temporary assignment
+      // Create temporary assignment for manager2 to test deletion
       const tempAssignment = await prisma.challengeAssignment.create({
         data: {
           id: randomUUID(),
-          challengeId: challenge1.id,
-          managerId: manager1.id,
-          workspaceId: workspace1.id,
+          challengeId: challenge2.id,
+          managerId: manager2.id,
+          workspaceId: workspace2.id,
+          assignedBy: admin2.id,
         },
       });
 
-      // Delete assignment
+      // Verify manager2 can see assignments
+      const beforeDeletion = await prisma.challengeAssignment.findMany({
+        where: {
+          managerId: manager2.id,
+        },
+      });
+
+      expect(beforeDeletion).toHaveLength(1);
+
+      // Delete the temp assignment
       await prisma.challengeAssignment.delete({
         where: {
           id: tempAssignment.id,
@@ -739,19 +780,19 @@ test.describe('RLS Policy Tests', () => {
 
       await prisma.activitySubmission.findMany({
         where: {
-          activity: {
-            challenge: {
+          Activity: {
+            Challenge: {
               workspaceId: workspace1.id,
             },
           },
         },
         include: {
-          activity: {
+          Activity: {
             include: {
-              challenge: true,
+              Challenge: true,
             },
           },
-          user: true,
+          User: true,
         },
       });
 
@@ -769,8 +810,8 @@ test.describe('RLS Policy Tests', () => {
       await prisma.activitySubmission.findMany({
         where: {
           status: 'PENDING',
-          activity: {
-            challenge: {
+          Activity: {
+            Challenge: {
               challenges_assignments: {
                 some: {
                   managerId: manager1.id,
@@ -780,12 +821,12 @@ test.describe('RLS Policy Tests', () => {
           },
         },
         include: {
-          activity: {
+          Activity: {
             include: {
-              challenge: true,
+              Challenge: true,
             },
           },
-          user: true,
+          User: true,
         },
       });
 
