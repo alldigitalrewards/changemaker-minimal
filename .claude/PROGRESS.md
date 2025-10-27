@@ -239,8 +239,8 @@
   - Risk: Confusing UX if user doesn't understand two-step approval
   - Depends on: Task 19
 
-- [ ] **Task 25**: Assignment Management UI - Admin ⏱️ 5h
-  - Status: Not Started
+- [x] **Task 25**: Assignment Management UI - Admin ⏱️ 5h ✅ 2025-10-24
+  - Status: Complete
   - File: `components/admin/challenge-managers-dialog.tsx` (NEW)
   - Deliverable: Admin UI for managing challenge assignments
   - Risk: Accidentally unassigning active manager with pending reviews
