@@ -246,8 +246,8 @@
   - Risk: Accidentally unassigning active manager with pending reviews
   - Depends on: Tasks 16, 17
 
-- [ ] **Task 26**: Navigation Updates - Manager Section ⏱️ 1h
-  - Status: Not Started
+- [x] **Task 26**: Navigation Updates - Manager Section ⏱️ 1h ✅ 2025-10-24
+  - Status: Complete
   - File: `components/navigation/admin-sidebar.tsx` (modified)
   - Deliverable: Manager Queue in navigation
   - Risk: Navigation clutter, badge not updating
