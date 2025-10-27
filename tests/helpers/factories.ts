@@ -32,13 +32,12 @@ export interface TestChallenge {
   id: string;
   title: string;
   workspaceId: string;
-  userId: string;
 }
 
 export interface TestActivity {
   id: string;
   challengeId: string;
-  activityTemplateId: string;
+  templateId: string;
 }
 
 export interface TestSubmission {
@@ -101,7 +100,6 @@ export async function getTestParticipant(email: string = PARTICIPANT_EMAIL): Pro
  */
 export async function createTestChallenge(params: {
   workspaceId: string;
-  userId: string;
   title?: string;
   status?: string;
 }): Promise<TestChallenge> {
@@ -117,14 +115,12 @@ export async function createTestChallenge(params: {
       workspaceId: params.workspaceId,
       startDate: now,
       endDate: futureDate,
-      status: params.status || 'PUBLISHED',
-      userId: params.userId
+      status: params.status || 'PUBLISHED'
     },
     select: {
       id: true,
       title: true,
-      workspaceId: true,
-      userId: true
+      workspaceId: true
     }
   });
 
@@ -161,7 +157,6 @@ export async function createManagerWithAssignment(params: {
 }): Promise<{ challenge: TestChallenge; assignment: any }> {
   const challenge = await createTestChallenge({
     workspaceId: params.workspaceId,
-    userId: params.managerId,
     title: params.challengeTitle
   });
 
@@ -180,18 +175,17 @@ export async function createManagerWithAssignment(params: {
  */
 export async function createTestActivityTemplate(params: {
   workspaceId: string;
-  userId: string;
   name?: string;
-  points?: number;
+  basePoints?: number;
 }) {
   return await prisma.activityTemplate.create({
     data: {
+      id: randomUUID(),
       name: params.name || `Test Activity ${Date.now()}`,
       description: 'Test activity',
-      type: 'SUBMISSION',
-      points: params.points || 100,
-      workspaceId: params.workspaceId,
-      userId: params.userId
+      type: 'TEXT_SUBMISSION',
+      basePoints: params.basePoints || 100,
+      workspaceId: params.workspaceId
     }
   });
 }
@@ -201,19 +195,22 @@ export async function createTestActivityTemplate(params: {
  */
 export async function createTestActivity(params: {
   challengeId: string;
-  activityTemplateId: string;
-  sortOrder?: number;
+  templateId: string;
+  position?: number;
+  pointsValue?: number;
 }): Promise<TestActivity> {
   const activity = await prisma.activity.create({
     data: {
+      id: randomUUID(),
       challengeId: params.challengeId,
-      activityTemplateId: params.activityTemplateId,
-      sortOrder: params.sortOrder || 0
+      templateId: params.templateId,
+      pointsValue: params.pointsValue || 100,
+      position: params.position || 0
     },
     select: {
       id: true,
       challengeId: true,
-      activityTemplateId: true
+      templateId: true
     }
   });
 
@@ -226,16 +223,18 @@ export async function createTestActivity(params: {
 export async function createTestSubmission(params: {
   activityId: string;
   userId: string;
+  enrollmentId: string;
   status?: string;
-  content?: any;
+  textContent?: string;
 }): Promise<TestSubmission> {
   const submission = await prisma.activitySubmission.create({
     data: {
+      id: randomUUID(),
       activityId: params.activityId,
       userId: params.userId,
-      submittedAt: new Date(),
-      status: params.status || 'PENDING',
-      content: params.content || { text: 'Test submission' }
+      enrollmentId: params.enrollmentId,
+      textContent: params.textContent || 'Test submission content',
+      status: params.status || 'PENDING'
     },
     select: {
       id: true,
@@ -250,37 +249,46 @@ export async function createTestSubmission(params: {
 
 /**
  * Create submission for manager's challenge
- * Convenience function that creates activity template, activity, and submission
+ * Convenience function that creates activity template, activity, enrollment, and submission
  */
 export async function createSubmissionForManager(params: {
   challengeId: string;
   workspaceId: string;
   participantId: string;
-  managerId: string;
   status?: string;
 }): Promise<{
   activityTemplate: any;
   activity: TestActivity;
+  enrollment: any;
   submission: TestSubmission;
 }> {
   const activityTemplate = await createTestActivityTemplate({
     workspaceId: params.workspaceId,
-    userId: params.managerId,
     name: `Test Activity for Challenge ${params.challengeId.substring(0, 8)}`
   });
 
   const activity = await createTestActivity({
     challengeId: params.challengeId,
-    activityTemplateId: activityTemplate.id
+    templateId: activityTemplate.id
+  });
+
+  // Create enrollment for participant
+  const enrollment = await prisma.enrollment.create({
+    data: {
+      userId: params.participantId,
+      challengeId: params.challengeId,
+      status: 'ACTIVE'
+    }
   });
 
   const submission = await createTestSubmission({
     activityId: activity.id,
     userId: params.participantId,
+    enrollmentId: enrollment.id,
     status: params.status
   });
 
-  return { activityTemplate, activity, submission };
+  return { activityTemplate, activity, enrollment, submission };
 }
 
 /**
@@ -304,11 +312,10 @@ export async function createCompleteTestSetup(params?: {
     challengeTitle: params?.challengeTitle
   });
 
-  const { activityTemplate, activity, submission } = await createSubmissionForManager({
+  const { activityTemplate, activity, enrollment, submission } = await createSubmissionForManager({
     challengeId: challenge.id,
     workspaceId: workspace.id,
     participantId: participant.id,
-    managerId: manager.id,
     status: params?.submissionStatus
   });
 
@@ -320,6 +327,7 @@ export async function createCompleteTestSetup(params?: {
     assignment,
     activityTemplate,
     activity,
+    enrollment,
     submission
   };
 }

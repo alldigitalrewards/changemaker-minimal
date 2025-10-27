@@ -2902,26 +2902,18 @@ export async function getManagerPendingSubmissions(
   }
 })[]> {
   try {
-    // Get all challenges assigned to this manager
-    const assignments = await prisma.challengeAssignment.findMany({
-      where: {
-        managerId,
-        workspaceId
-      },
-      select: { challengeId: true }
-    })
-
-    const assignedChallengeIds = assignments.map(a => a.challengeId)
-
-    if (assignedChallengeIds.length === 0) {
-      return []
-    }
-
-    // Get pending submissions for assigned challenges
+    // Single optimized query using nested WHERE clause with relation filter
     const submissions = await prisma.activitySubmission.findMany({
       where: {
         Activity: {
-          challengeId: { in: assignedChallengeIds }
+          Challenge: {
+            ChallengeAssignment: {
+              some: {
+                managerId,
+                workspaceId
+              }
+            }
+          }
         },
         status: 'PENDING'
       },
@@ -2997,28 +2989,8 @@ export async function managerReviewSubmission(data: {
       }
     })
 
-    // If manager approved, award points
-    if (data.status === 'MANAGER_APPROVED' && data.pointsAwarded && data.pointsAwarded > 0) {
-      await prisma.pointsBalance.upsert({
-        where: {
-          userId_workspaceId: {
-            userId: submission.userId,
-            workspaceId: data.workspaceId
-          }
-        },
-        create: {
-          id: crypto.randomUUID(),
-          userId: submission.userId,
-          workspaceId: data.workspaceId,
-          totalPoints: data.pointsAwarded,
-          availablePoints: data.pointsAwarded
-        },
-        update: {
-          totalPoints: { increment: data.pointsAwarded },
-          availablePoints: { increment: data.pointsAwarded }
-        }
-      })
-    }
+    // Points are awarded ONLY during final admin approval, not manager approval
+    // This ensures proper budget tracking and consistency
 
     return updated
   } catch (error) {

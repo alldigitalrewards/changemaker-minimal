@@ -59,8 +59,7 @@ test.describe('Manager Authorization Tests', () => {
         workspaceId,
         startDate: now,
         endDate: futureDate,
-        status: 'PUBLISHED',
-        userId: managerId
+        status: 'PUBLISHED'
       }
     });
 
@@ -73,8 +72,7 @@ test.describe('Manager Authorization Tests', () => {
         workspaceId,
         startDate: now,
         endDate: futureDate,
-        status: 'PUBLISHED',
-        userId: managerId
+        status: 'PUBLISHED'
       }
     });
 
@@ -93,30 +91,41 @@ test.describe('Manager Authorization Tests', () => {
       data: {
         name: 'Manager Auth Test Activity',
         description: 'Test activity',
-        type: 'SUBMISSION',
-        points: 100,
-        workspaceId,
-        userId: managerId
+        type: 'TEXT_SUBMISSION',
+        basePoints: 100,
+        workspaceId
       }
     });
 
     // Create activity for assigned challenge
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         challengeId: assignedChallengeId,
-        activityTemplateId: activityTemplate.id,
-        sortOrder: 0
+        templateId: activityTemplate.id,
+        pointsValue: 100,
+        position: 0
+      }
+    });
+
+    // Create enrollment for participant in assigned challenge
+    const enrollment = await prisma.enrollment.create({
+      data: {
+        userId: participantId,
+        challengeId: assignedChallengeId,
+        status: 'ACTIVE'
       }
     });
 
     // Create submission for assigned challenge
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: activity.id,
         userId: participantId,
-        submittedAt: now,
-        status: 'PENDING',
-        content: {}
+        enrollmentId: enrollment.id,
+        textContent: 'Test submission content',
+        status: 'PENDING'
       }
     });
     submissionId = submission.id;
@@ -188,19 +197,31 @@ test.describe('Manager Authorization Tests', () => {
 
     const unassignedActivity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         challengeId: unassignedChallengeId,
-        activityTemplateId: activityTemplate!.id,
-        sortOrder: 0
+        templateId: activityTemplate!.id,
+        pointsValue: 100,
+        position: 0
+      }
+    });
+
+    // Create enrollment for unassigned challenge
+    const unassignedEnrollment = await prisma.enrollment.create({
+      data: {
+        userId: participantId,
+        challengeId: unassignedChallengeId,
+        status: 'ACTIVE'
       }
     });
 
     const unassignedSubmission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId: unassignedActivity.id,
         userId: participantId,
-        submittedAt: new Date(),
-        status: 'PENDING',
-        content: {}
+        enrollmentId: unassignedEnrollment.id,
+        textContent: 'Test unassigned submission content',
+        status: 'PENDING'
       }
     });
 
@@ -309,8 +330,7 @@ test.describe('Manager Authorization Tests', () => {
         workspaceId: otherWorkspace.id,
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        status: 'PUBLISHED',
-        userId: managerId
+        status: 'PUBLISHED'
       }
     });
 

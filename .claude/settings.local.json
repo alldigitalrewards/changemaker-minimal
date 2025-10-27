@@ -63,7 +63,9 @@
       "Bash(npx playwright test tests/api/participants.spec.ts -g \"create participant\" --reporter=line)",
       "Bash(npx playwright test tests/api/challenge-crud.spec.ts --reporter=list)",
       "Bash(npx playwright test tests/api/challenge-crud.spec.ts:22 --reporter=line)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npx playwright test:*)",
+      "mcp__github__issue_write"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",
@@ -76,7 +78,12 @@
     "zen",
     "supabase-production",
     "supabase-staging",
-    "task-master-ai"
+    "task-master-ai",
+    "supabase-changemaker-production",
+    "supabase-changemaker-staging",
+    "supabase-changemaker-local",
+    "taskmaster-ai",
+    "vercel"
   ],
   "spinnerTipsEnabled": false
 }

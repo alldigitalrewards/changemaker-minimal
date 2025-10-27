@@ -30,6 +30,7 @@ test.describe('Manager Approval Workflow Tests', () => {
   let challengeId: string;
   let activityId: string;
   let activityTemplateId: string;
+  let enrollmentId: string;
 
   test.beforeAll(async () => {
     // Get workspace
@@ -61,8 +62,7 @@ test.describe('Manager Approval Workflow Tests', () => {
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         status: 'PUBLISHED',
-        userId: managerId,
-        rewardType: 'points',
+        rewardType: 'POINTS',
         rewardConfig: {
           pointsAmount: 100
         }
@@ -82,12 +82,12 @@ test.describe('Manager Approval Workflow Tests', () => {
     // Create activity template
     const activityTemplate = await prisma.activityTemplate.create({
       data: {
+        id: randomUUID(),
         name: 'Workflow Test Activity',
         description: 'Test activity for workflow tests',
-        type: 'SUBMISSION',
-        points: 100,
-        workspaceId,
-        userId: managerId
+        type: 'TEXT_SUBMISSION',
+        basePoints: 100,
+        workspaceId
       }
     });
     activityTemplateId = activityTemplate.id;
@@ -95,12 +95,24 @@ test.describe('Manager Approval Workflow Tests', () => {
     // Create activity
     const activity = await prisma.activity.create({
       data: {
+        id: randomUUID(),
         challengeId,
-        activityTemplateId,
-        sortOrder: 0
+        templateId: activityTemplateId,
+        pointsValue: 100,
+        position: 0
       }
     });
     activityId = activity.id;
+
+    // Create enrollment for participant
+    const enrollment = await prisma.enrollment.create({
+      data: {
+        userId: participantId,
+        challengeId,
+        status: 'ACTIVE'
+      }
+    });
+    enrollmentId = enrollment.id;
   });
 
   test.afterAll(async () => {
@@ -126,11 +138,12 @@ test.describe('Manager Approval Workflow Tests', () => {
     // Create submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
-        status: 'PENDING',
-        content: { text: 'Test submission 1' }
+        enrollmentId,
+        textContent: 'Test submission 1',
+        status: 'PENDING'
       }
     });
 
@@ -167,11 +180,12 @@ test.describe('Manager Approval Workflow Tests', () => {
     // Create submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
-        status: 'PENDING',
-        content: { text: 'Test submission 2' }
+        enrollmentId,
+        textContent: 'Test submission 2',
+        status: 'PENDING'
       }
     });
 
@@ -202,21 +216,26 @@ test.describe('Manager Approval Workflow Tests', () => {
     // Create submission and manager-approve it
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
+        enrollmentId,
+        textContent: 'Test submission 3',
         status: 'MANAGER_APPROVED',
-        managerNotes: 'Approved by manager',
-        content: { text: 'Test submission 3' }
+        managerNotes: 'Approved by manager'
       }
     });
 
     // Get participant's points before approval
-    const participantBefore = await prisma.user.findUnique({
-      where: { id: participantId },
-      select: { points: true }
+    const pointsBalanceBefore = await prisma.pointsBalance.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: participantId,
+          workspaceId
+        }
+      }
     });
-    const pointsBefore = participantBefore!.points || 0;
+    const pointsBefore = pointsBalanceBefore?.totalPoints || 0;
 
     await loginWithCredentials(page, ADMIN_EMAIL, DEFAULT_PASSWORD);
 
@@ -238,32 +257,56 @@ test.describe('Manager Approval Workflow Tests', () => {
     expect(data.submission.status).toBe('APPROVED');
 
     // Verify points were awarded
-    const participantAfter = await prisma.user.findUnique({
-      where: { id: participantId },
-      select: { points: true }
+    const pointsBalanceAfter = await prisma.pointsBalance.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: participantId,
+          workspaceId
+        }
+      }
     });
-    const pointsAfter = participantAfter!.points || 0;
+    const pointsAfter = pointsBalanceAfter?.totalPoints || 0;
     expect(pointsAfter).toBe(pointsBefore + 100);
 
     // Cleanup
     await prisma.activitySubmission.delete({ where: { id: submission.id } });
     // Reset participant points
-    await prisma.user.update({
-      where: { id: participantId },
-      data: { points: pointsBefore }
-    });
+    if (pointsBalanceBefore) {
+      await prisma.pointsBalance.update({
+        where: {
+          userId_workspaceId: {
+            userId: participantId,
+            workspaceId
+          }
+        },
+        data: {
+          totalPoints: pointsBefore,
+          availablePoints: pointsBefore
+        }
+      });
+    } else if (pointsBalanceAfter) {
+      await prisma.pointsBalance.delete({
+        where: {
+          userId_workspaceId: {
+            userId: participantId,
+            workspaceId
+          }
+        }
+      });
+    }
   });
 
   test('Admin can reject MANAGER_APPROVED submission (override)', async ({ page }) => {
     // Create manager-approved submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
+        enrollmentId,
+        textContent: 'Test submission 4',
         status: 'MANAGER_APPROVED',
-        managerNotes: 'Approved by manager',
-        content: { text: 'Test submission 4' }
+        managerNotes: 'Approved by manager'
       }
     });
 
@@ -294,19 +337,24 @@ test.describe('Manager Approval Workflow Tests', () => {
     // Create pending submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
-        status: 'PENDING',
-        content: { text: 'Test submission 5' }
+        enrollmentId,
+        textContent: 'Test submission 5',
+        status: 'PENDING'
       }
     });
 
-    const participantBefore = await prisma.user.findUnique({
-      where: { id: participantId },
-      select: { points: true }
+    const pointsBalanceBefore = await prisma.pointsBalance.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: participantId,
+          workspaceId
+        }
+      }
     });
-    const pointsBefore = participantBefore!.points || 0;
+    const pointsBefore = pointsBalanceBefore?.totalPoints || 0;
 
     await loginWithCredentials(page, ADMIN_EMAIL, DEFAULT_PASSWORD);
 
@@ -328,29 +376,53 @@ test.describe('Manager Approval Workflow Tests', () => {
     expect(data.submission.status).toBe('APPROVED');
 
     // Verify points awarded
-    const participantAfter = await prisma.user.findUnique({
-      where: { id: participantId },
-      select: { points: true }
+    const pointsBalanceAfter = await prisma.pointsBalance.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: participantId,
+          workspaceId
+        }
+      }
     });
-    expect(participantAfter!.points).toBe(pointsBefore + 100);
+    expect(pointsBalanceAfter!.totalPoints).toBe(pointsBefore + 100);
 
     // Cleanup
     await prisma.activitySubmission.delete({ where: { id: submission.id } });
-    await prisma.user.update({
-      where: { id: participantId },
-      data: { points: pointsBefore }
-    });
+    if (pointsBalanceBefore) {
+      await prisma.pointsBalance.update({
+        where: {
+          userId_workspaceId: {
+            userId: participantId,
+            workspaceId
+          }
+        },
+        data: {
+          totalPoints: pointsBefore,
+          availablePoints: pointsBefore
+        }
+      });
+    } else if (pointsBalanceAfter) {
+      await prisma.pointsBalance.delete({
+        where: {
+          userId_workspaceId: {
+            userId: participantId,
+            workspaceId
+          }
+        }
+      });
+    }
   });
 
   test('Cannot final-approve submission that is not PENDING or MANAGER_APPROVED', async ({ page }) => {
     // Create already-approved submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
-        status: 'APPROVED',
-        content: { text: 'Test submission 6' }
+        enrollmentId,
+        textContent: 'Test submission 6',
+        status: 'APPROVED'
       }
     });
 
@@ -381,19 +453,24 @@ test.describe('Manager Approval Workflow Tests', () => {
     // Create manager-approved submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
-        status: 'MANAGER_APPROVED',
-        content: { text: 'Test submission 7' }
+        enrollmentId,
+        textContent: 'Test submission 7',
+        status: 'MANAGER_APPROVED'
       }
     });
 
-    const participantBefore = await prisma.user.findUnique({
-      where: { id: participantId },
-      select: { points: true }
+    const pointsBalanceBefore = await prisma.pointsBalance.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: participantId,
+          workspaceId
+        }
+      }
     });
-    const pointsBefore = participantBefore!.points || 0;
+    const pointsBefore = pointsBalanceBefore?.totalPoints || 0;
 
     await loginWithCredentials(page, ADMIN_EMAIL, DEFAULT_PASSWORD);
 
@@ -410,11 +487,15 @@ test.describe('Manager Approval Workflow Tests', () => {
     );
 
     // Check points
-    const participantAfter = await prisma.user.findUnique({
-      where: { id: participantId },
-      select: { points: true }
+    const pointsBalanceAfter = await prisma.pointsBalance.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: participantId,
+          workspaceId
+        }
+      }
     });
-    expect(participantAfter!.points).toBe(pointsBefore + 100);
+    expect(pointsBalanceAfter!.totalPoints).toBe(pointsBefore + 100);
 
     // Try to approve again (should fail)
     const response2 = await page.request.post(
@@ -431,29 +512,53 @@ test.describe('Manager Approval Workflow Tests', () => {
     expect(response2.status()).toBe(400);
 
     // Points should remain the same
-    const participantFinal = await prisma.user.findUnique({
-      where: { id: participantId },
-      select: { points: true }
+    const pointsBalanceFinal = await prisma.pointsBalance.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: participantId,
+          workspaceId
+        }
+      }
     });
-    expect(participantFinal!.points).toBe(pointsBefore + 100);
+    expect(pointsBalanceFinal!.totalPoints).toBe(pointsBefore + 100);
 
     // Cleanup
     await prisma.activitySubmission.delete({ where: { id: submission.id } });
-    await prisma.user.update({
-      where: { id: participantId },
-      data: { points: pointsBefore }
-    });
+    if (pointsBalanceBefore) {
+      await prisma.pointsBalance.update({
+        where: {
+          userId_workspaceId: {
+            userId: participantId,
+            workspaceId
+          }
+        },
+        data: {
+          totalPoints: pointsBefore,
+          availablePoints: pointsBefore
+        }
+      });
+    } else if (pointsBalanceAfter) {
+      await prisma.pointsBalance.delete({
+        where: {
+          userId_workspaceId: {
+            userId: participantId,
+            workspaceId
+          }
+        }
+      });
+    }
   });
 
   test('Invalid status action returns 400 error', async ({ page }) => {
     // Create submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
-        status: 'PENDING',
-        content: { text: 'Test submission 8' }
+        enrollmentId,
+        textContent: 'Test submission 8',
+        status: 'PENDING'
       }
     });
 
@@ -483,11 +588,12 @@ test.describe('Manager Approval Workflow Tests', () => {
     // Create submission
     const submission = await prisma.activitySubmission.create({
       data: {
+        id: randomUUID(),
         activityId,
         userId: participantId,
-        submittedAt: new Date(),
-        status: 'PENDING',
-        content: { text: 'Test submission 9' }
+        enrollmentId,
+        textContent: 'Test submission 9',
+        status: 'PENDING'
       }
     });
 
