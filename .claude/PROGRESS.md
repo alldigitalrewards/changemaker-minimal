@@ -255,10 +255,10 @@
 
 ### Testing (Tasks 27-30)
 
-- [ ] **Task 27**: Authorization Tests - Manager Endpoints ⏱️ 4h
-  - Status: Not Started
+- [x] **Task 27**: Authorization Tests - Manager Endpoints ⏱️ 4h ✅ 2025-10-27
+  - Status: Complete
   - File: `tests/api/manager-auth.spec.ts` (NEW)
-  - Deliverable: 6+ authorization test cases
+  - Deliverable: 9 authorization test cases created
   - Risk: Missing edge cases (deleted assignments, inactive users)
   - Depends on: Tasks 18, 19
 
