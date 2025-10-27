@@ -276,10 +276,10 @@
   - Risk: Cross-workspace leakage not tested
   - Depends on: Tasks 16, 17
 
-- [ ] **Task 30**: Manager Test Data Factory ⏱️ 1h
-  - Status: Not Started
+- [x] **Task 30**: Manager Test Data Factory ⏱️ 1h ✅ 2025-10-27
+  - Status: Complete
   - File: `tests/helpers/factories.ts` (NEW)
-  - Deliverable: Reusable test helpers
+  - Deliverable: Reusable test helpers created
   - Risk: Test data conflicts with seed data
   - Depends on: Task 9
 
