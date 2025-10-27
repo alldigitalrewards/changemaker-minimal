@@ -2,839 +2,602 @@
  * Row-Level Security (RLS) Policy Tests
  *
  * These tests verify that database-level authorization is enforced correctly
- * for all access patterns. RLS provides defense-in-depth security beyond
- * application-level middleware.
+ * for all access patterns using Supabase client with proper authentication contexts.
+ * RLS provides defense-in-depth security beyond application-level middleware.
  *
  * Test Categories:
  * - Workspace Isolation (cross-tenant data access prevention)
  * - Manager Assignment Access (managers only see assigned challenges)
  * - Role-Based Access (ADMIN, MANAGER, PARTICIPANT permissions)
+ * - ActivitySubmission Multi-Role Policy (participant/manager/admin access)
  * - Service Role Bypass (system operations)
  * - Edge Cases (deleted memberships, invalid contexts)
+ * - Performance Verification (RLS query performance)
  */
 
 import { test, expect } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
-import { prisma } from '@/lib/db';
-import type { User, Workspace, Challenge, Activity, ActivitySubmission, ChallengeAssignment } from '@prisma/client';
-import { randomUUID } from 'crypto';
-
-// Supabase client for direct database access with RLS
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// Test fixtures
-let workspace1: Workspace;
-let workspace2: Workspace;
-let admin1: User;
-let admin2: User;
-let manager1: User;
-let manager2: User;
-let participant1: User;
-let participant2: User;
-let challenge1: Challenge;
-let challenge2: Challenge;
-let activity1: Activity;
-let activity2: Activity;
-let submission1: ActivitySubmission;
-let submission2: ActivitySubmission;
-let assignment1: ChallengeAssignment;
+import { TEST_WORKSPACES, createTestWorkspaces, cleanupTestData } from '../fixtures/rls-test-data';
+import {
+  createServiceRoleClient,
+  createAuthenticatedClient,
+  clearAuthSession,
+} from '../utils/supabase-auth-test';
 
 test.describe('RLS Policy Tests', () => {
   test.beforeAll(async () => {
-    // Create test fixtures with service role (bypasses RLS)
-    const timestamp = Date.now();
-    workspace1 = await prisma.workspace.create({
-      data: {
-        id: randomUUID(),
-        name: 'RLS Test Workspace 1',
-        slug: `rls-test-1-${timestamp}`,
-      },
-    });
-
-    workspace2 = await prisma.workspace.create({
-      data: {
-        id: randomUUID(),
-        name: 'RLS Test Workspace 2',
-        slug: `rls-test-2-${timestamp}`,
-      },
-    });
-
-    // Create users in workspace 1
-    admin1 = await prisma.user.create({
-      data: {
-        id: randomUUID(),
-        email: `admin1-rls-${timestamp}@test.com`,
-        supabaseUserId: randomUUID(),
-        role: 'ADMIN',
-      },
-    });
-
-    await prisma.workspaceMembership.create({
-      data: {
-        userId: admin1.id,
-        workspaceId: workspace1.id,
-        role: 'ADMIN',
-      },
-    });
-
-    manager1 = await prisma.user.create({
-      data: {
-        id: randomUUID(),
-        email: `manager1-rls-${timestamp}@test.com`,
-        supabaseUserId: randomUUID(),
-        role: 'MANAGER',
-      },
-    });
-
-    await prisma.workspaceMembership.create({
-      data: {
-        userId: manager1.id,
-        workspaceId: workspace1.id,
-        role: 'MANAGER',
-      },
-    });
-
-    participant1 = await prisma.user.create({
-      data: {
-        id: randomUUID(),
-        email: `participant1-rls-${timestamp}@test.com`,
-        supabaseUserId: randomUUID(),
-        role: 'PARTICIPANT',
-      },
-    });
-
-    await prisma.workspaceMembership.create({
-      data: {
-        userId: participant1.id,
-        workspaceId: workspace1.id,
-        role: 'PARTICIPANT',
-      },
-    });
-
-    // Create users in workspace 2
-    admin2 = await prisma.user.create({
-      data: {
-        id: randomUUID(),
-        email: `admin2-rls-${timestamp}@test.com`,
-        supabaseUserId: randomUUID(),
-        role: 'ADMIN',
-      },
-    });
-
-    await prisma.workspaceMembership.create({
-      data: {
-        userId: admin2.id,
-        workspaceId: workspace2.id,
-        role: 'ADMIN',
-      },
-    });
-
-    manager2 = await prisma.user.create({
-      data: {
-        id: randomUUID(),
-        email: `manager2-rls-${timestamp}@test.com`,
-        supabaseUserId: randomUUID(),
-        role: 'MANAGER',
-      },
-    });
-
-    await prisma.workspaceMembership.create({
-      data: {
-        userId: manager2.id,
-        workspaceId: workspace2.id,
-        role: 'MANAGER',
-      },
-    });
-
-    participant2 = await prisma.user.create({
-      data: {
-        id: randomUUID(),
-        email: `participant2-rls-${timestamp}@test.com`,
-        supabaseUserId: randomUUID(),
-        role: 'PARTICIPANT',
-      },
-    });
-
-    await prisma.workspaceMembership.create({
-      data: {
-        userId: participant2.id,
-        workspaceId: workspace2.id,
-        role: 'PARTICIPANT',
-      },
-    });
-
-    // Create challenges
-    challenge1 = await prisma.challenge.create({
-      data: {
-        id: randomUUID(),
-        workspaceId: workspace1.id,
-        title: 'RLS Test Challenge 1',
-        description: 'Test challenge for RLS',
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        requireManagerApproval: true,
-        requireAdminReapproval: false,
-      },
-    });
-
-    challenge2 = await prisma.challenge.create({
-      data: {
-        id: randomUUID(),
-        workspaceId: workspace2.id,
-        title: 'RLS Test Challenge 2',
-        description: 'Test challenge for RLS in workspace 2',
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        requireManagerApproval: true,
-        requireAdminReapproval: false,
-      },
-    });
-
-    // Create activity templates (required for Activity)
-    const activityTemplate1 = await prisma.activityTemplate.create({
-      data: {
-        id: randomUUID(),
-        name: 'RLS Test Template 1',
-        description: 'Test activity template',
-        type: 'TEXT_SUBMISSION',
-        workspaceId: workspace1.id,
-      },
-    });
-
-    const activityTemplate2 = await prisma.activityTemplate.create({
-      data: {
-        id: randomUUID(),
-        name: 'RLS Test Template 2',
-        description: 'Test activity template',
-        type: 'TEXT_SUBMISSION',
-        workspaceId: workspace2.id,
-      },
-    });
-
-    // Create activities (requires both challengeId and templateId)
-    activity1 = await prisma.activity.create({
-      data: {
-        id: randomUUID(),
-        challengeId: challenge1.id,
-        templateId: activityTemplate1.id,
-        pointsValue: 100,
-      },
-    });
-
-    activity2 = await prisma.activity.create({
-      data: {
-        id: randomUUID(),
-        challengeId: challenge2.id,
-        templateId: activityTemplate2.id,
-        pointsValue: 100,
-      },
-    });
-
-    // Create enrollments
-    const enrollment1 = await prisma.enrollment.create({
-      data: {
-        id: randomUUID(),
-        userId: participant1.id,
-        challengeId: challenge1.id,
-      },
-    });
-
-    const enrollment2 = await prisma.enrollment.create({
-      data: {
-        id: randomUUID(),
-        userId: participant2.id,
-        challengeId: challenge2.id,
-      },
-    });
-
-    // Create submissions (requires enrollmentId)
-    submission1 = await prisma.activitySubmission.create({
-      data: {
-        id: randomUUID(),
-        activityId: activity1.id,
-        userId: participant1.id,
-        enrollmentId: enrollment1.id,
-        status: 'PENDING',
-        textContent: 'Test submission for RLS',
-      },
-    });
-
-    submission2 = await prisma.activitySubmission.create({
-      data: {
-        id: randomUUID(),
-        activityId: activity2.id,
-        userId: participant2.id,
-        enrollmentId: enrollment2.id,
-        status: 'PENDING',
-        textContent: 'Test submission for RLS in workspace 2',
-      },
-    });
-
-    // Create challenge assignment (manager1 assigned to challenge1 by admin1)
-    assignment1 = await prisma.challengeAssignment.create({
-      data: {
-        id: randomUUID(),
-        challengeId: challenge1.id,
-        managerId: manager1.id,
-        workspaceId: workspace1.id,
-        assignedBy: admin1.id,
-      },
-    });
+    // Create test workspaces with Supabase service role client
+    const serviceClient = createServiceRoleClient();
+    await createTestWorkspaces(serviceClient);
   });
 
   test.afterAll(async () => {
-    // Clean up test data (service role bypasses RLS)
-    await prisma.activitySubmission.deleteMany({
-      where: {
-        id: { in: [submission1.id, submission2.id] },
-      },
-    });
-
-    await prisma.challengeAssignment.deleteMany({
-      where: {
-        id: assignment1.id,
-      },
-    });
-
-    await prisma.enrollment.deleteMany({
-      where: {
-        userId: { in: [participant1.id, participant2.id] },
-      },
-    });
-
-    await prisma.activity.deleteMany({
-      where: {
-        id: { in: [activity1.id, activity2.id] },
-      },
-    });
-
-    await prisma.challenge.deleteMany({
-      where: {
-        id: { in: [challenge1.id, challenge2.id] },
-      },
-    });
-
-    await prisma.workspaceMembership.deleteMany({
-      where: {
-        userId: { in: [admin1.id, admin2.id, manager1.id, manager2.id, participant1.id, participant2.id] },
-      },
-    });
-
-    await prisma.user.deleteMany({
-      where: {
-        id: { in: [admin1.id, admin2.id, manager1.id, manager2.id, participant1.id, participant2.id] },
-      },
-    });
-
-    await prisma.workspace.deleteMany({
-      where: {
-        id: { in: [workspace1.id, workspace2.id] },
-      },
-    });
+    // Cleanup test data
+    const serviceClient = createServiceRoleClient();
+    await cleanupTestData(serviceClient);
   });
 
+  // =================================================================
+  // CATEGORY 1: WORKSPACE ISOLATION TESTS
+  // =================================================================
   test.describe('Workspace Isolation', () => {
-    test('admin1 can see workspace1 but not workspace2', async () => {
-      // Create Supabase client with admin1 auth
-      const client = createClient(supabaseUrl, supabaseAnonKey);
+    test('admin1 can see own workspace but not workspace2', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.admin);
 
-      // Sign in as admin1 (would need real Supabase auth in production)
-      // For now, we'll use direct database queries with auth context
+      // Query all workspaces - should only see workspace1 due to RLS
+      const { data: workspaces, error } = await client.from('Workspace').select('*');
 
-      // Query workspaces (would be filtered by RLS)
-      const { data: workspaces, error } = await client
-        .from('Workspace')
-        .select('*');
-
-      // In production with RLS, admin1 should only see workspace1
-      // For this test, we're verifying the RLS policy design
       expect(error).toBeNull();
+      expect(workspaces).toBeDefined();
+      expect(workspaces?.length).toBe(1);
+      expect(workspaces?.[0].id).toBe(TEST_WORKSPACES.workspace1.id);
 
-      // TODO: Implement full Supabase auth test setup
-      // This test verifies the policy design is correct
+      await clearAuthSession(client);
     });
 
-    test('participant1 cannot see workspace2 challenges', async () => {
-      // Verify workspace isolation for challenges
-      // participant1 should only see challenges in workspace1
+    test('participant1 cannot see cross-workspace challenges', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.participant);
 
-      const { data: challenges } = await prisma.challenge.findMany({
-        where: {
-          workspaceId: workspace1.id,
-        },
-      });
+      // Query challenges - should only see workspace1 challenges
+      const { data: challenges, error } = await client.from('Challenge').select('*');
 
-      expect(challenges).toHaveLength(1);
-      expect(challenges[0].id).toBe(challenge1.id);
+      expect(error).toBeNull();
+      expect(challenges).toBeDefined();
+      expect(challenges?.length).toBe(1);
+      expect(challenges?.[0].workspaceId).toBe(TEST_WORKSPACES.workspace1.id);
 
-      // With RLS, participant1 querying all challenges should only see workspace1 challenges
-      // Direct query would be blocked by RLS policy
+      await clearAuthSession(client);
     });
 
-    test('users can only see other users in same workspace', async () => {
-      // User policy: users see other users in same workspace
-      const { data: workspace1Users } = await prisma.user.findMany({
-        where: {
-          workspaceMemberships: {
-            some: {
-              workspaceId: workspace1.id,
-            },
-          },
-        },
+    test('users can only see users in same workspace', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.admin);
+
+      // Query workspace memberships - should only see workspace1 members
+      const { data: memberships, error } = await client
+        .from('WorkspaceMembership')
+        .select('*, User(*)');
+
+      expect(error).toBeNull();
+      expect(memberships).toBeDefined();
+
+      // Should see 4 members in workspace1 (admin, manager, participant, otherParticipant)
+      expect(memberships?.length).toBe(4);
+
+      // All memberships should be for workspace1
+      memberships?.forEach((membership) => {
+        expect(membership.workspaceId).toBe(TEST_WORKSPACES.workspace1.id);
       });
 
-      expect(workspace1Users).toHaveLength(3); // admin1, manager1, participant1
-
-      const userIds = workspace1Users.map(u => u.id);
-      expect(userIds).toContain(admin1.id);
-      expect(userIds).toContain(manager1.id);
-      expect(userIds).toContain(participant1.id);
-      expect(userIds).not.toContain(admin2.id);
-      expect(userIds).not.toContain(manager2.id);
-      expect(userIds).not.toContain(participant2.id);
+      await clearAuthSession(client);
     });
   });
 
+  // =================================================================
+  // CATEGORY 2: MANAGER ASSIGNMENT-BASED ACCESS TESTS
+  // =================================================================
   test.describe('Manager Assignment-Based Access', () => {
-    test('manager1 can see submissions for assigned challenge1', async () => {
-      // Manager1 is assigned to challenge1
-      // Should be able to see submission1 (participant1's submission)
+    test('manager1 can see submissions for assigned challenge', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.manager);
 
-      const { data: submissions } = await prisma.activitySubmission.findMany({
-        where: {
-          Activity: {
-            challengeId: challenge1.id,
-          },
-        },
-      });
+      // Query submissions - should only see those for assigned challenges
+      const { data: submissions, error } = await client
+        .from('ActivitySubmission')
+        .select('*, Activity(*)')
+        .eq('activityId', TEST_WORKSPACES.workspace1.assignedActivity.id);
 
-      expect(submissions).toHaveLength(1);
-      expect(submissions[0].id).toBe(submission1.id);
+      expect(error).toBeNull();
+      expect(submissions).toBeDefined();
+      expect(submissions?.length).toBeGreaterThan(0);
 
-      // RLS policy would enforce this at database level
-      // Manager1 querying all submissions would only see assigned challenges
+      await clearAuthSession(client);
     });
 
-    test('manager1 cannot see submissions for unassigned challenge2', async () => {
-      // Manager1 is NOT assigned to challenge2
-      // Should NOT be able to see submission2
+    test('manager1 cannot see submissions for unassigned challenge', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.manager);
 
-      // With RLS, this query would return empty result
-      const { data: submissions } = await prisma.activitySubmission.findMany({
-        where: {
-          Activity: {
-            challengeId: challenge2.id,
-          },
-        },
-      });
+      // Query submissions for unassigned activity - should return empty
+      const { data: submissions, error } = await client
+        .from('ActivitySubmission')
+        .select('*')
+        .eq('activityId', TEST_WORKSPACES.workspace1.unassignedActivity.id);
 
-      expect(submissions).toHaveLength(1);
+      expect(error).toBeNull();
+      expect(submissions).toBeDefined();
+      expect(submissions?.length).toBe(0);
 
-      // In production with RLS + proper auth context:
-      // manager1 would see 0 submissions for challenge2
-      // This verifies the policy design is correct
+      await clearAuthSession(client);
     });
 
-    test('manager2 cannot see submissions from workspace1', async () => {
-      // Manager2 is in workspace2
-      // Should NOT see submission1 from workspace1
+    test('manager1 cannot see cross-workspace submissions', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.manager);
 
-      // Cross-workspace access should be blocked by RLS
-      const { data: submissions } = await prisma.activitySubmission.findMany({
-        where: {
-          Activity: {
-            Challenge: {
-              workspaceId: workspace1.id,
-            },
-          },
-        },
-      });
+      // Query submissions for workspace2 - should return empty
+      const { data: submissions, error } = await client
+        .from('ActivitySubmission')
+        .select('*')
+        .eq('activityId', TEST_WORKSPACES.workspace2.assignedActivity.id);
 
-      expect(submissions).toHaveLength(1);
+      expect(error).toBeNull();
+      expect(submissions).toBeDefined();
+      expect(submissions?.length).toBe(0);
 
-      // With RLS: manager2 would see 0 submissions from workspace1
+      await clearAuthSession(client);
     });
 
-    test('manager can see their assignments', async () => {
-      // Manager1 should see their assignment to challenge1
-      const { data: assignments } = await prisma.challengeAssignment.findMany({
-        where: {
-          managerId: manager1.id,
-        },
-      });
+    test('manager1 can see their challenge assignments', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.manager);
 
-      expect(assignments).toHaveLength(1);
-      expect(assignments[0].challengeId).toBe(challenge1.id);
+      // Query assignments
+      const { data: assignments, error } = await client.from('ChallengeAssignment').select('*');
+
+      expect(error).toBeNull();
+      expect(assignments).toBeDefined();
+      expect(assignments?.length).toBe(1);
+      expect(assignments?.[0].managerId).toBe(TEST_WORKSPACES.workspace1.users.manager.id);
+
+      await clearAuthSession(client);
     });
 
-    test('manager cannot see other manager assignments in same workspace', async () => {
-      // Create second assignment for manager2 (different manager)
-      // Manager1 should not see manager2's assignments
+    test('manager1 cannot see other manager assignments', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.manager);
 
-      // This test verifies assignment policy: managers only see own assignments
-      const { data: assignments } = await prisma.challengeAssignment.findMany({
-        where: {
-          managerId: manager1.id,
-        },
-      });
+      // Query workspace2 manager assignments - should return empty
+      const { data: assignments, error } = await client
+        .from('ChallengeAssignment')
+        .select('*')
+        .eq('workspaceId', TEST_WORKSPACES.workspace2.id);
 
-      // Should only see own assignments
-      expect(assignments.every(a => a.managerId === manager1.id)).toBe(true);
+      expect(error).toBeNull();
+      expect(assignments).toBeDefined();
+      expect(assignments?.length).toBe(0);
+
+      await clearAuthSession(client);
     });
   });
 
+  // =================================================================
+  // CATEGORY 3: ROLE-BASED ACCESS CONTROL TESTS
+  // =================================================================
   test.describe('Role-Based Access Control', () => {
-    test('admin can see all submissions in their workspace', async () => {
-      // Admin1 should see all submissions in workspace1
-      const { data: submissions } = await prisma.activitySubmission.findMany({
-        where: {
-          Activity: {
-            Challenge: {
-              workspaceId: workspace1.id,
-            },
-          },
-        },
+    test('admin can see all workspace submissions', async () => {
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.admin);
+
+      // Query all submissions in workspace
+      const { data: submissions, error } = await client
+        .from('ActivitySubmission')
+        .select('*, Activity(*, Challenge(*))');
+
+      expect(error).toBeNull();
+      expect(submissions).toBeDefined();
+
+      // Should see all submissions in workspace1
+      submissions?.forEach((submission) => {
+        expect(submission.Activity.Challenge.workspaceId).toBe(TEST_WORKSPACES.workspace1.id);
       });
 
-      expect(submissions).toHaveLength(1);
-      expect(submissions[0].id).toBe(submission1.id);
-
-      // RLS policy: admin sees all workspace submissions
+      await clearAuthSession(client);
     });
 
     test('participant can only see own submissions', async () => {
-      // Participant1 should only see their own submissions
-      const { data: submissions } = await prisma.activitySubmission.findMany({
-        where: {
-          userId: participant1.id,
-        },
+      const client = await createAuthenticatedClient(
+        TEST_WORKSPACES.workspace1.users.participant
+      );
+
+      // Query submissions
+      const { data: submissions, error } = await client.from('ActivitySubmission').select('*');
+
+      expect(error).toBeNull();
+      expect(submissions).toBeDefined();
+
+      // Should only see own submissions
+      submissions?.forEach((submission) => {
+        expect(submission.userId).toBe(TEST_WORKSPACES.workspace1.users.participant.id);
       });
 
-      expect(submissions).toHaveLength(1);
-      expect(submissions[0].id).toBe(submission1.id);
-
-      // RLS policy: participants only see own submissions
+      await clearAuthSession(client);
     });
 
     test('participant cannot see other participant submissions', async () => {
-      // Participant1 should NOT see participant2's submissions
-      const { data: submissions } = await prisma.activitySubmission.findMany({
-        where: {
-          userId: participant2.id,
-        },
-      });
+      const client = await createAuthenticatedClient(
+        TEST_WORKSPACES.workspace1.users.participant
+      );
 
-      expect(submissions).toHaveLength(1);
+      // Query submissions for other participant - should return empty
+      const { data: submissions, error } = await client
+        .from('ActivitySubmission')
+        .select('*')
+        .eq('userId', TEST_WORKSPACES.workspace1.users.otherParticipant.id);
 
-      // With RLS + auth context: participant1 would see 0 submissions
-      // (filtering by participant2.id would return empty)
+      expect(error).toBeNull();
+      expect(submissions).toBeDefined();
+      expect(submissions?.length).toBe(0);
+
+      await clearAuthSession(client);
     });
 
     test('only admin can create challenge assignments', async () => {
-      // Assignment creation policy: only admins
+      const managerClient = await createAuthenticatedClient(
+        TEST_WORKSPACES.workspace1.users.manager
+      );
 
-      // Verify admin1 can create assignments in workspace1
-      const newAssignment = await prisma.challengeAssignment.create({
-        data: {
-          id: randomUUID(),
-          challengeId: challenge1.id,
-          managerId: manager1.id,
-          workspaceId: workspace1.id,
-          assignedBy: admin1.id,
-        },
-      });
+      // Manager tries to create assignment - should fail
+      const { data: assignment, error: managerError } = await managerClient
+        .from('ChallengeAssignment')
+        .insert({
+          managerId: TEST_WORKSPACES.workspace1.users.manager.id,
+          challengeId: TEST_WORKSPACES.workspace1.challenge.id,
+          workspaceId: TEST_WORKSPACES.workspace1.id,
+        })
+        .select()
+        .single();
 
-      expect(newAssignment).toBeDefined();
-      expect(newAssignment.challengeId).toBe(challenge1.id);
+      expect(managerError).not.toBeNull();
+      expect(assignment).toBeNull();
 
-      // Clean up
-      await prisma.challengeAssignment.delete({
-        where: {
-          id: newAssignment.id,
-        },
-      });
+      await clearAuthSession(managerClient);
 
-      // With RLS: manager or participant attempting this would fail
+      // Admin can create assignment
+      const adminClient = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.admin);
+
+      const { data: adminAssignment, error: adminError } = await adminClient
+        .from('ChallengeAssignment')
+        .insert({
+          managerId: TEST_WORKSPACES.workspace1.users.manager.id,
+          challengeId: TEST_WORKSPACES.workspace1.challenge.id,
+          workspaceId: TEST_WORKSPACES.workspace1.id,
+        })
+        .select()
+        .single();
+
+      // Cleanup the test assignment if it was created
+      if (adminAssignment) {
+        await adminClient.from('ChallengeAssignment').delete().eq('id', adminAssignment.id);
+      }
+
+      expect(adminError).toBeNull();
+      expect(adminAssignment).not.toBeNull();
+
+      await clearAuthSession(adminClient);
     });
 
     test('only admin can delete challenge assignments', async () => {
-      // Create temporary assignment (use manager2 to avoid unique constraint with assignment1)
-      const tempAssignment = await prisma.challengeAssignment.create({
-        data: {
-          id: randomUUID(),
-          challengeId: challenge1.id,
-          managerId: manager2.id,
-          workspaceId: workspace1.id,
-          assignedBy: admin1.id,
-        },
-      });
+      const serviceClient = createServiceRoleClient();
 
-      // Admin can delete
-      await prisma.challengeAssignment.delete({
-        where: {
-          id: tempAssignment.id,
-        },
-      });
+      // Create temporary assignment for deletion test
+      const { data: tempAssignment } = await serviceClient
+        .from('ChallengeAssignment')
+        .insert({
+          managerId: TEST_WORKSPACES.workspace1.users.manager.id,
+          challengeId: TEST_WORKSPACES.workspace1.challenge.id,
+          workspaceId: TEST_WORKSPACES.workspace1.id,
+        })
+        .select()
+        .single();
 
-      // Verify deleted
-      const { data: deletedAssignment } = await prisma.challengeAssignment.findUnique({
-        where: {
-          id: tempAssignment.id,
-        },
-      });
+      if (!tempAssignment) {
+        throw new Error('Failed to create temporary assignment for test');
+      }
 
-      expect(deletedAssignment).toBeNull();
+      // Manager tries to delete assignment - should fail
+      const managerClient = await createAuthenticatedClient(
+        TEST_WORKSPACES.workspace1.users.manager
+      );
 
-      // With RLS: manager or participant attempting this would fail
+      const { error: managerError } = await managerClient
+        .from('ChallengeAssignment')
+        .delete()
+        .eq('id', tempAssignment.id);
+
+      expect(managerError).not.toBeNull();
+
+      await clearAuthSession(managerClient);
+
+      // Admin can delete assignment
+      const adminClient = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.admin);
+
+      const { error: adminError } = await adminClient
+        .from('ChallengeAssignment')
+        .delete()
+        .eq('id', tempAssignment.id);
+
+      expect(adminError).toBeNull();
+
+      await clearAuthSession(adminClient);
     });
   });
 
+  // =================================================================
+  // CATEGORY 4: ACTIVITYSUBMISSION MULTI-ROLE POLICY TESTS
+  // =================================================================
   test.describe('ActivitySubmission Multi-Role Policy', () => {
     test('participant can create own submission', async () => {
-      // Participant can insert submission for themselves
-      // First need to get enrollment1 (created in beforeAll)
-      const enrollment = await prisma.enrollment.findFirst({
-        where: {
-          userId: participant1.id,
-          challengeId: challenge1.id,
-        },
-      });
+      const client = await createAuthenticatedClient(
+        TEST_WORKSPACES.workspace1.users.participant
+      );
 
-      const newSubmission = await prisma.activitySubmission.create({
-        data: {
-          id: randomUUID(),
-          activityId: activity1.id,
-          userId: participant1.id,
-          enrollmentId: enrollment!.id,
+      // Create submission
+      const { data: submission, error } = await client
+        .from('ActivitySubmission')
+        .insert({
+          userId: TEST_WORKSPACES.workspace1.users.participant.id,
+          activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
           status: 'PENDING',
-          textContent: 'Test multi-role policy',
-        },
-      });
+        })
+        .select()
+        .single();
 
-      expect(newSubmission).toBeDefined();
-      expect(newSubmission.userId).toBe(participant1.id);
+      expect(error).toBeNull();
+      expect(submission).not.toBeNull();
 
-      // Clean up
-      await prisma.activitySubmission.delete({
-        where: {
-          id: newSubmission.id,
-        },
-      });
+      // Cleanup
+      if (submission) {
+        await client.from('ActivitySubmission').delete().eq('id', submission.id);
+      }
+
+      await clearAuthSession(client);
     });
 
     test('manager can update submission for assigned challenge', async () => {
-      // Manager1 can update submission1 (assigned to challenge1)
-      const updated = await prisma.activitySubmission.update({
-        where: {
-          id: submission1.id,
-        },
-        data: {
-          managerNotes: 'Manager review notes',
-        },
-      });
+      const serviceClient = createServiceRoleClient();
 
-      expect(updated.managerNotes).toBe('Manager review notes');
+      // Create temporary submission
+      const { data: tempSubmission } = await serviceClient
+        .from('ActivitySubmission')
+        .insert({
+          userId: TEST_WORKSPACES.workspace1.users.participant.id,
+          activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
+          status: 'PENDING',
+        })
+        .select()
+        .single();
 
-      // With RLS: manager1 attempting to update submission2 would fail
+      if (!tempSubmission) {
+        throw new Error('Failed to create temporary submission for test');
+      }
+
+      // Manager updates submission
+      const managerClient = await createAuthenticatedClient(
+        TEST_WORKSPACES.workspace1.users.manager
+      );
+
+      const { data: updated, error } = await managerClient
+        .from('ActivitySubmission')
+        .update({ status: 'REVIEWED' })
+        .eq('id', tempSubmission.id)
+        .select()
+        .single();
+
+      expect(error).toBeNull();
+      expect(updated?.status).toBe('REVIEWED');
+
+      await clearAuthSession(managerClient);
+
+      // Cleanup
+      await serviceClient.from('ActivitySubmission').delete().eq('id', tempSubmission.id);
     });
 
     test('admin can update any submission in workspace', async () => {
-      // Admin1 can update submission1 (in workspace1)
-      const updated = await prisma.activitySubmission.update({
-        where: {
-          id: submission1.id,
-        },
-        data: {
-          reviewNotes: 'Admin review notes',
-        },
-      });
+      const serviceClient = createServiceRoleClient();
 
-      expect(updated.adminNotes).toBe('Admin review notes');
+      // Create temporary submission
+      const { data: tempSubmission } = await serviceClient
+        .from('ActivitySubmission')
+        .insert({
+          userId: TEST_WORKSPACES.workspace1.users.participant.id,
+          activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
+          status: 'PENDING',
+        })
+        .select()
+        .single();
 
-      // RLS policy: admin can update all workspace submissions
+      if (!tempSubmission) {
+        throw new Error('Failed to create temporary submission for test');
+      }
+
+      // Admin updates submission
+      const adminClient = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.admin);
+
+      const { data: updated, error } = await adminClient
+        .from('ActivitySubmission')
+        .update({ status: 'APPROVED' })
+        .eq('id', tempSubmission.id)
+        .select()
+        .single();
+
+      expect(error).toBeNull();
+      expect(updated?.status).toBe('APPROVED');
+
+      await clearAuthSession(adminClient);
+
+      // Cleanup
+      await serviceClient.from('ActivitySubmission').delete().eq('id', tempSubmission.id);
     });
   });
 
+  // =================================================================
+  // CATEGORY 5: SERVICE ROLE BYPASS TESTS
+  // =================================================================
   test.describe('Service Role Bypass', () => {
     test('service role can access all data', async () => {
-      // Service role (used by application code) bypasses RLS
-      // Can access data across all workspaces
+      const serviceClient = createServiceRoleClient();
 
-      const { data: allWorkspaces } = await prisma.workspace.findMany();
-      expect(allWorkspaces.length).toBeGreaterThanOrEqual(2);
+      // Service role should see all workspaces
+      const { data: workspaces, error } = await serviceClient.from('Workspace').select('*');
 
-      const { data: allSubmissions } = await prisma.activitySubmission.findMany();
-      expect(allSubmissions.length).toBeGreaterThanOrEqual(2);
-
-      // Service role has full access for system operations
+      expect(error).toBeNull();
+      expect(workspaces).toBeDefined();
+      expect(workspaces?.length).toBeGreaterThanOrEqual(2); // Both test workspaces
     });
   });
 
+  // =================================================================
+  // CATEGORY 6: EDGE CASES
+  // =================================================================
   test.describe('Edge Cases', () => {
     test('user with no workspace membership sees nothing', async () => {
-      // Create user with no workspace membership
-      const orphanUser = await prisma.user.create({
-        data: {
-          id: randomUUID(),
-          email: `orphan-rls-${Date.now()}@test.com`,
-          supabaseUserId: randomUUID(),
-          role: 'PARTICIPANT',
-        },
+      const serviceClient = createServiceRoleClient();
+
+      // Create user without workspace membership
+      const { data: authUser } = await serviceClient.auth.admin.createUser({
+        email: 'no-workspace@test.com',
+        password: 'test-password',
+        email_confirm: true,
       });
 
-      // With RLS: orphan user would see 0 workspaces, 0 challenges, 0 submissions
+      if (!authUser.user) {
+        throw new Error('Failed to create test user');
+      }
 
-      // Clean up
-      await prisma.user.delete({
-        where: {
-          id: orphanUser.id,
-        },
+      const { data: noWorkspaceUser } = await serviceClient
+        .from('User')
+        .insert({
+          email: 'no-workspace@test.com',
+          supabaseUserId: authUser.user.id,
+        })
+        .select()
+        .single();
+
+      if (!noWorkspaceUser) {
+        throw new Error('Failed to create User record');
+      }
+
+      // Create authenticated client for user with no workspace
+      const client = await createAuthenticatedClient({
+        id: noWorkspaceUser.id,
+        email: noWorkspaceUser.email,
+        supabaseUserId: authUser.user.id,
+        role: 'PARTICIPANT',
       });
+
+      // Query challenges - should return empty
+      const { data: challenges, error } = await client.from('Challenge').select('*');
+
+      expect(error).toBeNull();
+      expect(challenges).toBeDefined();
+      expect(challenges?.length).toBe(0);
+
+      await clearAuthSession(client);
+
+      // Cleanup
+      await serviceClient.from('User').delete().eq('id', noWorkspaceUser.id);
+      await serviceClient.auth.admin.deleteUser(authUser.user.id);
     });
 
     test('deleted workspace membership revokes access', async () => {
-      // Create temporary user and membership
-      const tempUser = await prisma.user.create({
-        data: {
-          id: randomUUID(),
-          email: `temp-rls-${Date.now()}@test.com`,
-          supabaseUserId: randomUUID(),
-          role: 'PARTICIPANT',
-        },
-      });
+      const serviceClient = createServiceRoleClient();
 
-      const tempMembership = await prisma.workspaceMembership.create({
-        data: {
-          userId: tempUser.id,
-          workspaceId: workspace1.id,
-          role: 'PARTICIPANT',
-        },
-      });
+      // Delete participant's workspace membership
+      await serviceClient
+        .from('WorkspaceMembership')
+        .delete()
+        .eq('userId', TEST_WORKSPACES.workspace1.users.participant.id);
 
-      // Delete membership
-      await prisma.workspaceMembership.delete({
-        where: {
-          id: tempMembership.id,
-        },
-      });
+      // Try to query challenges
+      const client = await createAuthenticatedClient(
+        TEST_WORKSPACES.workspace1.users.participant
+      );
 
-      // With RLS: tempUser would now see 0 workspaces
+      const { data: challenges, error } = await client.from('Challenge').select('*');
 
-      // Clean up
-      await prisma.user.delete({
-        where: {
-          id: tempUser.id,
-        },
+      expect(error).toBeNull();
+      expect(challenges).toBeDefined();
+      expect(challenges?.length).toBe(0);
+
+      await clearAuthSession(client);
+
+      // Restore membership
+      await serviceClient.from('WorkspaceMembership').insert({
+        userId: TEST_WORKSPACES.workspace1.users.participant.id,
+        workspaceId: TEST_WORKSPACES.workspace1.id,
+        role: 'PARTICIPANT',
       });
     });
 
     test('manager with deleted assignment loses access', async () => {
-      // Create temporary assignment for manager2 to test deletion
-      const tempAssignment = await prisma.challengeAssignment.create({
-        data: {
-          id: randomUUID(),
-          challengeId: challenge2.id,
-          managerId: manager2.id,
-          workspaceId: workspace2.id,
-          assignedBy: admin2.id,
-        },
+      const serviceClient = createServiceRoleClient();
+
+      // Delete manager's assignment
+      await serviceClient
+        .from('ChallengeAssignment')
+        .delete()
+        .eq('managerId', TEST_WORKSPACES.workspace1.users.manager.id);
+
+      // Try to query submissions
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.manager);
+
+      const { data: submissions, error } = await client
+        .from('ActivitySubmission')
+        .select('*')
+        .eq('activityId', TEST_WORKSPACES.workspace1.assignedActivity.id);
+
+      expect(error).toBeNull();
+      expect(submissions).toBeDefined();
+      expect(submissions?.length).toBe(0);
+
+      await clearAuthSession(client);
+
+      // Restore assignment
+      await serviceClient.from('ChallengeAssignment').insert({
+        managerId: TEST_WORKSPACES.workspace1.users.manager.id,
+        challengeId: TEST_WORKSPACES.workspace1.challenge.id,
+        workspaceId: TEST_WORKSPACES.workspace1.id,
       });
-
-      // Verify manager2 can see assignments
-      const beforeDeletion = await prisma.challengeAssignment.findMany({
-        where: {
-          managerId: manager2.id,
-        },
-      });
-
-      expect(beforeDeletion).toHaveLength(1);
-
-      // Delete the temp assignment
-      await prisma.challengeAssignment.delete({
-        where: {
-          id: tempAssignment.id,
-        },
-      });
-
-      // With RLS: manager1 would no longer see submissions for challenge1
-      // (except original assignment1 still exists)
-
-      const { data: assignments } = await prisma.challengeAssignment.findMany({
-        where: {
-          managerId: manager1.id,
-          challengeId: challenge1.id,
-        },
-      });
-
-      // Should only see assignment1 (original), not the deleted one
-      expect(assignments).toHaveLength(1);
-      expect(assignments[0].id).toBe(assignment1.id);
     });
   });
 
+  // =================================================================
+  // CATEGORY 7: PERFORMANCE VERIFICATION
+  // =================================================================
   test.describe('Performance Verification', () => {
     test('RLS policies do not significantly slow queries', async () => {
-      // Measure query performance with RLS enabled
-      const startTime = Date.now();
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.admin);
 
-      await prisma.activitySubmission.findMany({
-        where: {
-          Activity: {
-            Challenge: {
-              workspaceId: workspace1.id,
-            },
-          },
-        },
-        include: {
-          Activity: {
-            include: {
-              Challenge: true,
-            },
-          },
-          User: true,
-        },
-      });
+      // Measure query time
+      const start = Date.now();
+      const { data: challenges, error } = await client.from('Challenge').select('*');
+      const duration = Date.now() - start;
 
-      const endTime = Date.now();
-      const duration = endTime - startTime;
+      expect(error).toBeNull();
+      expect(challenges).toBeDefined();
+      expect(duration).toBeLessThan(2000); // Should complete in <2s
 
-      // Query should complete in <2 seconds (Task 30.5 performance target)
-      expect(duration).toBeLessThan(2000);
+      await clearAuthSession(client);
     });
 
     test('manager queue query performs well with RLS', async () => {
-      // Simulate manager queue query with RLS
-      const startTime = Date.now();
+      const client = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.manager);
 
-      await prisma.activitySubmission.findMany({
-        where: {
-          status: 'PENDING',
-          Activity: {
-            Challenge: {
-              challenges_assignments: {
-                some: {
-                  managerId: manager1.id,
-                },
-              },
-            },
-          },
-        },
-        include: {
-          Activity: {
-            include: {
-              Challenge: true,
-            },
-          },
-          User: true,
-        },
-      });
+      // Measure complex manager query time
+      const start = Date.now();
+      const { data: submissions, error } = await client
+        .from('ActivitySubmission')
+        .select('*, Activity(*, Challenge(*))');
+      const duration = Date.now() - start;
 
-      const endTime = Date.now();
-      const duration = endTime - startTime;
+      expect(error).toBeNull();
+      expect(submissions).toBeDefined();
+      expect(duration).toBeLessThan(2000); // Should complete in <2s
 
-      // Manager queue should load in <2 seconds
-      expect(duration).toBeLessThan(2000);
+      await clearAuthSession(client);
     });
   });
 });
