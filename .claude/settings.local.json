@@ -62,7 +62,8 @@
       "Bash(npx playwright test tests/api/participants.spec.ts:21 --reporter=json)",
       "Bash(npx playwright test tests/api/participants.spec.ts -g \"create participant\" --reporter=line)",
       "Bash(npx playwright test tests/api/challenge-crud.spec.ts --reporter=list)",
-      "Bash(npx playwright test tests/api/challenge-crud.spec.ts:22 --reporter=line)"
+      "Bash(npx playwright test tests/api/challenge-crud.spec.ts:22 --reporter=line)",
+      "Bash(cat:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

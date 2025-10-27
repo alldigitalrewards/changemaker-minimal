@@ -51,3 +51,31 @@ jobs:
           echo "Verifying migrations were applied..."
           pnpm prisma migrate status
           echo "✅ Staging database migrations deployed successfully!"
+
+      - name: Check if seeding needed
+        id: check_seed
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Checking if database needs seeding..."
+          USER_COUNT=$(npx prisma db execute --stdin <<< "SELECT COUNT(*) FROM \"User\";" | grep -o '[0-9]*' | head -1 || echo "0")
+          if [ "$USER_COUNT" = "0" ]; then
+            echo "needs_seed=true" >> $GITHUB_OUTPUT
+            echo "Database is empty, seeding required"
+          else
+            echo "needs_seed=false" >> $GITHUB_OUTPUT
+            echo "Database has $USER_COUNT users, skipping seed"
+          fi
+
+      - name: Run staging seed
+        if: steps.check_seed.outputs.needs_seed == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "Running seed script for staging database..."
+          npx tsx prisma/seed-staging.ts
+          echo "✅ Staging database seeded successfully!"
