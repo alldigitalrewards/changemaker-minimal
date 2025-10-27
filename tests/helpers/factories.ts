@@ -115,7 +115,7 @@ export async function createTestChallenge(params: {
       workspaceId: params.workspaceId,
       startDate: now,
       endDate: futureDate,
-      status: params.status || 'PUBLISHED'
+      status: (params.status as any) || 'PUBLISHED'
     },
     select: {
       id: true,
@@ -234,7 +234,7 @@ export async function createTestSubmission(params: {
       userId: params.userId,
       enrollmentId: params.enrollmentId,
       textContent: params.textContent || 'Test submission content',
-      status: params.status || 'PENDING'
+      status: (params.status as any) || 'PENDING'
     },
     select: {
       id: true,
