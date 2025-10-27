@@ -318,7 +318,13 @@
   - Files: `tests/security/rls-policies.spec.ts` (800+ lines, 22 test cases)
   - Progress: Test suite created, all schema corrections complete (8 fixes)
   - Blocker: RLS policies require Supabase auth context, not Prisma client
-  - Next: Refactor tests to use Supabase client with proper auth tokens
+  - Subtasks:
+    1. Create Supabase test client helper with auth contexts
+    2. Generate test JWT tokens for admin/manager/participant roles
+    3. Refactor beforeAll fixture setup to create Supabase users
+    4. Update all test cases to use Supabase client with auth.setSession()
+    5. Run full RLS test suite and verify all 22 tests pass
+    6. Update session file with final results
   - Risk: Tests don't catch all edge cases
   - Depends on: Tasks 30.2 ✅, 30.3 ✅
   - **CRITICAL**: Verify policies don't break existing functionality
@@ -332,13 +338,33 @@
   - Depends on: Task 30.4 ✅
   - **CRITICAL**: Ensure <2 second page loads with RLS enabled (targets documented: <100ms per query)
 
+- [ ] **Task 30.6**: Pre-Merge Verification & Integration Testing ⏱️ 2h
+  - Status: Pending
+  - Session: `.claude/sessions/session-20251027-task-30.6-pre-merge.md` (to be created)
+  - Deliverable: Complete verification checklist and merge readiness
+  - Subtasks:
+    1. Verify all Phase 2 API routes work with RLS enabled
+    2. Run full test suite (unit + integration + RLS security tests)
+    3. Test manager workflow end-to-end with RLS active
+    4. Verify performance: manager queue loads <2s with RLS
+    5. Verify no breaking changes to existing functionality
+    6. Review all session files for completeness
+    7. Update PROGRESS.md with final checklist results
+    8. Create merge PR with comprehensive description
+  - Risk: RLS breaks existing functionality not covered by tests
+  - Depends on: Task 30.4 ✅
+  - **CRITICAL**: Zero breaking changes before merge to staging
+
 **🚦 GATE 2 CRITERIA (UPDATED):**
 - [ ] Manager can review assigned submissions end-to-end
 - [ ] Two-step approval workflow working
 - [ ] Authorization tests passing (100% coverage)
 - [ ] Manager queue loads <2 seconds with 100 submissions
-- [x] ✅ RLS policies implemented and tested (Tasks 30.1-30.5) - Complete 2025-10-27
+- [ ] RLS policies implemented and verified (Tasks 30.1-30.4 complete)
+- [ ] RLS security tests passing (Task 30.4 - 22 test cases)
+- [ ] Pre-merge verification complete (Task 30.6)
 - [ ] Zero critical security issues
+- [ ] No breaking changes to Phase 1 functionality
 
 ---
 
