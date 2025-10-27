@@ -262,10 +262,10 @@
   - Risk: Missing edge cases (deleted assignments, inactive users)
   - Depends on: Tasks 18, 19
 
-- [ ] **Task 28**: Approval Workflow Tests ⏱️ 4h
-  - Status: Not Started
+- [x] **Task 28**: Approval Workflow Tests ⏱️ 4h ✅ 2025-10-27
+  - Status: Complete
   - File: `tests/api/manager-workflow.spec.ts` (NEW)
-  - Deliverable: 6+ workflow test cases
+  - Deliverable: 9 workflow test cases created
   - Risk: Missing state transitions or edge cases
   - Depends on: Tasks 19, 20
 
