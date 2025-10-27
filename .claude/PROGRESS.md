@@ -269,10 +269,10 @@
   - Risk: Missing state transitions or edge cases
   - Depends on: Tasks 19, 20
 
-- [ ] **Task 29**: Assignment Tests ⏱️ 2h
-  - Status: Not Started
+- [x] **Task 29**: Assignment Tests ⏱️ 2h ✅ 2025-10-27
+  - Status: Complete
   - File: `tests/api/challenge-assignments.spec.ts` (NEW)
-  - Deliverable: 5+ assignment test cases
+  - Deliverable: 12 assignment test cases created
   - Risk: Cross-workspace leakage not tested
   - Depends on: Tasks 16, 17
 
