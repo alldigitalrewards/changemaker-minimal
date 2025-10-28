@@ -192,14 +192,48 @@ All fixtures created with service role to bypass RLS during setup.
   - Each test needs proper auth context (admin/manager/participant JWT tokens)
   - Service role needed only for fixture setup/cleanup
 
-**Next Steps**:
-1. Research Supabase test client setup with auth contexts
-2. Refactor tests to use Supabase client + proper auth tokens
-3. Keep Prisma client only for beforeAll/afterAll fixture management
-4. Run full test suite successfully with auth contexts
-5. Verify all 22 tests pass
-6. Document test results and coverage
-7. Mark Task 30.4 complete
+**Next Steps** (Session Continuation Required):
+
+### Immediate Actions:
+1. **Research Supabase Test Setup**:
+   - Review Supabase auth test documentation
+   - Understand how to create JWT tokens for testing
+   - Study `@supabase/supabase-js` test client setup
+   - Find examples of RLS testing with auth contexts
+
+2. **Create Test Auth Helper**:
+   - File: `tests/helpers/supabase-test-client.ts`
+   - Function: `createAuthenticatedClient(userId: string, role: Role)`
+   - Generate proper JWT tokens with claims
+   - Set up auth session with `auth.setSession()`
+
+3. **Refactor Test Suite**:
+   - Keep Prisma client for fixture setup/cleanup (service role)
+   - Replace all test queries with Supabase client
+   - Add auth context for each test case
+   - Handle relation includes (Prisma → Supabase query differences)
+
+4. **Run & Verify**:
+   - Execute full RLS test suite
+   - Verify all 22 tests pass
+   - Document any policy issues discovered
+   - Update session file with results
+
+5. **Mark Complete**:
+   - Update PROGRESS.md (Task 30.4 → ✅)
+   - Update Gate 2 criteria
+   - Proceed to Task 30.6
+
+### Technical Challenges:
+- JWT token generation for test users
+- Supabase auth session management in tests
+- Query syntax differences (Prisma relations → Supabase joins)
+- RLS policy debugging if tests fail
+
+### Estimated Remaining Time: 4-6 hours
+- Research & setup: 1-2 hours
+- Refactoring: 2-3 hours
+- Testing & fixes: 1 hour
 
 ## Files Created
 
