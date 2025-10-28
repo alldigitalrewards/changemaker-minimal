@@ -84,6 +84,7 @@ test('debug RLS workspace query', async () => {
       supabaseUserId,
       workspaceId,
       id: userId,
+      role: 'ADMIN',
     });
 
     console.log('Created authenticated client');
