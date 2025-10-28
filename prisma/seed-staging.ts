@@ -29,30 +29,44 @@ const supabaseAdmin = createClient(
   },
 );
 
-// Essential workspaces for staging
+const DEFAULT_PASSWORD = "Changemaker2025!";
+
+// Essential workspaces for staging (matching production)
 const stagingWorkspaces = [
   {
-    id: "00000000-0000-0000-0000-000000000001",
-    slug: "demo",
-    name: "Demo Workspace",
+    slug: "acme",
+    name: "ACME Corporation",
   },
   {
-    id: "00000000-0000-0000-0000-000000000002",
     slug: "alldigitalrewards",
     name: "AllDigitalRewards",
   },
+  {
+    slug: "sharecare",
+    name: "Sharecare",
+  },
 ];
 
-// Essential admin users for staging
+// Admin users matching production seed
 const stagingAdmins = [
   {
-    email: "admin@changemaker.im",
-    name: "Staging Admin",
-    workspace: "demo",
+    email: "krobinson@alldigitalrewards.com",
+    name: "Kim Robinson",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "kfelke@alldigitalrewards.com",
+    name: "Kathryn Felke",
+    workspace: "alldigitalrewards",
   },
   {
     email: "jfelke@alldigitalrewards.com",
     name: "Jack Felke",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "jhoughtelin@alldigitalrewards.com",
+    name: "Josh Houghtelin",
     workspace: "alldigitalrewards",
   },
 ];
@@ -71,11 +85,10 @@ async function ensureSupabaseUser(email: string, name: string) {
       return existingUser.id;
     }
 
-    // Create new user with a secure password
-    const password = `Staging_${Math.random().toString(36).slice(-8)}!`;
+    // Create new user with the default password
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password,
+      password: DEFAULT_PASSWORD,
       email_confirm: true,
       user_metadata: { name },
     });
@@ -85,7 +98,7 @@ async function ensureSupabaseUser(email: string, name: string) {
       return null;
     }
 
-    console.log(`✓ Created Supabase user: ${email}`);
+    console.log(`✓ Created Supabase user: ${email} (password: ${DEFAULT_PASSWORD})`);
     return data.user.id;
   } catch (error) {
     console.error(`Error ensuring Supabase user ${email}:`, error);
@@ -100,18 +113,15 @@ async function seedStaging() {
     // 1. Ensure workspaces exist
     console.log("📁 Ensuring workspaces...");
     for (const workspace of stagingWorkspaces) {
-      const existing = await prisma.workspace.findUnique({
+      await prisma.workspace.upsert({
         where: { slug: workspace.slug },
+        update: { name: workspace.name },
+        create: {
+          id: crypto.randomUUID(),
+          ...workspace,
+        },
       });
-
-      if (!existing) {
-        await prisma.workspace.create({
-          data: workspace,
-        });
-        console.log(`✓ Created workspace: ${workspace.name}`);
-      } else {
-        console.log(`✓ Workspace exists: ${workspace.name}`);
-      }
+      console.log(`✓ Workspace ready: ${workspace.name}`);
     }
 
     // 2. Ensure admin users exist
@@ -178,20 +188,20 @@ async function seedStaging() {
       }
     }
 
-    // 3. Create sample challenges for demo workspace
-    console.log("\n🎯 Ensuring demo challenges...");
-    const demoWorkspace = await prisma.workspace.findUnique({
-      where: { slug: "demo" },
+    // 3. Create sample challenges for alldigitalrewards workspace
+    console.log("\n🎯 Ensuring sample challenges...");
+    const adrWorkspace = await prisma.workspace.findUnique({
+      where: { slug: "alldigitalrewards" },
       include: { Challenge: true },
     });
 
-    if (demoWorkspace && demoWorkspace.Challenge.length === 0) {
+    if (adrWorkspace && adrWorkspace.Challenge.length === 0) {
       const challenges = [
         {
           id: crypto.randomUUID(),
           title: "Welcome Challenge",
           description: "Get started with the Changemaker platform",
-          workspaceId: demoWorkspace.id,
+          workspaceId: adrWorkspace.id,
           startDate: new Date(),
           endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
           status: "PUBLISHED" as const,
@@ -200,7 +210,7 @@ async function seedStaging() {
           id: crypto.randomUUID(),
           title: "Innovation Sprint",
           description: "Share your innovative ideas",
-          workspaceId: demoWorkspace.id,
+          workspaceId: adrWorkspace.id,
           startDate: new Date(),
           endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
           status: "PUBLISHED" as const,
@@ -212,7 +222,7 @@ async function seedStaging() {
         console.log(`✓ Created challenge: ${challenge.title}`);
       }
     } else {
-      console.log(`✓ Demo workspace has ${demoWorkspace?.Challenge.length || 0} challenges`);
+      console.log(`✓ AllDigitalRewards workspace has ${adrWorkspace?.Challenge.length || 0} challenges`);
     }
 
     console.log("\n✅ Staging seed completed successfully!");
