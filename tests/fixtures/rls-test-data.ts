@@ -12,6 +12,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../../lib/prisma';
+import { DEFAULT_PASSWORD } from '../e2e/support/auth';
 
 export interface TestWorkspace {
   id: string;
@@ -38,6 +39,7 @@ export interface TestUser {
   email: string;
   supabaseUserId: string;
   role: 'ADMIN' | 'MANAGER' | 'PARTICIPANT';
+  workspaceId?: string;
 }
 
 export interface TestChallenge {
@@ -72,7 +74,7 @@ export interface TestSubmission {
   userId: string;
   activityId: string;
   enrollmentId: string;
-  status: string;
+  status: 'PENDING' | 'MANAGER_APPROVED' | 'NEEDS_REVISION' | 'APPROVED' | 'REJECTED';
 }
 
 export interface TestAssignment {
@@ -369,7 +371,7 @@ export async function createTestWorkspaces(client: SupabaseClient): Promise<void
       // Create Supabase auth user (must use Supabase client)
       const { data: authUser, error: authError } = await client.auth.admin.createUser({
         email: user.email,
-        password: 'test-password-123',
+        password: DEFAULT_PASSWORD,
         email_confirm: true,
       });
 
@@ -458,19 +460,9 @@ export async function createTestWorkspaces(client: SupabaseClient): Promise<void
       ],
     });
 
-    // Create challenge assignment for manager using Prisma
-    const assignment = {
-      id: uuidv4(),
-      managerId: workspace.users.manager.id,
-      challengeId: workspace.challenge.id,
-      workspaceId: workspace.id,
-      assignedBy: workspace.users.admin.id,
-    };
-    workspace.assignments.push(assignment);
-
-    await prisma.challengeAssignment.create({
-      data: assignment,
-    });
+    // NOTE: We don't pre-create challenge assignments here because the API verification
+    // tests are specifically designed to test assignment creation/deletion.
+    // Tests will create assignments as needed via the API endpoints.
 
     // Create enrollment using Prisma (required before submissions)
     await prisma.enrollment.create({
