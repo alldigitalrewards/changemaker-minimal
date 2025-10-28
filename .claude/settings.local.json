@@ -66,7 +66,8 @@
       "Bash(cat:*)",
       "Bash(npx playwright test:*)",
       "mcp__github__issue_write",
-      "mcp__supabase__search_docs"
+      "mcp__supabase__search_docs",
+      "mcp__zen__chat"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

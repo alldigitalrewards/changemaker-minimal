@@ -11,6 +11,10 @@ import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
 import { prisma } from "@/lib/prisma"
 import { ReactNode } from "react"
 
+// Force dynamic rendering - this layout requires database access at request time
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs' // Explicitly use Node.js runtime for Prisma
+
 interface AdminLayoutProps {
   children: ReactNode
   params: Promise<{ slug: string }>
