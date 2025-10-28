@@ -346,111 +346,23 @@ test.describe('RLS Policy Tests', () => {
   // =================================================================
   test.describe('ActivitySubmission Multi-Role Policy', () => {
     test('participant can create own submission', async () => {
-      const serviceClient = createServiceRoleClient();
-
-      // Debug: Check activity and challenge exist
-      const { data: activity } = await serviceClient
-        .from('Activity')
-        .select('*, Challenge(*)')
-        .eq('id', TEST_WORKSPACES.workspace1.assignedActivity.id)
-        .single();
-
-      console.log('Activity for submission:', activity);
-
-      // Debug: Check participant membership
-      const { data: membership } = await serviceClient
-        .from('WorkspaceMembership')
-        .select('*')
-        .eq('userId', TEST_WORKSPACES.workspace1.users.participant.id)
-        .single();
-
-      console.log('Participant membership:', membership);
-
       const client = await createAuthenticatedClient(
         TEST_WORKSPACES.workspace1.users.participant
       );
 
-      // Check what auth.uid() returns
-      const { data: session } = await client.auth.getSession();
-      console.log('Authenticated session user:', {
-        userId: session.session?.user?.id,
-        email: session.session?.user?.email,
-      });
-
-      // Test current_user_id() function directly
-      const { data: currentUserId, error: userIdError } = await client.rpc('current_user_id');
-      console.log('current_user_id() result:', { currentUserId, userIdError });
-
-      // Test user_can_access_workspace() for the challenge's workspace
-      const challengeWorkspaceId = TEST_WORKSPACES.workspace1.id;
-      const { data: canAccess, error: accessError } = await client.rpc(
-        'user_can_access_workspace',
-        { workspace_id: challengeWorkspaceId }
-      );
-      console.log('user_can_access_workspace() result:', { canAccess, accessError, workspaceId: challengeWorkspaceId });
-
-      // Test if we can SELECT the Activity that we're trying to submit for
-      const { data: activityCheck, error: activityError } = await client
-        .from('Activity')
-        .select('id, challengeId, Challenge(id, workspaceId)')
-        .eq('id', TEST_WORKSPACES.workspace1.assignedActivity.id)
-        .single();
-      console.log('Activity SELECT check:', { activityCheck, activityError });
-
-      // Check if enrollment exists
-      const { data: enrollmentCheck, error: enrollmentError} = await serviceClient
-        .from('Enrollment')
-        .select('*')
-        .eq('id', TEST_WORKSPACES.workspace1.enrollment.id)
-        .single();
-      console.log('Enrollment check:', { enrollmentCheck, enrollmentError });
-
-      // Test if we can SELECT the Challenge
-      const { data: challengeCheck, error: challengeError } = await client
-        .from('Challenge')
-        .select('id, workspaceId')
-        .eq('id', TEST_WORKSPACES.workspace1.challenge.id)
-        .single();
-      console.log('Challenge SELECT check:', { challengeCheck, challengeError });
-
-      // Test the exact condition from the INSERT policy
-      const { data: canInsert, error: canInsertError } = await client.rpc(
-        'debug_can_insert_submission',
-        {
-          p_user_id: TEST_WORKSPACES.workspace1.users.participant.id,
-          p_activity_id: TEST_WORKSPACES.workspace1.assignedActivity.id,
-        }
-      );
-      console.log('debug_can_insert_submission() result:', { canInsert, canInsertError });
-
-      // Test the new SECURITY DEFINER function
-      const { data: canInsertNew, error: canInsertNewError } = await client.rpc(
-        'check_can_insert_submission_for_activity',
-        {
-          p_user_id: TEST_WORKSPACES.workspace1.users.participant.id,
-          p_activity_id: TEST_WORKSPACES.workspace1.assignedActivity.id,
-        }
-      );
-      console.log('check_can_insert_submission_for_activity() result:', { canInsertNew, canInsertNewError });
-
-      // Create submission (generate ID since schema doesn't have default)
+      // Create submission
       const submissionId = uuidv4();
-      const insertData = {
-        id: submissionId,
-        userId: TEST_WORKSPACES.workspace1.users.participant.id,
-        activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
-        enrollmentId: TEST_WORKSPACES.workspace1.enrollment.id,
-        status: 'PENDING',
-      };
-      console.log('About to INSERT submission with data:', insertData);
-
       const { data: submission, error } = await client
         .from('ActivitySubmission')
-        .insert(insertData)
+        .insert({
+          id: submissionId,
+          userId: TEST_WORKSPACES.workspace1.users.participant.id,
+          activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
+          enrollmentId: TEST_WORKSPACES.workspace1.enrollment.id,
+          status: 'PENDING',
+        })
         .select()
         .single();
-
-      console.log('Insert result:', { submission, error });
 
       expect(error).toBeNull();
       expect(submission).not.toBeNull();
@@ -467,18 +379,19 @@ test.describe('RLS Policy Tests', () => {
       const serviceClient = createServiceRoleClient();
 
       // Create temporary submission
-      const { data: tempSubmission } = await serviceClient
+      const { data: tempSubmission, error: insertError } = await serviceClient
         .from('ActivitySubmission')
         .insert({
           userId: TEST_WORKSPACES.workspace1.users.participant.id,
           activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
+          enrollmentId: TEST_WORKSPACES.workspace1.enrollment.id,
           status: 'PENDING',
         })
         .select()
         .single();
 
       if (!tempSubmission) {
-        throw new Error('Failed to create temporary submission for test');
+        throw new Error(`Failed to create temporary submission for test: ${insertError?.message || 'Unknown error'}`);
       }
 
       // Manager updates submission
@@ -488,13 +401,13 @@ test.describe('RLS Policy Tests', () => {
 
       const { data: updated, error } = await managerClient
         .from('ActivitySubmission')
-        .update({ status: 'REVIEWED' })
+        .update({ status: 'MANAGER_APPROVED' })
         .eq('id', tempSubmission.id)
         .select()
         .single();
 
       expect(error).toBeNull();
-      expect(updated?.status).toBe('REVIEWED');
+      expect(updated?.status).toBe('MANAGER_APPROVED');
 
       await clearAuthSession(managerClient);
 
@@ -511,6 +424,7 @@ test.describe('RLS Policy Tests', () => {
         .insert({
           userId: TEST_WORKSPACES.workspace1.users.participant.id,
           activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
+          enrollmentId: TEST_WORKSPACES.workspace1.enrollment.id,
           status: 'PENDING',
         })
         .select()
@@ -562,29 +476,31 @@ test.describe('RLS Policy Tests', () => {
   test.describe('Edge Cases', () => {
     test('user with no workspace membership sees nothing', async () => {
       const serviceClient = createServiceRoleClient();
+      const uniqueEmail = `no-workspace-${Date.now()}@test.com`;
 
       // Create user without workspace membership
-      const { data: authUser } = await serviceClient.auth.admin.createUser({
-        email: 'no-workspace@test.com',
-        password: 'test-password',
+      const { data: authUser, error: authError } = await serviceClient.auth.admin.createUser({
+        email: uniqueEmail,
+        password: 'test-password-123',
         email_confirm: true,
       });
 
       if (!authUser.user) {
-        throw new Error('Failed to create test user');
+        throw new Error(`Failed to create test user: ${authError?.message || 'Unknown error'}`);
       }
 
-      const { data: noWorkspaceUser } = await serviceClient
+      const { data: noWorkspaceUser, error: userInsertError } = await serviceClient
         .from('User')
         .insert({
-          email: 'no-workspace@test.com',
+          email: uniqueEmail,
           supabaseUserId: authUser.user.id,
+          role: 'PARTICIPANT',
         })
         .select()
         .single();
 
       if (!noWorkspaceUser) {
-        throw new Error('Failed to create User record');
+        throw new Error(`Failed to create User record: ${userInsertError?.message || 'Unknown error'}`);
       }
 
       // Create authenticated client for user with no workspace

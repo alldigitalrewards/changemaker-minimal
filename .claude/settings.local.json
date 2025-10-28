@@ -66,7 +66,6 @@
       "Bash(cat:*)",
       "Bash(npx playwright test:*)",
       "mcp__github__issue_write",
-      "mcp__supabase__execute_sql",
       "mcp__supabase__search_docs"
     ],
     "additionalDirectories": [

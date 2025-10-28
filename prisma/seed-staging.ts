@@ -182,26 +182,28 @@ async function seedStaging() {
     console.log("\n🎯 Ensuring demo challenges...");
     const demoWorkspace = await prisma.workspace.findUnique({
       where: { slug: "demo" },
-      include: { challenges: true },
+      include: { Challenge: true },
     });
 
-    if (demoWorkspace && demoWorkspace.challenges.length === 0) {
+    if (demoWorkspace && demoWorkspace.Challenge.length === 0) {
       const challenges = [
         {
+          id: crypto.randomUUID(),
           title: "Welcome Challenge",
           description: "Get started with the Changemaker platform",
           workspaceId: demoWorkspace.id,
           startDate: new Date(),
           endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-          isActive: true,
+          status: "PUBLISHED" as const,
         },
         {
+          id: crypto.randomUUID(),
           title: "Innovation Sprint",
           description: "Share your innovative ideas",
           workspaceId: demoWorkspace.id,
           startDate: new Date(),
           endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
-          isActive: true,
+          status: "PUBLISHED" as const,
         },
       ];
 
@@ -210,7 +212,7 @@ async function seedStaging() {
         console.log(`✓ Created challenge: ${challenge.title}`);
       }
     } else {
-      console.log(`✓ Demo workspace has ${demoWorkspace?.challenges.length || 0} challenges`);
+      console.log(`✓ Demo workspace has ${demoWorkspace?.Challenge.length || 0} challenges`);
     }
 
     console.log("\n✅ Staging seed completed successfully!");

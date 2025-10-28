@@ -31,6 +31,8 @@
     "migrate:workspace-membership": "tsx scripts/run-membership-migration.ts",
     "backfill:memberships": "tsx scripts/backfill-memberships.ts",
     "test:membership": "tsx scripts/test-membership.ts",
+    "reset:staging": "tsx scripts/reset-staging-db.ts",
+    "seed:staging": "tsx prisma/seed-staging.ts",
     "test": "playwright test",
     "test:e2e": "playwright test tests/e2e",
     "test:e2e:dev": "ENV_FILE=.env.local BASE_URL=http://localhost:3000 playwright test tests/e2e",

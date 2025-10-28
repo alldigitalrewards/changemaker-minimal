@@ -17,11 +17,15 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   migrate:
     runs-on: ubuntu-latest
     environment: production
-    timeout-minutes: 15
+    timeout-minutes: 8
 
     steps:
       - name: Checkout code
@@ -37,6 +41,18 @@ jobs:
         with:
           version: 9
 
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -45,14 +61,40 @@ jobs:
 
       - name: Backup production database
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+          PGPASSWORD: Changemaker2025!
         run: |
           echo "💾 Creating database backup..."
           BACKUP_NAME="backup_$(date +%Y%m%d_%H%M%S).sql"
           echo "Backup name: $BACKUP_NAME"
-          # Note: Actual backup would use pg_dump via Supabase API or direct connection
-          # For now, log the intent
-          echo "✅ Backup logged (implement pg_dump for production use)"
+
+          # Install PostgreSQL client
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+
+          # Create backup using pg_dump
+          pg_dump \
+            --host=aws-1-us-east-2.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres \
+            --dbname=postgres \
+            --no-password \
+            --format=custom \
+            --file="$BACKUP_NAME" \
+            --verbose
+
+          echo "✅ Backup created: $BACKUP_NAME ($(du -h $BACKUP_NAME | cut -f1))"
+
+          # Upload backup as artifact
+          mkdir -p backups
+          mv "$BACKUP_NAME" backups/
+          echo "backup_file=backups/$BACKUP_NAME" >> $GITHUB_OUTPUT
+        id: backup
+
+      - name: Upload database backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup-${{ github.run_number }}
+          path: backups/
+          retention-days: 30
 
       - name: Apply Prisma migrations
         env:
@@ -89,16 +131,40 @@ jobs:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
         run: |
           echo "🏥 Running health checks..."
-          pnpm prisma studio --browser none &
-          STUDIO_PID=$!
-          sleep 5
-          kill $STUDIO_PID || true
+
+          # Test database connectivity
+          echo "Testing database connection..."
+          pnpm prisma db execute --stdin <<< "SELECT 1 as health_check;"
+
+          # Verify critical tables exist
+          echo "Verifying schema..."
+          pnpm prisma db execute --stdin <<< "
+            SELECT
+              COUNT(*) as table_count
+            FROM information_schema.tables
+            WHERE table_schema = 'public'
+            AND table_type = 'BASE TABLE';
+          "
+
+          # Test production endpoint if available
+          if [ -n "$VERCEL_URL" ]; then
+            echo "Testing production endpoint: https://$VERCEL_URL"
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "https://$VERCEL_URL" || echo "000")
+            if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 307 ]; then
+              echo "✅ Production endpoint responding"
+            else
+              echo "⚠️  Production endpoint returned status: $RESPONSE"
+            fi
+          else
+            echo "⚠️  VERCEL_URL not set, skipping endpoint check"
+          fi
+
           echo "✅ Health check passed"
 
   e2e-smoke-test:
     needs: migrate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 6
 
     steps:
       - name: Checkout code
@@ -114,11 +180,37 @@ jobs:
         with:
           version: 9
 
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm playwright install chromium --with-deps
+
+      - name: Install Playwright deps only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm playwright install-deps chromium
 
       - name: Generate Prisma Client
         run: pnpm prisma generate

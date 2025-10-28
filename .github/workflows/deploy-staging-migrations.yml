@@ -4,11 +4,33 @@ on:
   push:
     branches:
       - staging
+    paths:
+      - 'prisma/schema.prisma'
+      - 'prisma/migrations/**'
+      - 'prisma/seed-staging.ts'
+      - '.github/workflows/deploy-staging-migrations.yml'
+  workflow_dispatch:
+    inputs:
+      reset_database:
+        description: 'Reset database (DELETE ALL DATA)'
+        required: false
+        default: false
+        type: boolean
+      force_reseed:
+        description: 'Force re-seed (even if data exists)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   deploy-migrations:
     name: Deploy Migrations to Staging Database
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Checkout code
@@ -22,13 +44,35 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
         run: pnpm prisma generate
+
+      - name: Reset database (if requested)
+        if: github.event.inputs.reset_database == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.STAGING_DIRECT_URL }}
+        run: |
+          echo "⚠️  RESETTING DATABASE - ALL DATA WILL BE DELETED"
+          pnpm prisma migrate reset --force --skip-seed
+          echo "✅ Database reset complete"
 
       - name: Check migration status
         env:
@@ -59,7 +103,11 @@ jobs:
         run: |
           echo "Checking if database needs seeding..."
           USER_COUNT=$(npx prisma db execute --stdin <<< "SELECT COUNT(*) FROM \"User\";" | grep -o '[0-9]*' | head -1 || echo "0")
-          if [ "$USER_COUNT" = "0" ]; then
+
+          if [ "${{ github.event.inputs.force_reseed }}" = "true" ]; then
+            echo "needs_seed=true" >> $GITHUB_OUTPUT
+            echo "Force reseed requested"
+          elif [ "$USER_COUNT" = "0" ]; then
             echo "needs_seed=true" >> $GITHUB_OUTPUT
             echo "Database is empty, seeding required"
           else

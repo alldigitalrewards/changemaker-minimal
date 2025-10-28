@@ -21,9 +21,9 @@ echo "2. Vercel CLI must be installed and logged in"
 echo ""
 read -p "Press Enter to continue..."
 
-# Staging Supabase Project ID from screenshots
-STAGING_PROJECT_ID="jlvvtejfinfqjfulnmfl"
-STAGING_URL="https://ffivsyhuyathnnlajjq.supabase.co"
+# Staging Supabase Project ID - CORRECT
+STAGING_PROJECT_ID="ffivsyhuyathrnnlajjq"
+STAGING_URL="https://ffivsyhuyathrnnlajjq.supabase.co"
 
 echo ""
 echo "=== Step 1: Get Staging Credentials ==="
