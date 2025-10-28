@@ -52,8 +52,7 @@ test.describe('Challenge Assignment Tests', () => {
         workspaceId,
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        status: 'PUBLISHED',
-        userId: managerId
+        status: 'PUBLISHED'
       }
     });
   });
