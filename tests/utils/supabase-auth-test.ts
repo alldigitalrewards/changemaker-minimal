@@ -7,6 +7,7 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
 import { TestUser } from '../fixtures/rls-test-data';
 
 // Supabase configuration from environment
@@ -25,14 +26,19 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY || !JWT_SE
  * JWT Claims for Supabase authentication
  */
 interface JWTClaims {
+  iss: string; // Issuer - Supabase project URL
   role: 'authenticated' | 'anon' | 'service_role';
   sub: string; // User ID (Supabase auth user ID)
   aud: string;
   exp: number;
   iat: number;
   email: string;
+  phone?: string;
+  aal: string; // Authenticator assurance level
   session_id?: string;
   is_anonymous?: boolean;
+  app_metadata?: Record<string, any>;
+  user_metadata?: Record<string, any>;
 }
 
 /**
@@ -46,18 +52,28 @@ export function generateTestJWT(user: TestUser, expiresInSeconds: number = 3600)
   const now = Math.floor(Date.now() / 1000);
 
   const claims: JWTClaims = {
+    iss: `${SUPABASE_URL}/auth/v1`,
     role: 'authenticated',
     sub: user.supabaseUserId,
     aud: 'authenticated',
     exp: now + expiresInSeconds,
     iat: now,
     email: user.email,
-    session_id: `test-session-${user.id}`,
+    phone: '',
+    aal: 'aal1',
+    session_id: uuidv4(),
     is_anonymous: false,
+    app_metadata: {
+      provider: 'email',
+      providers: ['email'],
+    },
+    user_metadata: {
+      test_user: true,
+    },
   };
 
   // Note: Don't pass expiresIn option when exp is already in claims
-  return jwt.sign(claims, JWT_SECRET);
+  return jwt.sign(claims, JWT_SECRET, { algorithm: 'HS256' });
 }
 
 /**
@@ -90,17 +106,18 @@ export async function createAuthenticatedClient(user: TestUser): Promise<Supabas
     },
   });
 
-  // Generate JWT token for the user
-  const token = generateTestJWT(user);
-
-  // Set the auth session with the JWT token
-  const { error } = await client.auth.setSession({
-    access_token: token,
-    refresh_token: 'not-needed-for-tests',
+  // Sign in with password using the test credentials
+  const { data, error } = await client.auth.signInWithPassword({
+    email: user.email,
+    password: 'test-password-123', // Must match password used in fixture creation
   });
 
   if (error) {
-    throw new Error(`Failed to set auth session for user ${user.email}: ${error.message}`);
+    throw new Error(`Failed to sign in user ${user.email}: ${error.message}`);
+  }
+
+  if (!data.session) {
+    throw new Error(`No session returned for user ${user.email}`);
   }
 
   return client;

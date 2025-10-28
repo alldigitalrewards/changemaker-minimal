@@ -4,10 +4,14 @@
  * This module provides test data setup and cleanup for RLS testing.
  * It creates multiple workspaces with different users and roles to test
  * workspace isolation and role-based access control.
+ *
+ * Note: We use Prisma for database operations and Supabase for auth operations
+ * because Prisma bypasses RLS which is necessary for fixture setup.
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import { prisma } from '../../lib/prisma';
 
 export interface TestWorkspace {
   id: string;
@@ -20,8 +24,10 @@ export interface TestWorkspace {
     otherParticipant: TestUser;
   };
   challenge: TestChallenge;
+  activityTemplate: TestActivityTemplate;
   assignedActivity: TestActivity;
   unassignedActivity: TestActivity;
+  enrollment: TestEnrollment;
   assignedSubmission: TestSubmission;
   assignments: TestAssignment[];
   expiredInvite: TestInvite;
@@ -44,12 +50,28 @@ export interface TestActivity {
   id: string;
   title: string;
   challengeId: string;
+  templateId: string;
+}
+
+export interface TestActivityTemplate {
+  id: string;
+  name: string;
+  description: string;
+  type: 'TEXT_SUBMISSION' | 'FILE_UPLOAD' | 'PHOTO_UPLOAD' | 'LINK_SUBMISSION' | 'MULTIPLE_CHOICE' | 'VIDEO_SUBMISSION';
+  workspaceId: string;
+}
+
+export interface TestEnrollment {
+  id: string;
+  userId: string;
+  challengeId: string;
 }
 
 export interface TestSubmission {
   id: string;
   userId: string;
   activityId: string;
+  enrollmentId: string;
   status: string;
 }
 
@@ -64,8 +86,12 @@ export interface TestInvite {
   id: string;
   code: string;
   workspaceId: string;
+  createdBy: string;
   expiresAt: Date;
 }
+
+// Generate unique identifiers for this test run
+const TEST_RUN_ID = Date.now();
 
 export const TEST_WORKSPACES: {
   workspace1: TestWorkspace;
@@ -73,31 +99,31 @@ export const TEST_WORKSPACES: {
 } = {
   workspace1: {
     id: uuidv4(),
-    slug: 'test-workspace-1',
+    slug: `test-workspace-1-${TEST_RUN_ID}`,
     name: 'Test Workspace 1',
     users: {
       admin: {
         id: uuidv4(),
-        email: 'admin1@test.com',
-        supabaseUserId: uuidv4(),
+        email: `admin1-${TEST_RUN_ID}@test.com`,
+        supabaseUserId: '', // Will be set during createTestWorkspaces()
         role: 'ADMIN',
       },
       manager: {
         id: uuidv4(),
-        email: 'manager1@test.com',
-        supabaseUserId: uuidv4(),
+        email: `manager1-${TEST_RUN_ID}@test.com`,
+        supabaseUserId: '', // Will be set during createTestWorkspaces()
         role: 'MANAGER',
       },
       participant: {
         id: uuidv4(),
-        email: 'participant1@test.com',
-        supabaseUserId: uuidv4(),
+        email: `participant1-${TEST_RUN_ID}@test.com`,
+        supabaseUserId: '', // Will be set during createTestWorkspaces()
         role: 'PARTICIPANT',
       },
       otherParticipant: {
         id: uuidv4(),
-        email: 'participant2@test.com',
-        supabaseUserId: uuidv4(),
+        email: `participant2-${TEST_RUN_ID}@test.com`,
+        supabaseUserId: '', // Will be set during createTestWorkspaces()
         role: 'PARTICIPANT',
       },
     },
@@ -106,57 +132,73 @@ export const TEST_WORKSPACES: {
       title: 'Test Challenge 1',
       workspaceId: '',
     },
+    activityTemplate: {
+      id: uuidv4(),
+      name: 'Text Submission Template 1',
+      description: 'Test text submission template',
+      type: 'TEXT_SUBMISSION',
+      workspaceId: '',
+    },
     assignedActivity: {
       id: uuidv4(),
       title: 'Assigned Activity',
       challengeId: '',
+      templateId: '',
     },
     unassignedActivity: {
       id: uuidv4(),
       title: 'Unassigned Activity',
+      challengeId: '',
+      templateId: '',
+    },
+    enrollment: {
+      id: uuidv4(),
+      userId: '',
       challengeId: '',
     },
     assignedSubmission: {
       id: uuidv4(),
       userId: '',
       activityId: '',
+      enrollmentId: '',
       status: 'PENDING',
     },
     assignments: [],
     expiredInvite: {
       id: uuidv4(),
-      code: 'EXPIRED123',
+      code: `EXPIRED123-${TEST_RUN_ID}`,
       workspaceId: '',
+      createdBy: '', // Will be set during createTestWorkspaces()
       expiresAt: new Date('2020-01-01'),
     },
   },
   workspace2: {
     id: uuidv4(),
-    slug: 'test-workspace-2',
+    slug: `test-workspace-2-${TEST_RUN_ID}`,
     name: 'Test Workspace 2',
     users: {
       admin: {
         id: uuidv4(),
-        email: 'admin2@test.com',
-        supabaseUserId: uuidv4(),
+        email: `admin2-${TEST_RUN_ID}@test.com`,
+        supabaseUserId: '', // Will be set during createTestWorkspaces()
         role: 'ADMIN',
       },
       manager: {
         id: uuidv4(),
-        email: 'manager2@test.com',
-        supabaseUserId: uuidv4(),
+        email: `manager2-${TEST_RUN_ID}@test.com`,
+        supabaseUserId: '', // Will be set during createTestWorkspaces()
         role: 'MANAGER',
       },
       participant: {
         id: uuidv4(),
-        email: 'participant3@test.com',
-        supabaseUserId: uuidv4(),
+        email: `participant3-${TEST_RUN_ID}@test.com`,
+        supabaseUserId: '', // Will be set during createTestWorkspaces()
         role: 'PARTICIPANT',
       },
       otherParticipant: {
         id: uuidv4(),
-        email: 'participant4@test.com',
-        supabaseUserId: uuidv4(),
+        email: `participant4-${TEST_RUN_ID}@test.com`,
+        supabaseUserId: '', // Will be set during createTestWorkspaces()
         role: 'PARTICIPANT',
       },
     },
@@ -165,27 +207,43 @@ export const TEST_WORKSPACES: {
       title: 'Test Challenge 2',
       workspaceId: '',
     },
+    activityTemplate: {
+      id: uuidv4(),
+      name: 'Text Submission Template 2',
+      description: 'Test text submission template',
+      type: 'TEXT_SUBMISSION',
+      workspaceId: '',
+    },
     assignedActivity: {
       id: uuidv4(),
       title: 'Assigned Activity 2',
       challengeId: '',
+      templateId: '',
     },
     unassignedActivity: {
       id: uuidv4(),
       title: 'Unassigned Activity 2',
+      challengeId: '',
+      templateId: '',
+    },
+    enrollment: {
+      id: uuidv4(),
+      userId: '',
       challengeId: '',
     },
     assignedSubmission: {
       id: uuidv4(),
       userId: '',
       activityId: '',
+      enrollmentId: '',
       status: 'PENDING',
     },
     assignments: [],
     expiredInvite: {
       id: uuidv4(),
-      code: 'EXPIRED456',
+      code: `EXPIRED456-${TEST_RUN_ID}`,
       workspaceId: '',
+      createdBy: '', // Will be set during createTestWorkspaces()
       expiresAt: new Date('2020-01-01'),
     },
   },
@@ -193,170 +251,408 @@ export const TEST_WORKSPACES: {
 
 // Link references
 TEST_WORKSPACES.workspace1.challenge.workspaceId = TEST_WORKSPACES.workspace1.id;
+TEST_WORKSPACES.workspace1.activityTemplate.workspaceId = TEST_WORKSPACES.workspace1.id;
 TEST_WORKSPACES.workspace1.assignedActivity.challengeId = TEST_WORKSPACES.workspace1.challenge.id;
+TEST_WORKSPACES.workspace1.assignedActivity.templateId = TEST_WORKSPACES.workspace1.activityTemplate.id;
 TEST_WORKSPACES.workspace1.unassignedActivity.challengeId = TEST_WORKSPACES.workspace1.challenge.id;
+TEST_WORKSPACES.workspace1.unassignedActivity.templateId = TEST_WORKSPACES.workspace1.activityTemplate.id;
+TEST_WORKSPACES.workspace1.enrollment.userId = TEST_WORKSPACES.workspace1.users.participant.id;
+TEST_WORKSPACES.workspace1.enrollment.challengeId = TEST_WORKSPACES.workspace1.challenge.id;
 TEST_WORKSPACES.workspace1.assignedSubmission.userId = TEST_WORKSPACES.workspace1.users.participant.id;
 TEST_WORKSPACES.workspace1.assignedSubmission.activityId = TEST_WORKSPACES.workspace1.assignedActivity.id;
+TEST_WORKSPACES.workspace1.assignedSubmission.enrollmentId = TEST_WORKSPACES.workspace1.enrollment.id;
 TEST_WORKSPACES.workspace1.expiredInvite.workspaceId = TEST_WORKSPACES.workspace1.id;
+TEST_WORKSPACES.workspace1.expiredInvite.createdBy = TEST_WORKSPACES.workspace1.users.admin.id;
 
 TEST_WORKSPACES.workspace2.challenge.workspaceId = TEST_WORKSPACES.workspace2.id;
+TEST_WORKSPACES.workspace2.activityTemplate.workspaceId = TEST_WORKSPACES.workspace2.id;
 TEST_WORKSPACES.workspace2.assignedActivity.challengeId = TEST_WORKSPACES.workspace2.challenge.id;
+TEST_WORKSPACES.workspace2.assignedActivity.templateId = TEST_WORKSPACES.workspace2.activityTemplate.id;
 TEST_WORKSPACES.workspace2.unassignedActivity.challengeId = TEST_WORKSPACES.workspace2.challenge.id;
+TEST_WORKSPACES.workspace2.unassignedActivity.templateId = TEST_WORKSPACES.workspace2.activityTemplate.id;
+TEST_WORKSPACES.workspace2.enrollment.userId = TEST_WORKSPACES.workspace2.users.participant.id;
+TEST_WORKSPACES.workspace2.enrollment.challengeId = TEST_WORKSPACES.workspace2.challenge.id;
 TEST_WORKSPACES.workspace2.assignedSubmission.userId = TEST_WORKSPACES.workspace2.users.participant.id;
 TEST_WORKSPACES.workspace2.assignedSubmission.activityId = TEST_WORKSPACES.workspace2.assignedActivity.id;
+TEST_WORKSPACES.workspace2.assignedSubmission.enrollmentId = TEST_WORKSPACES.workspace2.enrollment.id;
 TEST_WORKSPACES.workspace2.expiredInvite.workspaceId = TEST_WORKSPACES.workspace2.id;
+TEST_WORKSPACES.workspace2.expiredInvite.createdBy = TEST_WORKSPACES.workspace2.users.admin.id;
 
 /**
  * Create test workspaces and all associated data
+ * Uses Prisma for database operations (bypasses RLS) and Supabase for auth operations
  */
 export async function createTestWorkspaces(client: SupabaseClient): Promise<void> {
-  // Create workspaces
-  await client.from('Workspace').insert([
-    {
-      id: TEST_WORKSPACES.workspace1.id,
-      slug: TEST_WORKSPACES.workspace1.slug,
-      name: TEST_WORKSPACES.workspace1.name,
-    },
-    {
-      id: TEST_WORKSPACES.workspace2.id,
-      slug: TEST_WORKSPACES.workspace2.slug,
-      name: TEST_WORKSPACES.workspace2.name,
-    },
-  ]);
+  // Ensure clean state by deleting workspaces with these exact IDs if they exist
+  // This handles cases where previous test runs failed to clean up
+  const workspaceIds = [TEST_WORKSPACES.workspace1.id, TEST_WORKSPACES.workspace2.id];
+
+  try {
+    // Delete all related data first (cascade will handle most, but be explicit)
+    await prisma.activitySubmission.deleteMany({
+      where: {
+        Activity: {
+          Challenge: {
+            workspaceId: { in: workspaceIds },
+          },
+        },
+      },
+    });
+    await prisma.challengeAssignment.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+    await prisma.enrollment.deleteMany({
+      where: {
+        Challenge: { workspaceId: { in: workspaceIds } },
+      },
+    });
+    await prisma.activity.deleteMany({
+      where: {
+        Challenge: { workspaceId: { in: workspaceIds } },
+      },
+    });
+    await prisma.activityTemplate.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+    await prisma.challenge.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+    await prisma.inviteCode.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+    await prisma.workspaceMembership.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
+
+    // Find and delete users in these workspaces
+    const users = await prisma.user.findMany({
+      where: {
+        WorkspaceMembership: {
+          some: { workspaceId: { in: workspaceIds } },
+        },
+      },
+    });
+
+    for (const user of users) {
+      if (user.supabaseUserId) {
+        try {
+          await client.auth.admin.deleteUser(user.supabaseUserId);
+        } catch {
+          // Ignore if already deleted
+        }
+      }
+      try {
+        await prisma.user.delete({ where: { id: user.id } });
+      } catch {
+        // Ignore if already deleted
+      }
+    }
+
+    // Finally delete the workspaces
+    await prisma.workspace.deleteMany({ where: { id: { in: workspaceIds } } });
+    console.log('Pre-creation cleanup completed');
+  } catch (error) {
+    console.log('Pre-creation cleanup had errors (may be expected if data didnt exist):', error);
+  }
+
+  // Create workspaces using Prisma
+  const workspaceResult = await prisma.workspace.createMany({
+    data: [
+      {
+        id: TEST_WORKSPACES.workspace1.id,
+        slug: TEST_WORKSPACES.workspace1.slug,
+        name: TEST_WORKSPACES.workspace1.name,
+      },
+      {
+        id: TEST_WORKSPACES.workspace2.id,
+        slug: TEST_WORKSPACES.workspace2.slug,
+        name: TEST_WORKSPACES.workspace2.name,
+      },
+    ],
+  });
+
+  console.log(`Created ${workspaceResult.count} workspaces`);
 
   // Create Supabase auth users and link to User records
   for (const workspace of [TEST_WORKSPACES.workspace1, TEST_WORKSPACES.workspace2]) {
     for (const user of Object.values(workspace.users)) {
-      // Create Supabase auth user
-      const { data: authUser } = await client.auth.admin.createUser({
+      // Create Supabase auth user (must use Supabase client)
+      const { data: authUser, error: authError } = await client.auth.admin.createUser({
         email: user.email,
         password: 'test-password-123',
         email_confirm: true,
       });
 
-      if (authUser.user) {
-        user.supabaseUserId = authUser.user.id;
+      if (authError) {
+        throw new Error(`Failed to create Supabase auth user for ${user.email}: ${authError.message}`);
+      }
 
-        // Create User record
-        await client.from('User').insert({
+      if (!authUser.user) {
+        throw new Error(`No user returned from Supabase for ${user.email}`);
+      }
+
+      user.supabaseUserId = authUser.user.id;
+
+      // Create User record using Prisma (bypasses RLS)
+      const createdUser = await prisma.user.create({
+        data: {
           id: user.id,
           email: user.email,
           supabaseUserId: authUser.user.id,
-        });
+          role: user.role,
+          // Note: workspaceId is optional - users are linked to workspaces via WorkspaceMembership
+        },
+      });
 
-        // Create WorkspaceMembership
-        await client.from('WorkspaceMembership').insert({
+      console.log(`Created User: ${user.email} with supabaseUserId: ${authUser.user.id}`);
+
+      // Verify User was actually created in database
+      const verifyUser = await prisma.user.findUnique({
+        where: { id: user.id },
+      });
+      console.log(`Verified User exists in DB: ${!!verifyUser}, supabaseUserId: ${verifyUser?.supabaseUserId}`);
+
+      // Create WorkspaceMembership using Prisma (bypasses RLS)
+      await prisma.workspaceMembership.create({
+        data: {
           userId: user.id,
           workspaceId: workspace.id,
+          supabaseUserId: user.supabaseUserId, // Required for RLS helper function
           role: user.role,
-        });
-      }
+        },
+      });
     }
 
-    // Create challenge
-    await client.from('Challenge').insert({
-      id: workspace.challenge.id,
-      title: workspace.challenge.title,
-      description: 'Test challenge description',
-      workspaceId: workspace.id,
+    // Create challenge using Prisma
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setDate(endDate.getDate() + 30); // 30 days from now
+
+    await prisma.challenge.create({
+      data: {
+        id: workspace.challenge.id,
+        title: workspace.challenge.title,
+        description: 'Test challenge description',
+        workspaceId: workspace.id,
+        startDate: now,
+        endDate: endDate,
+      },
     });
 
-    // Create activities
-    await client.from('Activity').insert([
-      {
-        id: workspace.assignedActivity.id,
-        title: workspace.assignedActivity.title,
-        description: 'Assigned activity',
-        challengeId: workspace.challenge.id,
-        type: 'SUBMISSION',
+    // Create activity template using Prisma (required before activities)
+    await prisma.activityTemplate.create({
+      data: {
+        id: workspace.activityTemplate.id,
+        name: workspace.activityTemplate.name,
+        description: workspace.activityTemplate.description,
+        type: workspace.activityTemplate.type,
+        workspaceId: workspace.id,
       },
-      {
-        id: workspace.unassignedActivity.id,
-        title: workspace.unassignedActivity.title,
-        description: 'Unassigned activity',
-        challengeId: workspace.challenge.id,
-        type: 'SUBMISSION',
-      },
-    ]);
+    });
 
-    // Create challenge assignment for manager
+    // Create activities using Prisma
+    await prisma.activity.createMany({
+      data: [
+        {
+          id: workspace.assignedActivity.id,
+          templateId: workspace.activityTemplate.id,
+          challengeId: workspace.challenge.id,
+          pointsValue: 10,
+        },
+        {
+          id: workspace.unassignedActivity.id,
+          templateId: workspace.activityTemplate.id,
+          challengeId: workspace.challenge.id,
+          pointsValue: 10,
+        },
+      ],
+    });
+
+    // Create challenge assignment for manager using Prisma
     const assignment = {
       id: uuidv4(),
       managerId: workspace.users.manager.id,
       challengeId: workspace.challenge.id,
       workspaceId: workspace.id,
+      assignedBy: workspace.users.admin.id,
     };
     workspace.assignments.push(assignment);
 
-    await client.from('ChallengeAssignment').insert(assignment);
-
-    // Create activity submission
-    await client.from('ActivitySubmission').insert({
-      id: workspace.assignedSubmission.id,
-      userId: workspace.assignedSubmission.userId,
-      activityId: workspace.assignedSubmission.activityId,
-      status: workspace.assignedSubmission.status,
+    await prisma.challengeAssignment.create({
+      data: assignment,
     });
 
-    // Create expired invite
-    await client.from('InviteCode').insert({
-      id: workspace.expiredInvite.id,
-      code: workspace.expiredInvite.code,
-      workspaceId: workspace.id,
-      expiresAt: workspace.expiredInvite.expiresAt.toISOString(),
-      maxUses: 10,
-      usedCount: 0,
+    // Create enrollment using Prisma (required before submissions)
+    await prisma.enrollment.create({
+      data: {
+        id: workspace.enrollment.id,
+        userId: workspace.enrollment.userId,
+        challengeId: workspace.enrollment.challengeId,
+      },
+    });
+
+    // Create activity submission using Prisma
+    await prisma.activitySubmission.create({
+      data: {
+        id: workspace.assignedSubmission.id,
+        userId: workspace.assignedSubmission.userId,
+        activityId: workspace.assignedSubmission.activityId,
+        enrollmentId: workspace.assignedSubmission.enrollmentId,
+        status: workspace.assignedSubmission.status,
+      },
+    });
+
+    // Create expired invite using Prisma
+    await prisma.inviteCode.create({
+      data: {
+        id: workspace.expiredInvite.id,
+        code: workspace.expiredInvite.code,
+        workspaceId: workspace.id,
+        expiresAt: workspace.expiredInvite.expiresAt,
+        maxUses: 10,
+        usedCount: 0,
+        createdBy: workspace.expiredInvite.createdBy,
+      },
     });
   }
 }
 
 /**
  * Clean up all test data
+ * Uses Prisma for database operations (bypasses RLS) and Supabase for auth operations
+ * Handles cleanup of both current test run and any stale data from previous failed runs
  */
 export async function cleanupTestData(client: SupabaseClient): Promise<void> {
-  // Delete in reverse order of creation to avoid foreign key constraints
-  const workspaceIds = [TEST_WORKSPACES.workspace1.id, TEST_WORKSPACES.workspace2.id];
+  try {
+    // Get all test workspaces (current and any stale ones from previous runs)
+    const testWorkspaces = await prisma.workspace.findMany({
+      where: {
+        slug: {
+          startsWith: 'test-workspace-',
+        },
+      },
+      select: { id: true },
+    });
 
-  // Delete submissions
-  await client
-    .from('ActivitySubmission')
-    .delete()
-    .in(
-      'activityId',
-      [
-        TEST_WORKSPACES.workspace1.assignedActivity.id,
-        TEST_WORKSPACES.workspace1.unassignedActivity.id,
-        TEST_WORKSPACES.workspace2.assignedActivity.id,
-        TEST_WORKSPACES.workspace2.unassignedActivity.id,
-      ]
-    );
+    const workspaceIds = testWorkspaces.map((w) => w.id);
 
-  // Delete assignments
-  await client.from('ChallengeAssignment').delete().in('workspaceId', workspaceIds);
-
-  // Delete activities
-  await client.from('Activity').delete().in(
-    'challengeId',
-    [TEST_WORKSPACES.workspace1.challenge.id, TEST_WORKSPACES.workspace2.challenge.id]
-  );
-
-  // Delete challenges
-  await client.from('Challenge').delete().in('workspaceId', workspaceIds);
-
-  // Delete invites
-  await client.from('InviteCode').delete().in('workspaceId', workspaceIds);
-
-  // Delete workspace memberships
-  await client.from('WorkspaceMembership').delete().in('workspaceId', workspaceIds);
-
-  // Delete users and their Supabase auth accounts
-  for (const workspace of [TEST_WORKSPACES.workspace1, TEST_WORKSPACES.workspace2]) {
-    for (const user of Object.values(workspace.users)) {
-      await client.auth.admin.deleteUser(user.supabaseUserId);
-      await client.from('User').delete().eq('id', user.id);
+    if (workspaceIds.length === 0) {
+      return; // Nothing to clean up
     }
-  }
 
-  // Delete workspaces
-  await client.from('Workspace').delete().in('id', workspaceIds);
+    // Delete in reverse order of creation to avoid foreign key constraints
+
+    // Delete all test submissions
+    await prisma.activitySubmission.deleteMany({
+      where: {
+        Activity: {
+          Challenge: {
+            workspaceId: {
+              in: workspaceIds,
+            },
+          },
+        },
+      },
+    });
+
+    // Delete all test assignments
+    await prisma.challengeAssignment.deleteMany({
+      where: {
+        workspaceId: {
+          in: workspaceIds,
+        },
+      },
+    });
+
+    // Delete all test enrollments
+    await prisma.enrollment.deleteMany({
+      where: {
+        Challenge: {
+          workspaceId: {
+            in: workspaceIds,
+          },
+        },
+      },
+    });
+
+    // Delete all test activities
+    await prisma.activity.deleteMany({
+      where: {
+        Challenge: {
+          workspaceId: {
+            in: workspaceIds,
+          },
+        },
+      },
+    });
+
+    // Delete all test activity templates
+    await prisma.activityTemplate.deleteMany({
+      where: {
+        workspaceId: {
+          in: workspaceIds,
+        },
+      },
+    });
+
+    // Delete all test challenges
+    await prisma.challenge.deleteMany({
+      where: {
+        workspaceId: {
+          in: workspaceIds,
+        },
+      },
+    });
+
+    // Delete all test invite codes
+    await prisma.inviteCode.deleteMany({
+      where: {
+        workspaceId: {
+          in: workspaceIds,
+        },
+      },
+    });
+
+    // Get all users in test workspaces before deleting memberships
+    const testUsers = await prisma.user.findMany({
+      where: {
+        email: {
+          contains: '@test.com',
+        },
+      },
+      select: { id: true, supabaseUserId: true },
+    });
+
+    // Delete all test workspace memberships
+    await prisma.workspaceMembership.deleteMany({
+      where: {
+        workspaceId: {
+          in: workspaceIds,
+        },
+      },
+    });
+
+    // Delete Supabase auth users and User records
+    for (const user of testUsers) {
+      // Delete Supabase auth user if it exists
+      if (user.supabaseUserId) {
+        try {
+          await client.auth.admin.deleteUser(user.supabaseUserId);
+        } catch (error) {
+          // Ignore if user doesn't exist in Supabase
+        }
+      }
+
+      // Delete User record
+      try {
+        await prisma.user.delete({
+          where: { id: user.id },
+        });
+      } catch (error) {
+        // Ignore if user doesn't exist
+      }
+    }
+
+    // Delete all test workspaces
+    await prisma.workspace.deleteMany({
+      where: {
+        id: {
+          in: workspaceIds,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error during test data cleanup:', error);
+    // Don't throw - we want cleanup to be best-effort
+  }
 }

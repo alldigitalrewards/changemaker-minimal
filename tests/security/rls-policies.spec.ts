@@ -22,11 +22,18 @@ import {
   createAuthenticatedClient,
   clearAuthSession,
 } from '../utils/supabase-auth-test';
+import { v4 as uuidv4 } from 'uuid';
+
+// Configure tests to run serially (not in parallel) to avoid database conflicts
+test.describe.configure({ mode: 'serial' });
 
 test.describe('RLS Policy Tests', () => {
   test.beforeAll(async () => {
-    // Create test workspaces with Supabase service role client
+    // Clean up any stale data from previous failed runs first
     const serviceClient = createServiceRoleClient();
+    await cleanupTestData(serviceClient);
+
+    // Create test workspaces with Supabase service role client
     await createTestWorkspaces(serviceClient);
   });
 
@@ -240,10 +247,11 @@ test.describe('RLS Policy Tests', () => {
       );
 
       // Manager tries to create assignment - should fail
+      // Use participant as the manager to avoid unique constraint conflict with fixture assignment
       const { data: assignment, error: managerError } = await managerClient
         .from('ChallengeAssignment')
         .insert({
-          managerId: TEST_WORKSPACES.workspace1.users.manager.id,
+          managerId: TEST_WORKSPACES.workspace1.users.participant.id,
           challengeId: TEST_WORKSPACES.workspace1.challenge.id,
           workspaceId: TEST_WORKSPACES.workspace1.id,
         })
@@ -258,12 +266,13 @@ test.describe('RLS Policy Tests', () => {
       // Admin can create assignment
       const adminClient = await createAuthenticatedClient(TEST_WORKSPACES.workspace1.users.admin);
 
-      const { data: adminAssignment, error: adminError } = await adminClient
+      const { data: adminAssignment, error: adminError} = await adminClient
         .from('ChallengeAssignment')
         .insert({
-          managerId: TEST_WORKSPACES.workspace1.users.manager.id,
+          managerId: TEST_WORKSPACES.workspace1.users.participant.id,
           challengeId: TEST_WORKSPACES.workspace1.challenge.id,
           workspaceId: TEST_WORKSPACES.workspace1.id,
+          assignedBy: TEST_WORKSPACES.workspace1.users.admin.id,
         })
         .select()
         .single();
@@ -283,12 +292,14 @@ test.describe('RLS Policy Tests', () => {
       const serviceClient = createServiceRoleClient();
 
       // Create temporary assignment for deletion test
+      // Use participant as manager to avoid conflict with fixture assignment
       const { data: tempAssignment } = await serviceClient
         .from('ChallengeAssignment')
         .insert({
-          managerId: TEST_WORKSPACES.workspace1.users.manager.id,
+          managerId: TEST_WORKSPACES.workspace1.users.participant.id,
           challengeId: TEST_WORKSPACES.workspace1.challenge.id,
           workspaceId: TEST_WORKSPACES.workspace1.id,
+          assignedBy: TEST_WORKSPACES.workspace1.users.admin.id,
         })
         .select()
         .single();
@@ -302,12 +313,17 @@ test.describe('RLS Policy Tests', () => {
         TEST_WORKSPACES.workspace1.users.manager
       );
 
-      const { error: managerError } = await managerClient
+      // Manager tries to delete - RLS should prevent it
+      // When RLS blocks a delete, Supabase returns success but deletes 0 rows
+      const { data: managerDeleteResult, error: managerError } = await managerClient
         .from('ChallengeAssignment')
         .delete()
-        .eq('id', tempAssignment.id);
+        .eq('id', tempAssignment.id)
+        .select();
 
-      expect(managerError).not.toBeNull();
+      // RLS prevents delete by returning 0 rows, not an error
+      expect(managerError).toBeNull();
+      expect(managerDeleteResult).toEqual([]);
 
       await clearAuthSession(managerClient);
 
@@ -330,20 +346,111 @@ test.describe('RLS Policy Tests', () => {
   // =================================================================
   test.describe('ActivitySubmission Multi-Role Policy', () => {
     test('participant can create own submission', async () => {
+      const serviceClient = createServiceRoleClient();
+
+      // Debug: Check activity and challenge exist
+      const { data: activity } = await serviceClient
+        .from('Activity')
+        .select('*, Challenge(*)')
+        .eq('id', TEST_WORKSPACES.workspace1.assignedActivity.id)
+        .single();
+
+      console.log('Activity for submission:', activity);
+
+      // Debug: Check participant membership
+      const { data: membership } = await serviceClient
+        .from('WorkspaceMembership')
+        .select('*')
+        .eq('userId', TEST_WORKSPACES.workspace1.users.participant.id)
+        .single();
+
+      console.log('Participant membership:', membership);
+
       const client = await createAuthenticatedClient(
         TEST_WORKSPACES.workspace1.users.participant
       );
 
-      // Create submission
+      // Check what auth.uid() returns
+      const { data: session } = await client.auth.getSession();
+      console.log('Authenticated session user:', {
+        userId: session.session?.user?.id,
+        email: session.session?.user?.email,
+      });
+
+      // Test current_user_id() function directly
+      const { data: currentUserId, error: userIdError } = await client.rpc('current_user_id');
+      console.log('current_user_id() result:', { currentUserId, userIdError });
+
+      // Test user_can_access_workspace() for the challenge's workspace
+      const challengeWorkspaceId = TEST_WORKSPACES.workspace1.id;
+      const { data: canAccess, error: accessError } = await client.rpc(
+        'user_can_access_workspace',
+        { workspace_id: challengeWorkspaceId }
+      );
+      console.log('user_can_access_workspace() result:', { canAccess, accessError, workspaceId: challengeWorkspaceId });
+
+      // Test if we can SELECT the Activity that we're trying to submit for
+      const { data: activityCheck, error: activityError } = await client
+        .from('Activity')
+        .select('id, challengeId, Challenge(id, workspaceId)')
+        .eq('id', TEST_WORKSPACES.workspace1.assignedActivity.id)
+        .single();
+      console.log('Activity SELECT check:', { activityCheck, activityError });
+
+      // Check if enrollment exists
+      const { data: enrollmentCheck, error: enrollmentError} = await serviceClient
+        .from('Enrollment')
+        .select('*')
+        .eq('id', TEST_WORKSPACES.workspace1.enrollment.id)
+        .single();
+      console.log('Enrollment check:', { enrollmentCheck, enrollmentError });
+
+      // Test if we can SELECT the Challenge
+      const { data: challengeCheck, error: challengeError } = await client
+        .from('Challenge')
+        .select('id, workspaceId')
+        .eq('id', TEST_WORKSPACES.workspace1.challenge.id)
+        .single();
+      console.log('Challenge SELECT check:', { challengeCheck, challengeError });
+
+      // Test the exact condition from the INSERT policy
+      const { data: canInsert, error: canInsertError } = await client.rpc(
+        'debug_can_insert_submission',
+        {
+          p_user_id: TEST_WORKSPACES.workspace1.users.participant.id,
+          p_activity_id: TEST_WORKSPACES.workspace1.assignedActivity.id,
+        }
+      );
+      console.log('debug_can_insert_submission() result:', { canInsert, canInsertError });
+
+      // Test the new SECURITY DEFINER function
+      const { data: canInsertNew, error: canInsertNewError } = await client.rpc(
+        'check_can_insert_submission_for_activity',
+        {
+          p_user_id: TEST_WORKSPACES.workspace1.users.participant.id,
+          p_activity_id: TEST_WORKSPACES.workspace1.assignedActivity.id,
+        }
+      );
+      console.log('check_can_insert_submission_for_activity() result:', { canInsertNew, canInsertNewError });
+
+      // Create submission (generate ID since schema doesn't have default)
+      const submissionId = uuidv4();
+      const insertData = {
+        id: submissionId,
+        userId: TEST_WORKSPACES.workspace1.users.participant.id,
+        activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
+        enrollmentId: TEST_WORKSPACES.workspace1.enrollment.id,
+        status: 'PENDING',
+      };
+      console.log('About to INSERT submission with data:', insertData);
+
       const { data: submission, error } = await client
         .from('ActivitySubmission')
-        .insert({
-          userId: TEST_WORKSPACES.workspace1.users.participant.id,
-          activityId: TEST_WORKSPACES.workspace1.assignedActivity.id,
-          status: 'PENDING',
-        })
+        .insert(insertData)
         .select()
         .single();
+
+      console.log('Insert result:', { submission, error });
 
       expect(error).toBeNull();
       expect(submission).not.toBeNull();
