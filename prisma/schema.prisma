@@ -401,22 +401,24 @@ model WorkspaceEmailTemplate {
 }
 
 model WorkspaceMembership {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String    @db.Uuid
-  workspaceId String    @db.Uuid
-  role        Role
-  isPrimary   Boolean   @default(false)
-  joinedAt    DateTime  @default(now())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now())
-  preferences Json?
-  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @db.Uuid
+  workspaceId    String    @db.Uuid
+  supabaseUserId String?   @db.Uuid
+  role           Role
+  isPrimary      Boolean   @default(false)
+  joinedAt       DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now())
+  preferences    Json?
+  User           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
   @@index([userId])
   @@index([userId, isPrimary])
   @@index([workspaceId])
+  @@index([supabaseUserId])
 }
 
 model WorkspaceMembershipPreferences {
