@@ -9,8 +9,8 @@ import { getCurrentWorkspace } from '@/lib/workspace-context'
 import { requireAuth } from '@/lib/auth/api-auth'
 import { getUserWorkspaceRole } from '@/lib/workspace-context'
 import { ManagerReviewButton } from './manager-review-button'
+import { prisma } from '@/lib/prisma'
 
-type SubmissionStatus = 'PENDING' | 'MANAGER_APPROVED' | 'NEEDS_REVISION' | 'APPROVED' | 'REJECTED'
 type FilterKey = 'PENDING' | 'MANAGER_APPROVED' | 'NEEDS_REVISION' | 'ALL'
 
 const FILTERS: { key: FilterKey; label: string; description: string }[] = [
@@ -48,22 +48,50 @@ export default async function ManagerQueuePage({ params, searchParams }: PagePro
   const allowedFilters: FilterKey[] = ['PENDING', 'MANAGER_APPROVED', 'NEEDS_REVISION', 'ALL']
   const statusFilter: FilterKey = allowedFilters.includes(rawStatus as FilterKey) ? (rawStatus as FilterKey) : 'PENDING'
 
-  // Fetch submissions from manager queue API
-  const apiUrl = `/api/workspaces/${slug}/manager/queue${statusFilter !== 'ALL' ? `?status=${statusFilter}` : ''}`
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-
-  const response = await fetch(`${baseUrl}${apiUrl}`, {
-    headers: {
-      'Content-Type': 'application/json',
+  // Get all challenges assigned to this manager
+  const assignments = await prisma.challengeAssignment.findMany({
+    where: {
+      managerId: dbUser.id,
+      workspaceId: workspace.id,
     },
-    next: { revalidate: 0 },
+    select: { challengeId: true },
   })
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch manager queue')
+  const assignedChallengeIds = assignments.map((a) => a.challengeId)
+
+  // Build query with optional status filter
+  const whereClause: any = {
+    Activity: {
+      challengeId: { in: assignedChallengeIds },
+    },
   }
 
-  const { submissions } = await response.json()
+  if (statusFilter !== 'ALL') {
+    whereClause.status = statusFilter
+  }
+
+  // Get submissions for assigned challenges
+  const submissions = assignedChallengeIds.length > 0
+    ? await prisma.activitySubmission.findMany({
+        where: whereClause,
+        include: {
+          User: {
+            select: { id: true, email: true },
+          },
+          Activity: {
+            include: {
+              ActivityTemplate: {
+                select: { id: true, name: true, type: true },
+              },
+              Challenge: {
+                select: { id: true, title: true, workspaceId: true },
+              },
+            },
+          },
+        },
+        orderBy: { submittedAt: 'desc' },
+      })
+    : []
 
   // Calculate stats
   const statusCounts = {
