@@ -1887,8 +1887,8 @@ export async function getRecentWorkspaceActivities(
       (prisma as any).activityEvent.findMany({
         where: { workspaceId },
         include: {
-          User: { select: { id: true, email: true } },
-          actor: { select: { id: true, email: true } },
+          User_ActivityEvent_userIdToUser: { select: { id: true, email: true } },
+          User_ActivityEvent_actorUserIdToUser: { select: { id: true, email: true } },
           Challenge: { select: { id: true, title: true } }
         },
         orderBy: { createdAt: 'desc' },
