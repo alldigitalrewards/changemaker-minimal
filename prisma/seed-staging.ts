@@ -8,7 +8,7 @@ import {
   PrismaClient,
   EnrollmentStatus,
 } from "@prisma/client";
-import { ROLE_ADMIN, ROLE_PARTICIPANT } from "../lib/types";
+import { ROLE_ADMIN, ROLE_PARTICIPANT, ROLE_MANAGER } from "../lib/types";
 import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
 
@@ -68,6 +68,54 @@ const stagingAdmins = [
     email: "jhoughtelin@alldigitalrewards.com",
     name: "Josh Houghtelin",
     workspace: "alldigitalrewards",
+  },
+];
+
+// Manager users for testing
+const stagingManagers = [
+  {
+    email: "manager1@test.com",
+    name: "Sarah Manager",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "manager2@test.com",
+    name: "Mike Manager",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "manager.acme@test.com",
+    name: "ACME Manager",
+    workspace: "acme",
+  },
+];
+
+// Participant users for testing
+const stagingParticipants = [
+  {
+    email: "participant1@test.com",
+    name: "Alice Participant",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "participant2@test.com",
+    name: "Bob Participant",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "participant3@test.com",
+    name: "Carol Participant",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "participant.acme@test.com",
+    name: "ACME Participant",
+    workspace: "acme",
+  },
+  {
+    email: "participant.sharecare@test.com",
+    name: "Sharecare Participant",
+    workspace: "sharecare",
   },
 ];
 
@@ -188,7 +236,127 @@ async function seedStaging() {
       }
     }
 
-    // 3. Create sample challenges for alldigitalrewards workspace
+    // 3. Ensure manager users exist
+    console.log("\n👔 Ensuring manager users...");
+    for (const manager of stagingManagers) {
+      const workspace = await prisma.workspace.findUnique({
+        where: { slug: manager.workspace },
+      });
+
+      if (!workspace) {
+        console.error(`Workspace not found: ${manager.workspace}`);
+        continue;
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email: manager.email },
+      });
+
+      if (!existingUser) {
+        const supabaseUserId = await ensureSupabaseUser(manager.email, manager.name);
+
+        if (supabaseUserId) {
+          await prisma.user.create({
+            data: {
+              email: manager.email,
+              supabaseUserId,
+              role: ROLE_MANAGER,
+              WorkspaceMembership: {
+                create: {
+                  workspaceId: workspace.id,
+                  role: ROLE_MANAGER,
+                  isPrimary: true,
+                },
+              },
+            },
+          });
+          console.log(`✓ Created manager: ${manager.name} (${manager.email})`);
+        }
+      } else {
+        console.log(`✓ Manager exists: ${manager.name} (${manager.email})`);
+
+        const membership = await prisma.workspaceMembership.findFirst({
+          where: {
+            userId: existingUser.id,
+            workspaceId: workspace.id,
+          },
+        });
+
+        if (!membership) {
+          await prisma.workspaceMembership.create({
+            data: {
+              userId: existingUser.id,
+              workspaceId: workspace.id,
+              role: ROLE_MANAGER,
+              isPrimary: false,
+            },
+          });
+          console.log(`  → Added to workspace: ${workspace.name}`);
+        }
+      }
+    }
+
+    // 4. Ensure participant users exist
+    console.log("\n👥 Ensuring participant users...");
+    for (const participant of stagingParticipants) {
+      const workspace = await prisma.workspace.findUnique({
+        where: { slug: participant.workspace },
+      });
+
+      if (!workspace) {
+        console.error(`Workspace not found: ${participant.workspace}`);
+        continue;
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email: participant.email },
+      });
+
+      if (!existingUser) {
+        const supabaseUserId = await ensureSupabaseUser(participant.email, participant.name);
+
+        if (supabaseUserId) {
+          await prisma.user.create({
+            data: {
+              email: participant.email,
+              supabaseUserId,
+              role: ROLE_PARTICIPANT,
+              WorkspaceMembership: {
+                create: {
+                  workspaceId: workspace.id,
+                  role: ROLE_PARTICIPANT,
+                  isPrimary: true,
+                },
+              },
+            },
+          });
+          console.log(`✓ Created participant: ${participant.name} (${participant.email})`);
+        }
+      } else {
+        console.log(`✓ Participant exists: ${participant.name} (${participant.email})`);
+
+        const membership = await prisma.workspaceMembership.findFirst({
+          where: {
+            userId: existingUser.id,
+            workspaceId: workspace.id,
+          },
+        });
+
+        if (!membership) {
+          await prisma.workspaceMembership.create({
+            data: {
+              userId: existingUser.id,
+              workspaceId: workspace.id,
+              role: ROLE_PARTICIPANT,
+              isPrimary: false,
+            },
+          });
+          console.log(`  → Added to workspace: ${workspace.name}`);
+        }
+      }
+    }
+
+    // 5. Create sample challenges for alldigitalrewards workspace
     console.log("\n🎯 Ensuring sample challenges...");
     const adrWorkspace = await prisma.workspace.findUnique({
       where: { slug: "alldigitalrewards" },
