@@ -44,18 +44,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/workspaces', url.origin))
     }
 
-    // Fetch user's workspaces using tenant-aware logic
+    // Fetch user's workspaces using WorkspaceMembership
     const { getUserBySupabaseId } = await import('@/lib/db/queries')
-    const { getUserWorkspaces } = await import('@/lib/db/workspace-compatibility')
+    const { listMemberships } = await import('@/lib/db/workspace-membership')
 
     const dbUser = await getUserBySupabaseId(user.id)
     if (!dbUser) {
       return NextResponse.redirect(new URL('/workspaces', url.origin))
     }
 
+    // Get user's accessible workspaces via WorkspaceMembership
+    const memberships = await listMemberships(dbUser.id)
+    const workspaces = memberships
+      .map(m => m.Workspace)
+      .filter((w): w is NonNullable<typeof w> => w !== null && w !== undefined)
+
     // Try lastWorkspaceId first
     if (dbUser.lastWorkspaceId) {
-      const workspaces = await getUserWorkspaces(user.id)
       const lastWorkspace = workspaces.find(w => w.id === dbUser.lastWorkspaceId)
       if (lastWorkspace) {
         return NextResponse.redirect(new URL(`/w/${lastWorkspace.slug}/admin/dashboard`, url.origin))
@@ -63,7 +68,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Fall back to first accessible workspace
-    const workspaces = await getUserWorkspaces(user.id)
     if (workspaces.length > 0) {
       const firstWorkspace = workspaces[0]
       const route = dbUser.role === 'ADMIN' ? 'admin/dashboard' : 'participant/dashboard'

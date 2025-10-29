@@ -466,9 +466,14 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
       const body = await response.json();
 
       if (body.users && body.users.length > 0) {
-        body.users.forEach((user: any) => {
-          expect(user.workspaceId).toBe(TEST_WORKSPACES.workspace1.id);
-        });
+        // Verify users have WorkspaceMembership for workspace1 only
+        for (const user of body.users) {
+          const memberships = await prisma.workspaceMembership.findMany({
+            where: { userId: user.id }
+          });
+          expect(memberships.some(m => m.workspaceId === TEST_WORKSPACES.workspace1.id)).toBe(true);
+          expect(memberships.every(m => m.workspaceId === TEST_WORKSPACES.workspace1.id)).toBe(true);
+        }
       }
     });
   });

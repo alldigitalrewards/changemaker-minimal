@@ -1,8 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { type User } from '@prisma/client'
-import { getUserWorkspaceRole } from '@/lib/db/workspace-compatibility'
+import { type Role } from '@/lib/types'
 import type { CanonicalWorkspaceAccess, UserSummary } from '@/lib/auth/types'
+
+/**
+ * Get user's workspace role using WorkspaceMembership
+ */
+async function getUserWorkspaceRole(userId: string, workspaceId: string): Promise<Role | null> {
+  try {
+    const membership = await prisma.workspaceMembership.findUnique({
+      where: {
+        userId_workspaceId: { userId, workspaceId }
+      },
+      select: { role: true }
+    })
+    return membership?.role || null
+  } catch (error) {
+    console.error('Error getting user workspace role:', error)
+    return null
+  }
+}
 
 export async function getSession() {
   try {
@@ -84,12 +102,8 @@ export async function requireWorkspaceAccess(workspaceSlug: string) {
     throw new Error('Workspace not found')
   }
 
-  // Membership-aware access check using compatibility layer
-  // Uses Supabase user id stored on the Prisma User record
-  const supabaseUserId = user.supabaseUserId
-  const role = supabaseUserId
-    ? await getUserWorkspaceRole(supabaseUserId, workspaceSlug)
-    : null
+  // Check WorkspaceMembership for access
+  const role = await getUserWorkspaceRole(user.id, workspace.id)
 
   if (!role) {
     throw new Error('Workspace access denied')
@@ -110,10 +124,8 @@ export async function requireWorkspaceAccessCanonical(workspaceSlug: string): Pr
     email: user.email
   }
 
-  // Retrieve role for completeness
-  const role = user.supabaseUserId
-    ? await getUserWorkspaceRole(user.supabaseUserId, workspaceSlug)
-    : null
+  // Retrieve role from WorkspaceMembership
+  const role = await getUserWorkspaceRole(user.id, workspace.id)
 
   return { user: minimalUser, workspace, role: role ?? undefined }
 }

@@ -55,10 +55,10 @@ export async function PUT(
 
     // Verify user is admin of this workspace
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
-        { error: 'Access denied to workspace' },
-        { status: 403 }
+        { error: 'User not found' },
+        { status: 404 }
       );
     }
 
@@ -167,10 +167,10 @@ export async function DELETE(
 
     // Verify user is admin of this workspace
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
-        { error: 'Access denied to workspace' },
-        { status: 403 }
+        { error: 'User not found' },
+        { status: 404 }
       );
     }
 

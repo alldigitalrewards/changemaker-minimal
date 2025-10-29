@@ -305,7 +305,6 @@ model User {
   email                                         String                           @unique
   supabaseUserId                                String?                          @unique @db.Uuid
   role                                          Role
-  workspaceId                                   String?                          @db.Uuid
   createdAt                                     DateTime                         @default(now())
   updatedAt                                     DateTime                         @default(now())
   primaryWorkspaceId                            String?                          @db.Uuid
@@ -327,7 +326,6 @@ model User {
   PointsLedger_PointsLedger_actorUserIdToUser   PointsLedger[]                   @relation("PointsLedger_actorUserIdToUser")
   PointsLedger_PointsLedger_toUserIdToUser      PointsLedger[]                   @relation("PointsLedger_toUserIdToUser")
   RewardIssuance                                RewardIssuance[]
-  Workspace                                     Workspace?                       @relation(fields: [workspaceId], references: [id])
   WorkspaceEmailSettings                        WorkspaceEmailSettings[]
   WorkspaceEmailTemplate                        WorkspaceEmailTemplate[]
   WorkspaceMembership                           WorkspaceMembership[]
@@ -337,8 +335,6 @@ model User {
   WorkspaceCommunication                        WorkspaceCommunication[]         @relation("CommunicationSender")
 
   @@index([tenantId])
-  @@index([workspaceId])
-  @@index([workspaceId, role])
 }
 
 model Workspace {
@@ -359,7 +355,6 @@ model Workspace {
   PointsBalance                  PointsBalance[]
   PointsLedger                   PointsLedger[]
   RewardIssuance                 RewardIssuance[]
-  User                           User[]
   WorkspaceEmailSettings         WorkspaceEmailSettings?
   WorkspaceEmailTemplate         WorkspaceEmailTemplate[]
   WorkspaceMembership            WorkspaceMembership[]

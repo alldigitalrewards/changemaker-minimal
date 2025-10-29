@@ -15,16 +15,24 @@ async function grantAdminRole(email: string) {
         id: true,
         email: true,
         role: true,
-        workspaceId: true
+        WorkspaceMembership: {
+          select: {
+            workspaceId: true,
+            isPrimary: true
+          }
+        }
       }
     })
-    
+
     console.log('✅ Successfully granted ADMIN role to user:')
     console.log({
       id: user.id,
       email: user.email,
       role: user.role,
-      workspaceId: user.workspaceId
+      workspaces: user.WorkspaceMembership.map(m => ({
+        workspaceId: m.workspaceId,
+        isPrimary: m.isPrimary
+      }))
     })
   } catch (error) {
     if (error instanceof Error && error.message.includes('Record to update not found')) {

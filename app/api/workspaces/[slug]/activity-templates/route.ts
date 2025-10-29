@@ -26,7 +26,7 @@ export async function GET(
 ): Promise<NextResponse<ActivityTemplateListResponse | ApiError>> {
   try {
     const { slug } = await context.params;
-    
+
     // Verify authentication
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -35,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Get workspace with validation
+    // Find workspace with validation
     const workspace = await getWorkspaceBySlug(slug);
     if (!workspace) {
       return NextResponse.json(
@@ -44,11 +44,20 @@ export async function GET(
       );
     }
 
-    // Verify user belongs to workspace
+    // Verify user exists
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
-        { error: 'Access denied to workspace' },
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user is admin of this workspace
+    const isAdmin = await verifyWorkspaceAdmin(dbUser.id, workspace.id);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: 'Admin privileges required to view activity templates' },
         { status: 403 }
       );
     }

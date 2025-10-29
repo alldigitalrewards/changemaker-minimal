@@ -1,7 +1,6 @@
 import { cookies } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
 import { getWorkspaceBySlug, getManagerChallenges, getUserBySupabaseId } from "@/lib/db/queries"
-import { getUserWorkspaceRole as getCompatibleWorkspaceRole } from "@/lib/db/workspace-compatibility"
 import { getMembership } from "@/lib/db/workspace-membership"
 import { type Role } from "@/lib/types"
 import { type Challenge } from "@prisma/client"
@@ -26,8 +25,16 @@ export async function getUserWorkspaceRole(slug: string): Promise<Role | null> {
 
   if (!user) return null
 
-  // Use the new membership-aware compatibility function
-  return await getCompatibleWorkspaceRole(user.id, slug)
+  // Get DB user and workspace
+  const dbUser = await getUserBySupabaseId(user.id)
+  if (!dbUser) return null
+
+  const workspace = await getWorkspaceBySlug(slug)
+  if (!workspace) return null
+
+  // Check WorkspaceMembership
+  const membership = await getMembership(dbUser.id, workspace.id)
+  return membership?.role || null
 }
 
 /**

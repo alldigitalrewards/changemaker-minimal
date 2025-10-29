@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { syncSupabaseUser } from '@/lib/auth/sync-user'
-import { syncLegacyMembership } from '@/lib/db/workspace-compatibility'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
@@ -8,12 +7,12 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     // Use getUser for secure authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError) {
       console.error('Auth error during sync:', authError)
       return NextResponse.json({ error: 'Authentication error' }, { status: 401 })
     }
-    
+
     if (!user) {
       return NextResponse.json({ error: 'No authenticated user' }, { status: 401 })
     }
@@ -24,11 +23,9 @@ export async function POST(request: NextRequest) {
     }
 
     await syncSupabaseUser(user)
-    // Backfill legacy workspaceId into a membership if present (compat)
-    await syncLegacyMembership(user.id)
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       user: {
         id: user.id,
         email: user.email,

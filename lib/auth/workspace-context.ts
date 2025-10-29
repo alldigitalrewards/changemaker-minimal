@@ -1,11 +1,11 @@
 /**
  * Workspace Context Helpers
- * 
+ *
  * Server-side helpers for workspace authentication and context management.
- * Integrates with WorkspaceMembership system while maintaining backward compatibility.
+ * Uses WorkspaceMembership system for multi-tenant access control.
  */
 
-import { getUserWorkspaceRole, getUserWorkspaces } from '@/lib/db/workspace-compatibility'
+import { getMembership, listMemberships } from '@/lib/db/workspace-membership'
 import { getWorkspaceBySlug } from '@/lib/db/queries'
 import { type Workspace, type Role } from '@/lib/types'
 
@@ -20,7 +20,7 @@ export interface WorkspaceContext {
  * Get comprehensive workspace context for a user
  */
 export async function getWorkspaceContext(
-  slug: string, 
+  slug: string,
   userId: string
 ): Promise<WorkspaceContext> {
   try {
@@ -35,9 +35,10 @@ export async function getWorkspaceContext(
       }
     }
 
-    // Get user's role in this workspace
-    const userRole = await getUserWorkspaceRole(userId, slug)
-    const canAccess = userRole !== null
+    // Get user's membership in this workspace
+    const membership = await getMembership(userId, workspace.id)
+    const userRole = membership?.role || null
+    const canAccess = membership !== null
     const isAdmin = userRole === 'ADMIN'
 
     return {
@@ -62,7 +63,10 @@ export async function getWorkspaceContext(
  */
 export async function getUserAccessibleWorkspaces(userId: string): Promise<Workspace[]> {
   try {
-    return await getUserWorkspaces(userId)
+    const memberships = await listMemberships(userId)
+    return memberships
+      .map(m => m.Workspace)
+      .filter((w): w is Workspace => w !== null && w !== undefined)
   } catch (error) {
     console.error('Error getting user workspaces:', error)
     return []
@@ -73,12 +77,15 @@ export async function getUserAccessibleWorkspaces(userId: string): Promise<Works
  * Check if user has admin access to workspace
  */
 export async function hasWorkspaceAdminAccess(
-  userId: string, 
+  userId: string,
   slug: string
 ): Promise<boolean> {
   try {
-    const role = await getUserWorkspaceRole(userId, slug)
-    return role === 'ADMIN'
+    const workspace = await getWorkspaceBySlug(slug)
+    if (!workspace) return false
+
+    const membership = await getMembership(userId, workspace.id)
+    return membership?.role === 'ADMIN'
   } catch (error) {
     console.error('Error checking admin access:', error)
     return false
@@ -89,12 +96,15 @@ export async function hasWorkspaceAdminAccess(
  * Check if user has any access to workspace
  */
 export async function hasWorkspaceAccess(
-  userId: string, 
+  userId: string,
   slug: string
 ): Promise<boolean> {
   try {
-    const role = await getUserWorkspaceRole(userId, slug)
-    return role !== null
+    const workspace = await getWorkspaceBySlug(slug)
+    if (!workspace) return false
+
+    const membership = await getMembership(userId, workspace.id)
+    return membership !== null
   } catch (error) {
     console.error('Error checking workspace access:', error)
     return false
