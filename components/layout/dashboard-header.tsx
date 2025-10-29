@@ -196,23 +196,13 @@ export default function DashboardHeader({
                       </Link>
                     )}
 
-                    <button
-                      onClick={async () => {
-                        try {
-                          const response = await fetch('/auth/logout', { method: 'POST' });
-                          if (response.ok) {
-                            window.location.href = '/';
-                          }
-                        } catch (error) {
-                          console.error('Logout error:', error);
-                          window.location.href = '/';
-                        }
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                    <LogoutButton
+                      variant="ghost"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 justify-start"
                     >
-                      <LogOut className="h-4 w-4" />
-                      <span>Log out</span>
-                    </button>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Log out
+                    </LogoutButton>
                   </div>
                 </div>
               )}

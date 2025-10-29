@@ -2771,7 +2771,8 @@ export async function assignManagerToChallenge(data: {
     const existing = await prisma.challengeAssignment.findFirst({
       where: {
         challengeId: data.challengeId,
-        managerId: data.managerId
+        managerId: data.managerId,
+        workspaceId: data.workspaceId
       }
     })
 

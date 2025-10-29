@@ -305,8 +305,9 @@ test.describe('Phase 2 API Verification with RLS', () => {
         {
           headers: { 'Content-Type': 'application/json' },
           data: {
-            action: 'approve',
-            notes: 'Final approval',
+            status: 'APPROVED',
+            reviewNotes: 'Final approval',
+            pointsAwarded: 10,
           },
         }
       );
@@ -342,8 +343,8 @@ test.describe('Phase 2 API Verification with RLS', () => {
         {
           headers: { 'Content-Type': 'application/json' },
           data: {
-            action: 'reject',
-            notes: 'Does not meet requirements',
+            status: 'REJECTED',
+            reviewNotes: 'Does not meet requirements',
           },
         }
       );
@@ -379,8 +380,9 @@ test.describe('Phase 2 API Verification with RLS', () => {
         {
           headers: { 'Content-Type': 'application/json' },
           data: {
-            action: 'approve',
-            notes: 'Final approval for tracking test',
+            status: 'APPROVED',
+            reviewNotes: 'Final approval for tracking test',
+            pointsAwarded: 10,
           },
         }
       );

@@ -19,8 +19,16 @@ export const POST = withErrorHandling(async (
 
   try {
     // Get submission with challenge info for reward determination
-    const existingSubmission = await prisma.activitySubmission.findUnique({
-      where: { id },
+    // Include workspace filter to help RLS verify access
+    const existingSubmission = await prisma.activitySubmission.findFirst({
+      where: {
+        id,
+        Activity: {
+          Challenge: {
+            workspaceId: workspace.id
+          }
+        }
+      },
       include: {
         Activity: {
           include: {
