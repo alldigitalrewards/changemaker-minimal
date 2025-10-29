@@ -67,7 +67,7 @@ export const GET = withErrorHandling(
                 select: { id: true, name: true, type: true },
               },
               Challenge: {
-                select: { id: true, title: true },
+                select: { id: true, title: true, workspaceId: true },
               },
             },
           },

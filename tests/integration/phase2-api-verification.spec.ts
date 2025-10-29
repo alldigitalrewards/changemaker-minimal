@@ -388,22 +388,30 @@ test.describe('Phase 2 API Verification with RLS', () => {
       );
 
       expect(response.status()).toBe(200);
+      const body = await response.json();
+      expect(body.submission.status).toBe('APPROVED');
+      expect(body.submission.reviewNotes).toBe('Final approval for tracking test');
 
-      // Verify ActivityEvent was created using Prisma
+      // Verify ActivityEvent was created (event is logged without enrollmentId)
       const events = await prisma.activityEvent.findMany({
         where: {
-          submissionId: tempSubmission.id,
-          type: 'SUBMISSION_REVIEWED',
+          workspaceId: TEST_WORKSPACES.workspace1.id,
+          challengeId: TEST_WORKSPACES.workspace1.challenge.id,
+          type: 'SUBMISSION_APPROVED',
+          actorUserId: TEST_WORKSPACES.workspace1.users.admin.id,
         },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
       });
 
       expect(events.length).toBeGreaterThan(0);
+      expect(events[0].actorUserId).toBe(TEST_WORKSPACES.workspace1.users.admin.id);
 
-      const reviewEvent = events.find((e) => e.userId === TEST_WORKSPACES.workspace1.users.admin.id);
-      expect(reviewEvent).toBeDefined();
-
-      // Cleanup
-      await prisma.activityEvent.deleteMany({ where: { submissionId: tempSubmission.id } });
+      // Cleanup (delete only the events we created in this test)
+      const eventIds = events.map(e => e.id);
+      await prisma.activityEvent.deleteMany({
+        where: { id: { in: eventIds } },
+      });
       await prisma.activitySubmission.delete({ where: { id: tempSubmission.id } });
     });
   });
