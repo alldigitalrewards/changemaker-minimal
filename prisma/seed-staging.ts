@@ -71,6 +71,25 @@ const stagingAdmins = [
   },
 ];
 
+// Regular workspace admin users (non-platform admins)
+const stagingWorkspaceAdmins = [
+  {
+    email: "admin.adr@test.com",
+    name: "ADR Admin",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "admin.acme@test.com",
+    name: "ACME Admin",
+    workspace: "acme",
+  },
+  {
+    email: "admin.sharecare@test.com",
+    name: "Sharecare Admin",
+    workspace: "sharecare",
+  },
+];
+
 // Manager users for testing
 const stagingManagers = [
   {
@@ -236,7 +255,67 @@ async function seedStaging() {
       }
     }
 
-    // 3. Ensure manager users exist
+    // 3. Ensure workspace admin users exist (regular admins, not platform superadmins)
+    console.log("\n🔑 Ensuring workspace admin users...");
+    for (const admin of stagingWorkspaceAdmins) {
+      const workspace = await prisma.workspace.findUnique({
+        where: { slug: admin.workspace },
+      });
+
+      if (!workspace) {
+        console.error(`Workspace not found: ${admin.workspace}`);
+        continue;
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email: admin.email },
+      });
+
+      if (!existingUser) {
+        const supabaseUserId = await ensureSupabaseUser(admin.email, admin.name);
+
+        if (supabaseUserId) {
+          await prisma.user.create({
+            data: {
+              email: admin.email,
+              supabaseUserId,
+              role: ROLE_ADMIN,
+              WorkspaceMembership: {
+                create: {
+                  workspaceId: workspace.id,
+                  role: ROLE_ADMIN,
+                  isPrimary: true,
+                },
+              },
+            },
+          });
+          console.log(`✓ Created workspace admin: ${admin.name} (${admin.email})`);
+        }
+      } else {
+        console.log(`✓ Workspace admin exists: ${admin.name} (${admin.email})`);
+
+        const membership = await prisma.workspaceMembership.findFirst({
+          where: {
+            userId: existingUser.id,
+            workspaceId: workspace.id,
+          },
+        });
+
+        if (!membership) {
+          await prisma.workspaceMembership.create({
+            data: {
+              userId: existingUser.id,
+              workspaceId: workspace.id,
+              role: ROLE_ADMIN,
+              isPrimary: false,
+            },
+          });
+          console.log(`  → Added to workspace: ${workspace.name}`);
+        }
+      }
+    }
+
+    // 4. Ensure manager users exist
     console.log("\n👔 Ensuring manager users...");
     for (const manager of stagingManagers) {
       const workspace = await prisma.workspace.findUnique({
@@ -296,7 +375,7 @@ async function seedStaging() {
       }
     }
 
-    // 4. Ensure participant users exist
+    // 5. Ensure participant users exist
     console.log("\n👥 Ensuring participant users...");
     for (const participant of stagingParticipants) {
       const workspace = await prisma.workspace.findUnique({
@@ -356,7 +435,7 @@ async function seedStaging() {
       }
     }
 
-    // 5. Create sample challenges for alldigitalrewards workspace
+    // 6. Create sample challenges for alldigitalrewards workspace
     console.log("\n🎯 Ensuring sample challenges...");
     const adrWorkspace = await prisma.workspace.findUnique({
       where: { slug: "alldigitalrewards" },
