@@ -107,6 +107,11 @@ const stagingManagers = [
     name: "ACME Manager",
     workspace: "acme",
   },
+  {
+    email: "manager.sharecare@test.com",
+    name: "Sharecare Manager",
+    workspace: "sharecare",
+  },
 ];
 
 // Participant users for testing
@@ -437,76 +442,96 @@ async function seedStaging() {
 
     // 6. Create comprehensive sample challenges with activities, managers, and enrollments
     console.log("\n🎯 Ensuring sample challenges...");
-    const adrWorkspace = await prisma.workspace.findUnique({
-      where: { slug: "alldigitalrewards" },
-      include: {
-        Challenge: true,
-        User: {
-          where: {
-            WorkspaceMembership: {
-              some: { role: { in: [ROLE_MANAGER, ROLE_PARTICIPANT] } }
-            }
+
+    // Create challenges for all workspaces
+    for (const ws of stagingWorkspaces) {
+      await createWorkspaceChallenges(ws.slug);
+    }
+  } catch (error) {
+    console.error("Error during staging seed:", error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Function to create challenges for a workspace
+async function createWorkspaceChallenges(workspaceSlug: string) {
+  const workspace = await prisma.workspace.findUnique({
+    where: { slug: workspaceSlug },
+    include: {
+      Challenge: true,
+      User: {
+        where: {
+          WorkspaceMembership: {
+            some: { role: { in: [ROLE_MANAGER, ROLE_PARTICIPANT] } }
           }
         }
+      }
+    },
+  });
+
+  if (!workspace) {
+    console.log(`⚠️  Workspace '${workspaceSlug}' not found, skipping challenges`);
+    return;
+  }
+
+  // Check if our seed challenges already exist
+  const existingChallenges = await prisma.challenge.findMany({
+    where: {
+      workspaceId: workspace.id,
+      title: {
+        in: [
+          "Team Innovation Challenge",
+          "Wellness Week Challenge",
+          "Q1 Sales Competition",
+          "Customer Service Excellence"
+        ]
+      }
+    }
+  });
+
+  if (existingChallenges.length > 0) {
+    console.log(`✓ ${workspace.name}: Seed challenges already exist (found ${existingChallenges.length}/4)`);
+    return;
+  }
+
+  console.log(`\n📝 Creating challenges for ${workspace.name}...`);
+
+  // Get managers and participants
+  const managers = await prisma.user.findMany({
+    where: {
+      WorkspaceMembership: {
+        some: {
+          workspaceId: workspace.id,
+          role: ROLE_MANAGER,
+        },
       },
-    });
+    },
+  });
 
-    if (adrWorkspace) {
-      // Check if our seed challenges already exist
-      const existingChallenges = await prisma.challenge.findMany({
-        where: {
-          workspaceId: adrWorkspace.id,
-          title: {
-            in: [
-              "Team Innovation Challenge",
-              "Wellness Week Challenge",
-              "Q1 Sales Competition",
-              "Customer Service Excellence"
-            ]
-          }
-        }
-      });
-
-      if (existingChallenges.length > 0) {
-        console.log(`✓ Seed challenges already exist (found ${existingChallenges.length}/4)`);
-        console.log("  To recreate, delete these challenges first or use reset script");
-      } else {
-        console.log("Creating comprehensive challenge data...");
-
-      // Get managers and participants
-      const managers = await prisma.user.findMany({
-        where: {
-          WorkspaceMembership: {
-            some: {
-              workspaceId: adrWorkspace.id,
-              role: ROLE_MANAGER,
-            },
-          },
+  const participants = await prisma.user.findMany({
+    where: {
+      WorkspaceMembership: {
+        some: {
+          workspaceId: workspace.id,
+          role: ROLE_PARTICIPANT,
         },
-      });
+      },
+    },
+    take: 3, // Use first 3 participants
+  });
 
-      const participants = await prisma.user.findMany({
-        where: {
-          WorkspaceMembership: {
-            some: {
-              workspaceId: adrWorkspace.id,
-              role: ROLE_PARTICIPANT,
-            },
-          },
+  const adminUser = await prisma.user.findFirst({
+    where: {
+      WorkspaceMembership: {
+        some: {
+          workspaceId: workspace.id,
+          role: ROLE_ADMIN,
         },
-        take: 3, // Use first 3 participants
-      });
-
-      const adminUser = await prisma.user.findFirst({
-        where: {
-          WorkspaceMembership: {
-            some: {
-              workspaceId: adrWorkspace.id,
-              role: ROLE_ADMIN,
-            },
-          },
-        },
-      });
+      },
+    },
+  });
 
       // Challenge 1: Active challenge with manager, activities, and submissions
       const challenge1 = await prisma.challenge.create({
@@ -514,7 +539,7 @@ async function seedStaging() {
           id: crypto.randomUUID(),
           title: "Team Innovation Challenge",
           description: "Submit your innovative ideas to improve our workplace",
-          workspaceId: adrWorkspace.id,
+          workspaceId: workspace.id,
           startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Started 7 days ago
           endDate: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000), // Ends in 23 days
           status: "PUBLISHED",
@@ -531,7 +556,7 @@ async function seedStaging() {
             challengeId: challenge1.id,
             managerId: managers[0].id,
             assignedBy: adminUser.id,
-            workspaceId: adrWorkspace.id,
+            workspaceId: workspace.id,
           },
         });
         console.log(`  → Assigned manager: ${managers[0].email}`);
@@ -545,7 +570,7 @@ async function seedStaging() {
           description: "Submit your innovative idea",
           type: "TEXT_SUBMISSION",
           basePoints: 100,
-          workspaceId: adrWorkspace.id,
+          workspaceId: workspace.id,
           requiresApproval: true,
         },
       });
@@ -613,7 +638,7 @@ async function seedStaging() {
           id: crypto.randomUUID(),
           title: "Wellness Week Challenge",
           description: "Focus on health and wellness activities",
-          workspaceId: adrWorkspace.id,
+          workspaceId: workspace.id,
           startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Starts in 7 days
           endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // Ends in 14 days
           status: "PUBLISHED",
@@ -627,7 +652,7 @@ async function seedStaging() {
           id: crypto.randomUUID(),
           title: "Q1 Sales Competition",
           description: "Compete for the highest sales numbers",
-          workspaceId: adrWorkspace.id,
+          workspaceId: workspace.id,
           startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
           status: "DRAFT",
@@ -643,7 +668,7 @@ async function seedStaging() {
           description: "Submit your weekly sales numbers",
           type: "TEXT_SUBMISSION",
           basePoints: 50,
-          workspaceId: adrWorkspace.id,
+          workspaceId: workspace.id,
           requiresApproval: false,
         },
       });
@@ -668,7 +693,7 @@ async function seedStaging() {
               challengeId: challenge3.id,
               managerId: managers[i].id,
               assignedBy: adminUser.id,
-              workspaceId: adrWorkspace.id,
+              workspaceId: workspace.id,
             },
           });
           console.log(`  → Assigned manager: ${managers[i].email}`);
@@ -681,7 +706,7 @@ async function seedStaging() {
           id: crypto.randomUUID(),
           title: "Customer Service Excellence",
           description: "Completed challenge with awarded points",
-          workspaceId: adrWorkspace.id,
+          workspaceId: workspace.id,
           startDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
           endDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
           status: "PUBLISHED",
@@ -696,7 +721,7 @@ async function seedStaging() {
           description: "Share positive customer feedback",
           type: "LINK_SUBMISSION",
           basePoints: 75,
-          workspaceId: adrWorkspace.id,
+          workspaceId: workspace.id,
           requiresApproval: true,
         },
       });
@@ -744,21 +769,7 @@ async function seedStaging() {
         console.log(`  → Enrolled and completed by: ${participants[0].email}`);
       }
 
-      console.log("\n📊 Challenge Summary:");
-      console.log("  • Challenge 1: Active with manager, activities, and submissions");
-      console.log("  • Challenge 2: Basic setup (no managers/activities)");
-      console.log("  • Challenge 3: Draft with activities and multiple managers");
-      console.log("  • Challenge 4: Completed with awarded points");
-      }
-    }
-
-    console.log("\n✅ Staging seed completed successfully!");
-  } catch (error) {
-    console.error("Error during staging seed:", error);
-    throw error;
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log(`✓ ${workspace.name}: Created 4 challenges with activities, managers, and submissions`);
 }
 
 // Run the seed

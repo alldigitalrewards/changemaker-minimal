@@ -133,7 +133,17 @@ export const PUT = withErrorHandling(async (
     updateData.requireAdminReapproval = requireAdminReapproval
   }
 
-  const before = await prisma.challenge.findUnique({ where: { id } })
+  // Verify challenge exists and belongs to this workspace BEFORE updating
+  const before = await prisma.challenge.findFirst({
+    where: {
+      id,
+      workspaceId: workspace.id,
+    },
+  });
+
+  if (!before) {
+    return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
+  }
 
   // Only update challenge if there are fields to update
   let challenge = before;
@@ -144,14 +154,6 @@ export const PUT = withErrorHandling(async (
       },
       data: updateData,
     });
-  } else {
-    // If no update data, just fetch the challenge
-    challenge = await prisma.challenge.findUnique({ where: { id } });
-  }
-
-  // Verify challenge exists after update/fetch
-  if (!challenge) {
-    return NextResponse.json({ error: 'Challenge not found after update' }, { status: 404 });
   }
 
   // Log challenge updated with minimal diff
@@ -368,6 +370,18 @@ export const DELETE = withErrorHandling(async (
 ) => {
   const { slug, id } = await params;
   const { workspace, user } = await requireWorkspaceAdmin(slug);
+
+  // Verify challenge exists and belongs to this workspace BEFORE deleting
+  const challenge = await prisma.challenge.findFirst({
+    where: {
+      id,
+      workspaceId: workspace.id,
+    },
+  });
+
+  if (!challenge) {
+    return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
+  }
 
   // Delete related enrollments first
   await prisma.enrollment.deleteMany({

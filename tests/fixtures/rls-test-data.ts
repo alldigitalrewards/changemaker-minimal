@@ -560,12 +560,33 @@ export async function cleanupTestData(client: SupabaseClient): Promise<void> {
       },
     });
 
-    // Delete all test assignments
+    // Get all users in test workspaces FIRST (needed for FK cleanup)
+    const testUsers = await prisma.user.findMany({
+      where: {
+        email: {
+          contains: '@test.com',
+        },
+      },
+      select: { id: true, supabaseUserId: true },
+    });
+
+    const testUserIds = testUsers.map((u) => u.id);
+
+    // Delete all test assignments (must check both workspaceId AND assignedBy due to FK)
     await prisma.challengeAssignment.deleteMany({
       where: {
-        workspaceId: {
-          in: workspaceIds,
-        },
+        OR: [
+          {
+            workspaceId: {
+              in: workspaceIds,
+            },
+          },
+          {
+            assignedBy: {
+              in: testUserIds,
+            },
+          },
+        ],
       },
     });
 
@@ -609,23 +630,22 @@ export async function cleanupTestData(client: SupabaseClient): Promise<void> {
       },
     });
 
-    // Delete all test invite codes
+    // Delete all test invite codes (must happen before deleting users due to createdBy FK)
     await prisma.inviteCode.deleteMany({
       where: {
-        workspaceId: {
-          in: workspaceIds,
-        },
+        OR: [
+          {
+            workspaceId: {
+              in: workspaceIds,
+            },
+          },
+          {
+            createdBy: {
+              in: testUserIds,
+            },
+          },
+        ],
       },
-    });
-
-    // Get all users in test workspaces before deleting memberships
-    const testUsers = await prisma.user.findMany({
-      where: {
-        email: {
-          contains: '@test.com',
-        },
-      },
-      select: { id: true, supabaseUserId: true },
     });
 
     // Delete all test workspace memberships

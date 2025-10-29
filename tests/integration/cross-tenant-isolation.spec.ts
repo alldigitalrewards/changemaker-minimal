@@ -21,6 +21,9 @@ import { TEST_WORKSPACES, createTestWorkspaces, cleanupTestData, DEFAULT_PASSWOR
 import { randomUUID } from 'crypto';
 
 test.describe('Cross-Tenant Isolation Security Tests', () => {
+  // Force serial execution to prevent race conditions with shared test data
+  test.describe.configure({ mode: 'serial' });
+
   let supabaseClient: any;
 
   test.beforeAll(async () => {
@@ -47,7 +50,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
     test('participant cannot list challenges from other workspace', async ({ page }) => {
       await loginWithCredentials(
         page,
-        TEST_WORKSPACES.workspace1.users.participant1.email,
+        TEST_WORKSPACES.workspace1.users.participant.email,
         DEFAULT_PASSWORD
       );
 
@@ -91,7 +94,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
     test('participant cannot view other workspace user list', async ({ page }) => {
       await loginWithCredentials(
         page,
-        TEST_WORKSPACES.workspace1.users.participant1.email,
+        TEST_WORKSPACES.workspace1.users.participant.email,
         DEFAULT_PASSWORD
       );
 
@@ -130,7 +133,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
     test('participant cannot enroll in other workspace challenges', async ({ page }) => {
       await loginWithCredentials(
         page,
-        TEST_WORKSPACES.workspace1.users.participant1.email,
+        TEST_WORKSPACES.workspace1.users.participant.email,
         DEFAULT_PASSWORD
       );
 
@@ -241,7 +244,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
     test('cannot access challenge by ID from different workspace', async ({ page }) => {
       await loginWithCredentials(
         page,
-        TEST_WORKSPACES.workspace1.users.participant1.email,
+        TEST_WORKSPACES.workspace1.users.participant.email,
         DEFAULT_PASSWORD
       );
 
@@ -325,7 +328,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
           data: {
             id: randomUUID(),
             activityId: workspace2Activity.id,
-            userId: TEST_WORKSPACES.workspace2.users.participant3.id,
+            userId: TEST_WORKSPACES.workspace2.users.participant.id,
             status: 'PENDING',
             submittedAt: new Date()
           }
@@ -368,7 +371,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
       );
 
       const response = await page.request.get(
-        `/api/workspaces/${TEST_WORKSPACES.workspace1.slug}/users/${TEST_WORKSPACES.workspace2.users.participant3.id}`
+        `/api/workspaces/${TEST_WORKSPACES.workspace1.slug}/users/${TEST_WORKSPACES.workspace2.users.participant.id}`
       );
 
       expect(response.status()).toBeGreaterThanOrEqual(400);
@@ -379,7 +382,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
     test('challenge list only returns current workspace challenges', async ({ page }) => {
       await loginWithCredentials(
         page,
-        TEST_WORKSPACES.workspace1.users.participant1.email,
+        TEST_WORKSPACES.workspace1.users.participant.email,
         DEFAULT_PASSWORD
       );
 
@@ -479,7 +482,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
       );
 
       const response = await page.request.get(
-        `/api/workspaces/${TEST_WORKSPACES.workspace1.slug}/users/${TEST_WORKSPACES.workspace2.users.participant3.id}/points`
+        `/api/workspaces/${TEST_WORKSPACES.workspace1.slug}/users/${TEST_WORKSPACES.workspace2.users.participant.id}/points`
       );
 
       expect(response.status()).toBeGreaterThanOrEqual(400);
@@ -496,7 +499,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
         `/api/workspaces/${TEST_WORKSPACES.workspace1.slug}/points/award`,
         {
           data: {
-            userId: TEST_WORKSPACES.workspace2.users.participant3.id,
+            userId: TEST_WORKSPACES.workspace2.users.participant.id,
             points: 100,
             reason: 'Cross-workspace attempt'
           }
@@ -509,7 +512,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
     test('leaderboard only shows users from current workspace', async ({ page }) => {
       await loginWithCredentials(
         page,
-        TEST_WORKSPACES.workspace1.users.participant1.email,
+        TEST_WORKSPACES.workspace1.users.participant.email,
         DEFAULT_PASSWORD
       );
 
@@ -540,7 +543,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
       const endpoints = [
         { method: 'GET', path: `/api/workspaces/${TEST_WORKSPACES.workspace2.slug}/settings` },
         { method: 'POST', path: `/api/workspaces/${TEST_WORKSPACES.workspace2.slug}/users/invite` },
-        { method: 'DELETE', path: `/api/workspaces/${TEST_WORKSPACES.workspace2.slug}/users/${TEST_WORKSPACES.workspace2.users.participant3.id}` }
+        { method: 'DELETE', path: `/api/workspaces/${TEST_WORKSPACES.workspace2.slug}/users/${TEST_WORKSPACES.workspace2.users.participant.id}` }
       ];
 
       for (const endpoint of endpoints) {
@@ -581,7 +584,7 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
     test('participant cannot access any resources from other workspace', async ({ page }) => {
       await loginWithCredentials(
         page,
-        TEST_WORKSPACES.workspace1.users.participant1.email,
+        TEST_WORKSPACES.workspace1.users.participant.email,
         DEFAULT_PASSWORD
       );
 
