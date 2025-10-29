@@ -125,15 +125,16 @@ export async function POST(
       );
     }
 
-    // Verify user is admin of this workspace
+    // Verify user exists
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
-        { error: 'Access denied to workspace' },
-        { status: 403 }
+        { error: 'User not found' },
+        { status: 404 }
       );
     }
 
+    // Verify user is admin of this workspace
     const isAdmin = await verifyWorkspaceAdmin(dbUser.id, workspace.id);
     if (!isAdmin) {
       return NextResponse.json(

@@ -33,7 +33,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspacePointsBudget, type ChallengePointsBudget, type WorkspaceCommunication, CommunicationScope, CommunicationAudience } from '@prisma/client'
+import { type Workspace, type User, type Challenge, type Enrollment, type WorkspaceMembership, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspacePointsBudget, type ChallengePointsBudget, type WorkspaceCommunication, CommunicationScope, CommunicationAudience } from '@prisma/client'
 import { type Role, type ActivityType, type RewardType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { randomBytes } from 'crypto'
@@ -92,14 +92,16 @@ export type WorkspaceWithCounts = Workspace & {
 
 /**
  * @deprecated This local type has different includes than canonical WorkspaceWithDetails from './types'
- * This version includes User and Challenge arrays for admin details view
+ * This version includes WorkspaceMembership with nested User and Challenge arrays for admin details view
  * TODO: Consider creating separate canonical type for this use case
  */
 export type WorkspaceWithDetails = Workspace & {
-  User: (User & { Enrollment: { challengeId: string }[] })[]
+  WorkspaceMembership: (WorkspaceMembership & {
+    User: User & { Enrollment: { challengeId: string }[] }
+  })[]
   Challenge: Challenge[]
   _count: {
-    User: number
+    WorkspaceMembership: number
     Challenge: number
   }
 }
@@ -239,17 +241,21 @@ export async function getWorkspaceWithDetails(
     return await prisma.workspace.findUnique({
       where: { id: workspaceId },
       include: {
-        User: {
+        WorkspaceMembership: {
           include: {
-            Enrollment: {
-              select: { challengeId: true }
+            User: {
+              include: {
+                Enrollment: {
+                  select: { challengeId: true }
+                }
+              }
             }
           }
         },
         Challenge: true,
         _count: {
           select: {
-            User: true,
+            WorkspaceMembership: true,
             Challenge: true
           }
         }
@@ -305,15 +311,13 @@ export async function updateWorkspace(
 // =============================================================================
 
 /**
- * Get user with workspace context
+ * Get user by ID
+ * Role information comes from WorkspaceMembership
  */
-export async function getUserWithWorkspace(userId: UserId): Promise<UserWithWorkspace | null> {
+export async function getUser(userId: UserId): Promise<User | null> {
   try {
     return await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        Workspace: true
-      }
+      where: { id: userId }
     })
   } catch (error) {
     throw new DatabaseError(`Failed to fetch user: ${error}`)
@@ -321,15 +325,12 @@ export async function getUserWithWorkspace(userId: UserId): Promise<UserWithWork
 }
 
 /**
- * Get user by Supabase ID with workspace
+ * Get user by Supabase ID
  */
-export async function getUserBySupabaseId(supabaseUserId: string): Promise<UserWithWorkspace | null> {
+export async function getUserBySupabaseId(supabaseUserId: string): Promise<User | null> {
   try {
     return await prisma.user.findUnique({
-      where: { supabaseUserId },
-      include: {
-        Workspace: true
-      }
+      where: { supabaseUserId }
     })
   } catch (error) {
     throw new DatabaseError(`Failed to fetch user by Supabase ID: ${error}`)
@@ -353,66 +354,29 @@ export async function getWorkspaceUsers(workspaceId: WorkspaceId): Promise<User[
 }
 
 /**
- * Create or update user (for auth sync)
+ * Create or update user identity (for auth sync)
+ * Role assignment happens via WorkspaceMembership
  */
 export async function upsertUser(data: {
   supabaseUserId: string
   email: string
-  role?: Role
-  workspaceId?: WorkspaceId
 }): Promise<User> {
   try {
-    const user = await prisma.user.upsert({
+    return await prisma.user.upsert({
       where: { supabaseUserId: data.supabaseUserId },
       update: {
-        email: data.email,
-        ...(data.role && { role: data.role })
+        email: data.email
       },
       create: {
         supabaseUserId: data.supabaseUserId,
-        email: data.email,
-        role: data.role || 'PARTICIPANT'
+        email: data.email
       }
     })
-
-    if (data.workspaceId) {
-      await prisma.workspaceMembership.upsert({
-        where: { userId_workspaceId: { userId: user.id, workspaceId: data.workspaceId } },
-        update: {},
-        create: { userId: user.id, workspaceId: data.workspaceId, role: data.role || 'PARTICIPANT', isPrimary: false }
-      })
-    }
-
-    return user
   } catch (error) {
     throw new DatabaseError(`Failed to upsert user: ${error}`)
   }
 }
 
-/**
- * Update user role (admin only, workspace-scoped)
- */
-export async function updateUserRole(
-  userId: UserId,
-  role: Role,
-  adminWorkspaceId: WorkspaceId
-): Promise<User> {
-  const membership = await prisma.workspaceMembership.findUnique({
-    where: { userId_workspaceId: { userId, workspaceId: adminWorkspaceId } }
-  })
-  if (!membership) {
-    throw new WorkspaceAccessError(adminWorkspaceId)
-  }
-
-  try {
-    return await prisma.user.update({
-      where: { id: userId },
-      data: { role }
-    })
-  } catch (error) {
-    throw new DatabaseError(`Failed to update user role: ${error}`)
-  }
-}
 
 // =============================================================================
 // CHALLENGE QUERIES (WORKSPACE-SCOPED)

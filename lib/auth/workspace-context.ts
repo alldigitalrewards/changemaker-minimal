@@ -65,7 +65,7 @@ export async function getUserAccessibleWorkspaces(userId: string): Promise<Works
   try {
     const memberships = await listMemberships(userId)
     return memberships
-      .map(m => m.Workspace)
+      .map(m => m.workspace)
       .filter((w): w is Workspace => w !== null && w !== undefined)
   } catch (error) {
     console.error('Error getting user workspaces:', error)

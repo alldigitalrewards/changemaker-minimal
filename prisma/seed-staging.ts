@@ -223,11 +223,9 @@ async function seedStaging() {
             data: {
               email: admin.email,
               supabaseUserId,
-              role: ROLE_ADMIN,
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
-                  role: ROLE_ADMIN,
                   isPrimary: true,
                 },
               },
@@ -251,7 +249,6 @@ async function seedStaging() {
             data: {
               userId: existingUser.id,
               workspaceId: workspace.id,
-              role: ROLE_ADMIN,
               isPrimary: false,
             },
           });
@@ -284,11 +281,9 @@ async function seedStaging() {
             data: {
               email: admin.email,
               supabaseUserId,
-              role: ROLE_ADMIN,
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
-                  role: ROLE_ADMIN,
                   isPrimary: true,
                 },
               },
@@ -311,7 +306,6 @@ async function seedStaging() {
             data: {
               userId: existingUser.id,
               workspaceId: workspace.id,
-              role: ROLE_ADMIN,
               isPrimary: false,
             },
           });
@@ -344,11 +338,9 @@ async function seedStaging() {
             data: {
               email: manager.email,
               supabaseUserId,
-              role: ROLE_MANAGER,
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
-                  role: ROLE_MANAGER,
                   isPrimary: true,
                 },
               },
@@ -371,7 +363,6 @@ async function seedStaging() {
             data: {
               userId: existingUser.id,
               workspaceId: workspace.id,
-              role: ROLE_MANAGER,
               isPrimary: false,
             },
           });
@@ -404,11 +395,9 @@ async function seedStaging() {
             data: {
               email: participant.email,
               supabaseUserId,
-              role: ROLE_PARTICIPANT,
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
-                  role: ROLE_PARTICIPANT,
                   isPrimary: true,
                 },
               },
@@ -431,7 +420,6 @@ async function seedStaging() {
             data: {
               userId: existingUser.id,
               workspaceId: workspace.id,
-              role: ROLE_PARTICIPANT,
               isPrimary: false,
             },
           });
@@ -504,7 +492,6 @@ async function createWorkspaceChallenges(workspaceSlug: string) {
       WorkspaceMembership: {
         some: {
           workspaceId: workspace.id,
-          role: ROLE_MANAGER,
         },
       },
     },
@@ -515,7 +502,6 @@ async function createWorkspaceChallenges(workspaceSlug: string) {
       WorkspaceMembership: {
         some: {
           workspaceId: workspace.id,
-          role: ROLE_PARTICIPANT,
         },
       },
     },
@@ -527,7 +513,6 @@ async function createWorkspaceChallenges(workspaceSlug: string) {
       WorkspaceMembership: {
         some: {
           workspaceId: workspace.id,
-          role: ROLE_ADMIN,
         },
       },
     },

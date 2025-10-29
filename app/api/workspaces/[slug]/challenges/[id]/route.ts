@@ -207,7 +207,11 @@ export const PUT = withErrorHandling(async (
         const validInvitedParticipants = await prisma.user.findMany({
           where: {
             id: { in: invitedParticipantIds },
-            workspaceId: workspace.id,
+            WorkspaceMembership: {
+              some: {
+                workspaceId: workspace.id
+              }
+            }
           },
         });
 
@@ -240,7 +244,7 @@ export const PUT = withErrorHandling(async (
         const validEnrolledParticipants = await prisma.user.findMany({
           where: {
             id: { in: enrolledParticipantIds },
-            workspaceId: workspace.id,
+            WorkspaceMembership: { some: { workspaceId: workspace.id } },
           },
         });
 
@@ -273,7 +277,7 @@ export const PUT = withErrorHandling(async (
         const validParticipants = await prisma.user.findMany({
           where: {
             id: { in: participantIds },
-            workspaceId: workspace.id,
+            WorkspaceMembership: { some: { workspaceId: workspace.id } },
           },
         });
 

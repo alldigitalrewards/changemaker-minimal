@@ -114,7 +114,15 @@ export async function requireWorkspaceAccess(
     );
   }
 
-  return { workspace, user, role: role || user.dbUser.role };
+  // Role comes from WorkspaceMembership only (users don't have global roles)
+  if (!membership) {
+    throw NextResponse.json(
+      { error: "No membership found for workspace" },
+      { status: 403 },
+    );
+  }
+
+  return { workspace, user, role: membership.role };
 }
 
 /**

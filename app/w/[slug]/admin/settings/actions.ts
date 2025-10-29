@@ -54,11 +54,7 @@ export async function deleteWorkspace(formData: FormData) {
       where: { workspaceId }
     })
 
-    // Remove workspace association from users
-    await prisma.user.updateMany({
-      where: { workspaceId },
-      data: { workspaceId: null }
-    })
+    // WorkspaceMembership records will be deleted automatically via cascade when workspace is deleted
 
     // Delete the workspace
     await prisma.workspace.delete({

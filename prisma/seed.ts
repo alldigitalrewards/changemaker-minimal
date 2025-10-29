@@ -293,7 +293,6 @@ async function seed() {
           where: { email: admin.email },
           update: {
             supabaseUserId: supabaseUser.id,
-            role: ROLE_ADMIN,
             isPending: false, // Admins are not pending
             // Set legacy workspaceId to primary workspace for backward compatibility
             workspaceId: createdWorkspaces.find(
@@ -321,7 +320,6 @@ async function seed() {
           create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
-            role: ROLE_ADMIN,
             isPending: false, // Admins are not pending
             // Set legacy workspaceId to primary workspace for backward compatibility
             workspaceId: createdWorkspaces.find(
@@ -361,7 +359,6 @@ async function seed() {
                 },
               },
               update: {
-                role: ROLE_ADMIN,
                 isPrimary: membership.isPrimary,
                 preferences: membership.isPrimary
                   ? {
@@ -397,7 +394,6 @@ async function seed() {
               create: {
                 userId: user.id,
                 workspaceId: workspace.id,
-                role: ROLE_ADMIN,
                 isPrimary: membership.isPrimary,
                 preferences: membership.isPrimary
                   ? {
@@ -555,7 +551,6 @@ async function seed() {
             code: `${workspace.slug.toUpperCase()}-WELCOME-2025`,
             workspaceId: workspace.id,
             createdBy: adminUserId!,
-            role: ROLE_PARTICIPANT,
             maxUses: 100,
             usedCount: 0,
             expiresAt: thirtyDaysFromNow,
@@ -572,7 +567,6 @@ async function seed() {
             code: `${workspace.slug.toUpperCase()}-VIP-2025`,
             workspaceId: workspace.id,
             createdBy: adminUserId!,
-            role: ROLE_PARTICIPANT,
             maxUses: 1,
             usedCount: 0,
             expiresAt: thirtyDaysFromNow,
@@ -605,7 +599,6 @@ async function seed() {
           where: { email: manager.email },
           update: {
             supabaseUserId: supabaseUser.id,
-            role: ROLE_PARTICIPANT, // Keep User.role as PARTICIPANT (legacy field)
             isPending: false,
             workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default",
@@ -613,7 +606,6 @@ async function seed() {
           create: {
             email: manager.email,
             supabaseUserId: supabaseUser.id,
-            role: ROLE_PARTICIPANT, // Keep User.role as PARTICIPANT (legacy field)
             isPending: false,
             workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default",
@@ -673,7 +665,6 @@ async function seed() {
           where: { email: participant.email },
           update: {
             supabaseUserId: supabaseUser.id,
-            role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default", // Use workspace slug as tenantId
@@ -681,7 +672,6 @@ async function seed() {
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
-            role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
             workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default", // Use workspace slug as tenantId
@@ -698,13 +688,11 @@ async function seed() {
               },
             },
             update: {
-              role: ROLE_PARTICIPANT,
               isPrimary: true,
             },
             create: {
               userId: user.id,
               workspaceId: workspace.id,
-              role: ROLE_PARTICIPANT,
               isPrimary: true,
             },
           });

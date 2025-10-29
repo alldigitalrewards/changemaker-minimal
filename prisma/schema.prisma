@@ -304,13 +304,10 @@ model User {
   id                                            String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                                         String                           @unique
   supabaseUserId                                String?                          @unique @db.Uuid
-  role                                          Role
   createdAt                                     DateTime                         @default(now())
   updatedAt                                     DateTime                         @default(now())
-  primaryWorkspaceId                            String?                          @db.Uuid
   isPending                                     Boolean                          @default(false)
   emailChangePending                            Json?
-  lastWorkspaceId                               String?                          @db.Uuid
   permissions                                   String[]                         @default([])
   tenantId                                      String                           @default("default")
   ActivityEvent_ActivityEvent_actorUserIdToUser ActivityEvent[]                  @relation("ActivityEvent_actorUserIdToUser")

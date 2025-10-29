@@ -56,22 +56,23 @@ export async function GET(request: NextRequest) {
     // Get user's accessible workspaces via WorkspaceMembership
     const memberships = await listMemberships(dbUser.id)
     const workspaces = memberships
-      .map(m => m.Workspace)
+      .map(m => m.workspace)
       .filter((w): w is NonNullable<typeof w> => w !== null && w !== undefined)
 
-    // Try lastWorkspaceId first
-    if (dbUser.lastWorkspaceId) {
-      const lastWorkspace = workspaces.find(w => w.id === dbUser.lastWorkspaceId)
-      if (lastWorkspace) {
-        return NextResponse.redirect(new URL(`/w/${lastWorkspace.slug}/admin/dashboard`, url.origin))
-      }
+    // Try primary workspace first (isPrimary flag in membership)
+    const primaryMembership = memberships.find(m => m.isPrimary)
+    if (primaryMembership && primaryMembership.workspace) {
+      const route = primaryMembership.role === 'ADMIN' ? 'admin/dashboard' : 'participant/dashboard'
+      return NextResponse.redirect(new URL(`/w/${primaryMembership.workspace.slug}/${route}`, url.origin))
     }
 
     // Fall back to first accessible workspace
-    if (workspaces.length > 0) {
-      const firstWorkspace = workspaces[0]
-      const route = dbUser.role === 'ADMIN' ? 'admin/dashboard' : 'participant/dashboard'
-      return NextResponse.redirect(new URL(`/w/${firstWorkspace.slug}/${route}`, url.origin))
+    if (memberships.length > 0) {
+      const firstMembership = memberships[0]
+      if (firstMembership.workspace) {
+        const route = firstMembership.role === 'ADMIN' ? 'admin/dashboard' : 'participant/dashboard'
+        return NextResponse.redirect(new URL(`/w/${firstMembership.workspace.slug}/${route}`, url.origin))
+      }
     }
 
     // No workspaces: redirect to /workspaces with empty state

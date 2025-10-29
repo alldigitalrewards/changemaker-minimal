@@ -131,10 +131,22 @@ export type ChallengeWithDetails = Prisma.ChallengeGetPayload<typeof challengeWi
 
 /**
  * Workspace with membership and challenge counts
- * Includes: _count for WorkspaceMembership and Challenge relations
+ * Includes: WorkspaceMembership with nested User and Enrollment, Challenge, and _count
  */
 const workspaceWithDetailsArgs = Prisma.validator<Prisma.WorkspaceDefaultArgs>()({
   include: {
+    WorkspaceMembership: {
+      include: {
+        User: {
+          include: {
+            Enrollment: {
+              select: { challengeId: true }
+            }
+          }
+        }
+      }
+    },
+    Challenge: true,
     _count: {
       select: {
         WorkspaceMembership: true,

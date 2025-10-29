@@ -51,7 +51,7 @@ export async function GET(
 
     // Verify user belongs to workspace
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
         { error: 'Access denied to workspace' },
         { status: 403 }
@@ -182,7 +182,7 @@ export async function POST(
 
     // Verify user is admin of this workspace
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
         { error: 'Access denied to workspace' },
         { status: 403 }
@@ -353,7 +353,7 @@ async function getParticipants(
 
     // Verify user belongs to workspace
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
         { error: 'Access denied to workspace' },
         { status: 403 }

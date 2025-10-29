@@ -90,10 +90,8 @@ export async function POST(request: NextRequest) {
           dbUser = await prisma.user.create({
             data: {
               email,
-              supabaseUserId: authData.user.id,
-              role: 'PARTICIPANT', // Default role
-            },
-            include: { WorkspaceMembership: true }
+              supabaseUserId: authData.user.id
+            }
           });
 
           isNewUser = true;
