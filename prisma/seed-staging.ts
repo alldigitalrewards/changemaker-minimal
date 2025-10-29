@@ -435,39 +435,295 @@ async function seedStaging() {
       }
     }
 
-    // 6. Create sample challenges for alldigitalrewards workspace
+    // 6. Create comprehensive sample challenges with activities, managers, and enrollments
     console.log("\n🎯 Ensuring sample challenges...");
     const adrWorkspace = await prisma.workspace.findUnique({
       where: { slug: "alldigitalrewards" },
-      include: { Challenge: true },
+      include: {
+        Challenge: true,
+        User: {
+          where: {
+            WorkspaceMembership: {
+              some: { role: { in: [ROLE_MANAGER, ROLE_PARTICIPANT] } }
+            }
+          }
+        }
+      },
     });
 
     if (adrWorkspace && adrWorkspace.Challenge.length === 0) {
-      const challenges = [
-        {
-          id: crypto.randomUUID(),
-          title: "Welcome Challenge",
-          description: "Get started with the Changemaker platform",
-          workspaceId: adrWorkspace.id,
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-          status: "PUBLISHED" as const,
-        },
-        {
-          id: crypto.randomUUID(),
-          title: "Innovation Sprint",
-          description: "Share your innovative ideas",
-          workspaceId: adrWorkspace.id,
-          startDate: new Date(),
-          endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
-          status: "PUBLISHED" as const,
-        },
-      ];
+      console.log("Creating comprehensive challenge data...");
 
-      for (const challenge of challenges) {
-        await prisma.challenge.create({ data: challenge });
-        console.log(`✓ Created challenge: ${challenge.title}`);
+      // Get managers and participants
+      const managers = await prisma.user.findMany({
+        where: {
+          WorkspaceMembership: {
+            some: {
+              workspaceId: adrWorkspace.id,
+              role: ROLE_MANAGER,
+            },
+          },
+        },
+      });
+
+      const participants = await prisma.user.findMany({
+        where: {
+          WorkspaceMembership: {
+            some: {
+              workspaceId: adrWorkspace.id,
+              role: ROLE_PARTICIPANT,
+            },
+          },
+        },
+        take: 3, // Use first 3 participants
+      });
+
+      const adminUser = await prisma.user.findFirst({
+        where: {
+          WorkspaceMembership: {
+            some: {
+              workspaceId: adrWorkspace.id,
+              role: ROLE_ADMIN,
+            },
+          },
+        },
+      });
+
+      // Challenge 1: Active challenge with manager, activities, and submissions
+      const challenge1 = await prisma.challenge.create({
+        data: {
+          id: crypto.randomUUID(),
+          title: "Team Innovation Challenge",
+          description: "Submit your innovative ideas to improve our workplace",
+          workspaceId: adrWorkspace.id,
+          startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Started 7 days ago
+          endDate: new Date(Date.now() + 23 * 24 * 60 * 60 * 1000), // Ends in 23 days
+          status: "PUBLISHED",
+          enrollmentDeadline: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000), // Enrollment closes in 16 days
+        },
+      });
+      console.log(`✓ Created challenge: ${challenge1.title}`);
+
+      // Assign managers to challenge 1
+      if (managers.length > 0 && adminUser) {
+        await prisma.challengeAssignment.create({
+          data: {
+            id: crypto.randomUUID(),
+            challengeId: challenge1.id,
+            managerId: managers[0].id,
+            assignedBy: adminUser.id,
+            workspaceId: adrWorkspace.id,
+          },
+        });
+        console.log(`  → Assigned manager: ${managers[0].email}`);
       }
+
+      // Create activity templates for challenge 1
+      const activityTemplate1 = await prisma.activityTemplate.create({
+        data: {
+          id: crypto.randomUUID(),
+          name: "Idea Submission",
+          description: "Submit your innovative idea",
+          type: "TEXT_SUBMISSION",
+          pointValue: 100,
+          requiresApproval: true,
+        },
+      });
+
+      const activity1 = await prisma.activity.create({
+        data: {
+          id: crypto.randomUUID(),
+          challengeId: challenge1.id,
+          activityTemplateId: activityTemplate1.id,
+          order: 1,
+          isRequired: true,
+        },
+      });
+      console.log(`  → Created activity: ${activityTemplate1.name}`);
+
+      // Enroll participants and create submissions for challenge 1
+      for (let i = 0; i < participants.length; i++) {
+        const enrollment = await prisma.enrollment.create({
+          data: {
+            id: crypto.randomUUID(),
+            userId: participants[i].id,
+            challengeId: challenge1.id,
+            status: EnrollmentStatus.ACTIVE,
+            enrolledAt: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000),
+          },
+        });
+
+        // Create submissions with different statuses
+        if (i === 0) {
+          // First participant: MANAGER_APPROVED submission
+          await prisma.activitySubmission.create({
+            data: {
+              id: crypto.randomUUID(),
+              activityId: activity1.id,
+              userId: participants[i].id,
+              enrollmentId: enrollment.id,
+              textContent: "My innovative idea for improving team collaboration through digital tools",
+              status: "MANAGER_APPROVED",
+              submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+            },
+          });
+        } else if (i === 1) {
+          // Second participant: PENDING submission
+          await prisma.activitySubmission.create({
+            data: {
+              id: crypto.randomUUID(),
+              activityId: activity1.id,
+              userId: participants[i].id,
+              enrollmentId: enrollment.id,
+              textContent: "A new approach to remote work flexibility",
+              status: "PENDING",
+              submittedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+            },
+          });
+        }
+        // Third participant: No submission yet
+
+        console.log(`  → Enrolled participant: ${participants[i].email}`);
+      }
+
+      // Challenge 2: Challenge without managers or activities (basic setup)
+      const challenge2 = await prisma.challenge.create({
+        data: {
+          id: crypto.randomUUID(),
+          title: "Wellness Week Challenge",
+          description: "Focus on health and wellness activities",
+          workspaceId: adrWorkspace.id,
+          startDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Starts in 7 days
+          endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // Ends in 14 days
+          status: "PUBLISHED",
+        },
+      });
+      console.log(`✓ Created challenge: ${challenge2.title} (no managers or activities)`);
+
+      // Challenge 3: Draft challenge with activities but no enrollments
+      const challenge3 = await prisma.challenge.create({
+        data: {
+          id: crypto.randomUUID(),
+          title: "Q1 Sales Competition",
+          description: "Compete for the highest sales numbers",
+          workspaceId: adrWorkspace.id,
+          startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+          status: "DRAFT",
+        },
+      });
+      console.log(`✓ Created challenge: ${challenge3.title} (draft with activities)`);
+
+      // Create activity templates for challenge 3
+      const activityTemplate2 = await prisma.activityTemplate.create({
+        data: {
+          id: crypto.randomUUID(),
+          name: "Weekly Sales Report",
+          description: "Submit your weekly sales numbers",
+          type: "TEXT_SUBMISSION",
+          pointValue: 50,
+          requiresApproval: false,
+        },
+      });
+
+      await prisma.activity.create({
+        data: {
+          id: crypto.randomUUID(),
+          challengeId: challenge3.id,
+          activityTemplateId: activityTemplate2.id,
+          order: 1,
+          isRequired: true,
+        },
+      });
+
+      // Assign both managers to challenge 3
+      if (managers.length >= 2 && adminUser) {
+        for (let i = 0; i < Math.min(2, managers.length); i++) {
+          await prisma.challengeAssignment.create({
+            data: {
+              id: crypto.randomUUID(),
+              challengeId: challenge3.id,
+              managerId: managers[i].id,
+              assignedBy: adminUser.id,
+              workspaceId: adrWorkspace.id,
+            },
+          });
+          console.log(`  → Assigned manager: ${managers[i].email}`);
+        }
+      }
+
+      // Challenge 4: Completed challenge with points awarded
+      const challenge4 = await prisma.challenge.create({
+        data: {
+          id: crypto.randomUUID(),
+          title: "Customer Service Excellence",
+          description: "Completed challenge with awarded points",
+          workspaceId: adrWorkspace.id,
+          startDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
+          endDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+          status: "PUBLISHED",
+        },
+      });
+      console.log(`✓ Created challenge: ${challenge4.title} (completed with points)`);
+
+      const activityTemplate3 = await prisma.activityTemplate.create({
+        data: {
+          id: crypto.randomUUID(),
+          name: "Customer Feedback",
+          description: "Share positive customer feedback",
+          type: "LINK_SUBMISSION",
+          pointValue: 75,
+          requiresApproval: true,
+        },
+      });
+
+      const activity4 = await prisma.activity.create({
+        data: {
+          id: crypto.randomUUID(),
+          challengeId: challenge4.id,
+          activityTemplateId: activityTemplate3.id,
+          order: 1,
+          isRequired: true,
+        },
+      });
+
+      // Enroll and complete activities for challenge 4
+      if (participants.length > 0) {
+        const enrollment4 = await prisma.enrollment.create({
+          data: {
+            id: crypto.randomUUID(),
+            userId: participants[0].id,
+            challengeId: challenge4.id,
+            status: EnrollmentStatus.COMPLETED,
+            enrolledAt: new Date(Date.now() - 44 * 24 * 60 * 60 * 1000),
+            completedAt: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000),
+            totalPoints: 75,
+          },
+        });
+
+        // Approved submission
+        await prisma.activitySubmission.create({
+          data: {
+            id: crypto.randomUUID(),
+            activityId: activity4.id,
+            userId: participants[0].id,
+            enrollmentId: enrollment4.id,
+            linkUrl: "https://example.com/feedback",
+            status: "APPROVED",
+            submittedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+            reviewedAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
+            pointsAwarded: 75,
+          },
+        });
+
+        console.log(`  → Enrolled and completed by: ${participants[0].email}`);
+      }
+
+      console.log("\n📊 Challenge Summary:");
+      console.log("  • Challenge 1: Active with manager, activities, and submissions");
+      console.log("  • Challenge 2: Basic setup (no managers/activities)");
+      console.log("  • Challenge 3: Draft with activities and multiple managers");
+      console.log("  • Challenge 4: Completed with awarded points");
     } else {
       console.log(`✓ AllDigitalRewards workspace has ${adrWorkspace?.Challenge.length || 0} challenges`);
     }
