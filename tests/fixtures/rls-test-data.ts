@@ -25,6 +25,7 @@ export interface TestWorkspace {
     otherParticipant: TestUser;
   };
   challenge: TestChallenge;
+  unassignedChallenge: TestChallenge; // Separate challenge with no manager assignments
   activityTemplate: TestActivityTemplate;
   assignedActivity: TestActivity;
   unassignedActivity: TestActivity;
@@ -134,6 +135,11 @@ export const TEST_WORKSPACES: {
       title: 'Test Challenge 1',
       workspaceId: '',
     },
+    unassignedChallenge: {
+      id: uuidv4(),
+      title: 'Unassigned Challenge 1',
+      workspaceId: '',
+    },
     activityTemplate: {
       id: uuidv4(),
       name: 'Text Submission Template 1',
@@ -209,6 +215,11 @@ export const TEST_WORKSPACES: {
       title: 'Test Challenge 2',
       workspaceId: '',
     },
+    unassignedChallenge: {
+      id: uuidv4(),
+      title: 'Unassigned Challenge 2',
+      workspaceId: '',
+    },
     activityTemplate: {
       id: uuidv4(),
       name: 'Text Submission Template 2',
@@ -253,10 +264,11 @@ export const TEST_WORKSPACES: {
 
 // Link references
 TEST_WORKSPACES.workspace1.challenge.workspaceId = TEST_WORKSPACES.workspace1.id;
+TEST_WORKSPACES.workspace1.unassignedChallenge.workspaceId = TEST_WORKSPACES.workspace1.id;
 TEST_WORKSPACES.workspace1.activityTemplate.workspaceId = TEST_WORKSPACES.workspace1.id;
 TEST_WORKSPACES.workspace1.assignedActivity.challengeId = TEST_WORKSPACES.workspace1.challenge.id;
 TEST_WORKSPACES.workspace1.assignedActivity.templateId = TEST_WORKSPACES.workspace1.activityTemplate.id;
-TEST_WORKSPACES.workspace1.unassignedActivity.challengeId = TEST_WORKSPACES.workspace1.challenge.id;
+TEST_WORKSPACES.workspace1.unassignedActivity.challengeId = TEST_WORKSPACES.workspace1.unassignedChallenge.id; // Different challenge, no manager assignments
 TEST_WORKSPACES.workspace1.unassignedActivity.templateId = TEST_WORKSPACES.workspace1.activityTemplate.id;
 TEST_WORKSPACES.workspace1.enrollment.userId = TEST_WORKSPACES.workspace1.users.participant.id;
 TEST_WORKSPACES.workspace1.enrollment.challengeId = TEST_WORKSPACES.workspace1.challenge.id;
@@ -267,10 +279,11 @@ TEST_WORKSPACES.workspace1.expiredInvite.workspaceId = TEST_WORKSPACES.workspace
 TEST_WORKSPACES.workspace1.expiredInvite.createdBy = TEST_WORKSPACES.workspace1.users.admin.id;
 
 TEST_WORKSPACES.workspace2.challenge.workspaceId = TEST_WORKSPACES.workspace2.id;
+TEST_WORKSPACES.workspace2.unassignedChallenge.workspaceId = TEST_WORKSPACES.workspace2.id;
 TEST_WORKSPACES.workspace2.activityTemplate.workspaceId = TEST_WORKSPACES.workspace2.id;
 TEST_WORKSPACES.workspace2.assignedActivity.challengeId = TEST_WORKSPACES.workspace2.challenge.id;
 TEST_WORKSPACES.workspace2.assignedActivity.templateId = TEST_WORKSPACES.workspace2.activityTemplate.id;
-TEST_WORKSPACES.workspace2.unassignedActivity.challengeId = TEST_WORKSPACES.workspace2.challenge.id;
+TEST_WORKSPACES.workspace2.unassignedActivity.challengeId = TEST_WORKSPACES.workspace2.unassignedChallenge.id; // Different challenge, no manager assignments
 TEST_WORKSPACES.workspace2.unassignedActivity.templateId = TEST_WORKSPACES.workspace2.activityTemplate.id;
 TEST_WORKSPACES.workspace2.enrollment.userId = TEST_WORKSPACES.workspace2.users.participant.id;
 TEST_WORKSPACES.workspace2.enrollment.challengeId = TEST_WORKSPACES.workspace2.challenge.id;
@@ -415,20 +428,30 @@ export async function createTestWorkspaces(client: SupabaseClient): Promise<void
       });
     }
 
-    // Create challenge using Prisma
+    // Create challenges using Prisma
     const now = new Date();
     const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + 30); // 30 days from now
 
-    await prisma.challenge.create({
-      data: {
-        id: workspace.challenge.id,
-        title: workspace.challenge.title,
-        description: 'Test challenge description',
-        workspaceId: workspace.id,
-        startDate: now,
-        endDate: endDate,
-      },
+    await prisma.challenge.createMany({
+      data: [
+        {
+          id: workspace.challenge.id,
+          title: workspace.challenge.title,
+          description: 'Test challenge description',
+          workspaceId: workspace.id,
+          startDate: now,
+          endDate: endDate,
+        },
+        {
+          id: workspace.unassignedChallenge.id,
+          title: workspace.unassignedChallenge.title,
+          description: 'Test challenge with no manager assignments',
+          workspaceId: workspace.id,
+          startDate: now,
+          endDate: endDate,
+        },
+      ],
     });
 
     // Create activity template using Prisma (required before activities)
@@ -454,7 +477,7 @@ export async function createTestWorkspaces(client: SupabaseClient): Promise<void
         {
           id: workspace.unassignedActivity.id,
           templateId: workspace.activityTemplate.id,
-          challengeId: workspace.challenge.id,
+          challengeId: workspace.unassignedChallenge.id, // Different challenge with no assignments
           pointsValue: 10,
         },
       ],
