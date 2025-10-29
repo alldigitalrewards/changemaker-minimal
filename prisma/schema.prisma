@@ -175,6 +175,9 @@ model Enrollment {
   userId             String               @db.Uuid
   challengeId        String               @db.Uuid
   status             EnrollmentStatus     @default(INVITED)
+  enrolledAt         DateTime             @default(now())
+  completedAt        DateTime?
+  totalPoints        Int                  @default(0)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @default(now())
   ActivityEvent      ActivityEvent[]

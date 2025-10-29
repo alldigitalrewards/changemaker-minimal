@@ -451,8 +451,27 @@ async function seedStaging() {
       },
     });
 
-    if (adrWorkspace && adrWorkspace.Challenge.length === 0) {
-      console.log("Creating comprehensive challenge data...");
+    if (adrWorkspace) {
+      // Check if our seed challenges already exist
+      const existingChallenges = await prisma.challenge.findMany({
+        where: {
+          workspaceId: adrWorkspace.id,
+          title: {
+            in: [
+              "Team Innovation Challenge",
+              "Wellness Week Challenge",
+              "Q1 Sales Competition",
+              "Customer Service Excellence"
+            ]
+          }
+        }
+      });
+
+      if (existingChallenges.length > 0) {
+        console.log(`✓ Seed challenges already exist (found ${existingChallenges.length}/4)`);
+        console.log("  To recreate, delete these challenges first or use reset script");
+      } else {
+        console.log("Creating comprehensive challenge data...");
 
       // Get managers and participants
       const managers = await prisma.user.findMany({
@@ -525,7 +544,8 @@ async function seedStaging() {
           name: "Idea Submission",
           description: "Submit your innovative idea",
           type: "TEXT_SUBMISSION",
-          pointValue: 100,
+          basePoints: 100,
+          workspaceId: adrWorkspace.id,
           requiresApproval: true,
         },
       });
@@ -534,8 +554,9 @@ async function seedStaging() {
         data: {
           id: crypto.randomUUID(),
           challengeId: challenge1.id,
-          activityTemplateId: activityTemplate1.id,
-          order: 1,
+          templateId: activityTemplate1.id,
+          pointsValue: 100,
+          position: 1,
           isRequired: true,
         },
       });
@@ -621,7 +642,8 @@ async function seedStaging() {
           name: "Weekly Sales Report",
           description: "Submit your weekly sales numbers",
           type: "TEXT_SUBMISSION",
-          pointValue: 50,
+          basePoints: 50,
+          workspaceId: adrWorkspace.id,
           requiresApproval: false,
         },
       });
@@ -630,8 +652,9 @@ async function seedStaging() {
         data: {
           id: crypto.randomUUID(),
           challengeId: challenge3.id,
-          activityTemplateId: activityTemplate2.id,
-          order: 1,
+          templateId: activityTemplate2.id,
+          pointsValue: 50,
+          position: 1,
           isRequired: true,
         },
       });
@@ -672,7 +695,8 @@ async function seedStaging() {
           name: "Customer Feedback",
           description: "Share positive customer feedback",
           type: "LINK_SUBMISSION",
-          pointValue: 75,
+          basePoints: 75,
+          workspaceId: adrWorkspace.id,
           requiresApproval: true,
         },
       });
@@ -681,8 +705,9 @@ async function seedStaging() {
         data: {
           id: crypto.randomUUID(),
           challengeId: challenge4.id,
-          activityTemplateId: activityTemplate3.id,
-          order: 1,
+          templateId: activityTemplate3.id,
+          pointsValue: 75,
+          position: 1,
           isRequired: true,
         },
       });
@@ -724,8 +749,7 @@ async function seedStaging() {
       console.log("  • Challenge 2: Basic setup (no managers/activities)");
       console.log("  • Challenge 3: Draft with activities and multiple managers");
       console.log("  • Challenge 4: Completed with awarded points");
-    } else {
-      console.log(`✓ AllDigitalRewards workspace has ${adrWorkspace?.Challenge.length || 0} challenges`);
+      }
     }
 
     console.log("\n✅ Staging seed completed successfully!");
