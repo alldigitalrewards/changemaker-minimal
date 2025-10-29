@@ -312,22 +312,23 @@
   - Depends on: Task 30.2 ✅
   - **CRITICAL**: Manager can only access assigned challenge data
 
-- [ ] **Task 30.4**: RLS Testing & Verification ⏱️ 3h 🔄 In Progress
-  - Status: Requires Supabase client + auth contexts (Prisma insufficient)
+- [x] **Task 30.4**: RLS Testing & Verification ⏱️ 3h ✅ 2025-10-28
+  - Status: Complete
   - Session: `.claude/sessions/session-20251027-task-30.4-rls-testing.md`
   - Files: `tests/security/rls-policies.spec.ts` (800+ lines, 22 test cases)
-  - Progress: Test suite created, all schema corrections complete (8 fixes)
-  - Blocker: RLS policies require Supabase auth context, not Prisma client
-  - Subtasks:
-    1. Create Supabase test client helper with auth contexts
-    2. Generate test JWT tokens for admin/manager/participant roles
-    3. Refactor beforeAll fixture setup to create Supabase users
-    4. Update all test cases to use Supabase client with auth.setSession()
-    5. Run full RLS test suite and verify all 22 tests pass
-    6. Update session file with final results
-  - Risk: Tests don't catch all edge cases
+  - Deliverable: 22/22 RLS security tests passing (100% success rate)
+  - Test Results:
+    - Workspace Isolation (3/3 tests passing)
+    - Manager Assignment-Based Access (5/5 tests passing)
+    - Role-Based Access Control (5/5 tests passing)
+    - ActivitySubmission Multi-Role Policy (3/3 tests passing)
+    - Service Role Bypass (1/1 test passing)
+    - Edge Cases (3/3 tests passing)
+    - Performance Verification (2/2 tests passing)
+  - Execution Time: 12.9 seconds
+  - Risk: Tests don't catch all edge cases (mitigated via comprehensive test coverage)
   - Depends on: Tasks 30.2 ✅, 30.3 ✅
-  - **CRITICAL**: Verify policies don't break existing functionality
+  - **CRITICAL**: Verified policies don't break existing functionality
 
 - [x] **Task 30.5**: RLS Performance Optimization ⏱️ 2h ✅ 2025-10-27
   - Status: Complete
@@ -339,11 +340,20 @@
   - **CRITICAL**: Ensure <2 second page loads with RLS enabled (targets documented: <100ms per query)
 
 - [ ] **Task 30.6**: Pre-Merge Verification & Integration Testing ⏱️ 2h
-  - Status: Pending
-  - Session: `.claude/sessions/session-20251027-task-30.6-pre-merge.md` (to be created)
+  - Status: In Progress ✅ 2025-10-28
+  - Session: `.claude/sessions/session-20251028-task-30.6-pre-merge.md`
+  - Files: `tests/integration/phase2-api-verification.spec.ts` (513 lines, 16 test cases)
   - Deliverable: Complete verification checklist and merge readiness
   - Subtasks:
-    1. Verify all Phase 2 API routes work with RLS enabled
+    1. ✅ Verify all Phase 2 API routes work with RLS enabled (16/16 tests passing)
+       - Manager Assignment CRUD (6 tests): Create, list, remove, self-assignment prevention, cross-workspace blocking
+       - Manager Queue & Review (4 tests): Queue filtering, submission approval, unassigned blocking, cross-workspace prevention
+       - Admin Override (3 tests): MANAGER_APPROVED approval, rejection, event tracking
+       - Workspace Isolation (3 tests): Queue isolation, assignment management, endpoint access control
+       - Execution Time: 2.9 minutes
+       - Test Fixes Applied:
+         * Fixed ActivityEvent query to use correct fixture reference (`.challenge.id` not `.assignedChallenge.id`)
+         * Added `workspaceId` to manager queue Challenge response for isolation verification
     2. Run full test suite (unit + integration + RLS security tests)
     3. Test manager workflow end-to-end with RLS active
     4. Verify performance: manager queue loads <2s with RLS
@@ -351,7 +361,7 @@
     6. Review all session files for completeness
     7. Update PROGRESS.md with final checklist results
     8. Create merge PR with comprehensive description
-  - Risk: RLS breaks existing functionality not covered by tests
+  - Risk: RLS breaks existing functionality not covered by tests (partially mitigated via 38 passing tests)
   - Depends on: Task 30.4 ✅
   - **CRITICAL**: Zero breaking changes before merge to staging
 
