@@ -8,14 +8,16 @@ interface ParticipantDetailCardProps {
   participant: {
     id: string
     email: string
-    role: Role
     createdAt: Date
     Enrollment: any[]
+    WorkspaceMembership?: { role: Role }[]
   }
   slug?: string
 }
 
 export function ParticipantDetailCard({ participant, slug }: ParticipantDetailCardProps) {
+  const role = participant.WorkspaceMembership?.[0]?.role
+
   const getRoleBadgeProps = (role: Role) => {
     if (role === "ADMIN") {
       return {
@@ -24,12 +26,12 @@ export function ParticipantDetailCard({ participant, slug }: ParticipantDetailCa
       }
     }
     return {
-      className: "bg-gray-100 text-gray-800 border-gray-200", 
+      className: "bg-gray-100 text-gray-800 border-gray-200",
       icon: UserCheck
     }
   }
 
-  const { className: badgeClassName, icon: RoleIcon } = getRoleBadgeProps(participant.role)
+  const { className: badgeClassName, icon: RoleIcon } = role ? getRoleBadgeProps(role) : { className: "bg-gray-100 text-gray-800 border-gray-200", icon: UserCheck }
 
   return (
     <Card>
@@ -44,20 +46,22 @@ export function ParticipantDetailCard({ participant, slug }: ParticipantDetailCa
           <div className="flex items-center gap-3">
             <Mail className="h-5 w-5 text-gray-500" />
             <div className="flex-1">
-              {slug ? (
-                <InlineProfile slug={slug} participantId={participant.id} email={participant.email} role={participant.role} />
+              {slug && role ? (
+                <InlineProfile slug={slug} participantId={participant.id} email={participant.email} role={role} />
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{participant.email}</p>
                     <p className="text-sm text-gray-500">Email Address</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={badgeClassName}>
-                      <RoleIcon className="h-3 w-3 mr-1" />
-                      {participant.role}
-                    </Badge>
-                  </div>
+                  {role && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={badgeClassName}>
+                        <RoleIcon className="h-3 w-3 mr-1" />
+                        {role}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

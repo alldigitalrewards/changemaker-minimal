@@ -41,7 +41,6 @@ interface ParticipantSelectorProps {
 interface SelectedParticipant {
   id: UserId;
   email: string;
-  role: string;
   autoEnroll: boolean;
 }
 
@@ -101,7 +100,6 @@ export function ParticipantSelector({
         initialSelected.push({
           id: participant.id,
           email: participant.email,
-          role: participant.role,
           autoEnroll: false
         });
       }
@@ -114,7 +112,6 @@ export function ParticipantSelector({
         initialSelected.push({
           id: participant.id,
           email: participant.email,
-          role: participant.role,
           autoEnroll: true
         });
       }
@@ -172,7 +169,6 @@ export function ParticipantSelector({
       setSelectedParticipants(prev => [...prev, {
         id: participant.id,
         email: participant.email,
-        role: participant.role,
         autoEnroll: autoEnrollAll
       }]);
       setSelectValue('');
@@ -321,10 +317,7 @@ export function ParticipantSelector({
               <SelectContent>
                 {getAvailableParticipants().map((participant) => (
                   <SelectItem key={participant.id} value={participant.id}>
-                    <div className="flex items-center space-x-2">
-                      <span>{participant.email}</span>
-                      <span className="text-xs text-gray-500">({participant.role})</span>
-                    </div>
+                    {participant.email}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -366,7 +359,6 @@ export function ParticipantSelector({
                   <div className="flex items-center gap-2">
                     <input type="checkbox" className="h-4 w-4" checked={invitedSelected.has(p.id)} onChange={() => toggleInvitedSelection(p.id)} disabled={disabled} />
                     <span className="text-sm">{p.email}</span>
-                    <span className="text-xs text-gray-500">({p.role})</span>
                   </div>
                   <Button variant="ghost" size="sm" type="button" onClick={() => handleToggleAutoEnroll(p.id)} disabled={disabled}>
                     <ArrowRightLeft className="h-3 w-3 mr-1" /> Enroll
@@ -410,7 +402,6 @@ export function ParticipantSelector({
                   <div className="flex items-center gap-2">
                     <input type="checkbox" className="h-4 w-4" checked={enrolledSelected.has(p.id)} onChange={() => toggleEnrolledSelection(p.id)} disabled={disabled} />
                     <span className="text-sm">{p.email}</span>
-                    <span className="text-xs text-gray-500">({p.role})</span>
                   </div>
                   <Button variant="ghost" size="sm" type="button" onClick={() => handleToggleAutoEnroll(p.id)} disabled={disabled}>
                     <ArrowRightLeft className="h-3 w-3 mr-1" /> Invite
