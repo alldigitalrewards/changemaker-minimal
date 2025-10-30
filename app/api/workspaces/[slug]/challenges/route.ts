@@ -9,14 +9,15 @@ import {
   validateChallengeData,
   ApiError
 } from '@/lib/types';
-import { 
+import {
   getWorkspaceBySlug,
-  getWorkspaceChallenges, 
+  getWorkspaceChallenges,
   createChallenge,
   createChallengeEnrollments,
   getWorkspaceUsers,
   getUserBySupabaseId,
   verifyWorkspaceAdmin,
+  verifyWorkspaceAccess,
   DatabaseError,
   ResourceNotFoundError,
   WorkspaceAccessError
@@ -49,9 +50,18 @@ export async function GET(
       );
     }
 
-    // Verify user belongs to workspace
+    // Verify user exists
     const dbUser = await getUserBySupabaseId(user.id);
     if (!dbUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user has workspace membership (CRITICAL SECURITY CHECK)
+    const hasAccess = await verifyWorkspaceAccess(dbUser.id, workspace.id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: 'Access denied to workspace' },
         { status: 403 }
