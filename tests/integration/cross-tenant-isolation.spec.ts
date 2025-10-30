@@ -40,6 +40,8 @@ test.describe('Cross-Tenant Isolation Security Tests', () => {
 
     await cleanupTestData(supabaseClient);
     await createTestWorkspaces(supabaseClient);
+    // Wait for Supabase auth to propagate new users
+    await new Promise(resolve => setTimeout(resolve, 2000));
   });
 
   test.afterAll(async () => {
