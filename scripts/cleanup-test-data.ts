@@ -79,13 +79,13 @@ async function main() {
   })
   console.log(`Deleted ${challenges.count} challenges`)
 
-  // 6. Delete users
-  const users = await prisma.user.deleteMany({
+  // 6. Delete workspace memberships
+  const memberships = await prisma.workspaceMembership.deleteMany({
     where: {
       workspaceId: { in: workspaceIds },
     },
   })
-  console.log(`Deleted ${users.count} users`)
+  console.log(`Deleted ${memberships.count} workspace memberships`)
 
   // 7. Delete workspaces
   const workspaces = await prisma.workspace.deleteMany({
