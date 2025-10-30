@@ -9,14 +9,15 @@ import {
   validateChallengeData,
   ApiError
 } from '@/lib/types';
-import { 
+import {
   getWorkspaceBySlug,
-  getWorkspaceChallenges, 
+  getWorkspaceChallenges,
   createChallenge,
   createChallengeEnrollments,
   getWorkspaceUsers,
   getUserBySupabaseId,
   verifyWorkspaceAdmin,
+  verifyWorkspaceAccess,
   DatabaseError,
   ResourceNotFoundError,
   WorkspaceAccessError
@@ -49,9 +50,18 @@ export async function GET(
       );
     }
 
-    // Verify user belongs to workspace
+    // Verify user exists
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user has workspace membership (CRITICAL SECURITY CHECK)
+    const hasAccess = await verifyWorkspaceAccess(dbUser.id, workspace.id);
+    if (!hasAccess) {
       return NextResponse.json(
         { error: 'Access denied to workspace' },
         { status: 403 }
@@ -124,7 +134,7 @@ export async function POST(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, emailEditAllowed, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId, activities } = body;
+    const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, emailEditAllowed, requireManagerApproval, requireAdminReapproval, participantIds, invitedParticipantIds, enrolledParticipantIds, sourceChallengeId, activities } = body;
 
     // Validate required fields
     if (!title || typeof title !== 'string' || title.trim().length === 0 ||
@@ -182,7 +192,7 @@ export async function POST(
 
     // Verify user is admin of this workspace
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
         { error: 'Access denied to workspace' },
         { status: 403 }
@@ -210,7 +220,9 @@ export async function POST(
         enrollmentDeadline: enrollmentDeadline ? new Date(enrollmentDeadline) : undefined,
         rewardType: normalizedRewardType,
         rewardConfig,
-        emailEditAllowed
+        emailEditAllowed,
+        requireManagerApproval,
+        requireAdminReapproval
       },
       workspace.id
     );
@@ -351,7 +363,7 @@ async function getParticipants(
 
     // Verify user belongs to workspace
     const dbUser = await getUserBySupabaseId(user.id);
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json(
         { error: 'Access denied to workspace' },
         { status: 403 }
@@ -360,12 +372,11 @@ async function getParticipants(
 
     // Get all workspace users (participants)
     const users = await getWorkspaceUsers(workspace.id);
-    
+
     // Transform to participant format
     const participants = users.map(user => ({
       id: user.id,
-      email: user.email,
-      role: user.role
+      email: user.email
     }));
 
     return NextResponse.json({ participants });

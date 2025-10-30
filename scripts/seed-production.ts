@@ -87,15 +87,10 @@ async function seedProduction() {
 
       if (!user) {
         // Create user if doesn't exist
-        const primaryWorkspaceId = workspaces.find(
-          (w) => w.slug === config.primaryWorkspace,
-        )?.id;
         user = await prisma.user.create({
           data: {
             email: config.email,
             supabaseUserId: authUser.id,
-            role: "ADMIN",
-            workspaceId: primaryWorkspaceId,
           },
         });
         console.log(`  ✓ Created user: ${config.email}`);

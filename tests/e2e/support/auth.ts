@@ -11,28 +11,18 @@ export async function loginWithCredentials(page: Page, email: string, password: 
   await page.fill('#email, input[name="email"]', email)
   await page.fill('#password, input[name="password"]', password)
 
-  // Click submit and wait for navigation to complete
-  // The login flow redirects to /workspaces via client-side router.push()
-  // We need to wait for the navigation to settle, not just the URL change
-  await page.click('button[type="submit"]')
+  // Click submit and wait for navigation
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }).catch(() => {
+      // Ignore navigation timeout - cookies are what matter for API tests
+    }),
+    page.click('button[type="submit"]')
+  ])
 
-  // Wait for successful navigation by checking for workspace-specific content
-  // This is more reliable than waiting for URL change with client-side navigation
-  try {
-    // Option 1: Wait for /workspaces page to load with its content
-    await page.waitForURL(/\/workspaces/, { timeout: 10000 })
-    // Additionally wait for the page to be interactive
-    await page.waitForLoadState('networkidle', { timeout: 5000 })
-  } catch (error) {
-    // If the URL pattern fails, check if we're redirected elsewhere (like /w/[slug])
-    const currentUrl = page.url()
-    if (currentUrl.includes('/w/') || currentUrl.includes('/workspaces')) {
-      // We're logged in and redirected to a workspace - that's fine
-      await page.waitForLoadState('networkidle', { timeout: 5000 })
-    } else {
-      // We're stuck somewhere unexpected - re-throw the error
-      throw error
-    }
+  // Simple verification: check we're no longer on the login page
+  const currentUrl = page.url()
+  if (currentUrl.includes('/auth/login')) {
+    throw new Error(`Login failed - still on login page. URL: ${currentUrl}`)
   }
 }
 

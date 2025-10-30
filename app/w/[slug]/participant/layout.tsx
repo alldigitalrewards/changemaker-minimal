@@ -9,6 +9,10 @@ import { WorkspaceProvider } from "@/providers/workspace-provider"
 import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
 import { ReactNode } from "react"
 
+// Force dynamic rendering - this layout requires database access at request time
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs' // Explicitly use Node.js runtime for Prisma
+
 interface ParticipantLayoutProps {
   children: ReactNode
   params: Promise<{ slug: string }>

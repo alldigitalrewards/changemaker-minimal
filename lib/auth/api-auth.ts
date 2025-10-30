@@ -6,7 +6,7 @@ import {
   verifyWorkspaceAdmin,
 } from "@/lib/db/queries";
 import { syncSupabaseUser } from "@/lib/auth/sync-user";
-import { getUserWorkspaceRole } from "@/lib/db/workspace-compatibility";
+import { getMembership } from "@/lib/db/workspace-membership";
 import type { AuthenticatedUser, WorkspaceContext } from "@/lib/auth/types";
 import type { User } from "@prisma/client";
 
@@ -102,9 +102,9 @@ export async function requireWorkspaceAccess(
     throw NextResponse.json({ error: "Workspace not found" }, { status: 404 });
   }
 
-  // Membership-aware access check with legacy fallback
-  const role = await getUserWorkspaceRole(user.supabaseUser.id, slug);
-  const hasMembership = !!role;
+  // Check WorkspaceMembership for access
+  const membership = await getMembership(user.dbUser.id, workspace.id);
+  const hasMembership = !!membership;
 
   // Tenant-aware access control
   if (!canAccessWorkspace(user.dbUser, workspace as any, hasMembership)) {
@@ -114,7 +114,15 @@ export async function requireWorkspaceAccess(
     );
   }
 
-  return { workspace, user, role: role || user.dbUser.role };
+  // Role comes from WorkspaceMembership only (users don't have global roles)
+  if (!membership) {
+    throw NextResponse.json(
+      { error: "No membership found for workspace" },
+      { status: 403 },
+    );
+  }
+
+  return { workspace, user, role: membership.role };
 }
 
 /**

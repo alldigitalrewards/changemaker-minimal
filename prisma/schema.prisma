@@ -115,6 +115,8 @@ model Challenge {
   updatedAt              DateTime                 @default(now())
   status                 ChallengeStatus          @default(DRAFT)
   emailEditAllowed       Boolean                  @default(true)
+  requireManagerApproval Boolean                  @default(false)
+  requireAdminReapproval Boolean                  @default(true)
   rewardConfig           Json?
   rewardType             RewardType?
   Activity               Activity[]
@@ -173,6 +175,9 @@ model Enrollment {
   userId             String               @db.Uuid
   challengeId        String               @db.Uuid
   status             EnrollmentStatus     @default(INVITED)
+  enrolledAt         DateTime             @default(now())
+  completedAt        DateTime?
+  totalPoints        Int                  @default(0)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @default(now())
   ActivityEvent      ActivityEvent[]
@@ -299,14 +304,10 @@ model User {
   id                                            String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                                         String                           @unique
   supabaseUserId                                String?                          @unique @db.Uuid
-  role                                          Role
-  workspaceId                                   String?                          @db.Uuid
   createdAt                                     DateTime                         @default(now())
   updatedAt                                     DateTime                         @default(now())
-  primaryWorkspaceId                            String?                          @db.Uuid
   isPending                                     Boolean                          @default(false)
   emailChangePending                            Json?
-  lastWorkspaceId                               String?                          @db.Uuid
   permissions                                   String[]                         @default([])
   tenantId                                      String                           @default("default")
   ActivityEvent_ActivityEvent_actorUserIdToUser ActivityEvent[]                  @relation("ActivityEvent_actorUserIdToUser")
@@ -322,7 +323,6 @@ model User {
   PointsLedger_PointsLedger_actorUserIdToUser   PointsLedger[]                   @relation("PointsLedger_actorUserIdToUser")
   PointsLedger_PointsLedger_toUserIdToUser      PointsLedger[]                   @relation("PointsLedger_toUserIdToUser")
   RewardIssuance                                RewardIssuance[]
-  Workspace                                     Workspace?                       @relation(fields: [workspaceId], references: [id])
   WorkspaceEmailSettings                        WorkspaceEmailSettings[]
   WorkspaceEmailTemplate                        WorkspaceEmailTemplate[]
   WorkspaceMembership                           WorkspaceMembership[]
@@ -332,8 +332,6 @@ model User {
   WorkspaceCommunication                        WorkspaceCommunication[]         @relation("CommunicationSender")
 
   @@index([tenantId])
-  @@index([workspaceId])
-  @@index([workspaceId, role])
 }
 
 model Workspace {
@@ -354,7 +352,6 @@ model Workspace {
   PointsBalance                  PointsBalance[]
   PointsLedger                   PointsLedger[]
   RewardIssuance                 RewardIssuance[]
-  User                           User[]
   WorkspaceEmailSettings         WorkspaceEmailSettings?
   WorkspaceEmailTemplate         WorkspaceEmailTemplate[]
   WorkspaceMembership            WorkspaceMembership[]
@@ -399,22 +396,24 @@ model WorkspaceEmailTemplate {
 }
 
 model WorkspaceMembership {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String    @db.Uuid
-  workspaceId String    @db.Uuid
-  role        Role
-  isPrimary   Boolean   @default(false)
-  joinedAt    DateTime  @default(now())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now())
-  preferences Json?
-  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String    @db.Uuid
+  workspaceId    String    @db.Uuid
+  supabaseUserId String?   @db.Uuid
+  role           Role
+  isPrimary      Boolean   @default(false)
+  joinedAt       DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now())
+  preferences    Json?
+  User           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
   @@index([userId])
   @@index([userId, isPrimary])
   @@index([workspaceId])
+  @@index([supabaseUserId])
 }
 
 model WorkspaceMembershipPreferences {

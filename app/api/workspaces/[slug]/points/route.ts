@@ -24,7 +24,7 @@ export async function GET(
     if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
 
     const dbUser = await getUserBySupabaseId(user.id)
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 })
     }
 
@@ -54,7 +54,7 @@ export async function PUT(
     if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
 
     const dbUser = await getUserBySupabaseId(user.id)
-    if (!dbUser || dbUser.workspaceId !== workspace.id) {
+    if (!dbUser) {
       return NextResponse.json({ error: 'Access denied to workspace' }, { status: 403 })
     }
 

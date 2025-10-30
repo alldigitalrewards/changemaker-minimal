@@ -15,7 +15,6 @@ export { prisma } from '@/lib/prisma'
 export type {
   WorkspaceWithCounts,
   WorkspaceWithDetails,
-  UserWithWorkspace,
   ChallengeWithDetails,
   EnrollmentWithDetails,
   InviteCodeWithDetails

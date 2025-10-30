@@ -221,7 +221,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-coral-100 rounded-md">
                           <Trophy className="h-3.5 w-3.5 text-coral-600" />
                           <span className="text-sm font-bold text-coral-700">
-                            {submission.activity.pointsValue}
+                            {submission.Activity.pointsValue}
                           </span>
                         </div>
                       </div>
@@ -229,10 +229,10 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
                       {/* Participant & Challenge Info */}
                       <div>
                         <p className="text-sm font-semibold text-gray-900">
-                          {submission.user.email}
+                          {submission.User.email}
                         </p>
                         <p className="text-xs text-gray-600 mt-0.5">
-                          {submission.activity.template.name} • {submission.activity.challenge.title}
+                          {submission.Activity.ActivityTemplate.name} • {submission.Activity.Challenge.title}
                         </p>
                       </div>
 
@@ -272,7 +272,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
                         <Button
                           size="sm"
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white h-9"
-                          onClick={() => handleApprove(submission.id, submission.activity.pointsValue)}
+                          onClick={() => handleApprove(submission.id, submission.Activity.pointsValue)}
                           disabled={processing.has(submission.id)}
                         >
                           <Check className="h-4 w-4 mr-1.5" />

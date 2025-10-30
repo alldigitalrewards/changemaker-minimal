@@ -35,7 +35,7 @@ export default async function WorkspacesPage() {
   const dashboardData = await getOptimizedWorkspaceDashboardData(dbUser.id)
   const memberships = dashboardData.memberships
 
-  const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
+  const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser?.permissions, user.email!)
   const userIsWorkspaceAdmin = memberships.some(m => m.role === 'ADMIN')
 
   // Discoverable workspaces based on role

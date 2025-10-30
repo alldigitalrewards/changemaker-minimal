@@ -38,7 +38,11 @@ export default async function AdminDashboard({
   const stats = await prisma.workspace.findUnique({
     where: { slug },
     include: {
-      User: true,
+      WorkspaceMembership: {
+        include: {
+          User: true
+        }
+      },
       Challenge: {
         include: {
           Enrollment: true
@@ -47,7 +51,7 @@ export default async function AdminDashboard({
     }
   })
 
-  const participantCount = stats?.User.filter(u => u.role === "PARTICIPANT").length || 0
+  const participantCount = stats?.WorkspaceMembership.filter(m => m.role === "PARTICIPANT").length || 0
   const challengeCount = stats?.Challenge.length || 0
   const totalEnrollments = stats?.Challenge.reduce((acc, c) => acc + c.Enrollment.length, 0) || 0
 

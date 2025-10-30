@@ -72,7 +72,6 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
               select: {
                 id: true,
                 email: true,
-                role: true,
               },
             },
           },

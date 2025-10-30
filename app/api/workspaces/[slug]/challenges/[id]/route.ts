@@ -22,7 +22,6 @@ export const GET = withErrorHandling(async (
             select: {
               id: true,
               email: true,
-              role: true,
             },
           },
         },
@@ -67,7 +66,7 @@ export const PUT = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, participantIds, invitedParticipantIds, enrolledParticipantIds, status, activities } = body;
+  const { title, description, startDate, endDate, enrollmentDeadline, rewardType, rewardConfig, requireManagerApproval, requireAdminReapproval, participantIds, invitedParticipantIds, enrolledParticipantIds, status, activities } = body;
 
   // Basic validation - only validate if provided
   if ((title !== undefined && !title) || (description !== undefined && !description)) {
@@ -125,7 +124,25 @@ export const PUT = withErrorHandling(async (
     updateData.rewardConfig = rewardConfig
   }
 
-  const before = await prisma.challenge.findUnique({ where: { id } })
+  // Manager approval configuration (optional)
+  if (requireManagerApproval !== undefined) {
+    updateData.requireManagerApproval = requireManagerApproval
+  }
+  if (requireAdminReapproval !== undefined) {
+    updateData.requireAdminReapproval = requireAdminReapproval
+  }
+
+  // Verify challenge exists and belongs to this workspace BEFORE updating
+  const before = await prisma.challenge.findFirst({
+    where: {
+      id,
+      workspaceId: workspace.id,
+    },
+  });
+
+  if (!before) {
+    return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
+  }
 
   // Only update challenge if there are fields to update
   let challenge = before;
@@ -136,14 +153,6 @@ export const PUT = withErrorHandling(async (
       },
       data: updateData,
     });
-  } else {
-    // If no update data, just fetch the challenge
-    challenge = await prisma.challenge.findUnique({ where: { id } });
-  }
-
-  // Verify challenge exists after update/fetch
-  if (!challenge) {
-    return NextResponse.json({ error: 'Challenge not found after update' }, { status: 404 });
   }
 
   // Log challenge updated with minimal diff
@@ -197,7 +206,11 @@ export const PUT = withErrorHandling(async (
         const validInvitedParticipants = await prisma.user.findMany({
           where: {
             id: { in: invitedParticipantIds },
-            workspaceId: workspace.id,
+            WorkspaceMembership: {
+              some: {
+                workspaceId: workspace.id
+              }
+            }
           },
         });
 
@@ -230,7 +243,7 @@ export const PUT = withErrorHandling(async (
         const validEnrolledParticipants = await prisma.user.findMany({
           where: {
             id: { in: enrolledParticipantIds },
-            workspaceId: workspace.id,
+            WorkspaceMembership: { some: { workspaceId: workspace.id } },
           },
         });
 
@@ -263,7 +276,7 @@ export const PUT = withErrorHandling(async (
         const validParticipants = await prisma.user.findMany({
           where: {
             id: { in: participantIds },
-            workspaceId: workspace.id,
+            WorkspaceMembership: { some: { workspaceId: workspace.id } },
           },
         });
 
@@ -361,6 +374,18 @@ export const DELETE = withErrorHandling(async (
   const { slug, id } = await params;
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
+  // Verify challenge exists and belongs to this workspace BEFORE deleting
+  const challenge = await prisma.challenge.findFirst({
+    where: {
+      id,
+      workspaceId: workspace.id,
+    },
+  });
+
+  if (!challenge) {
+    return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
+  }
+
   // Delete related enrollments first
   await prisma.enrollment.deleteMany({
     where: {
@@ -434,11 +459,11 @@ export const PATCH = withErrorHandling(async (
           try {
             // Generate a targeted, single-use invite code for this participant and challenge
             const { createInviteCode } = await import('@/lib/db/queries')
-            const invite = await createInviteCode({ challengeId: id, role: m.User.role as any, maxUses: 1, targetEmail: m.User.email }, workspace.id, user.dbUser.id)
+            const invite = await createInviteCode({ challengeId: id, role: 'PARTICIPANT', maxUses: 1, targetEmail: m.User.email }, workspace.id, user.dbUser.id)
             const html = (await import('@/lib/email/templates/invite')).renderInviteEmail({
               workspaceName: workspace.name,
               inviterEmail: user.dbUser.email,
-              role: m.User.role,
+              role: 'PARTICIPANT',
               inviteUrl: `${inviteUrlBase}${invite.code}`,
               expiresAt: invite.expiresAt,
               challengeTitle: (updated as any).title || null

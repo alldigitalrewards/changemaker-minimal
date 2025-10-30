@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Info, Users, Activity, Settings, Trophy, Clock, ClipboardList } from 'lucide-react'
+import { ChallengeManagersDialog } from '@/components/admin/challenge-managers-dialog'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -108,6 +109,7 @@ export default async function ChallengeAdminLayout({ children, params }: LayoutP
               Copy Link
             </Button>
           </Link>
+          <ChallengeManagersDialog challengeId={id} workspaceSlug={slug} />
           <Link href={`/w/${slug}/admin/challenges/${id}/edit`}>
             <Button variant="outline" title={statusForActions === 'ARCHIVED' ? 'Archived challenges are read-only' : undefined} disabled={statusForActions === 'ARCHIVED'}>
               <Edit className="h-4 w-4 mr-2" />

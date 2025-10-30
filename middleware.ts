@@ -6,21 +6,23 @@ export async function middleware(request: NextRequest) {
   
   // Skip auth for public routes, API, and static assets
   const publicExact = [
-    '/', 
-    '/about', 
-    '/help', 
-    '/contact', 
-    '/faq', 
-    '/privacy', 
-    '/terms', 
-    '/how-it-works', 
+    '/',
+    '/about',
+    '/help',
+    '/contact',
+    '/faq',
+    '/privacy',
+    '/terms',
+    '/how-it-works',
     '/challenges',
-    '/auth/login', 
-    '/auth/signup'
+    '/auth/login',
+    '/auth/signup',
+    '/auth/logout'
   ].includes(pathname)
   const publicPrefix = (
     pathname.startsWith('/invite') ||
-    pathname.startsWith('/auth/callback')
+    pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/auth/')
   )
   const isStatic = pathname.startsWith('/_next') || pathname.startsWith('/api/') || pathname.includes('.')
   

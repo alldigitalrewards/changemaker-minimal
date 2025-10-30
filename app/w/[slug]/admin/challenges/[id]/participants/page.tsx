@@ -20,7 +20,7 @@ export default async function ParticipantsPage({ params, searchParams }: PagePro
     include: {
       Enrollment: {
         include: {
-          User: { select: { id: true, email: true, role: true } }
+          User: { select: { id: true, email: true } }
         }
       }
     }
@@ -90,7 +90,7 @@ export default async function ParticipantsPage({ params, searchParams }: PagePro
                   <div>
                     <p className="font-medium">{enrollment.User.email}</p>
                     <p className="text-sm text-gray-500">
-                      Role: {enrollment.User.role} | Status: {enrollment.status}
+                      Status: {enrollment.status}
                     </p>
                     <p className="text-xs text-gray-400">
                       Joined: {new Date(enrollment.createdAt).toLocaleDateString()}

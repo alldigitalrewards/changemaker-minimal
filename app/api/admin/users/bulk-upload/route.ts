@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
 
         // Find or create user
         let dbUser = await prisma.user.findUnique({
-          where: { email },
-          include: { WorkspaceMembership: true }
+          where: { email }
         });
 
         let isNewUser = false;
@@ -90,10 +89,8 @@ export async function POST(request: NextRequest) {
           dbUser = await prisma.user.create({
             data: {
               email,
-              supabaseUserId: authData.user.id,
-              role: 'PARTICIPANT', // Default role
-            },
-            include: { WorkspaceMembership: true }
+              supabaseUserId: authData.user.id
+            }
           });
 
           isNewUser = true;
@@ -130,7 +127,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Create membership
-        const isPrimary = dbUser.WorkspaceMembership.length === 0;
+        // Check if user has any existing memberships to determine if this should be primary
+        const existingMemberships = await prisma.workspaceMembership.count({
+          where: { userId: dbUser.id }
+        });
+        const isPrimary = existingMemberships === 0;
+
         await prisma.workspaceMembership.create({
           data: {
             userId: dbUser.id,

@@ -51,6 +51,11 @@ export default async function ParticipantDetailPage({
       }
     },
     include: {
+      WorkspaceMembership: {
+        where: {
+          workspaceId: workspace.id
+        }
+      },
       Enrollment: {
         where: {
           Challenge: {
@@ -119,7 +124,7 @@ export default async function ParticipantDetailPage({
               mode="edit"
               participantId={participant.id}
               participantEmail={participant.email}
-              participantRole={participant.role}
+              participantRole={participant.WorkspaceMembership[0]?.role as 'ADMIN' | 'PARTICIPANT' | 'MANAGER'}
               showLabel={true}
             />
           </div>

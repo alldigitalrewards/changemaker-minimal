@@ -163,7 +163,7 @@ test.describe('Multi-Reward System API', () => {
         challengeId: challenge.id,
         pointsValue: 50,
         rewardRules: [{
-          type: 'POINTS',
+          type: 'points',
           amount: 50
         }]
       }

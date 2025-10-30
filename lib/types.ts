@@ -43,14 +43,13 @@ export const isUserId = (id: string): id is UserId => {
 // =============================================================================
 
 /**
- * User with role information
+ * User identity and auth metadata only
+ * Role information comes from WorkspaceMembership
  */
 export interface AppUser {
   readonly id: UserId
   readonly email: string
   readonly supabaseUserId: string | null
-  readonly role: Role
-  readonly workspaceId: WorkspaceId | null
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -286,7 +285,6 @@ export interface EnrollmentListResponse {
 export interface WorkspaceParticipant {
   readonly id: UserId
   readonly email: string
-  readonly role: Role
 }
 
 export interface ParticipantsListResponse {

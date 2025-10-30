@@ -143,7 +143,6 @@ export const POST = withErrorHandling(async (
         participant: {
           id: result.userRecord.id,
           email: result.userRecord.email,
-          role: result.userRecord.role,
           workspaceId: workspace.id,
         },
         invite: { code: result.invite.code, url: inviteUrl }

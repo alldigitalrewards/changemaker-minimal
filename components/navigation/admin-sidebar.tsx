@@ -32,6 +32,7 @@ const workspaceNavigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Participants', href: '/admin/participants', icon: Users },
   { name: 'Challenges', href: '/admin/challenges', icon: Trophy },
+  { name: 'Manager Queue', href: '/admin/manager/queue', icon: ClipboardList },
   { name: 'Points', href: '/admin/points', icon: Coins },
   { name: 'Activities', href: '/admin/activity-templates', icon: ClipboardList },
   { name: 'Emails', href: '/admin/emails', icon: Settings },

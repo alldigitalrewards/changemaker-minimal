@@ -196,15 +196,13 @@ export default function DashboardHeader({
                       </Link>
                     )}
 
-                    <form action="/auth/logout" method="POST">
-                      <button
-                        type="submit"
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        <span>Log out</span>
-                      </button>
-                    </form>
+                    <LogoutButton
+                      variant="ghost"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 justify-start"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Log out
+                    </LogoutButton>
                   </div>
                 </div>
               )}

@@ -293,14 +293,7 @@ async function seed() {
           where: { email: admin.email },
           update: {
             supabaseUserId: supabaseUser.id,
-            role: ROLE_ADMIN,
             isPending: false, // Admins are not pending
-            // Set legacy workspaceId to primary workspace for backward compatibility
-            workspaceId: createdWorkspaces.find(
-              (w) =>
-                w.slug ===
-                admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace,
-            )?.id,
             // Grant platform_super_admin to designated super admins for testing
             permissions:
               admin.email === "jfelke@alldigitalrewards.com" ||
@@ -310,25 +303,11 @@ async function seed() {
             tenantId:
               admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace ||
               "default",
-            lastWorkspaceId:
-              createdWorkspaces.find(
-                (w) =>
-                  w.slug ===
-                  admin.workspaceMemberships.find((m) => m.isPrimary)
-                    ?.workspace,
-              )?.id || null,
-          } as any,
+          },
           create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
-            role: ROLE_ADMIN,
             isPending: false, // Admins are not pending
-            // Set legacy workspaceId to primary workspace for backward compatibility
-            workspaceId: createdWorkspaces.find(
-              (w) =>
-                w.slug ===
-                admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace,
-            )?.id,
             permissions:
               admin.email === "jfelke@alldigitalrewards.com" ||
               admin.email === "krobinson@alldigitalrewards.com"
@@ -337,14 +316,7 @@ async function seed() {
             tenantId:
               admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace ||
               "default",
-            lastWorkspaceId:
-              createdWorkspaces.find(
-                (w) =>
-                  w.slug ===
-                  admin.workspaceMemberships.find((m) => m.isPrimary)
-                    ?.workspace,
-              )?.id || null,
-          } as any,
+          },
         });
 
         // Create WorkspaceMemberships
@@ -361,7 +333,7 @@ async function seed() {
                 },
               },
               update: {
-                role: ROLE_ADMIN,
+                role: 'ADMIN',
                 isPrimary: membership.isPrimary,
                 preferences: membership.isPrimary
                   ? {
@@ -397,7 +369,7 @@ async function seed() {
               create: {
                 userId: user.id,
                 workspaceId: workspace.id,
-                role: ROLE_ADMIN,
+                role: 'ADMIN',
                 isPrimary: membership.isPrimary,
                 preferences: membership.isPrimary
                   ? {
@@ -452,9 +424,11 @@ async function seed() {
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
     // Get the first admin user to be the creator of invite codes
-    const firstAdmin = await prisma.user.findFirst({
-      where: { role: ROLE_ADMIN },
+    const firstAdminMembership = await prisma.workspaceMembership.findFirst({
+      where: { role: 'ADMIN' },
+      include: { User: true },
     });
+    const firstAdmin = firstAdminMembership?.User;
     // Safe nullable admin ID used anywhere an actor/updatedBy/createdBy is optional
     const adminUserId = firstAdmin?.id ?? null;
 
@@ -555,7 +529,6 @@ async function seed() {
             code: `${workspace.slug.toUpperCase()}-WELCOME-2025`,
             workspaceId: workspace.id,
             createdBy: adminUserId!,
-            role: ROLE_PARTICIPANT,
             maxUses: 100,
             usedCount: 0,
             expiresAt: thirtyDaysFromNow,
@@ -572,7 +545,6 @@ async function seed() {
             code: `${workspace.slug.toUpperCase()}-VIP-2025`,
             workspaceId: workspace.id,
             createdBy: adminUserId!,
-            role: ROLE_PARTICIPANT,
             maxUses: 1,
             usedCount: 0,
             expiresAt: thirtyDaysFromNow,
@@ -600,24 +572,20 @@ async function seed() {
           (w) => w.slug === manager.workspace,
         );
 
-        // Create Prisma user with PARTICIPANT role (legacy compatibility)
+        // Create Prisma user
         const user = await prisma.user.upsert({
           where: { email: manager.email },
           update: {
             supabaseUserId: supabaseUser.id,
-            role: ROLE_PARTICIPANT, // Keep User.role as PARTICIPANT (legacy field)
             isPending: false,
-            workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default",
-          } as any,
+          },
           create: {
             email: manager.email,
             supabaseUserId: supabaseUser.id,
-            role: ROLE_PARTICIPANT, // Keep User.role as PARTICIPANT (legacy field)
             isPending: false,
-            workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default",
-          } as any,
+          },
         });
 
         // Create WorkspaceMembership with MANAGER role (actual role)
@@ -673,19 +641,15 @@ async function seed() {
           where: { email: participant.email },
           update: {
             supabaseUserId: supabaseUser.id,
-            role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
-            workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default", // Use workspace slug as tenantId
-          } as any,
+          },
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
-            role: ROLE_PARTICIPANT,
             isPending: false, // Seeded participants are not pending
-            workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default", // Use workspace slug as tenantId
-          } as any,
+          },
         });
 
         // Create WorkspaceMembership for participants too
@@ -698,13 +662,13 @@ async function seed() {
               },
             },
             update: {
-              role: ROLE_PARTICIPANT,
+              role: 'PARTICIPANT',
               isPrimary: true,
             },
             create: {
               userId: user.id,
               workspaceId: workspace.id,
-              role: ROLE_PARTICIPANT,
+              role: 'PARTICIPANT',
               isPrimary: true,
             },
           });
@@ -728,21 +692,21 @@ async function seed() {
       "ARCHIVED",
     ] as const;
     for (const workspace of createdWorkspaces) {
-      // Create 3-5 challenges per workspace
-      const numChallenges = Math.floor(Math.random() * 3) + 3;
+      // Create 4 challenges per workspace (deterministic)
+      const numChallenges = 4;
       for (let i = 0; i < numChallenges; i++) {
         const template = challengeTemplates[i % challengeTemplates.length];
 
-        // Generate realistic dates for demo data
+        // Generate realistic dates for demo data (deterministic)
         const now = new Date();
         const startDate = new Date(
           now.getTime() +
-            (i * 7 + Math.floor(Math.random() * 14)) * 24 * 60 * 60 * 1000,
-        ); // Start 0-2 weeks from now, staggered
+            (i * 7 + 7) * 24 * 60 * 60 * 1000,
+        ); // Start 1-4 weeks from now, staggered weekly
         const endDate = new Date(
           startDate.getTime() +
-            (30 + Math.floor(Math.random() * 30)) * 24 * 60 * 60 * 1000,
-        ); // End 30-60 days after start
+            (30 + i * 10) * 24 * 60 * 60 * 1000,
+        ); // End 30-60 days after start, staggered
         const enrollmentDeadline = new Date(
           startDate.getTime() - 7 * 24 * 60 * 60 * 1000,
         ); // Enrollment deadline 1 week before start
@@ -949,26 +913,37 @@ async function seed() {
 
     // Create enrollments (participants in challenges)
     console.log("\n📝 Creating enrollments...");
-    const participants = await prisma.user.findMany({
-      where: { role: ROLE_PARTICIPANT },
+    const participantMemberships = await prisma.workspaceMembership.findMany({
+      where: { role: 'PARTICIPANT' },
+      include: { User: true },
+      orderBy: [
+        { workspaceId: 'asc' },
+        { User: { email: 'asc' } }
+      ],
     });
 
-    for (const participant of participants) {
+    for (const membership of participantMemberships) {
+      const participant = membership.User;
       // Enroll each participant in 1-3 challenges from their workspace
       const workspaceChallenges = allChallenges.filter(
-        (c) => c.workspaceId === participant.workspaceId,
+        (c) => c.workspaceId === membership.workspaceId,
       );
 
+      // Enroll in 1-3 challenges per participant (deterministic based on index)
+      const participantIndex = participantMemberships.indexOf(membership);
       const numEnrollments = Math.min(
-        Math.floor(Math.random() * 3) + 1,
+        (participantIndex % 3) + 1, // 1, 2, or 3 enrollments based on position
         workspaceChallenges.length,
       );
 
+      // Select challenges deterministically (no random sort)
       const selectedChallenges = workspaceChallenges
-        .sort(() => Math.random() - 0.5)
         .slice(0, numEnrollments);
 
       for (const challenge of selectedChallenges) {
+        // Deterministic status based on participant and challenge indices
+        const challengeIndex = selectedChallenges.indexOf(challenge);
+        const statusIndex = (participantIndex + challengeIndex) % 3;
         const enrollment = await prisma.enrollment.create({
           data: {
             userId: participant.id,
@@ -977,7 +952,7 @@ async function seed() {
               EnrollmentStatus.INVITED,
               EnrollmentStatus.ENROLLED,
               EnrollmentStatus.WITHDRAWN,
-            ][Math.floor(Math.random() * 3)],
+            ][statusIndex],
           },
         });
         console.log(`✓ Enrolled ${participant.email} in challenge`);
@@ -1108,13 +1083,16 @@ async function seed() {
 
     // Award some initial points to participants (not tied to submissions)
     console.log("\n🏆 Awarding initial points to participants...");
-    for (const participant of participants) {
-      if (participant.workspaceId) {
-        const pointsToAward = Math.floor(Math.random() * 100); // Random 0-100 initial points
+    for (const membership of participantMemberships) {
+      const participant = membership.User;
+      if (membership.workspaceId) {
+        // Deterministic points based on participant index (0, 25, 50, 75, 0, 25...)
+        const participantIndex = participantMemberships.indexOf(membership);
+        const pointsToAward = (participantIndex % 4) * 25;
         if (pointsToAward > 0) {
           try {
             await awardPointsWithBudget({
-              workspaceId: participant.workspaceId,
+              workspaceId: membership.workspaceId,
               challengeId: null, // General award, not challenge-specific
               toUserId: participant.id,
               amount: pointsToAward,
@@ -1213,9 +1191,11 @@ async function seed() {
     // Seed sample reward issuances for demo
     console.log("\n🎁 Seeding sample reward issuances...");
     for (const workspace of createdWorkspaces) {
-      const anyParticipant = await prisma.user.findFirst({
-        where: { role: ROLE_PARTICIPANT, workspaceId: workspace.id },
+      const anyParticipantMembership = await prisma.workspaceMembership.findFirst({
+        where: { role: 'PARTICIPANT', workspaceId: workspace.id },
+        include: { User: true },
       });
+      const anyParticipant = anyParticipantMembership?.User;
       if (anyParticipant) {
         await prisma.rewardIssuance.createMany({
           data: [
@@ -1336,8 +1316,8 @@ async function seed() {
     let redemptionCount = 0;
     for (const workspace of createdWorkspaces) {
       // Get participants in this workspace
-      const workspaceParticipants = participants.filter(
-        (p) => p.workspaceId === workspace.id,
+      const workspaceMemberships = participantMemberships.filter(
+        (m) => m.workspaceId === workspace.id,
       );
 
       // Get invite codes for this workspace
@@ -1348,12 +1328,12 @@ async function seed() {
       // Create redemptions for first 2 participants using the general invite
       const generalInvite = workspaceInvites.find((i) => !i.targetEmail);
       if (generalInvite) {
-        for (const participant of workspaceParticipants.slice(0, 2)) {
+        for (const membership of workspaceMemberships.slice(0, 2)) {
           await prisma.inviteRedemption.create({
             data: {
               id: randomUUID(),
               inviteId: generalInvite.id,
-              userId: participant.id,
+              userId: membership.User.id,
             },
           });
           redemptionCount++;
@@ -1368,8 +1348,8 @@ async function seed() {
           await prisma.activityEvent.create({
             data: {
               workspaceId: workspace.id,
-              userId: participant.id,
-              actorUserId: participant.id,
+              userId: membership.User.id,
+              actorUserId: membership.User.id,
               type: ActivityEventType.INVITE_REDEEMED,
               metadata: { inviteCode: generalInvite.code },
             },

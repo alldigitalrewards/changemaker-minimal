@@ -16,7 +16,7 @@ export async function GET(
   if (!workspace) return NextResponse.json({ error: 'Workspace not found' }, { status: 404 })
 
   const dbUser = await getUserBySupabaseId(user.id)
-  const isAdmin = dbUser && dbUser.workspaceId === workspace.id && await verifyWorkspaceAdmin(dbUser.id, workspace.id)
+  const isAdmin = dbUser && await verifyWorkspaceAdmin(dbUser.id, workspace.id)
   if (!isAdmin) return NextResponse.json({ error: 'Admin privileges required' }, { status: 403 })
 
   const memberships = await prisma.workspaceMembership.findMany({
