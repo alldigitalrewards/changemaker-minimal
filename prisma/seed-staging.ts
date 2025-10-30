@@ -226,6 +226,7 @@ async function seedStaging() {
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
+                  role: 'ADMIN',
                   isPrimary: true,
                 },
               },
@@ -284,6 +285,7 @@ async function seedStaging() {
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
+                  role: 'ADMIN',
                   isPrimary: true,
                 },
               },
@@ -341,6 +343,7 @@ async function seedStaging() {
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
+                  role: 'ADMIN',
                   isPrimary: true,
                 },
               },
@@ -398,6 +401,7 @@ async function seedStaging() {
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
+                  role: 'MANAGER',
                   isPrimary: true,
                 },
               },

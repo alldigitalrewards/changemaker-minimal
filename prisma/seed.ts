@@ -359,6 +359,7 @@ async function seed() {
                 },
               },
               update: {
+                role: 'ADMIN',
                 isPrimary: membership.isPrimary,
                 preferences: membership.isPrimary
                   ? {
@@ -394,6 +395,7 @@ async function seed() {
               create: {
                 userId: user.id,
                 workspaceId: workspace.id,
+                role: 'ADMIN',
                 isPrimary: membership.isPrimary,
                 preferences: membership.isPrimary
                   ? {
@@ -448,9 +450,11 @@ async function seed() {
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
     // Get the first admin user to be the creator of invite codes
-    const firstAdmin = await prisma.user.findFirst({
-      where: { role: ROLE_ADMIN },
+    const firstAdminMembership = await prisma.workspaceMembership.findFirst({
+      where: { role: 'ADMIN' },
+      include: { User: true },
     });
+    const firstAdmin = firstAdminMembership?.User;
     // Safe nullable admin ID used anywhere an actor/updatedBy/createdBy is optional
     const adminUserId = firstAdmin?.id ?? null;
 
@@ -688,11 +692,13 @@ async function seed() {
               },
             },
             update: {
+              role: 'PARTICIPANT',
               isPrimary: true,
             },
             create: {
               userId: user.id,
               workspaceId: workspace.id,
+              role: 'PARTICIPANT',
               isPrimary: true,
             },
           });
@@ -937,14 +943,16 @@ async function seed() {
 
     // Create enrollments (participants in challenges)
     console.log("\n📝 Creating enrollments...");
-    const participants = await prisma.user.findMany({
-      where: { role: ROLE_PARTICIPANT },
+    const participantMemberships = await prisma.workspaceMembership.findMany({
+      where: { role: 'PARTICIPANT' },
+      include: { User: true },
     });
 
-    for (const participant of participants) {
+    for (const membership of participantMemberships) {
+      const participant = membership.User;
       // Enroll each participant in 1-3 challenges from their workspace
       const workspaceChallenges = allChallenges.filter(
-        (c) => c.workspaceId === participant.workspaceId,
+        (c) => c.workspaceId === membership.workspaceId,
       );
 
       const numEnrollments = Math.min(
@@ -1096,13 +1104,14 @@ async function seed() {
 
     // Award some initial points to participants (not tied to submissions)
     console.log("\n🏆 Awarding initial points to participants...");
-    for (const participant of participants) {
-      if (participant.workspaceId) {
+    for (const membership of participantMemberships) {
+      const participant = membership.User;
+      if (membership.workspaceId) {
         const pointsToAward = Math.floor(Math.random() * 100); // Random 0-100 initial points
         if (pointsToAward > 0) {
           try {
             await awardPointsWithBudget({
-              workspaceId: participant.workspaceId,
+              workspaceId: membership.workspaceId,
               challengeId: null, // General award, not challenge-specific
               toUserId: participant.id,
               amount: pointsToAward,
@@ -1201,9 +1210,11 @@ async function seed() {
     // Seed sample reward issuances for demo
     console.log("\n🎁 Seeding sample reward issuances...");
     for (const workspace of createdWorkspaces) {
-      const anyParticipant = await prisma.user.findFirst({
-        where: { role: ROLE_PARTICIPANT, workspaceId: workspace.id },
+      const anyParticipantMembership = await prisma.workspaceMembership.findFirst({
+        where: { role: 'PARTICIPANT', workspaceId: workspace.id },
+        include: { User: true },
       });
+      const anyParticipant = anyParticipantMembership?.User;
       if (anyParticipant) {
         await prisma.rewardIssuance.createMany({
           data: [
@@ -1324,8 +1335,8 @@ async function seed() {
     let redemptionCount = 0;
     for (const workspace of createdWorkspaces) {
       // Get participants in this workspace
-      const workspaceParticipants = participants.filter(
-        (p) => p.workspaceId === workspace.id,
+      const workspaceMemberships = participantMemberships.filter(
+        (m) => m.workspaceId === workspace.id,
       );
 
       // Get invite codes for this workspace
@@ -1336,12 +1347,12 @@ async function seed() {
       // Create redemptions for first 2 participants using the general invite
       const generalInvite = workspaceInvites.find((i) => !i.targetEmail);
       if (generalInvite) {
-        for (const participant of workspaceParticipants.slice(0, 2)) {
+        for (const membership of workspaceMemberships.slice(0, 2)) {
           await prisma.inviteRedemption.create({
             data: {
               id: randomUUID(),
               inviteId: generalInvite.id,
-              userId: participant.id,
+              userId: membership.User.id,
             },
           });
           redemptionCount++;
@@ -1356,8 +1367,8 @@ async function seed() {
           await prisma.activityEvent.create({
             data: {
               workspaceId: workspace.id,
-              userId: participant.id,
-              actorUserId: participant.id,
+              userId: membership.User.id,
+              actorUserId: membership.User.id,
               type: ActivityEventType.INVITE_REDEEMED,
               metadata: { inviteCode: generalInvite.code },
             },
