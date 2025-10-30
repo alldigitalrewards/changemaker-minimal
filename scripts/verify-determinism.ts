@@ -19,7 +19,7 @@ interface DatabaseSnapshot {
   memberships: number;
   challengeTitles: string[];
   userEmails: string[];
-  pointsBalances: number[];
+  pointsBalances: { available: number; total: number; userEmail: string; workspaceSlug: string }[];
 }
 
 async function captureSnapshot(): Promise<DatabaseSnapshot> {
@@ -41,11 +41,23 @@ async function captureSnapshot(): Promise<DatabaseSnapshot> {
   });
   const userEmails = userRecords.map(u => u.email);
 
+  // Get balances with user/workspace context for deterministic comparison
   const balances = await prisma.pointsBalance.findMany({
-    orderBy: { userId: 'asc' },
-    select: { balance: true }
+    include: {
+      User: { select: { email: true } },
+      Workspace: { select: { slug: true } }
+    },
+    orderBy: [
+      { Workspace: { slug: 'asc' } },
+      { User: { email: 'asc' } }
+    ]
   });
-  const pointsBalances = balances.map(b => b.balance);
+  const pointsBalances = balances.map(b => ({
+    available: b.availablePoints,
+    total: b.totalPoints,
+    userEmail: b.User.email,
+    workspaceSlug: b.Workspace.slug
+  }));
 
   return {
     workspaces,
@@ -154,6 +166,21 @@ async function main() {
       }
       if (snapshot1.enrollments !== snapshot2.enrollments) {
         console.log(`   Enrollments: ${snapshot1.enrollments} vs ${snapshot2.enrollments}`);
+      }
+
+      // Compare arrays
+      if (JSON.stringify(snapshot1.challengeTitles) !== JSON.stringify(snapshot2.challengeTitles)) {
+        console.log(`   Challenge titles differ`);
+        console.log(`   Run 1 first 3: ${snapshot1.challengeTitles.slice(0, 3).join(', ')}`);
+        console.log(`   Run 2 first 3: ${snapshot2.challengeTitles.slice(0, 3).join(', ')}`);
+      }
+      if (JSON.stringify(snapshot1.userEmails) !== JSON.stringify(snapshot2.userEmails)) {
+        console.log(`   User emails differ`);
+      }
+      if (JSON.stringify(snapshot1.pointsBalances) !== JSON.stringify(snapshot2.pointsBalances)) {
+        console.log(`   Points balances differ`);
+        console.log(`   Run 1 first 3: ${JSON.stringify(snapshot1.pointsBalances.slice(0, 3))}`);
+        console.log(`   Run 2 first 3: ${JSON.stringify(snapshot2.pointsBalances.slice(0, 3))}`);
       }
 
       process.exit(1);

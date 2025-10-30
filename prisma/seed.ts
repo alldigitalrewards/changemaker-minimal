@@ -916,6 +916,10 @@ async function seed() {
     const participantMemberships = await prisma.workspaceMembership.findMany({
       where: { role: 'PARTICIPANT' },
       include: { User: true },
+      orderBy: [
+        { workspaceId: 'asc' },
+        { User: { email: 'asc' } }
+      ],
     });
 
     for (const membership of participantMemberships) {
