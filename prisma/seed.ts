@@ -572,22 +572,20 @@ async function seed() {
           (w) => w.slug === manager.workspace,
         );
 
-        // Create Prisma user with PARTICIPANT role (legacy compatibility)
+        // Create Prisma user
         const user = await prisma.user.upsert({
           where: { email: manager.email },
           update: {
             supabaseUserId: supabaseUser.id,
             isPending: false,
-            workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default",
-          } as any,
+          },
           create: {
             email: manager.email,
             supabaseUserId: supabaseUser.id,
             isPending: false,
-            workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default",
-          } as any,
+          },
         });
 
         // Create WorkspaceMembership with MANAGER role (actual role)
@@ -644,16 +642,14 @@ async function seed() {
           update: {
             supabaseUserId: supabaseUser.id,
             isPending: false, // Seeded participants are not pending
-            workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default", // Use workspace slug as tenantId
-          } as any,
+          },
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
             isPending: false, // Seeded participants are not pending
-            workspaceId: workspace?.id,
             tenantId: workspace?.slug || "default", // Use workspace slug as tenantId
-          } as any,
+          },
         });
 
         // Create WorkspaceMembership for participants too
