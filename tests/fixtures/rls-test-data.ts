@@ -303,7 +303,33 @@ export async function createTestWorkspaces(client: SupabaseClient): Promise<void
   const workspaceIds = [TEST_WORKSPACES.workspace1.id, TEST_WORKSPACES.workspace2.id];
 
   try {
-    // Delete all related data first (cascade will handle most, but be explicit)
+    // Collect all user IDs from both workspaces
+    const userIds = [
+      ...Object.values(TEST_WORKSPACES.workspace1.users).map(u => u.id),
+      ...Object.values(TEST_WORKSPACES.workspace2.users).map(u => u.id),
+    ];
+
+    // Delete users first (before workspaces, since WorkspaceMembership has FK constraints)
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+    });
+
+    for (const user of users) {
+      if (user.supabaseUserId) {
+        try {
+          await client.auth.admin.deleteUser(user.supabaseUserId);
+        } catch {
+          // Ignore if already deleted
+        }
+      }
+      try {
+        await prisma.user.delete({ where: { id: user.id } });
+      } catch {
+        // Ignore if already deleted
+      }
+    }
+
+    // Delete all workspace-related data
     await prisma.activitySubmission.deleteMany({
       where: {
         Activity: {
@@ -328,30 +354,6 @@ export async function createTestWorkspaces(client: SupabaseClient): Promise<void
     await prisma.challenge.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
     await prisma.inviteCode.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
     await prisma.workspaceMembership.deleteMany({ where: { workspaceId: { in: workspaceIds } } });
-
-    // Find and delete users in these workspaces
-    const users = await prisma.user.findMany({
-      where: {
-        WorkspaceMembership: {
-          some: { workspaceId: { in: workspaceIds } },
-        },
-      },
-    });
-
-    for (const user of users) {
-      if (user.supabaseUserId) {
-        try {
-          await client.auth.admin.deleteUser(user.supabaseUserId);
-        } catch {
-          // Ignore if already deleted
-        }
-      }
-      try {
-        await prisma.user.delete({ where: { id: user.id } });
-      } catch {
-        // Ignore if already deleted
-      }
-    }
 
     // Finally delete the workspaces
     await prisma.workspace.deleteMany({ where: { id: { in: workspaceIds } } });
