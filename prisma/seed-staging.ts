@@ -453,11 +453,12 @@ async function createWorkspaceChallenges(workspaceSlug: string) {
     where: { slug: workspaceSlug },
     include: {
       Challenge: true,
-      User: {
+      WorkspaceMembership: {
         where: {
-          WorkspaceMembership: {
-            some: { role: { in: [ROLE_MANAGER, ROLE_PARTICIPANT] } }
-          }
+          role: { in: [ROLE_MANAGER, ROLE_PARTICIPANT] }
+        },
+        include: {
+          User: true
         }
       }
     },

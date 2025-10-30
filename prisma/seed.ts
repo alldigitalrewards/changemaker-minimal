@@ -294,12 +294,6 @@ async function seed() {
           update: {
             supabaseUserId: supabaseUser.id,
             isPending: false, // Admins are not pending
-            // Set legacy workspaceId to primary workspace for backward compatibility
-            workspaceId: createdWorkspaces.find(
-              (w) =>
-                w.slug ===
-                admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace,
-            )?.id,
             // Grant platform_super_admin to designated super admins for testing
             permissions:
               admin.email === "jfelke@alldigitalrewards.com" ||
@@ -309,24 +303,11 @@ async function seed() {
             tenantId:
               admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace ||
               "default",
-            lastWorkspaceId:
-              createdWorkspaces.find(
-                (w) =>
-                  w.slug ===
-                  admin.workspaceMemberships.find((m) => m.isPrimary)
-                    ?.workspace,
-              )?.id || null,
-          } as any,
+          },
           create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
             isPending: false, // Admins are not pending
-            // Set legacy workspaceId to primary workspace for backward compatibility
-            workspaceId: createdWorkspaces.find(
-              (w) =>
-                w.slug ===
-                admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace,
-            )?.id,
             permissions:
               admin.email === "jfelke@alldigitalrewards.com" ||
               admin.email === "krobinson@alldigitalrewards.com"
@@ -335,14 +316,7 @@ async function seed() {
             tenantId:
               admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace ||
               "default",
-            lastWorkspaceId:
-              createdWorkspaces.find(
-                (w) =>
-                  w.slug ===
-                  admin.workspaceMemberships.find((m) => m.isPrimary)
-                    ?.workspace,
-              )?.id || null,
-          } as any,
+          },
         });
 
         // Create WorkspaceMemberships
@@ -722,21 +696,21 @@ async function seed() {
       "ARCHIVED",
     ] as const;
     for (const workspace of createdWorkspaces) {
-      // Create 3-5 challenges per workspace
-      const numChallenges = Math.floor(Math.random() * 3) + 3;
+      // Create 4 challenges per workspace (deterministic)
+      const numChallenges = 4;
       for (let i = 0; i < numChallenges; i++) {
         const template = challengeTemplates[i % challengeTemplates.length];
 
-        // Generate realistic dates for demo data
+        // Generate realistic dates for demo data (deterministic)
         const now = new Date();
         const startDate = new Date(
           now.getTime() +
-            (i * 7 + Math.floor(Math.random() * 14)) * 24 * 60 * 60 * 1000,
-        ); // Start 0-2 weeks from now, staggered
+            (i * 7 + 7) * 24 * 60 * 60 * 1000,
+        ); // Start 1-4 weeks from now, staggered weekly
         const endDate = new Date(
           startDate.getTime() +
-            (30 + Math.floor(Math.random() * 30)) * 24 * 60 * 60 * 1000,
-        ); // End 30-60 days after start
+            (30 + i * 10) * 24 * 60 * 60 * 1000,
+        ); // End 30-60 days after start, staggered
         const enrollmentDeadline = new Date(
           startDate.getTime() - 7 * 24 * 60 * 60 * 1000,
         ); // Enrollment deadline 1 week before start
@@ -955,16 +929,21 @@ async function seed() {
         (c) => c.workspaceId === membership.workspaceId,
       );
 
+      // Enroll in 1-3 challenges per participant (deterministic based on index)
+      const participantIndex = participantMemberships.indexOf(membership);
       const numEnrollments = Math.min(
-        Math.floor(Math.random() * 3) + 1,
+        (participantIndex % 3) + 1, // 1, 2, or 3 enrollments based on position
         workspaceChallenges.length,
       );
 
+      // Select challenges deterministically (no random sort)
       const selectedChallenges = workspaceChallenges
-        .sort(() => Math.random() - 0.5)
         .slice(0, numEnrollments);
 
       for (const challenge of selectedChallenges) {
+        // Deterministic status based on participant and challenge indices
+        const challengeIndex = selectedChallenges.indexOf(challenge);
+        const statusIndex = (participantIndex + challengeIndex) % 3;
         const enrollment = await prisma.enrollment.create({
           data: {
             userId: participant.id,
@@ -973,7 +952,7 @@ async function seed() {
               EnrollmentStatus.INVITED,
               EnrollmentStatus.ENROLLED,
               EnrollmentStatus.WITHDRAWN,
-            ][Math.floor(Math.random() * 3)],
+            ][statusIndex],
           },
         });
         console.log(`✓ Enrolled ${participant.email} in challenge`);
@@ -1107,7 +1086,9 @@ async function seed() {
     for (const membership of participantMemberships) {
       const participant = membership.User;
       if (membership.workspaceId) {
-        const pointsToAward = Math.floor(Math.random() * 100); // Random 0-100 initial points
+        // Deterministic points based on participant index (0, 25, 50, 75, 0, 25...)
+        const participantIndex = participantMemberships.indexOf(membership);
+        const pointsToAward = (participantIndex % 4) * 25;
         if (pointsToAward > 0) {
           try {
             await awardPointsWithBudget({
