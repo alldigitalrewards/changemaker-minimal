@@ -401,7 +401,7 @@ async function seedStaging() {
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
-                  role: 'MANAGER',
+                  role: 'PARTICIPANT',
                   isPrimary: true,
                 },
               },
