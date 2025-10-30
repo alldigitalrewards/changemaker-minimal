@@ -157,7 +157,7 @@ export async function PUT(
     }
 
     // Update participant role with guardrails
-    const previousRole = (membership.role as Role) || participant.role
+    const previousRole = membership.role as Role
     const dbUser = await getUserBySupabaseId(user.id)
     if (!dbUser) {
       return NextResponse.json(
@@ -185,14 +185,20 @@ export async function PUT(
       }
     }
 
-    // Keep legacy user.role and membership.role in sync
-    const [updatedParticipant] = await prisma.$transaction([
-      prisma.user.update({ where: { id }, data: { role: newRole as Role } }),
-      prisma.workspaceMembership.update({
-        where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } },
-        data: { role: newRole as any }
-      })
-    ])
+    // Update participant role in WorkspaceMembership (role only exists here now)
+    await prisma.workspaceMembership.update({
+      where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } },
+      data: { role: newRole as any }
+    })
+
+    // Get updated participant
+    const updatedParticipant = await prisma.user.findUnique({ where: { id } })
+    if (!updatedParticipant) {
+      return NextResponse.json(
+        { message: "Participant not found after update" },
+        { status: 500 }
+      )
+    }
 
     if (previousRole !== newRole) {
       await logActivityEvent({

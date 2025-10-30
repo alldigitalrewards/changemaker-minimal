@@ -55,7 +55,6 @@ export const GET = withErrorHandling(async (
     select: {
       id: true,
       email: true,
-      role: true,
       createdAt: true
     }
   });
