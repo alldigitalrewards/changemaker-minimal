@@ -38,9 +38,9 @@ export const GET = withErrorHandling(
 
       const assignedChallengeIds = assignments.map((a) => a.challengeId);
 
-      // If manager has no assignments, return empty array
+      // If manager has no assignments, return empty array with workspaceId
       if (assignedChallengeIds.length === 0) {
-        return NextResponse.json({ submissions: [] }, { status: 200 });
+        return NextResponse.json({ workspaceId: workspace.id, submissions: [] }, { status: 200 });
       }
 
       // Build query with optional status filter
@@ -75,7 +75,7 @@ export const GET = withErrorHandling(
         orderBy: { submittedAt: "desc" },
       });
 
-      return NextResponse.json({ submissions }, { status: 200 });
+      return NextResponse.json({ workspaceId: workspace.id, submissions }, { status: 200 });
     } catch (error) {
       // Unknown error
       console.error("Error fetching manager queue:", error);
