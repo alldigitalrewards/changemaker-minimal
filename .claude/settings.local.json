@@ -87,7 +87,9 @@
     "supabase-changemaker-staging",
     "supabase-changemaker-local",
     "taskmaster-ai",
-    "vercel"
+    "vercel",
+    "supabase-stage"
   ],
-  "spinnerTipsEnabled": false
+  "spinnerTipsEnabled": false,
+  "enableAllProjectMcpServers": true
 }
