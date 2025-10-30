@@ -22,7 +22,6 @@ export const GET = withErrorHandling(async (
             select: {
               id: true,
               email: true,
-              role: true,
             },
           },
         },
@@ -460,11 +459,11 @@ export const PATCH = withErrorHandling(async (
           try {
             // Generate a targeted, single-use invite code for this participant and challenge
             const { createInviteCode } = await import('@/lib/db/queries')
-            const invite = await createInviteCode({ challengeId: id, role: m.User.role as any, maxUses: 1, targetEmail: m.User.email }, workspace.id, user.dbUser.id)
+            const invite = await createInviteCode({ challengeId: id, role: 'PARTICIPANT', maxUses: 1, targetEmail: m.User.email }, workspace.id, user.dbUser.id)
             const html = (await import('@/lib/email/templates/invite')).renderInviteEmail({
               workspaceName: workspace.name,
               inviterEmail: user.dbUser.email,
-              role: m.User.role,
+              role: 'PARTICIPANT',
               inviteUrl: `${inviteUrlBase}${invite.code}`,
               expiresAt: invite.expiresAt,
               challengeTitle: (updated as any).title || null

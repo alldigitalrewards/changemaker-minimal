@@ -362,12 +362,11 @@ async function getParticipants(
 
     // Get all workspace users (participants)
     const users = await getWorkspaceUsers(workspace.id);
-    
+
     // Transform to participant format
     const participants = users.map(user => ({
       id: user.id,
-      email: user.email,
-      role: user.role
+      email: user.email
     }));
 
     return NextResponse.json({ participants });
