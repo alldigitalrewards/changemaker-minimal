@@ -41,7 +41,6 @@ import type {
   EnrollmentWithDetails as CanonicalEnrollmentWithDetails,
   ChallengeWithDetails as CanonicalChallengeWithDetails,
   WorkspaceWithDetails as CanonicalWorkspaceWithDetails,
-  UserWithWorkspace as CanonicalUserWithWorkspace,
   ActivitySubmissionWithDetails as CanonicalActivitySubmissionWithDetails
 } from './types'
 
@@ -106,13 +105,6 @@ export type WorkspaceWithDetails = Workspace & {
   }
 }
 
-/**
- * @deprecated Use UserWithWorkspace from './types' instead
- * Local type for backward compatibility only
- */
-export type UserWithWorkspace = User & {
-  Workspace: Workspace | null
-}
 
 /**
  * @deprecated This local type has minimal includes compared to canonical ChallengeWithDetails
@@ -2046,14 +2038,11 @@ export async function createInviteCode(
   workspaceId: WorkspaceId,
   createdBy: UserId
 ): Promise<InviteCode> {
-  // Verify creator is admin in workspace (membership-aware; fallback to legacy User.workspaceId)
+  // Verify creator is admin in workspace
   const membership = await prisma.workspaceMembership.findUnique({
     where: { userId_workspaceId: { userId: createdBy, workspaceId } }
   })
-  const legacyAdmin = await prisma.user.findFirst({
-    where: { id: createdBy, workspaceId, role: 'ADMIN' }
-  })
-  if (!(membership?.role === 'ADMIN' || !!legacyAdmin)) {
+  if (membership?.role !== 'ADMIN') {
     throw new WorkspaceAccessError(workspaceId)
   }
   
@@ -2586,7 +2575,6 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
   _count: {
     WorkspaceMembership: number
     Challenge: number
-    User: number
   }
   WorkspaceMembership: {
     User: Pick<User, 'id' | 'email'>
@@ -2600,8 +2588,7 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
         _count: {
           select: {
             WorkspaceMembership: true,
-            Challenge: true,
-            User: true
+            Challenge: true
           }
         },
         WorkspaceMembership: {
