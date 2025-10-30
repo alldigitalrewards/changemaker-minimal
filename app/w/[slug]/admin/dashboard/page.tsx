@@ -51,7 +51,7 @@ export default async function AdminDashboard({
     }
   })
 
-  const participantCount = stats?.WorkspaceMembership.filter(m => m.User.role === "PARTICIPANT").length || 0
+  const participantCount = stats?.WorkspaceMembership.filter(m => m.role === "PARTICIPANT").length || 0
   const challengeCount = stats?.Challenge.length || 0
   const totalEnrollments = stats?.Challenge.reduce((acc, c) => acc + c.Enrollment.length, 0) || 0
 
