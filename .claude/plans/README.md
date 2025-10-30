@@ -39,6 +39,40 @@ This directory contains detailed implementation roadmaps for major features and 
 
 ---
 
+### 3. Sidebar Architecture Improvements
+**Status**: Planning Complete ✓
+**File**: [sidebar-architecture-improvements.md](./sidebar-architecture-improvements.md)
+**Overview**: Comprehensive refactoring of sidebar navigation system addressing 70% code duplication, performance bottlenecks, and UX gaps.
+
+**Key Features**:
+- Unified compound component architecture (60% code reduction)
+- Two-tiered state management (Context + Zustand)
+- Parallel data fetching (50-70% performance improvement)
+- Full mobile responsiveness with gesture support
+- WCAG 2.1 AA accessibility compliance
+- Feature flag-based migration strategy
+
+**Current Phase**: Ready for Phase 1 Implementation
+
+---
+
+### 4. Admin & Participant UI Enhancements
+**Status**: Planning Complete ✓
+**File**: [admin-participant-ui-enhancements.md](./admin-participant-ui-enhancements.md)
+**Overview**: Comprehensive UI/UX improvements for both admin and participant interfaces focusing on operational efficiency and user engagement.
+
+**Key Features**:
+- Admin: Real-time analytics dashboard, AI-powered insights, bulk operations
+- Participant: Gamification elements, progress visualization, social features
+- Unified design system with component library
+- Mobile-first responsive approach
+- Performance optimizations (virtual scrolling, lazy loading)
+- AI-powered features (smart recommendations, predictive analytics)
+
+**Current Phase**: Ready for Phase 1 Implementation
+
+---
+
 ## Task Lists
 
 ### Manager Role Task List
@@ -55,6 +89,21 @@ This directory contains detailed implementation roadmaps for major features and 
 - Phase 3: Advanced Features (10 tasks)
 - Phase 4: Production Readiness (10 tasks)
 
+### Sidebar Architecture Task List
+**Status**: Documented in roadmap (3 phases, 6 weeks)
+**Key Milestones**:
+- Phase 1: Foundation & Feature Parity (Weeks 1-2)
+- Phase 2: Enhanced UX & Migration (Weeks 3-4)
+- Phase 3: Polish & Performance (Weeks 5-6)
+
+### UI Enhancement Task List
+**Status**: Documented in roadmap (4 phases, 8 weeks)
+**Phases**:
+- Phase 1: Foundation - Design system and performance
+- Phase 2: Core Features - Admin and participant enhancements
+- Phase 3: Advanced Features - AI integration and mobile
+- Phase 4: Polish - Animations and accessibility
+
 ---
 
 ## Dependencies
@@ -69,6 +118,20 @@ This directory contains detailed implementation roadmaps for major features and 
 - Vercel AI SDK (external)
 - Anthropic Claude API (external)
 - Monaco Editor (external)
+
+### Sidebar Architecture Dependencies
+- Radix UI for accessible primitives
+- Zustand for state management
+- Framer Motion for animations
+- React Virtual for performance
+- Feature flag system for migration
+
+### UI Enhancement Dependencies
+- Recharts/Tremor for data visualization
+- Tanstack Virtual for list virtualization
+- Vercel AI SDK for intelligent features
+- WebSocket for real-time updates
+- Service Worker for offline capability
 
 ---
 
