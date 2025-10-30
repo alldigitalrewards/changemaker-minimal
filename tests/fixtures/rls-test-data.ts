@@ -404,8 +404,7 @@ export async function createTestWorkspaces(client: SupabaseClient): Promise<void
           id: user.id,
           email: user.email,
           supabaseUserId: authUser.user.id,
-          role: user.role,
-          // Note: workspaceId is optional - users are linked to workspaces via WorkspaceMembership
+          // Note: Users are linked to workspaces via WorkspaceMembership (role is there)
         },
       });
 

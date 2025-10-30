@@ -15,8 +15,24 @@ export async function setUserRoleInWorkspace(email: string, slug: string, role: 
   const workspace = await ensureWorkspace(slug, slug)
   const user = await prisma.user.upsert({
     where: { email },
-    update: { role, workspaceId: workspace.id },
-    create: { email, role, workspaceId: workspace.id }
+    update: {},
+    create: { email }
+  })
+  // Create or update workspace membership with the specified role
+  await prisma.workspaceMembership.upsert({
+    where: {
+      userId_workspaceId: {
+        userId: user.id,
+        workspaceId: workspace.id
+      }
+    },
+    update: { role },
+    create: {
+      userId: user.id,
+      workspaceId: workspace.id,
+      role,
+      isPrimary: false
+    }
   })
   return { user, workspace }
 }
@@ -42,8 +58,25 @@ export async function ensurePendingSubmission(params: { slug: string; title: str
   const workspace = await prisma.workspace.findUniqueOrThrow({ where: { id: challenge.workspaceId } })
   const user = await prisma.user.upsert({
     where: { email: userEmail },
-    update: { role: 'PARTICIPANT', workspaceId: workspace.id },
-    create: { email: userEmail, role: 'PARTICIPANT', workspaceId: workspace.id }
+    update: {},
+    create: { email: userEmail }
+  })
+
+  // Create or update workspace membership with PARTICIPANT role
+  await prisma.workspaceMembership.upsert({
+    where: {
+      userId_workspaceId: {
+        userId: user.id,
+        workspaceId: workspace.id
+      }
+    },
+    update: { role: 'PARTICIPANT' },
+    create: {
+      userId: user.id,
+      workspaceId: workspace.id,
+      role: 'PARTICIPANT',
+      isPrimary: false
+    }
   })
 
   const enrollment = await prisma.enrollment.upsert({
