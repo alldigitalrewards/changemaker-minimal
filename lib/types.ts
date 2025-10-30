@@ -285,7 +285,6 @@ export interface EnrollmentListResponse {
 export interface WorkspaceParticipant {
   readonly id: UserId
   readonly email: string
-  readonly role: Role
 }
 
 export interface ParticipantsListResponse {

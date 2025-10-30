@@ -162,17 +162,6 @@ export type WorkspaceWithDetails = Prisma.WorkspaceGetPayload<typeof workspaceWi
 // User Types
 // ============================================================================
 
-/**
- * User with workspace relationship
- * Includes: Full Workspace relation
- */
-const userWithWorkspaceArgs = Prisma.validator<Prisma.UserDefaultArgs>()({
-  include: {
-    Workspace: true
-  }
-});
-
-export type UserWithWorkspace = Prisma.UserGetPayload<typeof userWithWorkspaceArgs>;
 
 // ============================================================================
 // ActivitySubmission Types
