@@ -36,7 +36,7 @@ export const POST = withErrorHandling(async (
   const { workspace, user } = await requireWorkspaceAdmin(slug);
 
   const body = await request.json();
-  const { email, role, name } = body;
+  const { email, role, firstName, lastName, phone, company, jobTitle, department } = body;
 
   // Rate limit per admin+workspace to prevent abuse
   const ip = request.headers.get('x-forwarded-for') || 'local'
@@ -52,6 +52,13 @@ export const POST = withErrorHandling(async (
   if (!email || !role) {
     return NextResponse.json(
       { error: 'Email and role are required' },
+      { status: 400 }
+    );
+  }
+
+  if (!firstName || !lastName) {
+    return NextResponse.json(
+      { error: 'First name and last name are required' },
       { status: 400 }
     );
   }
@@ -84,6 +91,12 @@ export const POST = withErrorHandling(async (
           email: lowerEmail,
           role,
           isPending: true,
+          firstName,
+          lastName,
+          phone: phone || null,
+          company: company || null,
+          jobTitle: jobTitle || null,
+          department: department || null,
         } as any,
       })
 

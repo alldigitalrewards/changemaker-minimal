@@ -127,7 +127,7 @@ export type ChallengeWithDetails = Challenge & {
  * TODO: Migrate queries to use canonical type or create separate lightweight type
  */
 export type EnrollmentWithDetails = Enrollment & {
-  User: Pick<User, 'id' | 'email'>
+  User: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'displayName'>
   Challenge: Pick<Challenge, 'id' | 'title' | 'description' | 'workspaceId' | 'status' | 'enrollmentDeadline'>
 }
 
@@ -414,7 +414,13 @@ export async function getChallengeWithDetails(
         Enrollment: {
           include: {
             User: {
-              select: { id: true, email: true }
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                displayName: true
+              }
             }
           }
         },
@@ -554,7 +560,13 @@ export async function getUserEnrollments(
       },
       include: {
         User: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         },
         Challenge: {
           select: { id: true, title: true, description: true, workspaceId: true, status: true, enrollmentDeadline: true }
@@ -587,7 +599,13 @@ export async function getChallengeEnrollments(
       where: { challengeId },
       include: {
         User: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         },
         Challenge: {
           select: { id: true, title: true, description: true, workspaceId: true }
@@ -790,7 +808,13 @@ export async function getAllWorkspaceEnrollments(
       },
       include: {
         User: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         },
         Challenge: {
           select: { id: true, title: true, description: true, workspaceId: true }
@@ -1646,13 +1670,19 @@ export async function awardPointsWithBudget(params: {
 export async function getWorkspaceLeaderboard(
   workspaceId: WorkspaceId,
   limit: number = 10
-): Promise<(PointsBalance & { User: Pick<User, 'id' | 'email'> })[]> {
+): Promise<(PointsBalance & { User: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'displayName'> })[]> {
   try {
     return await prisma.pointsBalance.findMany({
       where: { workspaceId },
       include: {
         User: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         }
       },
       orderBy: { totalPoints: 'desc' },
@@ -1714,6 +1744,9 @@ export async function getChallengeLeaderboard(
 ): Promise<{
   userId: string
   email: string
+  firstName: string | null
+  lastName: string | null
+  displayName: string | null
   totalPoints: number
   submissions: number
   completedActivities: number
@@ -1736,7 +1769,13 @@ export async function getChallengeLeaderboard(
       },
       include: {
         User: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         },
         ActivitySubmission: {
           where: {
@@ -1761,6 +1800,9 @@ export async function getChallengeLeaderboard(
       return {
         userId: enrollment.User.id,
         email: enrollment.User.email,
+        firstName: enrollment.User.firstName,
+        lastName: enrollment.User.lastName,
+        displayName: enrollment.User.displayName,
         totalPoints,
         submissions: submissions.length,
         completedActivities: uniqueActivities.size
@@ -1843,8 +1885,24 @@ export async function getRecentWorkspaceActivities(
       (prisma as any).activityEvent.findMany({
         where: { workspaceId },
         include: {
-          User_ActivityEvent_userIdToUser: { select: { id: true, email: true } },
-          User_ActivityEvent_actorUserIdToUser: { select: { id: true, email: true } },
+          User_ActivityEvent_userIdToUser: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              displayName: true
+            }
+          },
+          User_ActivityEvent_actorUserIdToUser: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              displayName: true
+            }
+          },
           Challenge: { select: { id: true, title: true } }
         },
         orderBy: { createdAt: 'desc' },
@@ -2002,7 +2060,15 @@ export async function getWorkspaceCommunications(
     return await prisma.workspaceCommunication.findMany({
       where: whereClause,
       include: {
-        sender: { select: { id: true, email: true } },
+        sender: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
+        },
         challenge: { select: { id: true, title: true } },
         activity: { select: { id: true, templateId: true } }
       },
@@ -2577,7 +2643,7 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
     Challenge: number
   }
   WorkspaceMembership: {
-    User: Pick<User, 'id' | 'email'>
+    User: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'displayName'>
     role: Role
   }[]
 })[]> {
@@ -2595,7 +2661,13 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
           where: { role: 'ADMIN' },
           include: {
             User: {
-              select: { id: true, email: true }
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                displayName: true
+              }
             }
           },
           take: 5
@@ -2651,7 +2723,7 @@ export type ChallengeAssignmentWithDetails = {
   workspaceId: string
   assignedBy: string
   assignedAt: Date
-  Manager: Pick<User, 'id' | 'email'>
+  Manager: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'displayName'>
   Challenge: Pick<Challenge, 'id' | 'title' | 'description'>
 }
 
@@ -2670,7 +2742,13 @@ export async function getChallengeAssignments(
       },
       include: {
         Manager: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         },
         Challenge: {
           select: { id: true, title: true, description: true }
@@ -2741,7 +2819,13 @@ export async function assignManagerToChallenge(data: {
       },
       include: {
         Manager: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         },
         Challenge: {
           select: { id: true, title: true, description: true }
@@ -2871,7 +2955,13 @@ export async function getManagerPendingSubmissions(
       },
       include: {
         User: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         },
         Activity: {
           include: {
