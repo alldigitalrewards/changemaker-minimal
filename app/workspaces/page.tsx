@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
-import CreateWorkspaceDialog from "./create-workspace-dialog"
 import JoinWorkspaceDialog from "./join-workspace-dialog"
 import WorkspaceCard from "./workspace-card-client"
 import { RedeemInviteDialog } from "./redeem-invite-dialog"
@@ -224,15 +223,9 @@ export default async function WorkspacesPage() {
               <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <CardTitle className="mb-2">No Workspaces Yet</CardTitle>
               <CardDescription className="mb-6">
-                Get started by creating your own workspace or joining an existing one.
+                Redeem an invitation code to join a workspace.
               </CardDescription>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                {userIsWorkspaceAdmin && (
-                  <CreateWorkspaceDialog
-                    userId={dbUser.id}
-                    currentWorkspace={null}
-                  />
-                )}
+              <div className="flex justify-center">
                 <RedeemInviteDialog />
               </div>
             </CardContent>

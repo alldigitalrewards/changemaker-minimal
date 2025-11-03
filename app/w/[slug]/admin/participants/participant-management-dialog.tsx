@@ -56,7 +56,12 @@ export function ParticipantManagementDialog({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState("")
-  const [name, setName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [company, setCompany] = useState("")
+  const [jobTitle, setJobTitle] = useState("")
+  const [department, setDepartment] = useState("")
   const [selectedRole, setSelectedRole] = useState<Role>(participantRole || "PARTICIPANT")
   const [loading, setLoading] = useState(false)
   const [showRemoveAlert, setShowRemoveAlert] = useState(false)
@@ -74,12 +79,26 @@ export function ParticipantManagementDialog({
       return
     }
 
+    if (!firstName || !lastName) {
+      toast.error("Please enter first and last name")
+      return
+    }
+
     setLoading(true)
     try {
       const response = await fetch(`/api/workspaces/${slug}/participants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, name, role: "PARTICIPANT" }),
+        body: JSON.stringify({
+          email,
+          firstName,
+          lastName,
+          phone: phone || undefined,
+          company: company || undefined,
+          jobTitle: jobTitle || undefined,
+          department: department || undefined,
+          role: "PARTICIPANT"
+        }),
       })
 
       if (!response.ok) {
@@ -88,8 +107,14 @@ export function ParticipantManagementDialog({
       }
 
       toast.success("Participant added successfully")
+      // Reset all fields
       setEmail("")
-      setName("")
+      setFirstName("")
+      setLastName("")
+      setPhone("")
+      setCompany("")
+      setJobTitle("")
+      setDepartment("")
       setOpen(false)
       router.refresh()
     } catch (error) {
@@ -173,17 +198,6 @@ export function ParticipantManagementDialog({
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Full Name (optional)</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="Jane Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <div className="grid gap-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
@@ -193,6 +207,76 @@ export function ParticipantManagementDialog({
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Jane"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Phone (optional)</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="company">Company (optional)</Label>
+              <Input
+                id="company"
+                type="text"
+                placeholder="Acme Inc."
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="jobTitle">Job Title (optional)</Label>
+                <Input
+                  id="jobTitle"
+                  type="text"
+                  placeholder="Product Manager"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="department">Department (optional)</Label>
+                <Input
+                  id="department"
+                  type="text"
+                  placeholder="Engineering"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>

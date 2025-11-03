@@ -3,13 +3,14 @@ import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
 import { getUserBySupabaseId, getWorkspaceLeaderboard } from "@/lib/db/queries"
+import { getUserDisplayName } from "@/lib/user-utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Trophy, 
-  Medal, 
-  Award, 
-  Crown, 
+import {
+  Trophy,
+  Medal,
+  Award,
+  Crown,
   Users,
   Target,
   CheckSquare
@@ -35,7 +36,7 @@ function LeaderboardSkeleton() {
 
 interface LeaderboardEntryProps {
   entry: {
-    User: { id: string; email: string }
+    User: { id: string; email: string; firstName: string | null; lastName: string | null; displayName: string | null }
     totalPoints: number
   }
   rank: number
@@ -56,7 +57,7 @@ function LeaderboardTile({ entry, rank, isCurrentUser }: LeaderboardEntryProps) 
     }
   }
 
-  const displayName = entry.User.email.split('@')[0]
+  const displayName = getUserDisplayName(entry.User)
 
   // Special styling for top 3
   const isTopThree = rank <= 3

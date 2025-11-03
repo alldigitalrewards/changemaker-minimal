@@ -19,6 +19,7 @@ import { Eye, Shield, UserCheck } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { getUserDisplayName } from "@/lib/user-utils"
 
 export default async function AdminParticipantsPage({ 
   params,
@@ -56,7 +57,13 @@ export default async function AdminParticipantsPage({
     },
     include: {
       User: {
-        include: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+          isPending: true,
           Enrollment: {
             where: {
               Challenge: {
@@ -83,6 +90,9 @@ export default async function AdminParticipantsPage({
   const participants = memberships.map(m => ({
     id: m.User.id,
     email: m.User.email,
+    firstName: m.User.firstName,
+    lastName: m.User.lastName,
+    displayName: m.User.displayName,
     role: m.role,
     enrollments: m.User.Enrollment,
     createdAt: m.joinedAt,
@@ -249,7 +259,8 @@ export default async function AdminParticipantsPage({
                       <TableCell>
                         <Link href={`/w/${slug}/admin/participants/${participant.id}`} className="block">
                           <div>
-                            <p className="font-medium">{participant.email}</p>
+                            <p className="font-medium">{getUserDisplayName(participant)}</p>
+                            <p className="text-sm text-gray-500">{participant.email}</p>
                             <p className="text-sm text-gray-500">
                           {participant.enrollments.length} enrollment{participant.enrollments.length !== 1 ? 's' : ''}
                             </p>

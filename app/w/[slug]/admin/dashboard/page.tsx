@@ -76,16 +76,19 @@ export default async function AdminDashboard({
     activityId: submission.activityId,
     User: {
       id: submission.User.id,
-      email: submission.User.email
+      email: submission.User.email,
+      firstName: submission.User.firstName,
+      lastName: submission.User.lastName,
+      displayName: submission.User.displayName
     },
     Activity: {
       id: submission.Activity.id,
-      pointsValue: submission.Activity.ActivityTemplate.pointsValue,
+      pointsValue: submission.Activity.ActivityTemplate.basePoints,
       challengeId: submission.Activity.challengeId,
       ActivityTemplate: {
         name: submission.Activity.ActivityTemplate.name,
         description: submission.Activity.ActivityTemplate.description,
-        pointsValue: submission.Activity.ActivityTemplate.pointsValue
+        pointsValue: submission.Activity.ActivityTemplate.basePoints
       },
       Challenge: {
         id: submission.Activity.Challenge.id,

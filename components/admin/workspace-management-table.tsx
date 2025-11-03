@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MoreVertical, ExternalLink, Users, Trophy, Search } from 'lucide-react';
+import { getUserDisplayName } from '@/lib/user-utils';
 
 interface Workspace {
   id: string;
@@ -44,6 +45,9 @@ interface Workspace {
     User: {
       id: string;
       email: string;
+      firstName: string | null;
+      lastName: string | null;
+      displayName: string | null;
     };
     role: string;
   }[];
@@ -285,7 +289,10 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
                     </TableCell>
                     <TableCell>
                       {admin ? (
-                        <span className="text-sm text-gray-600">{admin.User.email}</span>
+                        <div>
+                          <span className="text-sm text-gray-900">{getUserDisplayName(admin.User)}</span>
+                          <p className="text-xs text-gray-500">{admin.User.email}</p>
+                        </div>
                       ) : (
                         <span className="text-sm text-gray-400">No admin</span>
                       )}

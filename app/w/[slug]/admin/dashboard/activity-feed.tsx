@@ -7,6 +7,7 @@ import { Check, X, Clock, User, Trophy, Mail, Settings, FileText, Paperclip, Ext
 import { quickApproveSubmission, quickRejectSubmission } from './actions'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { getUserDisplayName } from '@/lib/user-utils'
 
 interface ActivityFeedProps {
   workspaceId: string
@@ -100,31 +101,31 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
   }
 
   const formatEventMessage = (event: any) => {
-    const userEmail = event.user?.email || 'Unknown user'
-    const actorEmail = event.actor?.email || 'System'
+    const userName = event.user ? getUserDisplayName(event.user) : 'Unknown user'
+    const actorName = event.actor ? getUserDisplayName(event.actor) : 'System'
     const challengeTitle = event.challenge?.title || 'a challenge'
 
     switch (event.type) {
       case 'ENROLLED':
-        return `${userEmail} enrolled in ${challengeTitle}`
+        return `${userName} enrolled in ${challengeTitle}`
       case 'UNENROLLED':
-        return `${userEmail} unenrolled from ${challengeTitle}`
+        return `${userName} unenrolled from ${challengeTitle}`
       case 'SUBMISSION_CREATED':
-        return `${userEmail} submitted work for ${challengeTitle}`
+        return `${userName} submitted work for ${challengeTitle}`
       case 'SUBMISSION_APPROVED':
-        return `${actorEmail} approved ${userEmail}'s submission`
+        return `${actorName} approved ${userName}'s submission`
       case 'SUBMISSION_REJECTED':
-        return `${actorEmail} rejected ${userEmail}'s submission`
+        return `${actorName} rejected ${userName}'s submission`
       case 'CHALLENGE_CREATED':
-        return `${actorEmail} created ${challengeTitle}`
+        return `${actorName} created ${challengeTitle}`
       case 'CHALLENGE_UPDATED':
-        return `${actorEmail} updated ${challengeTitle}`
+        return `${actorName} updated ${challengeTitle}`
       case 'CHALLENGE_PUBLISHED':
-        return `${actorEmail} published ${challengeTitle}`
+        return `${actorName} published ${challengeTitle}`
       case 'INVITE_SENT':
-        return `${actorEmail} sent an invite`
+        return `${actorName} sent an invite`
       case 'INVITE_REDEEMED':
-        return `${userEmail} redeemed an invite`
+        return `${userName} redeemed an invite`
       default:
         return event.type.replace(/_/g, ' ').toLowerCase()
     }
@@ -229,8 +230,9 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
                       {/* Participant & Challenge Info */}
                       <div>
                         <p className="text-sm font-semibold text-gray-900">
-                          {submission.User.email}
+                          {getUserDisplayName(submission.User)}
                         </p>
+                        <p className="text-xs text-gray-500">{submission.User.email}</p>
                         <p className="text-xs text-gray-600 mt-0.5">
                           {submission.Activity.ActivityTemplate.name} • {submission.Activity.Challenge.title}
                         </p>
