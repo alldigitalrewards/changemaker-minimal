@@ -303,6 +303,29 @@ model TenantSku {
 model User {
   id                                            String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                                         String                           @unique
+
+  // Identity & Display
+  firstName                                     String?
+  lastName                                      String?
+  displayName                                   String?
+
+  // Contact Information
+  phone                                         String?
+
+  // Shipping Address (for reward fulfillment)
+  addressLine1                                  String?
+  addressLine2                                  String?
+  city                                          String?
+  state                                         String?
+  zipCode                                       String?
+  country                                       String?
+
+  // Professional/Organizational
+  company                                       String?
+  jobTitle                                      String?
+  department                                    String?
+
+  // System fields
   supabaseUserId                                String?                          @unique @db.Uuid
   createdAt                                     DateTime                         @default(now())
   updatedAt                                     DateTime                         @default(now())
