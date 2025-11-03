@@ -23,6 +23,9 @@ export default async function AdminApiDocsPage({ params }: Props) {
   }
 
   const workspace = await getCurrentWorkspace(slug)
+  if (!workspace) {
+    redirect('/workspaces')
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 pb-16">
