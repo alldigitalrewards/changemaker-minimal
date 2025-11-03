@@ -4,120 +4,123 @@
       {
         "id": 42,
         "title": "Database Schema Migration for RewardSTACK Integration",
-        "description": "Add new fields and tables to support RewardSTACK integration, participant tracking, and reward issuance. This is a phase-1 task that establishes the foundational database schema for the RewardSTACK integration project.",
+        "description": "Add new fields and tables to support RewardSTACK integration, participant tracking, and reward issuance based on ADR Marketplace Platform API documentation. This is a phase-1 task that establishes the foundational database schema for the RewardSTACK integration project. Includes critical enum clarifications based on codebase validation.",
         "status": "pending",
         "dependencies": [],
         "priority": "high",
-        "details": "Update Prisma schema to add fields for RewardSTACK configuration in Workspace, participant tracking in User, transaction tracking in RewardIssuance, catalog mapping in TenantSku, and necessary indexes. Use add-only migrations for backward compatibility. Encrypt sensitive fields using pgcrypto. Run migration using `pnpm prisma db push` and verify with staging DB. Tags: rewardstack, database, prisma, phase-1",
-        "testStrategy": "Verify migration applies cleanly, all new fields exist, and indexes are created. Run Prisma migration tests and check for zero errors. Validate that the schema supports the RewardSTACK integration requirements for phase-1.",
+        "details": "Update Prisma schema to add specific fields for RewardSTACK configuration in Workspace (orgId, programId, apiKey, enabled, environment), participant tracking in User (participantId, syncStatus, lastSync, ssoUrl), transaction tracking in RewardIssuance (transactionId, adjustmentId, rewardStackStatus, webhookReceived, errorMessage, metadata), and new RewardStackWebhookLog model. Use add-only migrations for backward compatibility. Encrypt sensitive fields using pgcrypto. Run migration using `pnpm prisma db push` and verify with staging DB. API environments: QA (https://admin.adrqa.info/api), Production (TBD). CRITICAL: Add separate rewardStackStatus field to RewardIssuance (do NOT extend existing RewardStatus enum). Add COMPLETED to EnrollmentStatus enum. Create new enums: RewardStackSyncStatus, RewardStackEnvironment, RewardStackStatus. Tags: rewardstack, database, prisma, phase-1",
+        "testStrategy": "Verify migration applies cleanly, all new fields exist, and indexes are created. Run Prisma migration tests and check for zero errors. Validate that the schema supports the RewardSTACK integration requirements for phase-1 including participant sync, transaction tracking, and webhook logging. Verify enum additions and separate rewardStackStatus field implementation.",
         "subtasks": [
           {
             "id": 1,
             "title": "Design Schema Changes for RewardSTACK Integration",
-            "description": "Specify all new fields and tables required for RewardSTACK integration, participant tracking, reward issuance, and catalog mapping for phase-1 implementation.",
+            "description": "Specify all new fields and tables required for RewardSTACK integration based on ADR Marketplace Platform API documentation, including Workspace config, User participant tracking, RewardIssuance transaction tracking, and webhook logging. Include critical enum clarifications based on codebase validation.",
             "dependencies": [],
-            "details": "Work with stakeholders to define the exact fields for RewardSTACK configuration in Workspace, participant tracking in User, transaction tracking in RewardIssuance, and catalog mapping in TenantSku. Document field types, relationships, and which fields require encryption. Identify necessary indexes for performance. Focus on phase-1 requirements for the RewardSTACK integration project.",
+            "details": "Define exact fields based on API documentation: Workspace (rewardStackOrgId, rewardStackProgramId, rewardStackApiKey encrypted, rewardStackEnabled boolean, rewardStackEnvironment enum QA/PRODUCTION), User (rewardStackParticipantId, rewardStackSyncStatus enum NOT_SYNCED/PENDING/SYNCED/FAILED, rewardStackLastSync datetime, rewardStackSsoUrl), RewardIssuance (rewardStackTransactionId, rewardStackAdjustmentId, rewardStackStatus enum PENDING/PROCESSING/COMPLETED/FAILED/RETURNED - SEPARATE from existing RewardStatus, rewardStackWebhookReceived boolean, rewardStackErrorMessage, metadata json), and new RewardStackWebhookLog model (id UUID, workspaceId relation, webhookId, event, payload json, status enum RECEIVED/PROCESSED/FAILED, processedAt, createdAt). CRITICAL: Add COMPLETED to existing EnrollmentStatus enum. Create new enums: RewardStackSyncStatus, RewardStackEnvironment, RewardStackStatus. Identify necessary indexes for performance.",
             "status": "pending",
-            "testStrategy": "Review schema design with engineering and product teams; validate against RewardSTACK integration requirements for phase-1."
+            "testStrategy": "Review schema design with engineering and product teams; validate against RewardSTACK API documentation and phase-1 requirements. Verify enum strategy preserves existing RewardStatus enum while adding separate rewardStackStatus field."
           },
           {
             "id": 2,
             "title": "Update Prisma Schema with New Models and Fields",
-            "description": "Implement the schema changes in the Prisma schema file, ensuring add-only modifications for backward compatibility and RewardSTACK integration support.",
+            "description": "Implement the schema changes in the Prisma schema file based on ADR Marketplace Platform API specifications, ensuring add-only modifications for backward compatibility. Include all required enum additions and clarifications.",
             "dependencies": [
               1
             ],
-            "details": "Edit `schema.prisma` to add new models, fields, and relations as specified for RewardSTACK integration. Use appropriate Prisma data types and attributes. Mark sensitive fields for later encryption. Ensure all changes are additive (no destructive changes). Include proper tagging for rewardstack and database components.",
+            "details": "Edit `schema.prisma` to add new fields to Workspace, User, and RewardIssuance models as specified in API documentation. Create new RewardStackWebhookLog model with proper relations. CRITICAL ENUM CHANGES: 1) Add COMPLETED to existing EnrollmentStatus enum, 2) Create RewardStackSyncStatus enum (NOT_SYNCED, PENDING, SYNCED, FAILED), 3) Create RewardStackEnvironment enum (QA, PRODUCTION), 4) Create RewardStackStatus enum (PENDING, PROCESSING, COMPLETED, FAILED, RETURNED) for separate rewardStackStatus field in RewardIssuance. Use appropriate Prisma data types and attributes. Mark rewardStackApiKey for encryption. Ensure all changes are additive (no destructive changes). Keep existing RewardStatus enum unchanged.",
             "status": "pending",
-            "testStrategy": "Run `prisma validate` and `prisma format` to ensure schema correctness; peer review the schema changes for RewardSTACK compatibility."
+            "testStrategy": "Run `prisma validate` and `prisma format` to ensure schema correctness; peer review the schema changes against API documentation requirements. Verify enum additions and separation of rewardStackStatus from existing RewardStatus."
           },
           {
             "id": 3,
             "title": "Create and Review Add-Only Migration Script",
-            "description": "Generate and review the migration script to apply the schema changes using add-only operations for RewardSTACK database requirements.",
+            "description": "Generate and review the migration script to apply the schema changes using add-only operations for RewardSTACK database requirements based on API specifications. Include all enum additions and field clarifications.",
             "dependencies": [
               2
             ],
-            "details": "Use `prisma migrate dev` or `prisma migrate diff` to generate the migration SQL for RewardSTACK integration. Ensure the script only adds tables, columns, and indexes. Manually review the SQL for safety and compliance with add-only policy. Verify compatibility with phase-1 requirements.",
+            "details": "Use `prisma migrate dev` or `prisma migrate diff` to generate the migration SQL for RewardSTACK integration. Ensure the script only adds tables, columns, indexes, and enums. Include enum additions: COMPLETED to EnrollmentStatus, new RewardStackSyncStatus, RewardStackEnvironment, and RewardStackStatus enums. Manually review the SQL for safety and compliance with add-only policy. Verify compatibility with phase-1 requirements and API field mappings (orgId, programId, uniqueId, transactionId, etc.). Confirm separate rewardStackStatus field implementation.",
             "status": "pending",
-            "testStrategy": "Apply migration to a test database; verify no data loss or destructive changes; confirm all new fields and tables are present for RewardSTACK integration."
+            "testStrategy": "Apply migration to a test database; verify no data loss or destructive changes; confirm all new fields, tables, and enums are present for RewardSTACK integration. Validate enum additions and rewardStackStatus field separation."
           },
           {
             "id": 4,
             "title": "Implement Encryption for Sensitive Fields Using pgcrypto",
-            "description": "Set up encryption for sensitive RewardSTACK fields in the database using pgcrypto, updating the Prisma schema and migration as needed.",
+            "description": "Set up encryption for sensitive RewardSTACK fields (specifically rewardStackApiKey) in the database using pgcrypto, updating the Prisma schema and migration as needed.",
             "dependencies": [
               3
             ],
-            "details": "Identify sensitive fields (e.g., RewardSTACK API keys) and modify the migration script to use pgcrypto functions for encryption. Update Prisma schema to reflect encrypted fields. Ensure application code can read/write encrypted data for RewardSTACK integration. Focus on phase-1 security requirements.",
+            "details": "Identify sensitive fields (rewardStackApiKey for JWT bearer token generation) and modify the migration script to use pgcrypto functions for encryption. Update Prisma schema to reflect encrypted fields. Ensure application code can read/write encrypted data for RewardSTACK authentication. Focus on phase-1 security requirements for API key protection.",
             "status": "pending",
-            "testStrategy": "Insert and retrieve test data for encrypted RewardSTACK fields; verify encryption at rest in the database."
+            "testStrategy": "Insert and retrieve test data for encrypted rewardStackApiKey field; verify encryption at rest in the database and proper decryption for JWT token generation."
           },
           {
             "id": 5,
             "title": "Execute Migration and Validate on Staging Database",
-            "description": "Run the migration using `pnpm prisma db push` on the staging database and verify all RewardSTACK integration changes, including indexes and encryption.",
+            "description": "Run the migration using `pnpm prisma db push` on the staging database and verify all RewardSTACK integration changes including new models, fields, enums, indexes, and encryption. Validate all enum additions and field clarifications.",
             "dependencies": [
               4
             ],
-            "details": "Apply the migration to the staging environment for RewardSTACK integration. Check that all new fields, tables, and indexes exist. Validate that sensitive fields are encrypted. Run integration and migration tests to confirm zero errors. Verify readiness for phase-1 RewardSTACK implementation.",
+            "details": "Apply the migration to the staging environment for RewardSTACK integration. Check that all new fields in Workspace, User, and RewardIssuance models exist. Verify RewardStackWebhookLog model is created with proper relations. Validate that rewardStackApiKey is encrypted. Confirm all enums are properly defined: EnrollmentStatus includes COMPLETED, RewardStackSyncStatus (NOT_SYNCED/PENDING/SYNCED/FAILED), RewardStackEnvironment (QA/PRODUCTION), RewardStackStatus (PENDING/PROCESSING/COMPLETED/FAILED/RETURNED), and webhook status enums. Verify separate rewardStackStatus field in RewardIssuance. Run integration and migration tests to confirm zero errors. Verify readiness for phase-1 RewardSTACK implementation with API endpoints support.",
             "status": "pending",
-            "testStrategy": "Automated and manual tests: check schema, run Prisma migration tests, verify encryption, and confirm application functionality for RewardSTACK integration phase-1."
+            "testStrategy": "Automated and manual tests: check schema against API documentation requirements, run Prisma migration tests, verify encryption, test all enum values including new additions, confirm separate rewardStackStatus field implementation, and verify application functionality for RewardSTACK integration phase-1."
           }
         ]
       },
       {
         "id": 43,
         "title": "Implement RewardSTACK Authentication Layer",
-        "description": "Create JWT bearer token generation, caching, and refresh logic for RewardSTACK API.",
-        "details": "Implement `generateBearerToken()` using `jsonwebtoken` (latest v9.x) or Web Crypto API. Cache token in memory, auto-refresh if expiring within 5 minutes. Implement error handling for 401 and configuration errors. Log all auth attempts for audit. Store encrypted API key in Workspace config.",
-        "testStrategy": "Unit test token generation, expiry, refresh, and error handling. Simulate expired tokens and invalid API keys.",
-        "priority": "high",
+        "description": "Create JWT bearer token generation, caching, and refresh logic for RewardSTACK API with environment-aware client wrapper and secure API key management.",
+        "status": "pending",
         "dependencies": [
           42
         ],
-        "status": "pending",
+        "priority": "high",
+        "details": "Implement `generateRewardStackToken(workspaceId: string)` to retrieve encrypted API key from Workspace.rewardStackApiKey, decrypt it, and generate JWT bearer tokens. Create `createRewardStackClient(workspaceId: string)` wrapper that automatically attaches Bearer tokens and routes to QA (https://admin.adrqa.info/api) or Production based on Workspace.rewardStackEnvironment. Implement token caching with TTL, handle 401/403 errors with proper retry logic, and ensure secure handling of encrypted API keys with comprehensive audit logging.",
+        "testStrategy": "Unit test token generation with valid/invalid API keys, test request authentication with generated bearer tokens, test environment switching between QA and Production, mock encryption/decryption flows, and verify error handling for 401/403 responses.",
         "subtasks": [
           {
             "id": 1,
-            "title": "Implement JWT Bearer Token Generation Logic",
-            "description": "Develop the function to generate JWT bearer tokens using jsonwebtoken v9.x or Web Crypto API for RewardSTACK API authentication.",
+            "title": "Implement generateRewardStackToken Authentication Function",
+            "description": "Create the core authentication function that retrieves encrypted API key from Workspace, decrypts it, and generates JWT bearer tokens for RewardSTACK API requests.",
             "dependencies": [],
-            "details": "Use the jsonwebtoken library (v9.x) to create and sign JWT tokens with the required claims and expiration. Ensure the payload includes necessary fields such as issuer, subject, and expiry. Support both symmetric and asymmetric signing as needed. Validate configuration and handle key management securely.",
+            "details": "Implement generateRewardStackToken(workspaceId: string) -> Promise<string> that queries Workspace.rewardStackApiKey, decrypts the stored API key using the workspace encryption system, and generates a JWT bearer token. Include proper error handling for missing API keys, decryption failures, and token generation errors. Never log decrypted API keys in any circumstances.",
             "status": "pending",
-            "testStrategy": "Unit test token generation with valid and invalid payloads, verify token structure and claims, and check compatibility with RewardSTACK API."
+            "testStrategy": "Unit test with valid encrypted API keys, test decryption process, verify JWT token structure, and test error scenarios for missing or invalid API keys."
           },
           {
             "id": 2,
-            "title": "Implement In-Memory Token Caching and Auto-Refresh Logic",
-            "description": "Create logic to cache JWT tokens in memory and automatically refresh them if they are expiring within 5 minutes.",
+            "title": "Implement createRewardStackClient API Wrapper with Environment Routing",
+            "description": "Create an API client wrapper that automatically attaches Bearer tokens and routes requests to appropriate environment endpoints based on workspace configuration.",
             "dependencies": [
               1
             ],
-            "details": "Store the generated JWT token in a memory cache. Monitor token expiry and trigger auto-refresh if the token is about to expire (within 5 minutes). Ensure thread safety and avoid race conditions during refresh. Provide a method to retrieve the current valid token for API requests.",
+            "details": "Build createRewardStackClient(workspaceId: string) that automatically calls generateRewardStackToken for authentication, attaches Bearer token to all requests, and routes to QA (https://admin.adrqa.info/api) or Production based on Workspace.rewardStackEnvironment enum. Handle 401 errors with automatic token refresh and 403 errors with proper error messaging.",
             "status": "pending",
-            "testStrategy": "Simulate token expiry and verify auto-refresh triggers correctly. Test concurrent requests to ensure only one refresh occurs. Validate cache invalidation and token replacement."
+            "testStrategy": "Test client creation with different environment configurations, verify automatic token attachment, test environment URL routing, and validate 401/403 error handling with retry logic."
           },
           {
             "id": 3,
-            "title": "Implement Error Handling and Audit Logging for Authentication",
-            "description": "Add robust error handling for 401 responses and configuration errors, and log all authentication attempts for auditing purposes.",
+            "title": "Implement Token Caching with TTL and Rate Limiting Awareness",
+            "description": "Add intelligent token caching with time-to-live management to reduce token generation overhead and implement rate limiting awareness for API requests.",
             "dependencies": [
               1,
               2
             ],
-            "details": "Detect and handle authentication errors such as invalid credentials, expired tokens, and misconfiguration. Log all authentication attempts, including successes and failures, with relevant metadata for audit trails. Ensure logs are structured and securely stored.",
+            "details": "Implement in-memory token caching with configurable TTL to avoid regenerating tokens for every request. Monitor token expiry and proactively refresh tokens before expiration. Add rate limiting awareness to prevent excessive token generation and API calls. Ensure thread safety and handle concurrent requests appropriately.",
             "status": "pending",
-            "testStrategy": "Trigger error scenarios (401, config errors) and verify correct error handling and logging. Review audit logs for completeness and accuracy."
+            "testStrategy": "Test token caching behavior with various TTL settings, verify proactive refresh logic, simulate concurrent requests to validate thread safety, and test rate limiting scenarios."
           },
           {
             "id": 4,
-            "title": "Implement Secure Storage and Encryption of API Keys in Workspace Config",
-            "description": "Store the API key securely in the workspace configuration, ensuring it is encrypted at rest and accessible only for authentication.",
-            "dependencies": [],
-            "details": "Integrate encryption for API keys before storing them in workspace config. Use a secure encryption algorithm and manage keys appropriately. Provide methods to retrieve and decrypt the API key only when needed for token generation. Document the encryption and access process.",
+            "title": "Implement Comprehensive Error Handling and Audit Logging",
+            "description": "Add robust error handling for authentication failures and implement comprehensive audit logging for all authentication attempts while maintaining security best practices.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Handle 401 Unauthorized (invalid/expired tokens), 403 Forbidden (invalid API key/insufficient permissions), and configuration errors with appropriate error messages for debugging. Log all authentication attempts, successes, and failures with relevant metadata for audit trails. Ensure logs never contain decrypted API keys or sensitive authentication data.",
             "status": "pending",
-            "testStrategy": "Test storing and retrieving encrypted API keys. Attempt unauthorized access and verify keys remain protected. Validate encryption and decryption logic."
+            "testStrategy": "Trigger various error scenarios (401, 403, config errors) and verify correct error handling and logging. Review audit logs for completeness while ensuring no sensitive data is logged."
           }
         ]
       },
@@ -283,217 +286,295 @@
       {
         "id": 47,
         "title": "Participant Sync Service for RewardSTACK",
-        "description": "Implement automatic participant creation and update in RewardSTACK on first reward issuance. Tags: rewardstack, sync, api, phase-2",
+        "description": "Implement comprehensive participant sync service for RewardSTACK with manual, automatic, and scheduled sync capabilities. Support create, update, delete operations with proper error handling and status tracking. Tags: rewardstack, sync, api, phase-2",
         "status": "pending",
         "dependencies": [
           46
         ],
         "priority": "high",
-        "details": "Create `lib/rewardstack/participants.ts` with functions for create, update, and get participant using RewardSTACK API v2.2. Handle duplicate, validation, and auth errors. Integrate with `issueReward()` for lazy sync. Use Prisma `$transaction()` for atomicity. This is a phase-2 feature focusing on RewardSTACK sync and API integration.",
-        "testStrategy": "Unit tests for participant creation, duplicate handling, error logging, and sync retry logic. Include tests for rewardstack API integration scenarios.",
+        "details": "Create `lib/rewardstack/participant-sync.ts` with functions for syncing participants to RewardSTACK using API v2.2 endpoints. Implement syncParticipantToRewardStack(), bulkSyncParticipants(), unsyncParticipant(), and getParticipantFromRewardStack(). Handle sync status tracking (NOT_SYNCED → PENDING → SYNCED/FAILED), error scenarios (400, 404, 409, 500), and data mapping between Changemaker User model and RewardSTACK participant format. Support multiple sync triggers: manual admin action, automatic enrollment, scheduled cron jobs, and webhook-based reverse sync.",
+        "testStrategy": "Unit tests for all sync functions, error handling scenarios (validation, duplicates, server errors), and sync status transitions. Integration tests for enrollment flow with RewardSTACK sync, batch operations, and webhook handling. Performance tests for bulk sync operations.",
         "subtasks": [
           {
             "id": 1,
-            "title": "Implement RewardSTACK Participant API Integration (Create, Update, Get)",
-            "description": "Develop functions to create, update, and retrieve participants using RewardSTACK API v2.2.",
+            "title": "Implement Core RewardSTACK Participant API Functions",
+            "description": "Create base API functions for participant CRUD operations using RewardSTACK API v2.2 endpoints.",
             "dependencies": [],
-            "details": "Create `lib/rewardstack/participants.ts` with async functions for participant creation, update, and retrieval. Use the RewardSTACK API v2.2 endpoints, handle authentication, and ensure correct request/response mapping. Document function signatures and expected payloads.",
+            "details": "Create `lib/rewardstack/participant-sync.ts` with functions for POST /api/program/{programId}/participant (create), PUT /api/program/{programId}/participant/{uniqueId} (update), GET /api/program/{programId}/participant/{uniqueId} (get single), and DELETE /api/program/{programId}/participant/{uniqueId} (delete). Map Changemaker User fields to RewardSTACK participant format: User.id → uniqueId, User.email → email, User.firstName → firstName, User.lastName → lastName. Include metadata with changemakerId and workspaceSlug.",
             "status": "pending",
-            "testStrategy": "Unit tests for each API function using mocked HTTP responses."
+            "testStrategy": "Unit tests for each CRUD operation with mocked API responses, field mapping validation, and request/response handling."
           },
           {
             "id": 2,
-            "title": "Implement Error Handling and Duplicate Participant Logic",
-            "description": "Add logic to handle duplicate, validation, and authentication errors from the RewardSTACK API.",
+            "title": "Implement Sync Status Tracking and Error Handling",
+            "description": "Add comprehensive error handling for API responses and sync status state management.",
             "dependencies": [
               1
             ],
-            "details": "Extend API functions to detect and handle duplicate participant errors (e.g., by checking error codes or messages), validation failures, and authentication issues. Implement retry or fallback logic as appropriate. Ensure errors are logged and surfaced for debugging.",
+            "details": "Handle HTTP error codes: 400 (validation errors with field-specific logging), 404 (participant not found for updates), 409 (duplicate uniqueId - retry with PUT), 500 (server errors with exponential backoff retry). Implement sync status transitions: NOT_SYNCED → PENDING → SYNCED/FAILED. Update User.rewardStackSyncStatus, User.rewardStackParticipantId, and User.rewardStackLastSync fields appropriately.",
             "status": "pending",
-            "testStrategy": "Unit tests simulating API error responses for duplicates, validation, and auth failures."
+            "testStrategy": "Unit tests for each error scenario, retry logic, and sync status state transitions. Mock API responses for different error codes."
           },
           {
             "id": 3,
-            "title": "Integrate Participant Sync with Reward Issuance Flow",
-            "description": "Connect participant sync logic to the `issueReward()` function for lazy creation/update on first reward issuance.",
+            "title": "Implement Primary Sync Function (syncParticipantToRewardStack)",
+            "description": "Create main sync function that handles individual participant sync with status checking and appropriate API calls.",
             "dependencies": [
               1,
               2
             ],
-            "details": "Modify `issueReward()` to check for participant existence and trigger create/update as needed before issuing a reward. Ensure the sync is performed only when necessary (lazy sync) and does not block reward issuance unnecessarily.",
+            "details": "Implement syncParticipantToRewardStack(userId: string, workspaceId: string) that checks User.rewardStackSyncStatus and calls POST for NOT_SYNCED users or PUT for SYNCED users needing updates. Handle the complete sync flow including status updates, error logging, and participant ID storage. Ensure atomic database updates using Prisma transactions.",
             "status": "pending",
-            "testStrategy": "Integration tests for reward issuance with and without existing participants."
+            "testStrategy": "Unit tests for sync logic with different initial sync statuses, integration tests with database transactions, and error recovery scenarios."
           },
           {
             "id": 4,
-            "title": "Ensure Atomic Operations with Prisma Transactions",
-            "description": "Wrap participant sync and reward issuance in a Prisma `$transaction()` to guarantee atomicity.",
+            "title": "Implement Bulk Sync and Additional Utility Functions",
+            "description": "Create batch sync capabilities and utility functions for comprehensive participant management.",
             "dependencies": [
               3
             ],
-            "details": "Refactor the reward issuance and participant sync logic to execute within a single Prisma `$transaction()`. Ensure that both DB updates and external API calls are coordinated to prevent partial updates or inconsistent state.",
+            "details": "Implement bulkSyncParticipants(workspaceId: string, userIds?: string[]) using Promise.allSettled for parallel processing with success/failure reporting. Add unsyncParticipant() for removing participants from RewardSTACK and getParticipantFromRewardStack() for verification. Ensure all functions handle workspace-specific program ID resolution and maintain data consistency.",
             "status": "pending",
-            "testStrategy": "Unit and integration tests to verify rollback on failure and atomicity of operations."
+            "testStrategy": "Unit tests for bulk operations, parallel processing, and utility functions. Performance tests for large batch operations and error aggregation."
           },
           {
             "id": 5,
-            "title": "Develop Unit and Integration Tests for Participant Sync Scenarios",
-            "description": "Write comprehensive tests covering participant creation, duplicate handling, error logging, and sync retry logic.",
+            "title": "Implement Sync Triggers and Integration Points",
+            "description": "Connect sync service to various trigger points: manual admin actions, automatic enrollment, scheduled jobs, and webhooks.",
+            "dependencies": [
+              4
+            ],
+            "details": "Integrate sync calls into challenge enrollment flow (when workspace.rewardStackEnabled is true), create admin interface for manual bulk sync, implement scheduled cron job for pending participants, and add webhook handlers for reverse sync from RewardSTACK. Ensure proper error handling and logging for each trigger type.",
+            "status": "pending",
+            "testStrategy": "Integration tests for each sync trigger, end-to-end tests for enrollment flow with sync, and webhook handling tests. Verify proper error handling and logging across all trigger types."
+          },
+          {
+            "id": 6,
+            "title": "Comprehensive Testing Suite for Participant Sync",
+            "description": "Develop complete test coverage for all sync scenarios, error cases, and integration points.",
             "dependencies": [
               1,
               2,
               3,
-              4
+              4,
+              5
             ],
-            "details": "Implement unit tests for all participant API functions and error scenarios. Add integration tests for the full sync flow, including reward issuance and transaction atomicity. Cover edge cases such as retries, partial failures, and concurrent sync attempts.",
+            "details": "Create comprehensive test suite covering: POST with required/optional fields, PUT updates, GET verification, DELETE operations, error handling for all HTTP status codes, sync status transitions, duplicate handling (409 → PUT retry), enrollment integration, bulk sync performance, and webhook processing. Include edge cases like concurrent sync attempts and partial failures.",
             "status": "pending",
-            "testStrategy": "Automated test suite with coverage for all sync scenarios and error cases."
+            "testStrategy": "Automated test suite with unit tests for all functions, integration tests for complete flows, performance tests for bulk operations, and end-to-end tests for user enrollment with RewardSTACK sync."
           }
         ]
       },
       {
         "id": 48,
         "title": "Enhance Reward Issuance Logic for Points via RewardSTACK",
-        "description": "Issue point rewards using RewardSTACK adjustments API with retry and error handling. This is part of phase-2 implementation for enhanced reward processing capabilities.",
+        "description": "Issue point rewards using RewardSTACK adjustments API with retry and error handling. This is part of phase-2 implementation for enhanced reward processing capabilities using the actual RewardSTACK Transaction and Point Adjustment API endpoints. Triggers when enrollment.status changes to COMPLETED after all required activities are approved.",
         "status": "pending",
         "dependencies": [
-          47
+          47,
+          42
         ],
         "priority": "high",
-        "details": "Implement `issuePointReward()` and `issuePointRewardWithRetry()` in `lib/rewardstack/rewards.ts`. Use exponential backoff, 30s timeout, and error classification. Update `issueReward()` to call these for point rewards. Store external transaction ID and response in RewardIssuance. Tags: rewardstack, rewards, points, phase-2",
-        "testStrategy": "Integration tests for successful issuance, retries, error scenarios, and DB record creation.",
+        "details": "Implement reward logic in `lib/rewardstack/reward-logic.ts` with functions `issueRewardTransaction()`, `issuePointsAdjustment()`, and `issueCatalogReward()`. Use POST /api/program/{programId}/participant/{uniqueId}/adjustment for point rewards and POST /api/program/{programId}/participant/{uniqueId}/transaction for SKU rewards with exponential backoff retry logic. Handle error classification (400/404/409/500), participant sync validation, and idempotency. Store rewardStackAdjustmentId and full API response in RewardIssuance. Integrate with challenge completion workflow triggered when Enrollment.status = COMPLETED (requires COMPLETED enum value from Task 42). Reward type mapping: Challenge.rewardType = points → adjustment API, Challenge.rewardType = sku → transaction API. Tags: rewardstack, rewards, points, phase-2",
+        "testStrategy": "Integration tests for point adjustments, duplicate adjustmentId handling, participant sync scenarios, retry logic for 500 errors, challenge completion workflow with COMPLETED enrollment status, reward type mapping validation, and DB record updates.",
         "subtasks": [
           {
             "id": 1,
-            "title": "Implement Point Reward Issuance with Error Classification and Exponential Backoff",
-            "description": "Develop the core logic for issuing point rewards via RewardSTACK adjustments API, including error classification and exponential backoff retry mechanism.",
+            "title": "Implement Core Reward Transaction Logic with API Endpoint Integration",
+            "description": "Develop the main reward issuance function that handles both point adjustments and catalog item transactions using actual RewardSTACK API endpoints.",
             "dependencies": [],
-            "details": "Create `issuePointReward()` and `issuePointRewardWithRetry()` functions in `lib/rewardstack/rewards.ts`. Integrate with RewardSTACK adjustments API using the 'credit' adjustment type for points. Implement error classification to distinguish between transient and permanent errors. Use exponential backoff for retries, with a maximum timeout of 30 seconds per attempt. This implementation supports the phase-2 reward processing enhancement.",
+            "details": "Create `issueRewardTransaction(rewardIssuanceId: string)` in `lib/rewardstack/reward-logic.ts`. Get RewardIssuance record with challenge details, sync participant if needed (check User.rewardStackSyncStatus), determine reward type based on Challenge.rewardType (points vs sku), update RewardIssuance.rewardStackStatus to PROCESSING, make appropriate API call with retry logic, store rewardStackTransactionId or rewardStackAdjustmentId, and update status to COMPLETED or FAILED. Handle error logging in RewardIssuance.rewardStackErrorMessage.",
             "status": "pending",
-            "testStrategy": "Unit tests for error classification, backoff timing, and API request structure. Mock API responses for transient and permanent errors."
+            "testStrategy": "Unit tests for reward type determination based on Challenge.rewardType, participant sync validation, status updates, and error handling. Mock RewardSTACK API responses."
           },
           {
             "id": 2,
-            "title": "Update Reward Issuance Flow to Use Enhanced Point Logic",
-            "description": "Refactor the main reward issuance function to utilize the new point reward logic for point-type rewards.",
+            "title": "Implement Point Adjustment API Integration with Error Classification",
+            "description": "Create point adjustment wrapper function using POST /api/program/{programId}/participant/{uniqueId}/adjustment endpoint with comprehensive error handling.",
             "dependencies": [
               1
             ],
-            "details": "Modify `issueReward()` to call `issuePointRewardWithRetry()` when issuing point rewards. Ensure correct routing based on reward type. Maintain compatibility with existing SKU and monetary reward logic. This update is part of the phase-2 reward system improvements.",
+            "details": "Implement `issuePointsAdjustment(userId: string, workspaceId: string, amount: number, description: string, rewardIssuanceId: string)` function. Validate amount > 0 for rewards, call RewardSTACK adjustment API with required fields (amount, adjustmentId using RewardIssuance.id), optional description and metadata (challengeId, enrollmentId, completedAt). Handle HTTP status codes: 400 (invalid amount), 404 (participant not synced), 409 (duplicate adjustmentId for idempotency), 500 (retry with exponential backoff, max 3 retries). Return new points balance and update RewardIssuance with adjustment details.",
             "status": "pending",
-            "testStrategy": "Integration tests to verify correct function calls for point rewards and regression tests for other reward types."
+            "testStrategy": "Integration tests for positive/negative amounts, duplicate adjustmentId handling, participant not synced scenario, retry logic for 500 errors, and metadata storage."
           },
           {
             "id": 3,
-            "title": "Store External Transaction ID and API Response in RewardIssuance Record",
-            "description": "Persist the external transaction ID and full API response from RewardSTACK in the RewardIssuance database record for traceability.",
+            "title": "Implement Catalog Item Transaction API Integration",
+            "description": "Create catalog reward wrapper function using POST /api/program/{programId}/participant/{uniqueId}/transaction endpoint for SKU and monetary rewards.",
             "dependencies": [
-              2
+              1
             ],
-            "details": "Update the RewardIssuance model and database logic to store the external transaction ID and relevant response data after successful or failed point reward issuance. Ensure data integrity and error handling for failed writes. This enhancement supports better tracking and debugging capabilities in phase-2.",
+            "details": "Implement `issueCatalogReward(userId: string, workspaceId: string, rewardId: string, rewardIssuanceId: string)` function. Get reward details from RewardSTACK catalog if needed, call transaction API with required fields (rewardId from Challenge.rewardStackRewardId, transactionId using RewardIssuance.id), optional metadata (challengeId, enrollmentId, completedAt). Handle same error scenarios as point adjustments. Return transaction object and update RewardIssuance with transaction details including rewardStackTransactionId.",
             "status": "pending",
-            "testStrategy": "Database tests to confirm correct storage of transaction ID and response. Integration tests for end-to-end issuance and record creation."
+            "testStrategy": "Integration tests for catalog item transactions, reward validation, duplicate transactionId handling, and transaction status tracking."
+          },
+          {
+            "id": 4,
+            "title": "Implement Transaction Status Monitoring and Error Recovery",
+            "description": "Create functions for checking transaction status and handling failed transactions with proper error recovery mechanisms.",
+            "dependencies": [
+              2,
+              3
+            ],
+            "details": "Implement `checkTransactionStatus(rewardIssuanceId: string)` to query RewardSTACK for current transaction status and update local RewardIssuance.rewardStackStatus. Create `handleFailedTransaction(rewardIssuanceId: string, error: Error)` to update status to FAILED, log errors in rewardStackErrorMessage, send admin notifications, and optionally queue for retry. Support both polling and webhook-based status updates for comprehensive transaction monitoring.",
+            "status": "pending",
+            "testStrategy": "Unit tests for status polling, error recovery workflows, admin notifications, and retry queue management."
+          },
+          {
+            "id": 5,
+            "title": "Integrate Reward Issuance with Challenge Completion Workflow",
+            "description": "Connect the reward issuance logic to the challenge completion trigger point when enrollment.status changes to COMPLETED after all required activities are approved.",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement integration workflow triggered when Enrollment.status = COMPLETED (requires COMPLETED enum value from Task 42): check workspace.rewardStackEnabled === true, get challenge reward configuration based on Challenge.rewardType (points or sku), create RewardIssuance record with PENDING status, call issueRewardTransaction(rewardIssuance.id), wait for webhook confirmation or poll status, update local records based on result. Handle data mapping from Changemaker to RewardSTACK (RewardIssuance.id → adjustmentId/transactionId, Challenge fields → API parameters) and store full API responses in RewardIssuance.metadata. Trigger flow: participant completes activities → manager approves submissions → admin final approval → Enrollment.status = COMPLETED → reward issuance.",
+            "status": "pending",
+            "testStrategy": "End-to-end integration tests: complete challenge with COMPLETED enrollment status → auto-issue reward → verify in RewardSTACK. Test workspace enablement checks, reward type mapping (points vs sku), Challenge.rewardType validation, and data mapping accuracy."
           }
         ]
       },
       {
         "id": 49,
         "title": "Enhance Reward Issuance Logic for SKU and Monetary Rewards",
-        "description": "Issue SKU and monetary rewards via RewardSTACK transactions API with validation and retry logic. This is part of phase-2 implementation for enhanced reward processing capabilities.",
+        "description": "Issue catalog item rewards via RewardSTACK transactions API with state management, validation, and retry logic. This is part of phase-2 implementation for enhanced reward processing capabilities using the RewardSTACK transaction model.",
         "status": "pending",
         "dependencies": [
           48
         ],
         "priority": "high",
-        "details": "Implement `issueSkuReward()` and `issueSkuRewardWithRetry()` in `lib/rewardstack/rewards.ts`. Validate SKU before transaction, handle participant sync, and error scenarios. Update `issueReward()` for SKU/monetary types. Store transaction details in RewardIssuance. Tags: rewardstack, rewards, sku, phase-2",
-        "testStrategy": "Integration tests for SKU validation, transaction flow, retries, and DB updates.",
+        "details": "Implement catalog item reward issuance in `lib/rewardstack/rewards.ts` using the RewardSTACK transaction model. Handle state transitions (PENDING → PROCESSING → COMPLETED/FAILED/RETURNED), store transaction IDs and metadata, implement retry logic for failed transactions. Add query helpers in `lib/db/queries.ts` for transaction monitoring and reconciliation. Store full API responses and webhook data in RewardIssuance.metadata JSON field. Tags: rewardstack, rewards, catalog-item, transaction-model, phase-2",
+        "testStrategy": "Integration tests for state transitions, webhook handling, metadata storage, query helpers, and reconciliation logic. Test end-to-end catalog reward issuance with webhook confirmation.",
         "subtasks": [
           {
             "id": 1,
-            "title": "Implement SKU and Monetary Reward Issuance with Validation",
-            "description": "Develop functions to issue SKU and monetary rewards via the RewardSTACK transactions API, ensuring SKU validation and participant synchronization before transaction.",
+            "title": "Implement Catalog Item Reward Transaction Logic",
+            "description": "Develop functions to issue catalog item rewards via the RewardSTACK transactions API, implementing the transaction state machine and storing transaction details.",
             "dependencies": [],
-            "details": "Implement `issueSkuReward()` in `lib/rewardstack/rewards.ts` to validate SKU existence and eligibility before initiating the transaction. Ensure participant data is synchronized with RewardSTACK. Handle pre-transaction validation errors and return appropriate error responses.",
+            "details": "Implement `issueCatalogReward()` in `lib/rewardstack/rewards.ts` to create transactions for catalog items. Handle state transitions from PENDING to PROCESSING when making API calls. Store rewardStackTransactionId and full API response in RewardIssuance.metadata. Validate catalog item existence and participant synchronization before transaction. Handle pre-transaction validation errors appropriately.",
             "status": "pending",
-            "testStrategy": "Unit and integration tests for SKU validation, participant sync, and error handling before transaction."
+            "testStrategy": "Unit and integration tests for catalog item validation, participant sync, transaction creation, and metadata storage."
           },
           {
             "id": 2,
-            "title": "Add Retry Logic and Error Handling for Reward Issuance",
-            "description": "Enhance reward issuance with robust retry logic for transient failures and comprehensive error handling for both SKU and monetary rewards.",
+            "title": "Implement Transaction State Management and Webhook Handling",
+            "description": "Add comprehensive state management for reward transactions including webhook processing and state transitions between PROCESSING, COMPLETED, FAILED, and RETURNED states.",
             "dependencies": [
               1
             ],
-            "details": "Implement `issueSkuRewardWithRetry()` to wrap the issuance logic with retry mechanisms (e.g., exponential backoff) for network or API errors. Classify errors as retryable or non-retryable. Ensure that all error scenarios are logged and surfaced appropriately.",
+            "details": "Implement webhook handlers to update RewardIssuance status from PROCESSING to COMPLETED/FAILED/RETURNED based on webhook events. Store webhook data in metadata including webhookReceivedAt, webhookEvent, and webhookPayload. Handle transaction reversal scenarios (COMPLETED to RETURNED). Set rewardStackWebhookReceived flag when webhooks are processed. Implement proper error message storage in rewardStackErrorMessage field.",
             "status": "pending",
-            "testStrategy": "Integration tests simulating transient and permanent errors, verifying retry attempts, and correct error classification."
+            "testStrategy": "Integration tests for webhook processing, state transitions, metadata updates, and transaction reversal scenarios."
           },
           {
             "id": 3,
-            "title": "Update Reward Issuance Flow and Persist Transaction Details",
-            "description": "Update the main `issueReward()` function to support SKU and monetary reward types, and persist all transaction details in the RewardIssuance database.",
+            "title": "Add Retry Logic and Error Classification",
+            "description": "Enhance reward issuance with robust retry logic for transient failures and comprehensive error handling with proper error classification.",
             "dependencies": [
               2
             ],
-            "details": "Modify `issueReward()` to route SKU and monetary rewards to the new issuance logic. Ensure transaction responses, including external transaction IDs and statuses, are stored in the RewardIssuance table for auditing and reconciliation.",
+            "details": "Implement retry mechanisms with exponential backoff for retryable errors (network failures, 500 errors). Classify errors as retryable or non-retryable based on HTTP status codes and error types. Store retry metadata including retryCount, lastRetryAt, and retryScheduledFor in the metadata JSON field. Queue failed transactions for retry processing. Ensure non-retryable errors are marked as FAILED immediately.",
             "status": "pending",
-            "testStrategy": "Integration tests for end-to-end reward issuance, database record creation, and data integrity checks."
+            "testStrategy": "Integration tests simulating transient and permanent errors, verifying retry attempts, error classification, and retry queue processing."
+          },
+          {
+            "id": 4,
+            "title": "Implement Database Query Helpers for Transaction Management",
+            "description": "Add comprehensive query functions in lib/db/queries.ts for monitoring, reconciliation, and transaction management across different reward issuance states.",
+            "dependencies": [],
+            "details": "Implement query helpers: getRewardIssuancesByStatus() for monitoring dashboards, getPendingRewardIssuances() for retry queue processing, getRewardIssuanceByTransactionId() and getRewardIssuanceByAdjustmentId() for webhook handlers, and updateRewardIssuanceFromWebhook() for webhook processing. Include proper error handling and return types for all query functions.",
+            "status": "pending",
+            "testStrategy": "Unit tests for all query functions with various status filters, transaction ID lookups, and webhook update scenarios."
+          },
+          {
+            "id": 5,
+            "title": "Implement Monitoring and Reconciliation Logic",
+            "description": "Add monitoring capabilities for stuck transactions, failed transaction reporting, and daily reconciliation with RewardSTACK API status polling.",
+            "dependencies": [
+              4
+            ],
+            "details": "Implement daily reconciliation job to query PROCESSING rewards older than 24 hours and poll RewardSTACK API for current status. Add stuck transaction detection for PROCESSING rewards older than 48 hours with admin alerts. Create failed transaction reporting grouped by error messages. Include comprehensive metadata tracking for all monitoring activities with proper timestamps and error logging.",
+            "status": "pending",
+            "testStrategy": "Integration tests for reconciliation logic, stuck transaction detection, failed transaction reporting, and admin notification systems."
+          },
+          {
+            "id": 6,
+            "title": "Update Main Reward Issuance Flow for Transaction Model",
+            "description": "Update the main issueReward() function to support the new transaction model with proper routing for catalog items vs point adjustments and comprehensive metadata storage.",
+            "dependencies": [
+              3
+            ],
+            "details": "Modify `issueReward()` to route catalog item rewards (CATALOG_ITEM type) to the new transaction logic while point rewards (POINTS type) use the adjustment API from Task 48. Ensure proper metadata structure is stored including requestedAt, apiEndpoint, requestBody, challengeTitle, rewardType, rewardAmount/rewardCatalogId. Handle both transaction types with appropriate state management and error handling.",
+            "status": "pending",
+            "testStrategy": "Integration tests for end-to-end reward issuance covering both catalog items and points, metadata storage validation, and proper routing logic."
           }
         ]
       },
       {
         "id": 50,
         "title": "RewardSTACK Webhook Handler",
-        "description": "Create webhook endpoint to process RewardSTACK fulfillment events and update reward status. Tags: rewardstack, webhooks, api, phase-2",
+        "description": "Create webhook endpoint to process RewardSTACK webhook events and update reward status. Implement webhook management API integration, event handlers for participant/transaction/adjustment events, and comprehensive logging. Tags: rewardstack, webhooks, api, phase-2",
         "status": "pending",
         "dependencies": [
           49
         ],
         "priority": "high",
-        "details": "Implement POST `/api/webhooks/rewardstack` route. Verify webhook signature, handle events (`reward.fulfilled`, `reward.failed`, `reward.cancelled`), update RewardIssuance status, log ActivityEvent, and return 200 OK. Use latest crypto libraries for signature verification. This is part of phase-2 implementation for RewardSTACK integration.",
-        "testStrategy": "API tests for webhook signature, event handling, status updates, and error logging.",
+        "details": "Implement POST `/api/webhooks/rewardstack` route with workspace identification via query param. Handle RewardSTACK webhook events (participant.*, transaction.*, adjustment.*) with proper signature verification, logging to RewardStackWebhookLog table, and routing to specialized handlers. Update RewardIssuance status based on transaction/adjustment events. Implement webhook management functions for creating, updating, and deleting webhooks via RewardSTACK Management API. Include idempotency, rate limiting, and comprehensive error handling.",
+        "testStrategy": "API tests for webhook signature validation, event handling for all event types, RewardIssuance status updates, webhook log storage, idempotency checks, rate limiting, and webhook management API integration.",
         "subtasks": [
           {
             "id": 1,
-            "title": "Implement Webhook Endpoint and Signature Verification",
-            "description": "Create the POST /api/webhooks/rewardstack endpoint and verify incoming webhook signatures using the latest crypto libraries.",
+            "title": "Implement Webhook Endpoint with Workspace Identification",
+            "description": "Create the POST /api/webhooks/rewardstack endpoint with workspace identification via query parameter and signature verification.",
             "dependencies": [],
-            "details": "Set up the Express (or relevant framework) route for POST /api/webhooks/rewardstack. Parse the raw request body as required for signature verification. Use the latest crypto library (e.g., Node.js crypto) to compute and verify the HMAC signature against the provided header. Reject requests with invalid signatures and return 401 Unauthorized.",
+            "details": "Set up the Next.js API route at app/api/webhooks/rewardstack/route.ts. Extract workspaceId from query parameters, validate workspace exists and has RewardSTACK enabled. Implement signature verification using shared secret if provided by RewardSTACK. Parse raw request body for signature validation and reject invalid signatures with 401. Include rate limiting to prevent abuse.",
             "status": "pending",
-            "testStrategy": "Send test requests with valid and invalid signatures to ensure only valid requests are processed and others are rejected with 401."
+            "testStrategy": "Test workspace identification, signature validation with valid/invalid signatures, rate limiting, and proper error responses."
           },
           {
             "id": 2,
-            "title": "Parse and Handle RewardSTACK Event Types",
-            "description": "Extract and process event types from the webhook payload, supporting 'reward.fulfilled', 'reward.failed', and 'reward.cancelled'.",
+            "title": "Implement RewardStackWebhookLog Storage",
+            "description": "Create logging functionality to store all incoming webhooks in RewardStackWebhookLog table with status tracking.",
             "dependencies": [
               1
             ],
-            "details": "After signature verification, parse the JSON payload and determine the event type. Implement logic to route each event type ('reward.fulfilled', 'reward.failed', 'reward.cancelled') to the appropriate handler function for further processing.",
+            "details": "Log all incoming webhooks to RewardStackWebhookLog table with fields: workspaceId, webhookId, event, payload, status (RECEIVED/PROCESSED/FAILED), processedAt, errorMessage. Implement idempotency checking using webhook event ID to prevent duplicate processing. Update log status as webhook processing progresses.",
             "status": "pending",
-            "testStrategy": "Send sample payloads for each event type and verify correct handler invocation and branching."
+            "testStrategy": "Verify webhook logs are created correctly, idempotency prevents duplicate processing, and status updates work properly."
           },
           {
             "id": 3,
-            "title": "Update RewardIssuance Status and Log ActivityEvent",
-            "description": "Update the RewardIssuance record status based on the event and log an ActivityEvent for auditing.",
+            "title": "Create Specialized Webhook Event Handlers",
+            "description": "Implement handler functions for participant, transaction, and adjustment webhook events in lib/rewardstack/webhook-handlers.ts.",
             "dependencies": [
               2
             ],
-            "details": "For each event, update the corresponding RewardIssuance record in the database to reflect the new status. Create and persist an ActivityEvent entry with relevant details for audit purposes. Ensure idempotency by checking if the status has already been updated.",
+            "details": "Create handleParticipantWebhook() for participant.* events to update User.rewardStackSyncStatus. Create handleTransactionWebhook() for transaction.* events to find RewardIssuance by rewardStackTransactionId, update rewardStackStatus and rewardStackWebhookReceived, store payload in metadata, and send admin notifications on failures. Create handleAdjustmentWebhook() for adjustment.* events with similar RewardIssuance updates using rewardStackAdjustmentId.",
             "status": "pending",
-            "testStrategy": "Verify that database records are updated correctly and ActivityEvent logs are created for each event, including repeated (idempotent) requests."
+            "testStrategy": "Test each handler with appropriate event payloads, verify RewardIssuance updates, User sync status changes, and admin notifications."
           },
           {
             "id": 4,
-            "title": "Implement Error Handling, Response Logic, and API Tests",
-            "description": "Handle errors gracefully, ensure correct HTTP responses, and implement comprehensive API tests for all event types and error scenarios.",
+            "title": "Implement Webhook Management API Integration",
+            "description": "Create functions to manage webhooks via RewardSTACK Management API for webhook creation, updates, and deletion.",
             "dependencies": [
               3
             ],
-            "details": "Return 200 OK for successful processing, 401 for invalid signatures, and 500 for internal errors. Log errors for monitoring. Write automated API tests covering valid events, invalid signatures, malformed payloads, and database failures.",
+            "details": "Implement functions to call RewardSTACK Management API endpoints: createWebhook() for POST /api/organization/{orgId}/webhooks, updateWebhook() for PUT requests, deleteWebhook() for DELETE requests, and listWebhooks() for GET requests. Use Workspace.rewardStackOrgId for API calls. Store webhookId in Workspace.rewardStackWebhookId field. Handle all webhook event types: participant.*, transaction.*, adjustment.*.",
             "status": "pending",
-            "testStrategy": "Run automated tests to confirm correct responses and error handling for all event types and failure scenarios."
+            "testStrategy": "Test webhook creation with proper event subscriptions, webhook updates, deletion, and webhook ID storage in workspace."
+          },
+          {
+            "id": 5,
+            "title": "Implement Comprehensive Error Handling and Monitoring",
+            "description": "Add robust error handling, monitoring capabilities, and admin dashboard features for webhook management.",
+            "dependencies": [
+              4
+            ],
+            "details": "Return appropriate HTTP status codes (200 for success, 401 for invalid signature, 400 for invalid events, 500 for internal errors). Implement webhook delivery dashboard showing recent webhooks by event type, success/failure rates, and processing times. Add alerts for high failure rates and processing delays. Include retry mechanism for failed webhook processing.",
+            "status": "pending",
+            "testStrategy": "Test all error scenarios, verify proper HTTP responses, test monitoring dashboard functionality, and validate alert mechanisms."
           }
         ]
       },
@@ -613,48 +694,70 @@
         ]
       },
       {
-        "id": 53,
+        "id": "53",
         "title": "Participant Reward Catalog SSO Integration",
-        "description": "Enable participants to access RewardSTACK catalog via SSO token. Tags: rewardstack, participant, sso, phase-3",
+        "description": "Enable participants to access RewardSTACK catalog via SSO token using the actual RewardSTACK SSO API endpoint with proper workspace isolation. Tags: rewardstack, participant, sso, phase-3",
         "status": "pending",
         "dependencies": [
           49
         ],
         "priority": "medium",
-        "details": "Implement `/api/rewardstack/sso` endpoint to generate SSO token and redirect URL. Add UI button to participant dashboard to open catalog. Handle token expiry and error scenarios. Use latest fetch and JWT libraries. This is a phase-3 feature focusing on participant-facing catalog access through SSO integration.",
-        "testStrategy": "E2E tests for SSO flow, token generation, redirect, and error handling.",
+        "details": "Implement SSO integration using RewardSTACK's actual API endpoint: GET /api/program/{programId}/participant/{uniqueId}/sso. Create lib/rewardstack/sso.ts with generateSSOUrl(), getSSOUrlWithCache(), and invalidateSSOUrl() functions. Add ParticipantRewardPortalButton component to participant dashboard and rewards page. Implement GET /api/workspaces/[slug]/rewardstack/sso route following existing API conventions with proper workspace isolation and authentication. Include caching strategy with workspace+user composite keys, security considerations, rate limiting, and comprehensive monitoring. This is a phase-3 feature focusing on participant-facing catalog access through RewardSTACK's official SSO integration with multi-tenant security.",
+        "testStrategy": "Unit tests for SSO functions, integration tests for API endpoint with workspace context, UI tests for button behavior and error states, security tests for URL expiration and workspace isolation, rate limiting tests, and E2E tests for complete SSO flow including RewardSTACK portal access.",
         "subtasks": [
           {
             "id": 1,
-            "title": "Implement /api/rewardstack/sso Endpoint for SSO Token Generation",
-            "description": "Develop the backend API endpoint to generate a JWT SSO token and provide the redirect URL for RewardSTACK catalog access.",
+            "title": "Implement RewardSTACK SSO Service Library",
+            "description": "Create lib/rewardstack/sso.ts with core SSO functions using the actual RewardSTACK API endpoint with workspace context support.",
             "dependencies": [],
-            "details": "Create the `/api/rewardstack/sso` endpoint using the latest fetch and JWT libraries. Ensure the endpoint validates participant identity, generates a secure SSO token, and returns the correct redirect URL for the RewardSTACK catalog. Handle token expiry and error scenarios in the response.",
+            "details": "Implement generateSSOUrl(userId, workspaceId, returnUrl?) function that validates user sync status, maps workspace.rewardStackProgramId to programId and user.rewardStackParticipantId to uniqueId, calls GET /api/program/{programId}/participant/{uniqueId}/sso, and returns SSO URL object. Add getSSOUrlWithCache() for caching valid URLs with workspace+user composite key in User.rewardStackSsoUrl with TTL. Include invalidateSSOUrl() for security scenarios. Handle all error cases (404, 400, 401, 500) and implement proper TypeScript types for API responses.",
             "status": "pending",
-            "testStrategy": "Unit and integration tests for token generation, expiry handling, and error responses."
+            "testStrategy": "Unit tests for all SSO functions, error handling scenarios, caching behavior with workspace isolation, and sync status validation."
           },
           {
             "id": 2,
-            "title": "Add Catalog Access Button to Participant Dashboard UI",
-            "description": "Integrate a UI button on the participant dashboard that initiates the SSO flow and opens the RewardSTACK catalog.",
+            "title": "Create GET /api/workspaces/[slug]/rewardstack/sso API Route",
+            "description": "Implement the backend API route following existing workspace API conventions for SSO URL generation requests.",
             "dependencies": [
               1
             ],
-            "details": "Update the participant dashboard React component to include a 'View Catalog' button. On click, call the `/api/rewardstack/sso` endpoint, handle loading and error states, and redirect the user to the catalog using the provided URL. Ensure accessibility and responsive design.",
+            "details": "Create app/api/workspaces/[slug]/rewardstack/sso/route.ts with GET endpoint accepting workspace slug parameter and optional returnUrl query parameter. Implement requireWorkspaceAccess() for authentication, extract userId from session, call generateSSOUrl() from SSO service with workspace context, handle rate limiting (10 requests per user per hour), and return structured response with ssoUrl and expiresAt. Include comprehensive error handling, workspace isolation validation, and audit logging.",
             "status": "pending",
-            "testStrategy": "UI tests for button visibility, click behavior, redirect flow, and error display."
+            "testStrategy": "Integration tests for API route with workspace context, authentication validation, rate limiting, error responses, workspace isolation, and audit trail logging."
           },
           {
             "id": 3,
-            "title": "Implement Token Expiry and Error Handling Logic",
-            "description": "Ensure robust handling of SSO token expiry and error scenarios throughout the integration.",
+            "title": "Develop ParticipantRewardPortalButton Component",
+            "description": "Create the React component for SSO catalog access on participant dashboard and rewards page with workspace-aware API calls.",
+            "dependencies": [
+              2
+            ],
+            "details": "Build ParticipantRewardPortalButton component with loading states, error handling for not-synced participants, and proper accessibility. On click, call GET /api/workspaces/{slug}/rewardstack/sso endpoint with current workspace context, handle responses, and open SSO URL in new tab. Include error messages for sync requirements and API failures. Integrate into /w/[slug]/participant/dashboard and /w/[slug]/participant/rewards pages with proper workspace slug handling.",
+            "status": "pending",
+            "testStrategy": "UI tests for button behavior, loading states, error display, accessibility compliance, workspace context handling, and SSO URL opening in new tab."
+          },
+          {
+            "id": 4,
+            "title": "Implement Admin SSO Access Feature",
+            "description": "Add admin capability to generate SSO URLs for any workspace participant for support and troubleshooting with proper workspace isolation.",
+            "dependencies": [
+              2
+            ],
+            "details": "Extend /w/[slug]/admin/participants page with 'Access Portal As' button for each participant. Implement admin-specific SSO generation using GET /api/workspaces/{slug}/rewardstack/sso with target participant context and proper permission validation. Add audit logging for admin SSO access attempts. Ensure admins can generate SSO URLs for any workspace participant while maintaining workspace isolation and security controls.",
+            "status": "pending",
+            "testStrategy": "Tests for admin permission validation, SSO generation for other users within workspace context, audit logging, workspace isolation, and security boundary enforcement."
+          },
+          {
+            "id": 5,
+            "title": "Implement Security and Monitoring Features",
+            "description": "Add comprehensive security measures, rate limiting, and monitoring for SSO integration with workspace-aware caching.",
             "dependencies": [
               1,
               2
             ],
-            "details": "Add logic to detect expired or invalid tokens both on the backend and frontend. Display clear error messages to participants and provide retry options. Log errors for monitoring and debugging. Test with various expiry and failure cases.",
+            "details": "Implement rate limiting (10 SSO URLs per user per hour per workspace), HTTPS-only transmission, proper URL expiration handling, and cache invalidation strategies with workspace+user composite keys. Add monitoring for SSO access metrics per workspace, audit trail logging with timestamp/IP/user/workspace tracking, and alerting for suspicious access patterns. Ensure SSO URLs are never logged in client-side code, are cleared from browser history, and maintain proper workspace isolation in all caching mechanisms.",
             "status": "pending",
-            "testStrategy": "E2E tests simulating token expiry, invalid tokens, and error conditions; verify user messaging and system logging."
+            "testStrategy": "Security tests for rate limiting per workspace, URL expiration, HTTPS enforcement, workspace isolation in caching, monitoring verification, and audit trail completeness with workspace context."
           }
         ]
       },
@@ -1664,7 +1767,7 @@
         ]
       },
       {
-        "id": "76",
+        "id": 76,
         "title": "Comprehensive Testing and Validation for Phase 1 & 2",
         "description": "Write and execute unit, integration, and E2E tests for all core and AI features, including security and performance checks. Tags: ai-email, testing, validation, phase-4",
         "status": "pending",

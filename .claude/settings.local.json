@@ -69,7 +69,8 @@
       "mcp__supabase__search_docs",
       "mcp__zen__chat",
       "Bash(killall:*)",
-      "mcp__vercel-awesome-ai__list_projects"
+      "mcp__vercel-awesome-ai__list_projects",
+      "Bash(pnpm tsx:*)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",
@@ -78,6 +79,7 @@
       "/Users/jack/Projects/qa-changemaker"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "zen",
     "supabase-production",
@@ -90,6 +92,5 @@
     "vercel",
     "supabase-stage"
   ],
-  "spinnerTipsEnabled": false,
-  "enableAllProjectMcpServers": true
+  "spinnerTipsEnabled": false
 }
