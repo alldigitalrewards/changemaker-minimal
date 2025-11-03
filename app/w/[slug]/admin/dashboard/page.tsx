@@ -56,17 +56,20 @@ export default async function AdminDashboard({
   const totalEnrollments = stats?.Challenge.reduce((acc, c) => acc + c.Enrollment.length, 0) || 0
 
   // Get recent activities
-  const { 
-    events, 
-    pendingSubmissions, 
-    pendingSubmissionCount, 
-    oldestPendingSubmission 
+  const {
+    events,
+    pendingSubmissions,
+    pendingSubmissionCount,
+    oldestPendingSubmission
   } = await getRecentWorkspaceActivities(workspace.id)
+
+  // Extract challengeId for client components (to avoid serialization issues)
+  const firstPendingChallengeId = pendingSubmissions[0]?.Activity?.challengeId
 
   return (
     <div className="space-y-6">
       {/* Pending Submissions - Priority Alert */}
-      {pendingSubmissionCount > 0 && (
+      {pendingSubmissionCount > 0 && firstPendingChallengeId && (
         <Card className="border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -89,7 +92,7 @@ export default async function AdminDashboard({
                 </div>
               </div>
               <Button asChild size="lg" className="bg-coral-500 hover:bg-coral-600">
-                <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].Activity.challengeId}/submissions?status=pending`}>
+                <Link href={`/w/${slug}/admin/challenges/${firstPendingChallengeId}/submissions?status=pending`}>
                   Review Now
                 </Link>
               </Button>
@@ -143,8 +146,8 @@ export default async function AdminDashboard({
           </CardContent>
         </Card>
 
-        {pendingSubmissionCount > 0 && pendingSubmissions.length > 0 ? (
-          <Link href={`/w/${slug}/admin/challenges/${pendingSubmissions[0].Activity.challengeId}/submissions?status=pending`}>
+        {pendingSubmissionCount > 0 && firstPendingChallengeId ? (
+          <Link href={`/w/${slug}/admin/challenges/${firstPendingChallengeId}/submissions?status=pending`}>
             <Card className="border-amber-200 bg-amber-50/50 hover:shadow-md hover:border-amber-300 transition-all cursor-pointer group">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-amber-700 transition-colors">Pending Review</CardTitle>
