@@ -57,11 +57,19 @@ export default async function AdminDashboard({
 
   // Get recent activities
   const {
-    events,
+    events: rawEvents,
     pendingSubmissions,
     pendingSubmissionCount,
     oldestPendingSubmission
   } = await getRecentWorkspaceActivities(workspace.id)
+
+  // Transform events to normalize Prisma relation names to expected field names
+  const events = rawEvents.map((event: any) => ({
+    ...event,
+    user: event.User_ActivityEvent_userIdToUser,
+    actor: event.User_ActivityEvent_actorUserIdToUser,
+    challenge: event.Challenge
+  }))
 
   // Extract challengeId for client components (to avoid serialization issues)
   const firstPendingChallengeId = pendingSubmissions[0]?.Activity?.challengeId
