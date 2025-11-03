@@ -66,6 +66,38 @@ export default async function AdminDashboard({
   // Extract challengeId for client components (to avoid serialization issues)
   const firstPendingChallengeId = pendingSubmissions[0]?.Activity?.challengeId
 
+  // Transform pendingSubmissions for client component serialization
+  const serializedPendingSubmissions = pendingSubmissions.map(submission => ({
+    id: submission.id,
+    submittedAt: submission.submittedAt.toISOString(),
+    textContent: submission.textContent,
+    linkUrl: submission.linkUrl,
+    fileUrls: submission.fileUrls,
+    activityId: submission.activityId,
+    User: {
+      id: submission.User.id,
+      email: submission.User.email,
+      name: submission.User.name
+    },
+    Activity: {
+      id: submission.Activity.id,
+      pointsValue: submission.Activity.ActivityTemplate.pointsValue,
+      challengeId: submission.Activity.challengeId,
+      ActivityTemplate: {
+        name: submission.Activity.ActivityTemplate.name,
+        description: submission.Activity.ActivityTemplate.description,
+        pointsValue: submission.Activity.ActivityTemplate.pointsValue
+      },
+      Challenge: {
+        id: submission.Activity.Challenge.id,
+        title: submission.Activity.Challenge.title
+      }
+    },
+    activity: {
+      challengeId: submission.Activity.challengeId
+    }
+  }))
+
   return (
     <div className="space-y-6">
       {/* Pending Submissions - Priority Alert */}
@@ -194,7 +226,7 @@ export default async function AdminDashboard({
           workspaceId={workspace.id}
           slug={slug}
           events={events}
-          pendingSubmissions={pendingSubmissions}
+          pendingSubmissions={serializedPendingSubmissions}
         />
       </div>
 
