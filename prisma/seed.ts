@@ -173,6 +173,23 @@ const challengeTemplates = [
 ];
 
 /**
+ * Split a full name into firstName and lastName
+ */
+function splitFullName(fullName: string): { firstName: string; lastName: string | null } {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return {
+      firstName: parts[0],
+      lastName: parts.slice(1).join(' ')
+    };
+  }
+  return {
+    firstName: fullName.trim(),
+    lastName: null
+  };
+}
+
+/**
  * Get or create a Supabase user for seeding purposes.
  * Attempts to create the user; if the user already exists, updates password and metadata.
  *
@@ -288,11 +305,17 @@ async function seed() {
       );
 
       if (supabaseUser) {
+        // Split name into firstName and lastName
+        const { firstName, lastName } = splitFullName(admin.name);
+
         // Create Prisma user
         const user = await prisma.user.upsert({
           where: { email: admin.email },
           update: {
             supabaseUserId: supabaseUser.id,
+            firstName,
+            lastName,
+            displayName: admin.name,
             isPending: false, // Admins are not pending
             // Grant platform_super_admin to designated super admins for testing
             permissions:
@@ -307,6 +330,9 @@ async function seed() {
           create: {
             email: admin.email,
             supabaseUserId: supabaseUser.id,
+            firstName,
+            lastName,
+            displayName: admin.name,
             isPending: false, // Admins are not pending
             permissions:
               admin.email === "jfelke@alldigitalrewards.com" ||
@@ -572,17 +598,26 @@ async function seed() {
           (w) => w.slug === manager.workspace,
         );
 
+        // Split name into firstName and lastName
+        const { firstName, lastName } = splitFullName(manager.name);
+
         // Create Prisma user
         const user = await prisma.user.upsert({
           where: { email: manager.email },
           update: {
             supabaseUserId: supabaseUser.id,
+            firstName,
+            lastName,
+            displayName: manager.name,
             isPending: false,
             tenantId: workspace?.slug || "default",
           },
           create: {
             email: manager.email,
             supabaseUserId: supabaseUser.id,
+            firstName,
+            lastName,
+            displayName: manager.name,
             isPending: false,
             tenantId: workspace?.slug || "default",
           },
@@ -636,17 +671,26 @@ async function seed() {
           (w) => w.slug === participant.workspace,
         );
 
+        // Split name into firstName and lastName
+        const { firstName, lastName } = splitFullName(participant.name);
+
         // Use upsert to handle existing Prisma users
         const user = await prisma.user.upsert({
           where: { email: participant.email },
           update: {
             supabaseUserId: supabaseUser.id,
+            firstName,
+            lastName,
+            displayName: participant.name,
             isPending: false, // Seeded participants are not pending
             tenantId: workspace?.slug || "default", // Use workspace slug as tenantId
           },
           create: {
             email: participant.email,
             supabaseUserId: supabaseUser.id,
+            firstName,
+            lastName,
+            displayName: participant.name,
             isPending: false, // Seeded participants are not pending
             tenantId: workspace?.slug || "default", // Use workspace slug as tenantId
           },

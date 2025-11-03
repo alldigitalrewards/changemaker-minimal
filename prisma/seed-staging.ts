@@ -144,6 +144,23 @@ const stagingParticipants = [
 ];
 
 /**
+ * Split a full name into firstName and lastName
+ */
+function splitFullName(fullName: string): { firstName: string; lastName: string | null } {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return {
+      firstName: parts[0],
+      lastName: parts.slice(1).join(' ')
+    };
+  }
+  return {
+    firstName: fullName.trim(),
+    lastName: null
+  };
+}
+
+/**
  * Get or create a Supabase user for staging
  */
 async function ensureSupabaseUser(email: string, name: string) {
@@ -218,11 +235,17 @@ async function seedStaging() {
         const supabaseUserId = await ensureSupabaseUser(admin.email, admin.name);
 
         if (supabaseUserId) {
+          // Split name into firstName and lastName
+          const { firstName, lastName } = splitFullName(admin.name);
+
           // Create database user
           await prisma.user.create({
             data: {
               email: admin.email,
               supabaseUserId,
+              firstName,
+              lastName,
+              displayName: admin.name,
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
@@ -278,10 +301,16 @@ async function seedStaging() {
         const supabaseUserId = await ensureSupabaseUser(admin.email, admin.name);
 
         if (supabaseUserId) {
+          // Split name into firstName and lastName
+          const { firstName, lastName } = splitFullName(admin.name);
+
           await prisma.user.create({
             data: {
               email: admin.email,
               supabaseUserId,
+              firstName,
+              lastName,
+              displayName: admin.name,
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
@@ -336,10 +365,16 @@ async function seedStaging() {
         const supabaseUserId = await ensureSupabaseUser(manager.email, manager.name);
 
         if (supabaseUserId) {
+          // Split name into firstName and lastName
+          const { firstName, lastName } = splitFullName(manager.name);
+
           await prisma.user.create({
             data: {
               email: manager.email,
               supabaseUserId,
+              firstName,
+              lastName,
+              displayName: manager.name,
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
@@ -394,10 +429,16 @@ async function seedStaging() {
         const supabaseUserId = await ensureSupabaseUser(participant.email, participant.name);
 
         if (supabaseUserId) {
+          // Split name into firstName and lastName
+          const { firstName, lastName } = splitFullName(participant.name);
+
           await prisma.user.create({
             data: {
               email: participant.email,
               supabaseUserId,
+              firstName,
+              lastName,
+              displayName: participant.name,
               WorkspaceMembership: {
                 create: {
                   workspaceId: workspace.id,
