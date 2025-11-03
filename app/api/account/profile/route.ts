@@ -2,25 +2,45 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, withErrorHandling } from '@/lib/auth/api-auth'
 import { getUserBySupabaseId } from '@/lib/db/queries'
+import { prisma } from '@/lib/prisma'
 
 export const GET = withErrorHandling(async () => {
-  const { supabaseUser } = await requireAuth()
-  const fullName = (supabaseUser.user_metadata as any)?.full_name || ''
+  const { supabaseUser, dbUser } = await requireAuth()
   return NextResponse.json({
     email: supabaseUser.email,
-    fullName,
+    firstName: dbUser.firstName,
+    lastName: dbUser.lastName,
+    displayName: dbUser.displayName,
+    addressLine1: dbUser.addressLine1,
+    addressLine2: dbUser.addressLine2,
+    city: dbUser.city,
+    state: dbUser.state,
+    zipCode: dbUser.zipCode,
+    country: dbUser.country,
+    phone: dbUser.phone,
     userMetadata: supabaseUser.user_metadata || {}
   })
 })
 
 export const PUT = withErrorHandling(async (request: Request) => {
   const { supabaseUser, dbUser } = await requireAuth()
-  const body = await request.json().catch(() => ({})) as { 
-    fullName?: string; 
-    department?: string; 
-    bio?: string; 
+  const body = await request.json().catch(() => ({})) as {
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    fullName?: string; // For backward compatibility - will be split into firstName/lastName
+    department?: string;
+    bio?: string;
     organization?: string;
     timezone?: string;
+    // Address fields
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    phone?: string;
     notificationPrefs?: {
       reviewQueue?: boolean;
       enrollmentChanges?: boolean;
@@ -34,40 +54,90 @@ export const PUT = withErrorHandling(async (request: Request) => {
     showKeyboardHints?: boolean;
   }
 
-  const updates: Record<string, any> = {}
-  if (typeof body.fullName === 'string') updates.full_name = body.fullName.trim()
-  if (typeof body.department === 'string') updates.department = body.department.trim()
-  if (typeof body.bio === 'string') updates.bio = body.bio.trim()
-  if (typeof body.organization === 'string') updates.organization = body.organization.trim()
-  if (typeof body.timezone === 'string') updates.timezone = body.timezone.trim()
+  // Handle database fields (firstName, lastName, displayName, address fields)
+  const dbUpdates: {
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+    phone?: string;
+  } = {}
+
+  // If fullName is provided (backward compatibility), split it
+  if (typeof body.fullName === 'string' && body.fullName.trim()) {
+    const parts = body.fullName.trim().split(/\s+/)
+    if (parts.length >= 2) {
+      dbUpdates.firstName = parts[0]
+      dbUpdates.lastName = parts.slice(1).join(' ')
+    } else {
+      dbUpdates.firstName = body.fullName.trim()
+    }
+  }
+
+  // Direct field updates override fullName split
+  if (typeof body.firstName === 'string') dbUpdates.firstName = body.firstName.trim()
+  if (typeof body.lastName === 'string') dbUpdates.lastName = body.lastName.trim()
+  if (typeof body.displayName === 'string') dbUpdates.displayName = body.displayName.trim()
+
+  // Handle address fields
+  if (typeof body.addressLine1 === 'string') dbUpdates.addressLine1 = body.addressLine1.trim() || undefined
+  if (typeof body.addressLine2 === 'string') dbUpdates.addressLine2 = body.addressLine2.trim() || undefined
+  if (typeof body.city === 'string') dbUpdates.city = body.city.trim() || undefined
+  if (typeof body.state === 'string') dbUpdates.state = body.state.trim() || undefined
+  if (typeof body.zipCode === 'string') dbUpdates.zipCode = body.zipCode.trim() || undefined
+  if (typeof body.country === 'string') dbUpdates.country = body.country.trim() || undefined
+  if (typeof body.phone === 'string') dbUpdates.phone = body.phone.trim() || undefined
+
+  // Handle user_metadata fields (preferences, settings, etc.)
+  const metadataUpdates: Record<string, any> = {}
+  if (typeof body.department === 'string') metadataUpdates.department = body.department.trim()
+  if (typeof body.bio === 'string') metadataUpdates.bio = body.bio.trim()
+  if (typeof body.organization === 'string') metadataUpdates.organization = body.organization.trim()
+  if (typeof body.timezone === 'string') metadataUpdates.timezone = body.timezone.trim()
   if (body.notificationPrefs && typeof body.notificationPrefs === 'object') {
-    updates.notification_prefs = {
+    metadataUpdates.notification_prefs = {
       ...(supabaseUser.user_metadata as any)?.notification_prefs,
       ...body.notificationPrefs
     }
   }
-  if (typeof body.defaultLanding === 'string') updates.default_landing = body.defaultLanding
-  if (typeof body.defaultWorkspaceSlug === 'string') updates.default_workspace_slug = body.defaultWorkspaceSlug
-  if (typeof body.dateFormat === 'string') updates.date_format = body.dateFormat
-  if (typeof body.reducedMotion === 'boolean') updates.reduced_motion = body.reducedMotion
-  if (typeof body.uiDensity === 'string') updates.ui_density = body.uiDensity
-  if (typeof body.showKeyboardHints === 'boolean') updates.show_keyboard_hints = body.showKeyboardHints
+  if (typeof body.defaultLanding === 'string') metadataUpdates.default_landing = body.defaultLanding
+  if (typeof body.defaultWorkspaceSlug === 'string') metadataUpdates.default_workspace_slug = body.defaultWorkspaceSlug
+  if (typeof body.dateFormat === 'string') metadataUpdates.date_format = body.dateFormat
+  if (typeof body.reducedMotion === 'boolean') metadataUpdates.reduced_motion = body.reducedMotion
+  if (typeof body.uiDensity === 'string') metadataUpdates.ui_density = body.uiDensity
+  if (typeof body.showKeyboardHints === 'boolean') metadataUpdates.show_keyboard_hints = body.showKeyboardHints
 
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(dbUpdates).length === 0 && Object.keys(metadataUpdates).length === 0) {
     return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 })
   }
 
-  const supabase = await createClient()
-  const { error } = await supabase.auth.updateUser({ data: updates })
-  if (error) {
-    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+  // Update database fields
+  if (Object.keys(dbUpdates).length > 0) {
+    try {
+      await prisma.user.update({
+        where: { id: dbUser.id },
+        data: dbUpdates
+      })
+    } catch (error) {
+      console.error('Failed to update user profile in database:', error)
+      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+    }
   }
 
-  // Touch prisma User.updatedAt via no-op update
-  try {
-    const { prisma } = await import('@/lib/prisma')
-    await prisma.user.update({ where: { id: dbUser.id }, data: { email: dbUser.email } })
-  } catch {}
+  // Update user_metadata fields if any
+  if (Object.keys(metadataUpdates).length > 0) {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.updateUser({ data: metadataUpdates })
+    if (error) {
+      console.error('Failed to update user metadata:', error)
+      return NextResponse.json({ error: 'Failed to update user preferences' }, { status: 500 })
+    }
+  }
 
   return NextResponse.json({ success: true })
 })

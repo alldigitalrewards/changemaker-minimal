@@ -10,6 +10,8 @@ import ProfileNameForm from "@/components/ui/profile-name-form"
 import ProfileParticipantForm from "@/components/ui/profile-participant-form"
 import ProfileStats from "@/components/ui/profile-stats"
 import { PasswordResetDialog } from "@/components/ui/password-reset-dialog"
+import { ProfileAddress } from "@/components/ui/profile-address"
+import { getUserDisplayName } from "@/lib/user-utils"
 
 export default async function ParticipantProfilePage({
   params
@@ -54,7 +56,12 @@ export default async function ParticipantProfilePage({
   ])
 
   const userMetadata = (user.user_metadata as any) || {}
-  const fullName = userMetadata.full_name || ""
+  // Build display name from database fields
+  const displayName = getUserDisplayName(dbUser)
+  // For the form, combine firstName and lastName if they exist
+  const fullNameForForm = dbUser.firstName && dbUser.lastName
+    ? `${dbUser.firstName} ${dbUser.lastName}`
+    : (dbUser.firstName || dbUser.displayName || "")
 
   return (
     <div className="space-y-6">
@@ -73,6 +80,10 @@ export default async function ParticipantProfilePage({
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-3">
               <div>
+                <p className="text-sm text-gray-500">Name</p>
+                <p className="font-medium">{displayName}</p>
+              </div>
+              <div>
                 <p className="text-sm text-gray-500">Email</p>
                 <p className="font-medium">{user.email}</p>
               </div>
@@ -85,7 +96,7 @@ export default async function ParticipantProfilePage({
               </div>
             </div>
             <div className="space-y-6">
-              <ProfileNameForm initialName={fullName} />
+              <ProfileNameForm initialName={fullNameForForm} />
               <ProfileParticipantForm initial={{
                 department: userMetadata.department,
                 bio: userMetadata.bio,
@@ -128,6 +139,19 @@ export default async function ParticipantProfilePage({
           </div>
         </CardContent>
       </Card>
+
+      {/* Shipping Address */}
+      <ProfileAddress
+        initialAddress={{
+          addressLine1: dbUser.addressLine1,
+          addressLine2: dbUser.addressLine2,
+          city: dbUser.city,
+          state: dbUser.state,
+          zipCode: dbUser.zipCode,
+          country: dbUser.country,
+          phone: dbUser.phone
+        }}
+      />
 
       {/* Enrollment Summary */}
       <Card>

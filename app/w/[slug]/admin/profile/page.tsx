@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { User as UserIcon, Calendar, Trophy } from "lucide-react"
 import AdminProfileForm from "@/components/ui/AdminProfileForm"
+import { getUserDisplayName } from "@/lib/user-utils"
 
 export default async function AdminProfilePage({
   params
@@ -46,7 +47,10 @@ export default async function AdminProfilePage({
   // Admin page focuses on admin preferences; omit points/enrollment stats
 
   const userMetadata = (user.user_metadata as any) || {}
-  const fullName = userMetadata.full_name || ""
+  // Build full name from database fields
+  const fullName = dbUser.firstName && dbUser.lastName
+    ? `${dbUser.firstName} ${dbUser.lastName}`
+    : (dbUser.firstName || dbUser.displayName || "")
   const organization = userMetadata.organization || workspace.name
 
   return (
