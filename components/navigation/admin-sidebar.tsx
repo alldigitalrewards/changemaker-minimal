@@ -18,6 +18,7 @@ import {
   Crown,
   Globe,
   UserCog,
+  Code,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -38,6 +39,7 @@ const workspaceNavigation = [
   { name: 'Emails', href: '/admin/emails', icon: Settings },
   { name: 'Invites', href: '/admin/invites', icon: Link2 },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
+  { name: 'API Docs', href: '/admin/api-docs', icon: Code },
   { name: 'Profile', href: '/admin/profile', icon: UserIcon },
 ];
 
