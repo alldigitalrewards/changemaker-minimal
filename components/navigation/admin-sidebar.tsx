@@ -19,6 +19,7 @@ import {
   Globe,
   UserCog,
   Code,
+  MessageSquare,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -37,6 +38,7 @@ const workspaceNavigation = [
   { name: 'Points', href: '/admin/points', icon: Coins },
   { name: 'Activities', href: '/admin/activity-templates', icon: ClipboardList },
   { name: 'Emails', href: '/admin/emails', icon: Settings },
+  { name: 'Communications', href: '/admin/communications', icon: MessageSquare },
   { name: 'Invites', href: '/admin/invites', icon: Link2 },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
   { name: 'API Docs', href: '/admin/api-docs', icon: Code },

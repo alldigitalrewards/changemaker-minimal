@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Users, Trophy, Plus, ClipboardList } from "lucide-react"
 import { CollapsibleActivityFeed } from "./collapsible-activity-feed"
-import { AnnouncementComposer } from "./announcement-composer"
 import { formatDistanceToNow } from "date-fns"
+import { MessageSquare, Send } from 'lucide-react'
 
 export default async function AdminDashboard({ 
   params 
@@ -49,6 +49,24 @@ export default async function AdminDashboard({
         }
       }
     }
+  })
+
+  // Get recent communications
+  const recentCommunications = await prisma.workspaceCommunication.findMany({
+    where: { workspaceId: workspace.id },
+    include: {
+      sender: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+        },
+      },
+    },
+    orderBy: { sentAt: 'desc' },
+    take: 3,
   })
 
   const participantCount = stats?.WorkspaceMembership.filter(m => m.role === "PARTICIPANT").length || 0
@@ -229,9 +247,83 @@ export default async function AdminDashboard({
         )}
       </div>
 
-      {/* Announcement and Activity Feed side by side */}
+      {/* Recent Announcements and Activity Feed side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AnnouncementComposer slug={slug} />
+        {/* Recent Announcements Widget */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-coral-100 text-coral-600">
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <CardTitle>Recent Announcements</CardTitle>
+                  <CardDescription>Latest workspace updates</CardDescription>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/w/${slug}/admin/communications`}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentCommunications.length === 0 ? (
+              <div className="text-center py-8 px-4">
+                <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                  <MessageSquare className="h-6 w-6 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-600 mb-3">
+                  No announcements yet
+                </p>
+                <Button asChild size="sm" className="bg-coral-500 hover:bg-coral-600">
+                  <Link href={`/w/${slug}/admin/communications`}>
+                    Send First Announcement
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentCommunications.map((comm) => {
+                  const senderName = comm.sender
+                    ? comm.sender.displayName ||
+                      `${comm.sender.firstName || ''} ${comm.sender.lastName || ''}`.trim() ||
+                      comm.sender.email
+                    : 'System'
+
+                  return (
+                    <div
+                      key={comm.id}
+                      className="p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h4 className="font-medium text-sm text-gray-900 line-clamp-1">{comm.subject}</h4>
+                        <span className="shrink-0 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                          {comm.audience}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 line-clamp-2 mb-2">{comm.message}</p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>{senderName}</span>
+                        <span>•</span>
+                        <span>{formatDistanceToNow(new Date(comm.sentAt), { addSuffix: true })}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+                <Button asChild variant="ghost" size="sm" className="w-full">
+                  <Link href={`/w/${slug}/admin/communications`}>
+                    View all announcements
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <CollapsibleActivityFeed
           workspaceId={workspace.id}
           slug={slug}
