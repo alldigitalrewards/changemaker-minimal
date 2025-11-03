@@ -22,7 +22,9 @@ export async function middleware(request: NextRequest) {
   const publicPrefix = (
     pathname.startsWith('/invite') ||
     pathname.startsWith('/auth/callback') ||
-    pathname.startsWith('/auth/')
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/docs') ||
+    pathname.startsWith('/help/docs')
   )
   const isStatic = pathname.startsWith('/_next') || pathname.startsWith('/api/') || pathname.includes('.')
   
