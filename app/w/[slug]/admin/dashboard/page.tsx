@@ -76,8 +76,7 @@ export default async function AdminDashboard({
     activityId: submission.activityId,
     User: {
       id: submission.User.id,
-      email: submission.User.email,
-      name: submission.User.name
+      email: submission.User.email
     },
     Activity: {
       id: submission.Activity.id,
