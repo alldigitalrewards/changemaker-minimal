@@ -95,5 +95,5 @@ AGENTS.md
 storybook-static
 .fixes/
 
-
-docs/
+# API docs cache
+.cache/
