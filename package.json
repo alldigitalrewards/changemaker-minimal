@@ -96,6 +96,7 @@
     "@playwright/test": "^1.55.0",
     "@supabase/supabase-js": "^2.57.0",
     "@tailwindcss/postcss": "^4.1.6",
+    "@types/js-yaml": "^4.0.9",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.17",
     "@types/nodemailer": "^7.0.1",
