@@ -915,9 +915,9 @@ async function seed() {
     console.log("\n📝 Creating enrollments...");
     const participantMemberships = await prisma.workspaceMembership.findMany({
       where: { role: 'PARTICIPANT' },
-      include: { User: true },
+      include: { User: true, Workspace: true },
       orderBy: [
-        { workspaceId: 'asc' },
+        { Workspace: { slug: 'asc' } },
         { User: { email: 'asc' } }
       ],
     });
@@ -976,7 +976,11 @@ async function seed() {
     let submissionCount = 0;
     const enrolledEnrollments = await prisma.enrollment.findMany({
       where: { status: EnrollmentStatus.ENROLLED },
-      include: { Challenge: true },
+      include: { Challenge: { include: { Workspace: true } }, User: true },
+      orderBy: [
+        { Challenge: { Workspace: { slug: 'asc' } } },
+        { User: { email: 'asc' } }
+      ],
       take: 10, // Limit to 10 for sample data
     });
 
@@ -985,6 +989,7 @@ async function seed() {
       const activity = await prisma.activity.findFirst({
         where: { challengeId: enrollment.challengeId },
         include: { ActivityTemplate: true },
+        orderBy: { createdAt: 'asc' }
       });
 
       if (activity) {
@@ -1086,9 +1091,10 @@ async function seed() {
     for (const membership of participantMemberships) {
       const participant = membership.User;
       if (membership.workspaceId) {
-        // Deterministic points based on participant index (0, 25, 50, 75, 0, 25...)
+        // Deterministic points based on participant index (10, 25, 50, 75, 10, 25...)
         const participantIndex = participantMemberships.indexOf(membership);
-        const pointsToAward = (participantIndex % 4) * 25;
+        const pointsPattern = [10, 25, 50, 75];
+        const pointsToAward = pointsPattern[participantIndex % 4];
         if (pointsToAward > 0) {
           try {
             await awardPointsWithBudget({
