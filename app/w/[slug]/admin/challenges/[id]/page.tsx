@@ -147,12 +147,13 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
   const { slug, id } = await params;
   const sp = (await (searchParams || Promise.resolve({} as any))) as any
   const challenge = await getChallenge(slug, id);
-  const budget = await prisma.challengePointsBudget.findUnique({ where: { challengeId: id } });
-  const workspaceBudget = await prisma.workspacePointsBudget.findUnique({ where: { workspaceId: (await prisma.challenge.findUnique({ where: { id }, select: { workspaceId: true } }))?.workspaceId || '' } });
 
   if (!challenge) {
     notFound();
   }
+
+  const budget = await prisma.challengePointsBudget.findUnique({ where: { challengeId: id } });
+  const workspaceBudget = await prisma.workspacePointsBudget.findUnique({ where: { workspaceId: challenge.workspaceId } });
 
   const enrolledUsers = challenge.Enrollment || [];
   const activeEnrollments = enrolledUsers.filter(e => e.status === 'ENROLLED').length;
