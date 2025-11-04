@@ -50,6 +50,7 @@
     "generate:types": "openapi-typescript public/api/generated-openapi.yaml -o lib/types/api.generated.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.62",
     "@hookform/resolvers": "^5.2.1",
     "@langchain/anthropic": "^0.3.33",
     "@langchain/core": "^1.0.2",

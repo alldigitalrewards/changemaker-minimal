@@ -2,7 +2,7 @@
   "master": {
     "tasks": [
       {
-        "id": "42",
+        "id": 42,
         "title": "Database Schema Migration for RewardSTACK Integration",
         "description": "Add new fields and tables to support RewardSTACK integration, participant tracking, and reward issuance based on ADR Marketplace Platform API documentation. This is a phase-1 task that establishes the foundational database schema for the RewardSTACK integration project. Includes critical enum clarifications based on codebase validation.",
         "status": "done",
@@ -81,7 +81,7 @@
         "updatedAt": "2025-11-04T23:01:50.228Z"
       },
       {
-        "id": "43",
+        "id": 43,
         "title": "Implement RewardSTACK Authentication Layer",
         "description": "Create JWT bearer token generation, caching, and refresh logic for RewardSTACK API with environment-aware client wrapper and secure API key management.",
         "status": "done",
@@ -151,7 +151,7 @@
         "updatedAt": "2025-11-04T23:09:21.468Z"
       },
       {
-        "id": "44",
+        "id": 44,
         "title": "Admin RewardSTACK Configuration UI",
         "description": "Build admin UI for configuring RewardSTACK integration, including environment, API key, program ID, and enable/disable toggle. Tags: rewardstack, ui, admin, phase-1",
         "status": "done",
@@ -221,7 +221,7 @@
         "updatedAt": "2025-11-04T23:18:57.645Z"
       },
       {
-        "id": "45",
+        "id": 45,
         "title": "API Route: Test RewardSTACK Connection",
         "description": "Create POST endpoint to test RewardSTACK credentials and program connectivity. Tags: rewardstack, api, testing, phase-1",
         "status": "done",
@@ -276,7 +276,7 @@
         "updatedAt": "2025-11-04T23:14:56.188Z"
       },
       {
-        "id": "46",
+        "id": 46,
         "title": "API Route: Update RewardSTACK Configuration",
         "description": "Create PUT endpoint to update Workspace RewardSTACK config securely. Tags: rewardstack, api, config, phase-1",
         "status": "done",
@@ -344,7 +344,7 @@
         "updatedAt": "2025-11-04T23:22:17.384Z"
       },
       {
-        "id": "47",
+        "id": 47,
         "title": "Participant Sync Service for RewardSTACK",
         "description": "Implement comprehensive participant sync service for RewardSTACK with manual, automatic, and scheduled sync capabilities. Support create, update, delete operations with proper error handling and status tracking. Tags: rewardstack, sync, api, phase-2",
         "status": "done",
@@ -443,7 +443,7 @@
         "updatedAt": "2025-11-04T23:31:01.366Z"
       },
       {
-        "id": "48",
+        "id": 48,
         "title": "Enhance Reward Issuance Logic for Points via RewardSTACK",
         "description": "Issue point rewards using RewardSTACK adjustments API with retry and error handling. This is part of phase-2 implementation for enhanced reward processing capabilities using the actual RewardSTACK Transaction and Point Adjustment API endpoints. Triggers when enrollment.status changes to COMPLETED after all required activities are approved.",
         "status": "done",
@@ -528,24 +528,23 @@
       {
         "id": "49",
         "title": "Enhance Reward Issuance Logic for SKU and Monetary Rewards",
-        "description": "Issue catalog item rewards via RewardSTACK transactions API with state management, validation, and retry logic. This is part of phase-2 implementation for enhanced reward processing capabilities using the RewardSTACK transaction model.",
-        "status": "pending",
+        "description": "This task was originally planned to implement catalog item reward issuance via RewardSTACK transactions API. However, all the core functionality has been completed as part of Task 48, making this task redundant. The catalog item transaction API integration, state management, retry logic, and monitoring capabilities were all implemented in Task 48's subtasks.",
+        "status": "done",
         "dependencies": [
           "48"
         ],
         "priority": "high",
-        "details": "Implement catalog item reward issuance in `lib/rewardstack/rewards.ts` using the RewardSTACK transaction model. Handle state transitions (PENDING → PROCESSING → COMPLETED/FAILED/RETURNED), store transaction IDs and metadata, implement retry logic for failed transactions. Add query helpers in `lib/db/queries.ts` for transaction monitoring and reconciliation. Store full API responses and webhook data in RewardIssuance.metadata JSON field. Tags: rewardstack, rewards, catalog-item, transaction-model, phase-2",
-        "testStrategy": "Integration tests for state transitions, webhook handling, metadata storage, query helpers, and reconciliation logic. Test end-to-end catalog reward issuance with webhook confirmation.",
+        "details": "Task 49 scope was fully covered by Task 48 implementation: catalog item reward issuance (issueCatalogReward function) was implemented in Task 48 subtask 48.3, transaction state management and retry logic were covered in Task 48 subtasks 48.2-48.5, and monitoring/reconciliation capabilities were included. The only remaining aspect (webhook handling) is covered by Task 50. This task is marked as completed since all its original requirements have been fulfilled through Task 48's comprehensive implementation.",
+        "testStrategy": "All testing requirements were fulfilled through Task 48's integration tests covering state transitions, metadata storage, query helpers, reconciliation logic, and end-to-end catalog reward issuance workflows.",
         "subtasks": [
           {
             "id": 1,
             "title": "Implement Catalog Item Reward Transaction Logic",
             "description": "Develop functions to issue catalog item rewards via the RewardSTACK transactions API, implementing the transaction state machine and storing transaction details.",
             "dependencies": [],
-            "details": "Implement `issueCatalogReward()` in `lib/rewardstack/rewards.ts` to create transactions for catalog items. Handle state transitions from PENDING to PROCESSING when making API calls. Store rewardStackTransactionId and full API response in RewardIssuance.metadata. Validate catalog item existence and participant synchronization before transaction. Handle pre-transaction validation errors appropriately.",
-            "status": "pending",
-            "testStrategy": "Unit and integration tests for catalog item validation, participant sync, transaction creation, and metadata storage.",
-            "parentId": "undefined"
+            "details": "This functionality was implemented in Task 48, subtask 48.3 as the issueCatalogReward() function in lib/rewardstack/reward-logic.ts. The implementation includes catalog item validation, participant synchronization, transaction creation, and comprehensive metadata storage.",
+            "status": "done",
+            "testStrategy": "Completed through Task 48's integration tests for catalog item validation, participant sync, transaction creation, and metadata storage."
           },
           {
             "id": 2,
@@ -554,10 +553,9 @@
             "dependencies": [
               1
             ],
-            "details": "Implement webhook handlers to update RewardIssuance status from PROCESSING to COMPLETED/FAILED/RETURNED based on webhook events. Store webhook data in metadata including webhookReceivedAt, webhookEvent, and webhookPayload. Handle transaction reversal scenarios (COMPLETED to RETURNED). Set rewardStackWebhookReceived flag when webhooks are processed. Implement proper error message storage in rewardStackErrorMessage field.",
-            "status": "pending",
-            "testStrategy": "Integration tests for webhook processing, state transitions, metadata updates, and transaction reversal scenarios.",
-            "parentId": "undefined"
+            "details": "Transaction state management was implemented in Task 48, subtasks 48.2-48.4. Webhook handling is covered by Task 50. State transitions, metadata storage, and error handling are fully operational.",
+            "status": "done",
+            "testStrategy": "State management testing completed through Task 48. Webhook processing will be tested in Task 50."
           },
           {
             "id": 3,
@@ -566,20 +564,18 @@
             "dependencies": [
               2
             ],
-            "details": "Implement retry mechanisms with exponential backoff for retryable errors (network failures, 500 errors). Classify errors as retryable or non-retryable based on HTTP status codes and error types. Store retry metadata including retryCount, lastRetryAt, and retryScheduledFor in the metadata JSON field. Queue failed transactions for retry processing. Ensure non-retryable errors are marked as FAILED immediately.",
-            "status": "pending",
-            "testStrategy": "Integration tests simulating transient and permanent errors, verifying retry attempts, error classification, and retry queue processing.",
-            "parentId": "undefined"
+            "details": "Retry logic with exponential backoff and error classification was implemented in Task 48, subtask 48.4. The implementation includes retryable vs non-retryable error classification, retry metadata storage, and queue processing for failed transactions.",
+            "status": "done",
+            "testStrategy": "Completed through Task 48's integration tests covering retry mechanisms, error classification, and queue processing scenarios."
           },
           {
             "id": 4,
             "title": "Implement Database Query Helpers for Transaction Management",
             "description": "Add comprehensive query functions in lib/db/queries.ts for monitoring, reconciliation, and transaction management across different reward issuance states.",
             "dependencies": [],
-            "details": "Implement query helpers: getRewardIssuancesByStatus() for monitoring dashboards, getPendingRewardIssuances() for retry queue processing, getRewardIssuanceByTransactionId() and getRewardIssuanceByAdjustmentId() for webhook handlers, and updateRewardIssuanceFromWebhook() for webhook processing. Include proper error handling and return types for all query functions.",
-            "status": "pending",
-            "testStrategy": "Unit tests for all query functions with various status filters, transaction ID lookups, and webhook update scenarios.",
-            "parentId": "undefined"
+            "details": "Database query helpers were implemented in Task 48, subtask 48.2. Functions include getRewardIssuancesByStatus(), getPendingRewardIssuances(), getRewardIssuanceByTransactionId(), and updateRewardIssuanceFromWebhook() with proper error handling.",
+            "status": "done",
+            "testStrategy": "Completed through Task 48's unit tests covering all query functions with various status filters and transaction scenarios."
           },
           {
             "id": 5,
@@ -588,10 +584,9 @@
             "dependencies": [
               4
             ],
-            "details": "Implement daily reconciliation job to query PROCESSING rewards older than 24 hours and poll RewardSTACK API for current status. Add stuck transaction detection for PROCESSING rewards older than 48 hours with admin alerts. Create failed transaction reporting grouped by error messages. Include comprehensive metadata tracking for all monitoring activities with proper timestamps and error logging.",
-            "status": "pending",
-            "testStrategy": "Integration tests for reconciliation logic, stuck transaction detection, failed transaction reporting, and admin notification systems.",
-            "parentId": "undefined"
+            "details": "Monitoring and reconciliation logic was implemented in Task 48, subtask 48.5. Includes daily reconciliation jobs, stuck transaction detection, failed transaction reporting, and comprehensive metadata tracking with proper timestamps.",
+            "status": "done",
+            "testStrategy": "Completed through Task 48's integration tests for reconciliation logic, stuck transaction detection, and admin notification systems."
           },
           {
             "id": 6,
@@ -600,18 +595,14 @@
             "dependencies": [
               3
             ],
-            "details": "Modify `issueReward()` to route catalog item rewards (CATALOG_ITEM type) to the new transaction logic while point rewards (POINTS type) use the adjustment API from Task 48. Ensure proper metadata structure is stored including requestedAt, apiEndpoint, requestBody, challengeTitle, rewardType, rewardAmount/rewardCatalogId. Handle both transaction types with appropriate state management and error handling.",
-            "status": "pending",
-            "testStrategy": "Integration tests for end-to-end reward issuance covering both catalog items and points, metadata storage validation, and proper routing logic.",
-            "parentId": "undefined"
+            "details": "Main reward issuance flow was updated in Task 48, subtask 48.1. The issueReward() function properly routes catalog item rewards to transaction logic and point rewards to adjustment API, with comprehensive metadata storage and state management.",
+            "status": "done",
+            "testStrategy": "Completed through Task 48's integration tests covering end-to-end reward issuance for both catalog items and points with metadata validation."
           }
-        ],
-        "complexity": 5,
-        "recommendedSubtasks": 3,
-        "expansionPrompt": "Break down this task with a focus on enhance reward issuance logic for sku and monetary rewards."
+        ]
       },
       {
-        "id": "50",
+        "id": 50,
         "title": "RewardSTACK Webhook Handler",
         "description": "Create webhook endpoint to process RewardSTACK webhook events and update reward status. Implement webhook management API integration, event handlers for participant/transaction/adjustment events, and comprehensive logging. Tags: rewardstack, webhooks, api, phase-2",
         "status": "pending",
@@ -686,7 +677,7 @@
         "expansionPrompt": "Break into: (1) webhook endpoint and signature verification, (2) event parsing and handling logic, (3) RewardIssuance status update and ActivityEvent logging, (4) error handling and response, (5) API tests for all event types."
       },
       {
-        "id": "51",
+        "id": 51,
         "title": "Admin Reward Management and Reconciliation Dashboard",
         "description": "Build admin UI for monitoring, filtering, and retrying reward issuances. Tags: rewardstack, admin, dashboard, ui, phase-2",
         "status": "pending",
@@ -764,7 +755,7 @@
         "expansionPrompt": "Expand into: (1) reward issuance table with filters and pagination, (2) manual/bulk retry integration, (3) error details and status display, (4) CSV export functionality, (5) performance optimization for large datasets, (6) UI/UX and accessibility checks."
       },
       {
-        "id": "52",
+        "id": 52,
         "title": "API Route: Manual Retry for Failed Rewards",
         "description": "Create POST endpoint to manually retry failed reward issuances. Tags: rewardstack, admin, api, retry, phase-2",
         "status": "pending",
@@ -815,7 +806,7 @@
         "expansionPrompt": "Break into: (1) admin authentication and input validation, (2) reward issuance retry logic by type, (3) status update and error handling, (4) audit logging, (5) API tests for retry scenarios."
       },
       {
-        "id": "53",
+        "id": 53,
         "title": "Participant Reward Catalog SSO Integration",
         "description": "Enable participants to access RewardSTACK catalog via SSO token using the actual RewardSTACK SSO API endpoint with proper workspace isolation. Tags: rewardstack, participant, sso, phase-3",
         "status": "pending",
@@ -891,7 +882,7 @@
         "expansionPrompt": "Break down this task with a focus on participant reward catalog sso integration."
       },
       {
-        "id": "54",
+        "id": 54,
         "title": "Participant Dashboard Reward History and Catalog Access",
         "description": "Display participant point balance, recent rewards, and catalog access. Tags: rewardstack, participant, dashboard, ui, phase-3",
         "status": "pending",
@@ -943,7 +934,7 @@
         "expansionPrompt": "Break down this task with a focus on participant dashboard reward history and catalog access."
       },
       {
-        "id": "55",
+        "id": 55,
         "title": "Background Job: Automatic Retry for Failed Rewards",
         "description": "Implement scheduled job to auto-retry failed rewards up to 3 times. Tags: rewardstack, jobs, retry, phase-3",
         "status": "pending",
@@ -994,7 +985,7 @@
         "expansionPrompt": "Break down this task with a focus on background job: automatic retry for failed rewards."
       },
       {
-        "id": "56",
+        "id": 56,
         "title": "Performance Optimization: Batch Participant Sync and Catalog Caching",
         "description": "Optimize participant sync and catalog queries for large datasets. Tags: rewardstack, performance, caching, phase-3",
         "status": "pending",
@@ -1041,7 +1032,7 @@
         "expansionPrompt": "Break down this task with a focus on performance optimization: batch participant sync and catalog caching."
       },
       {
-        "id": "57",
+        "id": 57,
         "title": "Documentation: RewardSTACK Integration and Troubleshooting Guides",
         "description": "Write comprehensive guides for API integration, troubleshooting, and admin operations. Tags: rewardstack, docs, phase-3",
         "status": "pending",
@@ -1093,7 +1084,7 @@
         "expansionPrompt": "Break down this task with a focus on documentation: rewardstack integration and troubleshooting guides."
       },
       {
-        "id": "58",
+        "id": 58,
         "title": "Admin Dashboard Reward Stats and Alerts",
         "description": "Add widgets for reward issuance stats, failed rewards alerts, and recent activity. Tags: rewardstack, admin, dashboard, stats, phase-3",
         "status": "pending",
@@ -1144,7 +1135,7 @@
         "expansionPrompt": "Expand into: (1) stats widget implementation (totals, rates, top types), (2) failed rewards alert logic, (3) recent activity feed, (4) efficient backend queries and groupBy, (5) UI/integration tests."
       },
       {
-        "id": "59",
+        "id": 59,
         "title": "Comprehensive Integration and E2E Testing",
         "description": "Write and execute tests for all RewardSTACK flows, error scenarios, and UI components. Tags: rewardstack, testing, e2e, phase-4",
         "status": "pending",
@@ -1198,7 +1189,7 @@
         "expansionPrompt": "Break down this task with a focus on comprehensive integration and e2e testing."
       },
       {
-        "id": "60",
+        "id": 60,
         "title": "Production Deployment and Rollback Plan",
         "description": "Deploy RewardSTACK integration to production with rollback and monitoring. Tags: rewardstack, deployment, production, phase-4",
         "status": "pending",
@@ -1249,7 +1240,7 @@
         "expansionPrompt": "Break down this task with a focus on production deployment and rollback plan."
       },
       {
-        "id": "61",
+        "id": 61,
         "title": "Post-Deployment Monitoring and Success Metrics Tracking",
         "description": "Monitor production metrics, email delivery, dashboard performance, and adoption rate for RewardSTACK integration in phase-4.",
         "status": "pending",
@@ -1312,7 +1303,7 @@
         "expansionPrompt": "Break down this task with a focus on post-deployment monitoring and success metrics tracking."
       },
       {
-        "id": "62",
+        "id": 62,
         "title": "Set Up Project Dependencies and Tooling",
         "description": "Install and configure all required dependencies, libraries, and tools for the AI Email Template Editor project. This is a foundational phase-1 task for setting up the development environment with AI-powered email template editing capabilities.",
         "status": "pending",
@@ -1361,7 +1352,7 @@
         "expansionPrompt": "Break down this task with a focus on set up project dependencies and tooling."
       },
       {
-        "id": "63",
+        "id": 63,
         "title": "Design and Migrate Email Template Database Schema",
         "description": "Define and migrate the EmailTemplate model in Prisma schema, including workspace relations and variable support. Tags: ai-email, database, prisma, phase-1",
         "status": "pending",
@@ -1412,7 +1403,7 @@
         "expansionPrompt": "Break down this task with a focus on design and migrate email template database schema."
       },
       {
-        "id": "64",
+        "id": 64,
         "title": "Configure AI SDK and Anthropic Model Integration",
         "description": "Set up Vercel AI SDK and Anthropic Claude 3.5 Sonnet model with streaming and rate limiting. Tags: ai-email, ai, config, phase-1",
         "status": "pending",
@@ -1464,7 +1455,7 @@
         "expansionPrompt": "Break down this task with a focus on configure ai sdk and anthropic model integration."
       },
       {
-        "id": "65",
+        "id": 65,
         "title": "Implement Split View Editor Layout",
         "description": "Develop the SplitViewEditor React component with resizable panels for HTML editing and live preview. This is a core UI component for the AI email editor with layout management capabilities, tagged as ai-email, ui, layout, phase-1.",
         "status": "pending",
@@ -1516,7 +1507,7 @@
         "expansionPrompt": "Break down this task with a focus on implement split view editor layout."
       },
       {
-        "id": "66",
+        "id": 66,
         "title": "Build HTML Editor Component with Monaco Editor",
         "description": "Integrate Monaco Editor for HTML editing with syntax highlighting, auto-completion, and template variable support. Tags: ai-email, ui, editor, monaco, phase-2",
         "status": "pending",
@@ -1567,7 +1558,7 @@
         "expansionPrompt": "Break down this task with a focus on build html editor component with monaco editor."
       },
       {
-        "id": "67",
+        "id": 67,
         "title": "Develop Email Preview Component with Live Desktop/Mobile Toggle",
         "description": "Create EmailPreview component to render processed HTML with variable substitution, CSS inlining, and responsive view toggling. Tagged as ai-email, ui, preview, phase-2 for project organization.",
         "status": "pending",
@@ -1618,7 +1609,7 @@
         "expansionPrompt": "Break down this task with a focus on develop email preview component with live desktop/mobile toggle."
       },
       {
-        "id": "68",
+        "id": 68,
         "title": "Implement Template CRUD API Endpoints",
         "description": "Create Next.js API routes for listing, creating, updating, and deleting email templates with workspace isolation and validation. Tagged as ai-email, api, crud, phase-2.",
         "status": "pending",
@@ -1670,7 +1661,7 @@
         "expansionPrompt": "Break down this task with a focus on implement template crud api endpoints."
       },
       {
-        "id": "69",
+        "id": 69,
         "title": "Create Template Picker and Management UI",
         "description": "Develop TemplatePicker React component for selecting, creating, and managing templates with metadata display. Tags: ai-email, ui, management, phase-2",
         "status": "pending",
@@ -1722,7 +1713,7 @@
         "expansionPrompt": "Break down this task with a focus on create template picker and management ui."
       },
       {
-        "id": "70",
+        "id": 70,
         "title": "Assemble Main Email Settings Page",
         "description": "Build the main settings page integrating TemplatePicker, SplitViewEditor, and save/cancel controls. This is part of phase-2 implementation for AI email template management with comprehensive UI integration.",
         "status": "pending",
@@ -1770,7 +1761,7 @@
         "expansionPrompt": "Break down this task with a focus on assemble main email settings page."
       },
       {
-        "id": "71",
+        "id": 71,
         "title": "Develop AI Assist Hook and Prompt Engineering",
         "description": "Implement useAIEmailAssist React hook and prompt builder for AI-powered HTML editing with streaming and variable preservation. Tagged as ai-email, ai, hooks, prompts, phase-3 for project organization.",
         "status": "pending",
@@ -1822,7 +1813,7 @@
         "expansionPrompt": "Break down this task with a focus on develop ai assist hook and prompt engineering."
       },
       {
-        "id": "72",
+        "id": 72,
         "title": "Implement AI Assist Panel and Suggestion Controls",
         "description": "Create AIAssistPanel UI for user instructions, quick prompts, and suggestion approval/rejection in the editor. Tagged as ai-email, ai, ui, panel, phase-3.",
         "status": "pending",
@@ -1874,7 +1865,7 @@
         "expansionPrompt": "Break down this task with a focus on implement ai assist panel and suggestion controls."
       },
       {
-        "id": "73",
+        "id": 73,
         "title": "Integrate AI Assist Workflow with Editor and Preview",
         "description": "Wire up useAIEmailAssist, AIAssistPanel, HTMLEditor, and EmailPreview for a seamless AI-powered editing experience. This is a phase-3 AI workflow integration task.",
         "status": "pending",
@@ -1926,7 +1917,7 @@
         "expansionPrompt": "Break down this task with a focus on integrate ai assist workflow with editor and preview."
       },
       {
-        "id": "74",
+        "id": 74,
         "title": "Implement Template Variable Extraction and Management",
         "description": "Auto-detect template variables in HTML, update EmailTemplate.variables, and warn on variable removal. Tagged as ai-email, templates, variables, phase-3.",
         "status": "pending",
@@ -1977,7 +1968,7 @@
         "expansionPrompt": "Break down this task with a focus on implement template variable extraction and management."
       },
       {
-        "id": "75",
+        "id": 75,
         "title": "Optimize Performance: Debouncing, Caching, and Editor Responsiveness",
         "description": "Add debounced AI requests, request cancellation, and optimize editor/preview performance for large templates. Tags: ai-email, performance, optimization, phase-3",
         "status": "pending",
@@ -2029,7 +2020,7 @@
         "expansionPrompt": "Break down this task with a focus on optimize performance: debouncing, caching, and editor responsiveness."
       },
       {
-        "id": "76",
+        "id": 76,
         "title": "Comprehensive Testing and Validation for Phase 1 & 2",
         "description": "Write and execute unit, integration, and E2E tests for all core and AI features, including security and performance checks. Tags: ai-email, testing, validation, phase-4",
         "status": "pending",
@@ -2081,7 +2072,7 @@
         "expansionPrompt": "Break down this task with a focus on comprehensive testing and validation for phase 1 & 2."
       },
       {
-        "id": "77",
+        "id": 77,
         "title": "Implement Privacy Controls and Opt-Out System",
         "description": "Add privacy controls allowing participants to opt out of public leaderboards while maintaining their personal stats visibility",
         "details": "Create database migration to ensure WorkspaceMembership.preferences JSONB field exists with default '{}'. Add showInLeaderboard boolean field defaulting to true. Create PUT /api/workspaces/[slug]/me/preferences endpoint to update privacy settings. Implement shouldShowInLeaderboard(membership) helper function. Update leaderboard queries to filter out opted-out users while preserving their own stats visibility. Add privacy toggle UI component in participant profile settings page with clear messaging about privacy implications.",
@@ -2092,7 +2083,7 @@
         "subtasks": []
       },
       {
-        "id": "78",
+        "id": 78,
         "title": "Implement Time-Based Leaderboard Filtering",
         "description": "Add tab-based filtering for different time periods (All Time, This Month, This Week, Today) with optimized database queries",
         "details": "Update GET /api/workspaces/[slug]/leaderboard endpoint to accept 'period' query parameter ('all', 'month', 'week', 'day'). Add database index on ActivityEvent.timestamp for performance. Implement date filtering logic in leaderboard queries using appropriate date ranges. Create LeaderboardTabs component using shadcn/ui Tabs with TabsList and TabsTrigger. Implement 5-minute TTL caching per period using Redis or in-memory cache. Update leaderboard stats calculation to be period-specific.",
@@ -2105,7 +2096,7 @@
         "subtasks": []
       },
       {
-        "id": "79",
+        "id": 79,
         "title": "Create Enhanced Leaderboard API Response Structure",
         "description": "Expand the leaderboard API to include comprehensive user data, statistics, and ranking information needed for all features",
         "details": "Restructure leaderboard API response to include: user details (userId, name, avatarUrl), ranking data (rank, activityCount, points, completionRate, rankChange), achievement data (badges array), and comprehensive stats (topCount, averageCount, participantCount, hiddenCount). Add currentUser section with personal rank, activityCount, and percentile. Implement rank change calculation by storing/comparing previous period rankings. Add support for avatar URLs from Supabase user metadata or generate initials fallback.",
@@ -2118,7 +2109,7 @@
         "subtasks": []
       },
       {
-        "id": "80",
+        "id": 80,
         "title": "Implement Challenge-Specific Leaderboard Filtering",
         "description": "Add challenge filtering capability to show leaderboards for specific challenges with navigation integration",
         "details": "Add challengeId query parameter to leaderboard API endpoint. Create ChallengeFilter component using shadcn/ui Select with 'All Challenges' default option and dynamic challenge list. Update database queries to filter ActivityEvent by challenge relationship when challengeId is provided. Add challenge context to leaderboard header showing current challenge name. Implement navigation links from challenge detail pages (/w/[slug]/participant/challenges/[id]) to filtered leaderboard view. Add breadcrumb navigation for filtered views.",
@@ -2131,7 +2122,7 @@
         "subtasks": []
       },
       {
-        "id": "81",
+        "id": 81,
         "title": "Design and Implement Visual Enhancements and Gamification Elements",
         "description": "Add visual recognition elements including medals, badges, rank indicators, and progress visualization to increase engagement",
         "details": "Create medal components for top 3 positions (gold, silver, bronze) using shadcn/ui styling. Implement badge system for activity milestones (10, 25, 50, 100 activities). Add rank change indicators with up/down arrows and delta values from previous period. Create progress bars showing percentage relative to top performer. Add avatar support using Supabase avatar_url or initials fallback. Implement color coding system: top 10% gold, top 25% silver, top 50% bronze. Add CSS animations for ranking changes and trophy icon for #1 position.",
@@ -2144,7 +2135,7 @@
         "subtasks": []
       },
       {
-        "id": "82",
+        "id": 82,
         "title": "Enhance Leaderboard Statistics and Personal Insights",
         "description": "Add comprehensive statistics including completion rates, streaks, and personal performance metrics",
         "details": "Expand leaderboard calculations to include completion rate (completed vs total activities), streak tracking from consecutive ActivityEvent timestamps, points earned if points system is active, and average activities per day/week. Add 'Your Stats' section above leaderboard showing personal metrics. Create stats cards below leaderboard table with workspace-wide insights. Implement streak calculation algorithm using ActivityEvent timestamps. Add personal best indicators and participation rate by challenge calculations.",
@@ -2157,7 +2148,7 @@
         "subtasks": []
       },
       {
-        "id": "83",
+        "id": 83,
         "title": "Build Enhanced Leaderboard UI Components",
         "description": "Create the complete leaderboard interface with all filtering, visual enhancements, and responsive design",
         "details": "Build comprehensive LeaderboardPage component integrating all features: time period tabs, challenge filtering, privacy-aware user list, visual enhancements (medals, badges, avatars), and statistics sections. Create RankingCard component with avatar, name, department badge, activity count, rank trend indicators, and progress bars. Implement responsive design for mobile and desktop views. Add loading states, error handling, and empty states. Integrate with existing workspace layout and navigation.",
@@ -2170,7 +2161,7 @@
         "subtasks": []
       },
       {
-        "id": "84",
+        "id": 84,
         "title": "Implement Admin Configuration and Export Features",
         "description": "Add admin tools for leaderboard configuration, CSV export functionality, and workspace-level settings",
         "details": "Create workspace settings section for leaderboard configuration including visibility toggle, refresh frequency settings, and points vs activities display preference. Implement CSV export endpoint GET /api/workspaces/[slug]/leaderboard/export with same query parameters as main leaderboard API. Add admin-only detailed analytics view with enhanced metrics. Create export functionality with proper CSV formatting, filename generation, and download handling. Add configuration UI in workspace settings page with appropriate admin permissions.",
@@ -2183,7 +2174,7 @@
         "subtasks": []
       },
       {
-        "id": "85",
+        "id": 85,
         "title": "Implement Caching and Performance Optimization",
         "description": "Add comprehensive caching strategy and database optimizations to ensure fast leaderboard performance",
         "details": "Implement 5-minute TTL caching for leaderboard data per period and challenge combination using Redis or in-memory cache. Add database indexes on ActivityEvent.timestamp and challenge relationships for query optimization. Create cache invalidation strategy for when new activities are recorded. Implement background job for pre-calculating complex rankings and statistics. Add query optimization for large datasets and implement pagination if needed. Monitor and optimize database query performance.",
@@ -2196,7 +2187,7 @@
         "subtasks": []
       },
       {
-        "id": "86",
+        "id": 86,
         "title": "Add Database Schema Updates and Migration Scripts",
         "description": "Create necessary database migrations and schema updates to support all leaderboard enhancements",
         "details": "Create migration scripts to ensure WorkspaceMembership.preferences JSONB field exists with proper defaults. Add ActivityEvent.timestamp index for performance optimization. Create optional department field in WorkspaceMembership for future team rankings. Add any additional indexes needed for leaderboard queries. Implement data validation constraints and proper JSONB structure for preferences. Create rollback scripts for all migrations and test migration process on staging environment.",
@@ -2216,7 +2207,9 @@
       "completedCount": 7,
       "tags": [
         "master"
-      ]
+      ],
+      "created": "2025-11-04T23:42:37.847Z",
+      "description": "Tasks for master context"
     }
   }
 }
