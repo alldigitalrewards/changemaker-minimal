@@ -2175,7 +2175,13 @@ export async function getInviteByCode(code: string): Promise<InviteCodeWithDetai
         Workspace: true,
         Challenge: true,
         User: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         }
       }
     }) as any
@@ -2340,7 +2346,13 @@ export async function getWorkspaceInviteCodes(
         Workspace: true,
         Challenge: true,
         User: {
-          select: { id: true, email: true }
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
