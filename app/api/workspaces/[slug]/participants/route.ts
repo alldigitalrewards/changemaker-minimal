@@ -140,6 +140,9 @@ export const POST = withErrorHandling(async (
       const html = renderInviteEmail({
         workspaceName: workspace.name,
         inviterEmail: user.dbUser.email,
+        inviterFirstName: user.dbUser.firstName,
+        inviterLastName: user.dbUser.lastName,
+        inviterDisplayName: user.dbUser.displayName,
         role,
         inviteUrl,
         expiresAt: result.invite.expiresAt,

@@ -418,10 +418,19 @@ export async function POST(
       const baseUrl = `${proto}://${host}`
       const inviteUrl = `${baseUrl}/invite/${invite.code}`
 
+      // Get full database user for name fields
+      const dbUser = await getUserBySupabaseId(user.id)
+      if (!dbUser) {
+        return NextResponse.json({ message: 'User not found' }, { status: 404 })
+      }
+
       try {
         const html = renderInviteEmail({
           workspaceName: workspace.name,
-          inviterEmail: user.email ?? 'no-reply@changemaker.im',
+          inviterEmail: dbUser.email,
+          inviterFirstName: dbUser.firstName,
+          inviterLastName: dbUser.lastName,
+          inviterDisplayName: dbUser.displayName,
           role: membership.role,
           inviteUrl,
           expiresAt: invite.expiresAt,
@@ -439,7 +448,7 @@ export async function POST(
       await logActivityEvent({
         workspaceId: workspace.id,
         userId: id,
-        actorUserId: (await getUserBySupabaseId(user.id))!.id as any,
+        actorUserId: dbUser.id as any,
         type: 'EMAIL_RESENT' as any,
         metadata: { inviteCode: invite.code }
       })

@@ -486,6 +486,9 @@ export const PATCH = withErrorHandling(async (
             const html = (await import('@/lib/email/templates/invite')).renderInviteEmail({
               workspaceName: workspace.name,
               inviterEmail: user.dbUser.email,
+              inviterFirstName: user.dbUser.firstName,
+              inviterLastName: user.dbUser.lastName,
+              inviterDisplayName: user.dbUser.displayName,
               role: 'PARTICIPANT',
               inviteUrl: `${inviteUrlBase}${invite.code}`,
               expiresAt: invite.expiresAt,

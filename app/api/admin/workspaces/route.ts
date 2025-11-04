@@ -134,6 +134,9 @@ export async function POST(request: NextRequest) {
       const html = renderInviteEmail({
         workspaceName: result.workspace.name,
         inviterEmail: dbUser.email,
+        inviterFirstName: dbUser.firstName,
+        inviterLastName: dbUser.lastName,
+        inviterDisplayName: dbUser.displayName,
         role: 'ADMIN',
         inviteUrl,
         expiresAt: result.invite.expiresAt,
