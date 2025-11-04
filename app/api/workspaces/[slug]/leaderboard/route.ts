@@ -9,6 +9,30 @@ import {
 } from '@/lib/db/queries';
 import { prisma } from '@/lib/prisma';
 
+type TimePeriod = 'day' | 'week' | 'month' | 'all';
+
+function getDateFilter(period: TimePeriod): Date | null {
+  const now = new Date();
+
+  switch (period) {
+    case 'day':
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+      return startOfDay;
+    case 'week':
+      const startOfWeek = new Date(now);
+      startOfWeek.setDate(now.getDate() - 7);
+      return startOfWeek;
+    case 'month':
+      const startOfMonth = new Date(now);
+      startOfMonth.setMonth(now.getMonth() - 1);
+      return startOfMonth;
+    case 'all':
+    default:
+      return null;
+  }
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> }
@@ -51,50 +75,108 @@ export async function GET(
       );
     }
 
-    // Get leaderboard - users from this workspace only
-    // Note: Points are tracked in PointsBalance table, not directly on User
-    const leaderboard = await prisma.user.findMany({
-      where: {
-        WorkspaceMembership: {
-          some: {
-            workspaceId: workspace.id
-          }
-        }
-      },
-      select: {
-        id: true,
-        email: true,
-        WorkspaceMembership: {
-          where: {
-            workspaceId: workspace.id
-          },
+    // Get query parameters for filtering
+    const { searchParams } = new URL(request.url);
+    const period = (searchParams.get('period') || 'all') as TimePeriod;
+    const challengeId = searchParams.get('challengeId');
+
+    const dateFilter = getDateFilter(period);
+
+    // Build where clause for ActivityEvents
+    const whereClause: any = {
+      Challenge: {
+        workspaceId: workspace.id
+      }
+    };
+
+    // Add time filter if not 'all'
+    if (dateFilter) {
+      whereClause.createdAt = {
+        gte: dateFilter
+      };
+    }
+
+    // Add challenge filter if specified
+    if (challengeId && challengeId !== 'all') {
+      whereClause.challengeId = challengeId;
+    }
+
+    // Get activity events with aggregation
+    const activityEvents = await prisma.activityEvent.findMany({
+      where: whereClause,
+      include: {
+        User_ActivityEvent_userIdToUser: {
           select: {
-            workspaceId: true
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+            isPending: true
           }
         },
-        PointsBalance: {
-          where: {
-            workspaceId: workspace.id
-          },
+        Challenge: {
           select: {
-            totalPoints: true
+            id: true,
+            workspaceId: true
           }
         }
-      },
-      take: 100 // Limit to top 100
+      }
     });
 
-    // Transform to ensure workspaceId is at the top level for easy testing
-    const transformedLeaderboard = leaderboard
-      .map(user => ({
-        id: user.id,
-        email: user.email,
-        totalPoints: user.PointsBalance[0]?.totalPoints || 0,
-        workspaceId: user.WorkspaceMembership[0]?.workspaceId || workspace.id
-      }))
-      .sort((a, b) => b.totalPoints - a.totalPoints); // Sort by points descending
+    // Filter out pending users and aggregate by user
+    const userActivityMap = new Map<string, {
+      userId: string
+      name: string
+      email: string
+      activityCount: number
+      avatarUrl: string | null
+    }>();
 
-    return NextResponse.json({ leaderboard: transformedLeaderboard }, { status: 200 });
+    activityEvents.forEach(event => {
+      const user = event.User_ActivityEvent_userIdToUser;
+      if (!user || user.isPending) return;
+
+      const userId = user.id;
+      const existing = userActivityMap.get(userId);
+
+      if (existing) {
+        existing.activityCount += 1;
+      } else {
+        const name = user.displayName ||
+                     (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` :
+                     (user.firstName || user.email.split('@')[0]));
+
+        userActivityMap.set(userId, {
+          userId: user.id,
+          name,
+          email: user.email,
+          activityCount: 1,
+          avatarUrl: null
+        });
+      }
+    });
+
+    // Convert to array and sort by activity count
+    const leaderboard = Array.from(userActivityMap.values())
+      .sort((a, b) => b.activityCount - a.activityCount);
+
+    // Calculate stats
+    const activityCounts = leaderboard.map(entry => entry.activityCount);
+    const topCount = activityCounts[0] || 0;
+    const averageCount = activityCounts.length > 0
+      ? Math.round(activityCounts.reduce((sum, count) => sum + count, 0) / activityCounts.length)
+      : 0;
+
+    return NextResponse.json({
+      leaderboard,
+      stats: {
+        topCount,
+        averageCount,
+        participantCount: leaderboard.length,
+        hiddenCount: 0
+      }
+    }, { status: 200 });
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
 

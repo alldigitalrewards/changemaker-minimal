@@ -564,6 +564,7 @@ enum ActivityEventType {
   ACTIVITY_CREATED
   ACTIVITY_UPDATED
   BULK_UNENROLL
+  WORKSPACE_SETTINGS_UPDATED
 }
 
 enum ActivityType {

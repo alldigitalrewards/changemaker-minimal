@@ -279,7 +279,7 @@
         "id": "46",
         "title": "API Route: Update RewardSTACK Configuration",
         "description": "Create PUT endpoint to update Workspace RewardSTACK config securely. Tags: rewardstack, api, config, phase-1",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "44"
         ],
@@ -292,10 +292,11 @@
             "title": "Implement Admin Authentication and Input Validation for PUT Endpoint",
             "description": "Ensure only authorized admins can update RewardSTACK configuration and validate all input fields for correctness and completeness.",
             "dependencies": [],
-            "details": "Add middleware to authenticate admin users for the PUT `/api/workspaces/[slug]/rewardstack/config` route. Implement schema validation for all incoming fields (e.g., environment, API key, program ID, enable/disable flag) using a validation library. Reject requests with invalid or missing data and return appropriate error responses.",
-            "status": "pending",
+            "details": "Add middleware to authenticate admin users for the PUT `/api/workspaces/[slug]/rewardstack/config` route. Implement schema validation for all incoming fields (e.g., environment, API key, program ID, enable/disable flag) using a validation library. Reject requests with invalid or missing data and return appropriate error responses.\n<info added on 2025-11-04T23:21:22.256Z>\nSuccessfully implemented admin authentication using requireWorkspaceAdmin() middleware for the PUT endpoint. Added comprehensive input validation that checks all required fields (programId, apiKey, environment) when enabled=true. Environment validation ensures only 'QA' or 'PRODUCTION' values are accepted. Returns 400 status codes with descriptive error messages for all validation failures.\n</info added on 2025-11-04T23:21:22.256Z>",
+            "status": "done",
             "testStrategy": "Unit and integration tests for authentication failures, missing/invalid fields, and correct error responses.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-04T23:21:25.611Z"
           },
           {
             "id": 2,
@@ -304,10 +305,11 @@
             "dependencies": [
               1
             ],
-            "details": "Use a strong encryption algorithm (e.g., AES-256) to encrypt the API key before saving it. Store the encrypted key and other configuration fields in the database. Ensure decryption is only possible in secure backend contexts and never expose raw keys in logs or responses.",
-            "status": "pending",
+            "details": "Use a strong encryption algorithm (e.g., AES-256) to encrypt the API key before saving it. Store the encrypted key and other configuration fields in the database. Ensure decryption is only possible in secure backend contexts and never expose raw keys in logs or responses.\n<info added on 2025-11-04T23:21:40.681Z>\nStores API key as plain text in rewardStackApiKey field for MVP (Phase 2 will implement pgcrypto encryption per Task 42 decision). Updates workspace with all RewardSTACK configuration fields: enabled, environment, orgId, programId, apiKey, and sandboxMode. Nulls out fields when disabling integration. Calls clearTokenCache() to invalidate cached authentication token after configuration changes.\n</info added on 2025-11-04T23:21:40.681Z>",
+            "status": "done",
             "testStrategy": "Unit tests for encryption/decryption logic and verification that plaintext keys are never persisted or logged.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-04T23:21:44.627Z"
           },
           {
             "id": 3,
@@ -316,10 +318,11 @@
             "dependencies": [
               2
             ],
-            "details": "Wrap the configuration update logic in a database transaction. Ensure that all changes (including encrypted API key and other fields) are committed together, and roll back on any error. Handle concurrency and potential conflicts gracefully.",
-            "status": "pending",
+            "details": "Wrap the configuration update logic in a database transaction. Ensure that all changes (including encrypted API key and other fields) are committed together, and roll back on any error. Handle concurrency and potential conflicts gracefully.\n<info added on 2025-11-04T23:21:58.155Z>\nImplemented transactional database update using prisma.workspace.update() in try-catch block. Single transaction ensures atomic updates of all configuration fields. Returns 500 error with details if database operation fails. Success response includes updated configuration excluding sensitive API key field.\n</info added on 2025-11-04T23:21:58.155Z>",
+            "status": "done",
             "testStrategy": "Integration tests to simulate failures and verify that no partial updates occur; check rollback on error.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-04T23:22:00.752Z"
           },
           {
             "id": 4,
@@ -328,15 +331,17 @@
             "dependencies": [
               3
             ],
-            "details": "After a successful transactional update, create an ActivityEvent entry capturing the admin user, timestamp, and details of the configuration change (excluding sensitive values). Ensure logs are immutable and accessible for audit purposes.",
-            "status": "pending",
+            "details": "After a successful transactional update, create an ActivityEvent entry capturing the admin user, timestamp, and details of the configuration change (excluding sensitive values). Ensure logs are immutable and accessible for audit purposes.\n<info added on 2025-11-04T23:22:14.944Z>\nImplementation completed with ActivityEvent record creation after successful configuration updates. The audit logging captures action='rewardstack_config_update' with comprehensive metadata including enabled status, environment, changedBy email, and timestamp. Records are properly linked to workspace and user entities for complete audit trail visibility. Implementation follows established ActivityEvent schema patterns used throughout the codebase for consistency.\n</info added on 2025-11-04T23:22:14.944Z>",
+            "status": "done",
             "testStrategy": "Integration tests to verify that audit logs are created for every successful update and contain correct metadata.",
-            "parentId": "undefined"
+            "parentId": "undefined",
+            "updatedAt": "2025-11-04T23:22:17.384Z"
           }
         ],
         "complexity": 5,
         "recommendedSubtasks": 4,
-        "expansionPrompt": "Expand into: (1) admin authentication and input validation, (2) API key encryption and secure storage, (3) transactional DB update logic, (4) audit logging integration, (5) API tests for all update scenarios."
+        "expansionPrompt": "Expand into: (1) admin authentication and input validation, (2) API key encryption and secure storage, (3) transactional DB update logic, (4) audit logging integration, (5) API tests for all update scenarios.",
+        "updatedAt": "2025-11-04T23:22:17.384Z"
       },
       {
         "id": "47",
@@ -2193,9 +2198,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-11-04T23:18:57.647Z",
+      "lastModified": "2025-11-04T23:22:17.386Z",
       "taskCount": 45,
-      "completedCount": 4,
+      "completedCount": 5,
       "tags": [
         "master"
       ]
