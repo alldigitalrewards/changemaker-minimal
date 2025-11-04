@@ -65,9 +65,33 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
         id: challengeId,
         workspaceId: workspace.id,
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        enrollmentDeadline: true,
+        workspaceId: true,
+        createdAt: true,
+        updatedAt: true,
+        status: true,
+        emailEditAllowed: true,
+        requireManagerApproval: true,
+        requireAdminReapproval: true,
+        rewardConfig: true,
+        rewardType: true,
         Enrollment: {
-          include: {
+          select: {
+            id: true,
+            userId: true,
+            challengeId: true,
+            status: true,
+            enrolledAt: true,
+            completedAt: true,
+            totalPoints: true,
+            createdAt: true,
+            updatedAt: true,
             User: {
               select: {
                 id: true,
@@ -80,7 +104,18 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
           },
         },
         Activity: {
-          include: {
+          select: {
+            id: true,
+            templateId: true,
+            challengeId: true,
+            pointsValue: true,
+            maxSubmissions: true,
+            deadline: true,
+            isRequired: true,
+            createdAt: true,
+            updatedAt: true,
+            position: true,
+            rewardRules: true,
             ActivityTemplate: true,
             ActivitySubmission: {
               select: {
