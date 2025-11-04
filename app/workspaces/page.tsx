@@ -92,6 +92,14 @@ export default async function WorkspacesPage() {
   // Get primary membership for header
   const primaryMembership = await getPrimaryMembership(dbUser.id)
 
+  // Determine highest role across all workspaces for global page badge
+  const highestRole = memberships.reduce((highest, membership) => {
+    const roleHierarchy = { ADMIN: 3, MANAGER: 2, PARTICIPANT: 1 }
+    const currentLevel = roleHierarchy[membership.role as keyof typeof roleHierarchy] || 0
+    const highestLevel = roleHierarchy[highest as keyof typeof roleHierarchy] || 0
+    return currentLevel > highestLevel ? membership.role : highest
+  }, 'PARTICIPANT' as string)
+
   return (
     <div className="flex h-screen flex-col">
       {/* Header */}
@@ -99,7 +107,7 @@ export default async function WorkspacesPage() {
         title="Workspaces"
         workspace={primaryMembership?.workspace || { name: 'All Workspaces', slug: 'home' }}
         user={user}
-        role={primaryMembership?.role || 'PARTICIPANT'}
+        role={highestRole as any}
         showRoleSwitcher={false}
         showWorkspaceSwitcher={false}
         isGlobalPage={true}
