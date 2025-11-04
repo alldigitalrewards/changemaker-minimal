@@ -1854,8 +1854,24 @@ export async function getChallengeEvents(challengeId: string) {
   return await (prisma as any).activityEvent.findMany({
     where: { challengeId },
     include: {
-      User: { select: { email: true } },
-      actor: { select: { email: true } }
+      User: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          displayName: true
+        }
+      },
+      actor: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          displayName: true
+        }
+      }
     },
     orderBy: { createdAt: 'desc' },
     take: 100
