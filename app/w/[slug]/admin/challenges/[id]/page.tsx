@@ -93,7 +93,15 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
                     displayName: true,
                   }
                 },
-                Enrollment: true,
+                Enrollment: {
+                  select: {
+                    id: true,
+                    userId: true,
+                    challengeId: true,
+                    status: true,
+                    createdAt: true,
+                  }
+                },
               },
               orderBy: {
                 submittedAt: 'desc'
