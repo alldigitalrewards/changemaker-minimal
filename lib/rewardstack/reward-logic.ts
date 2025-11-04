@@ -744,3 +744,493 @@ export async function issueRewardTransaction(
       };
   }
 }
+
+/**
+ * RewardSTACK adjustment/transaction status response
+ */
+interface RewardStackStatusResponse {
+  id: string;
+  status: string;
+  participantId: string;
+  amount?: number;
+  skuId?: string;
+  createdAt: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
+  error?: string;
+}
+
+/**
+ * Get adjustment status from RewardSTACK
+ * GET /api/2.2/programs/{programId}/participants/{participantId}/adjustments/{adjustmentId}
+ */
+export async function getAdjustmentStatus(
+  workspaceId: string,
+  participantId: string,
+  adjustmentId: string
+): Promise<RewardStackStatusResponse> {
+  const { programId } = await validateWorkspaceConfig(workspaceId);
+  const token = await generateRewardStackToken(workspaceId);
+  const baseUrl = await getRewardStackBaseUrl(workspaceId);
+
+  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}/adjustments/${encodeURIComponent(adjustmentId)}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData: RewardStackError = await response
+      .json()
+      .catch(() => ({ message: `HTTP ${response.status}` }));
+
+    if (response.status === 404) {
+      throw new Error(`Adjustment not found: ${adjustmentId}`);
+    }
+
+    throw new Error(
+      `Failed to get adjustment status: ${errorData.message || `HTTP ${response.status}`}`
+    );
+  }
+
+  return await response.json();
+}
+
+/**
+ * Get transaction status from RewardSTACK
+ * GET /api/2.2/programs/{programId}/participants/{participantId}/transactions/{transactionId}
+ */
+export async function getTransactionStatus(
+  workspaceId: string,
+  participantId: string,
+  transactionId: string
+): Promise<RewardStackStatusResponse> {
+  const { programId } = await validateWorkspaceConfig(workspaceId);
+  const token = await generateRewardStackToken(workspaceId);
+  const baseUrl = await getRewardStackBaseUrl(workspaceId);
+
+  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}/transactions/${encodeURIComponent(transactionId)}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorData: RewardStackError = await response
+      .json()
+      .catch(() => ({ message: `HTTP ${response.status}` }));
+
+    if (response.status === 404) {
+      throw new Error(`Transaction not found: ${transactionId}`);
+    }
+
+    throw new Error(
+      `Failed to get transaction status: ${errorData.message || `HTTP ${response.status}`}`
+    );
+  }
+
+  return await response.json();
+}
+
+/**
+ * Map RewardSTACK status to local RewardStackStatus enum
+ */
+function mapRewardStackStatus(status: string): RewardStackStatus {
+  const statusLower = status.toLowerCase();
+
+  switch (statusLower) {
+    case "pending":
+      return "PENDING";
+    case "processing":
+      return "PROCESSING";
+    case "completed":
+    case "success":
+    case "delivered":
+      return "COMPLETED";
+    case "failed":
+    case "error":
+      return "FAILED";
+    case "returned":
+    case "cancelled":
+      return "RETURNED";
+    default:
+      console.warn(`Unknown RewardSTACK status: ${status}, defaulting to PROCESSING`);
+      return "PROCESSING";
+  }
+}
+
+/**
+ * Check status of a single reward issuance
+ * Queries RewardSTACK and updates local status
+ */
+export async function checkRewardIssuanceStatus(
+  rewardIssuanceId: string
+): Promise<{
+  success: boolean;
+  status?: RewardStackStatus;
+  error?: string;
+  updated?: boolean;
+}> {
+  try {
+    // Get reward issuance
+    const rewardIssuance = await prisma.rewardIssuance.findUnique({
+      where: { id: rewardIssuanceId },
+      select: {
+        id: true,
+        workspaceId: true,
+        userId: true,
+        type: true,
+        rewardStackStatus: true,
+        rewardStackTransactionId: true,
+        rewardStackAdjustmentId: true,
+        User: {
+          select: {
+            rewardStackParticipantId: true,
+          },
+        },
+      },
+    });
+
+    if (!rewardIssuance) {
+      return { success: false, error: "RewardIssuance not found" };
+    }
+
+    if (!rewardIssuance.User.rewardStackParticipantId) {
+      return {
+        success: false,
+        error: "Participant not synced to RewardSTACK",
+      };
+    }
+
+    // Get external ID based on reward type
+    const externalId =
+      rewardIssuance.type === "points"
+        ? rewardIssuance.rewardStackAdjustmentId
+        : rewardIssuance.rewardStackTransactionId;
+
+    if (!externalId) {
+      return {
+        success: false,
+        error: "No external transaction/adjustment ID found",
+      };
+    }
+
+    // Query RewardSTACK for status
+    let statusResponse: RewardStackStatusResponse;
+
+    if (rewardIssuance.type === "points") {
+      statusResponse = await getAdjustmentStatus(
+        rewardIssuance.workspaceId,
+        rewardIssuance.User.rewardStackParticipantId,
+        externalId
+      );
+    } else {
+      statusResponse = await getTransactionStatus(
+        rewardIssuance.workspaceId,
+        rewardIssuance.User.rewardStackParticipantId,
+        externalId
+      );
+    }
+
+    // Map status
+    const newStatus = mapRewardStackStatus(statusResponse.status);
+
+    // Check if status changed
+    const statusChanged = newStatus !== rewardIssuance.rewardStackStatus;
+
+    if (statusChanged) {
+      // Update local status
+      const updates: Parameters<typeof updateRewardIssuance>[1] = {
+        rewardStackStatus: newStatus,
+      };
+
+      // Update local reward status based on RewardSTACK status
+      if (newStatus === "COMPLETED") {
+        updates.status = "ISSUED";
+        updates.issuedAt = updates.issuedAt || new Date();
+      } else if (newStatus === "FAILED") {
+        updates.status = "FAILED";
+        updates.rewardStackErrorMessage = statusResponse.error || "Transaction failed";
+      }
+
+      await updateRewardIssuance(rewardIssuanceId, updates);
+
+      // Log status change
+      await prisma.activityEvent.create({
+        data: {
+          type: "WORKSPACE_SETTINGS_UPDATED",
+          metadata: {
+            action: "rewardstack_status_updated",
+            rewardIssuanceId,
+            externalId,
+            oldStatus: rewardIssuance.rewardStackStatus,
+            newStatus,
+            timestamp: new Date().toISOString(),
+          },
+          userId: rewardIssuance.userId,
+          workspaceId: rewardIssuance.workspaceId,
+        },
+      });
+
+      console.log(
+        `Updated RewardIssuance ${rewardIssuanceId} status: ${rewardIssuance.rewardStackStatus} → ${newStatus}`
+      );
+    }
+
+    return {
+      success: true,
+      status: newStatus,
+      updated: statusChanged,
+    };
+  } catch (error) {
+    console.error(
+      `Failed to check reward issuance status ${rewardIssuanceId}:`,
+      error
+    );
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Check status of multiple reward issuances in parallel
+ */
+export async function checkMultipleRewardStatuses(
+  rewardIssuanceIds: string[],
+  options: {
+    concurrency?: number; // Max parallel checks, default: 10
+  } = {}
+): Promise<{
+  checked: number;
+  updated: number;
+  failed: number;
+  results: Array<{ id: string; success: boolean; updated?: boolean; error?: string }>;
+}> {
+  const concurrency = options.concurrency || 10;
+  const results: Array<{ id: string; success: boolean; updated?: boolean; error?: string }> = [];
+  let checked = 0;
+  let updated = 0;
+  let failed = 0;
+
+  // Process in batches
+  for (let i = 0; i < rewardIssuanceIds.length; i += concurrency) {
+    const batch = rewardIssuanceIds.slice(i, i + concurrency);
+
+    const batchResults = await Promise.all(
+      batch.map(async (id) => {
+        const result = await checkRewardIssuanceStatus(id);
+        checked++;
+        if (result.success && result.updated) updated++;
+        if (!result.success) failed++;
+        return { id, ...result };
+      })
+    );
+
+    results.push(...batchResults);
+  }
+
+  return { checked, updated, failed, results };
+}
+
+/**
+ * Retry a failed reward issuance
+ */
+export async function retryFailedRewardIssuance(
+  rewardIssuanceId: string
+): Promise<RewardIssuanceResult> {
+  try {
+    // Get reward issuance
+    const rewardIssuance = await prisma.rewardIssuance.findUnique({
+      where: { id: rewardIssuanceId },
+      select: {
+        id: true,
+        status: true,
+        rewardStackStatus: true,
+        type: true,
+      },
+    });
+
+    if (!rewardIssuance) {
+      return {
+        success: false,
+        error: "RewardIssuance not found",
+      };
+    }
+
+    // Only retry if status is FAILED
+    if (rewardIssuance.status !== "FAILED") {
+      return {
+        success: false,
+        error: `Cannot retry reward with status ${rewardIssuance.status}. Only FAILED rewards can be retried.`,
+      };
+    }
+
+    // Reset status to PENDING to allow retry
+    await updateRewardIssuance(rewardIssuanceId, {
+      status: "PENDING",
+      rewardStackStatus: "PENDING",
+      rewardStackErrorMessage: null,
+      rewardStackTransactionId: null,
+      rewardStackAdjustmentId: null,
+    });
+
+    // Log retry attempt
+    await prisma.activityEvent.create({
+      data: {
+        type: "WORKSPACE_SETTINGS_UPDATED",
+        metadata: {
+          action: "rewardstack_retry_initiated",
+          rewardIssuanceId,
+          timestamp: new Date().toISOString(),
+        },
+        workspaceId: rewardIssuance.id, // Will be populated from rewardIssuance
+      },
+    });
+
+    // Retry the issuance
+    return await issueRewardTransaction(rewardIssuanceId);
+  } catch (error) {
+    console.error(
+      `Failed to retry reward issuance ${rewardIssuanceId}:`,
+      error
+    );
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Find and check status of all pending/processing reward issuances
+ * Useful for background job to monitor ongoing transactions
+ */
+export async function monitorPendingRewards(
+  workspaceId?: string
+): Promise<{
+  checked: number;
+  updated: number;
+  failed: number;
+  details: string[];
+}> {
+  const details: string[] = [];
+
+  // Find pending/processing rewards
+  const pendingRewards = await prisma.rewardIssuance.findMany({
+    where: {
+      ...(workspaceId && { workspaceId }),
+      rewardStackStatus: {
+        in: ["PENDING", "PROCESSING"],
+      },
+      OR: [
+        { rewardStackTransactionId: { not: null } },
+        { rewardStackAdjustmentId: { not: null } },
+      ],
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  details.push(`Found ${pendingRewards.length} pending/processing rewards`);
+
+  if (pendingRewards.length === 0) {
+    return { checked: 0, updated: 0, failed: 0, details };
+  }
+
+  // Check status of all pending rewards
+  const result = await checkMultipleRewardStatuses(
+    pendingRewards.map((r) => r.id),
+    { concurrency: 10 }
+  );
+
+  details.push(`Checked ${result.checked} rewards`);
+  details.push(`Updated ${result.updated} statuses`);
+  details.push(`Failed to check ${result.failed} rewards`);
+
+  return {
+    checked: result.checked,
+    updated: result.updated,
+    failed: result.failed,
+    details,
+  };
+}
+
+/**
+ * Bulk retry failed reward issuances
+ */
+export async function retryFailedRewards(
+  workspaceId?: string,
+  options: {
+    concurrency?: number; // Max parallel retries, default: 5
+    limit?: number; // Max number of retries, default: 50
+  } = {}
+): Promise<{
+  attempted: number;
+  successful: number;
+  failed: number;
+  details: string[];
+}> {
+  const concurrency = options.concurrency || 5;
+  const limit = options.limit || 50;
+  const details: string[] = [];
+
+  // Find failed rewards
+  const failedRewards = await prisma.rewardIssuance.findMany({
+    where: {
+      ...(workspaceId && { workspaceId }),
+      status: "FAILED",
+    },
+    select: {
+      id: true,
+    },
+    take: limit,
+    orderBy: {
+      createdAt: "asc", // Oldest first
+    },
+  });
+
+  details.push(`Found ${failedRewards.length} failed rewards`);
+
+  if (failedRewards.length === 0) {
+    return { attempted: 0, successful: 0, failed: 0, details };
+  }
+
+  let attempted = 0;
+  let successful = 0;
+  let failed = 0;
+
+  // Process in batches
+  for (let i = 0; i < failedRewards.length; i += concurrency) {
+    const batch = failedRewards.slice(i, i + concurrency);
+
+    const batchResults = await Promise.all(
+      batch.map(async (reward) => {
+        attempted++;
+        const result = await retryFailedRewardIssuance(reward.id);
+        if (result.success) {
+          successful++;
+        } else {
+          failed++;
+        }
+        return result;
+      })
+    );
+
+    details.push(`Batch ${Math.floor(i / concurrency) + 1}: ${batchResults.filter(r => r.success).length}/${batch.length} successful`);
+  }
+
+  details.push(`Total: ${successful} successful, ${failed} failed out of ${attempted} attempted`);
+
+  return { attempted, successful, failed, details };
+}
