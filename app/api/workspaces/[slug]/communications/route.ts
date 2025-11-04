@@ -40,7 +40,14 @@ async function getRecipientsForCommunication(params: {
       where: { workspaceId },
       include: {
         User: {
-          select: { email: true, isPending: true }
+          select: {
+            id: true,
+            email: true,
+            isPending: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+          }
         }
       }
     })
@@ -69,7 +76,16 @@ async function getRecipientsForCommunication(params: {
         status: { in: statusFilters[audience] }
       },
       include: {
-        User: { select: { email: true, isPending: true } }
+        User: {
+          select: {
+            id: true,
+            email: true,
+            isPending: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+          }
+        }
       }
     })
 
@@ -90,7 +106,16 @@ async function getRecipientsForCommunication(params: {
       status: { in: statusFilters[audience] }
     },
     include: {
-      User: { select: { email: true, isPending: true } }
+      User: {
+        select: {
+          id: true,
+          email: true,
+          isPending: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+        }
+      }
     }
   })
 
