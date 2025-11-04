@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table"
 import { ParticipantManagementDialog } from "./participant-management-dialog"
 import { BulkInviteDialog } from "./bulk-invite-dialog"
-import { Eye, Shield, UserCheck } from "lucide-react"
+import { Eye, Shield, UserCheck, Users } from "lucide-react"
 import Link from "next/link"
 import { Suspense } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -269,15 +269,20 @@ export default async function AdminParticipantsPage({
                       </TableCell>
                       <TableCell>
                         <Link href={`/w/${slug}/admin/participants/${participant.id}`} className="block">
-                          <Badge 
-                            variant="outline" 
-                            className={participant.role === "ADMIN" 
-                              ? "bg-blue-100 text-blue-800 border-blue-200" 
-                              : "bg-gray-100 text-gray-800 border-gray-200"
+                          <Badge
+                            variant="outline"
+                            className={
+                              participant.role === "ADMIN"
+                                ? "bg-blue-100 text-blue-800 border-blue-200"
+                                : participant.role === "MANAGER"
+                                ? "bg-amber-100 text-amber-800 border-amber-200"
+                                : "bg-gray-100 text-gray-800 border-gray-200"
                             }
                           >
                             {participant.role === "ADMIN" ? (
                               <Shield className="h-3 w-3 mr-1" />
+                            ) : participant.role === "MANAGER" ? (
+                              <Users className="h-3 w-3 mr-1" />
                             ) : (
                               <UserCheck className="h-3 w-3 mr-1" />
                             )}

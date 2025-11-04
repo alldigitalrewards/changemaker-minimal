@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { UserPlus, Trash2, Loader2, Users } from 'lucide-react'
+import { UserPlus, Trash2, Loader2, Users, Shield } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface Manager {
@@ -229,8 +230,14 @@ export function ChallengeManagersDialog({ challengeId, workspaceSlug }: Challeng
                       key={manager.id}
                       className="flex items-center justify-between p-3 border rounded-md bg-muted/20"
                     >
-                      <div>
-                        <p className="text-sm font-medium">{getDisplayName(manager)}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium">{getDisplayName(manager)}</p>
+                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
+                            <Users className="h-3 w-3 mr-1" />
+                            MANAGER
+                          </Badge>
+                        </div>
                         <p className="text-xs text-muted-foreground">{manager.email}</p>
                         <p className="text-xs text-muted-foreground">
                           Assigned{' '}
