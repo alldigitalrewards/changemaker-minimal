@@ -33,7 +33,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { type Workspace, type User, type Challenge, type Enrollment, type WorkspaceMembership, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspacePointsBudget, type ChallengePointsBudget, type WorkspaceCommunication, CommunicationScope, CommunicationAudience } from '@prisma/client'
+import { type Workspace, type User, type Challenge, type Enrollment, type WorkspaceMembership, type ActivityTemplate, type Activity, type ActivitySubmission, type PointsBalance, type InviteCode, type WorkspaceEmailSettings, type WorkspaceEmailTemplate, type EmailTemplateType, type WorkspacePointsBudget, type ChallengePointsBudget, type WorkspaceCommunication, CommunicationScope, CommunicationAudience, CommunicationPriority } from '@prisma/client'
 import { type Role, type ActivityType, type RewardType, type SubmissionStatus } from '@/lib/types'
 import type { WorkspaceId, UserId, ChallengeId, EnrollmentId } from '@/lib/types'
 import { randomBytes } from 'crypto'
@@ -1989,11 +1989,12 @@ export async function getRecentWorkspaceActivities(
 // COMMUNICATIONS
 // =============================================================================
 
-interface CreateCommunicationInput {
+export interface CreateCommunicationInput {
   subject: string
   message: string
   scope: CommunicationScope
   audience?: CommunicationAudience
+  priority?: CommunicationPriority
   challengeId?: string | null
   activityId?: string | null
 }
@@ -2060,6 +2061,7 @@ export async function createWorkspaceCommunication(
         activityId,
         scope: input.scope,
         audience: input.audience ?? CommunicationAudience.ALL,
+        priority: input.priority ?? CommunicationPriority.NORMAL,
         subject,
         message,
         sentBy,

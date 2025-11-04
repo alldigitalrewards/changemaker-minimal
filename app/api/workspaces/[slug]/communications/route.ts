@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth'
 import { createWorkspaceCommunication, DatabaseError } from '@/lib/db/queries'
 import { prisma } from '@/lib/prisma'
-import { CommunicationScope, CommunicationAudience } from '@prisma/client'
+import { CommunicationScope, CommunicationAudience, CommunicationPriority } from '@prisma/client'
 import { sendCommunicationEmail } from '@/lib/email/communications'
 import { revalidatePath } from 'next/cache'
 
@@ -133,6 +133,7 @@ export const POST = withErrorHandling(async (request: NextRequest, context: { pa
 
   const rawScope = (payload.scope || '').toUpperCase()
   const rawAudience = (payload.audience || 'ALL').toUpperCase()
+  const rawPriority = (payload.priority || 'NORMAL').toUpperCase()
 
   if (!Object.values(CommunicationScope).includes(rawScope as CommunicationScope)) {
     return NextResponse.json({ error: 'Invalid communication scope' }, { status: 400 })
@@ -142,8 +143,13 @@ export const POST = withErrorHandling(async (request: NextRequest, context: { pa
     return NextResponse.json({ error: 'Invalid communication audience' }, { status: 400 })
   }
 
+  if (!Object.values(CommunicationPriority).includes(rawPriority as CommunicationPriority)) {
+    return NextResponse.json({ error: 'Invalid communication priority' }, { status: 400 })
+  }
+
   const scope = rawScope as CommunicationScope
   const audience = rawAudience as CommunicationAudience
+  const priority = rawPriority as CommunicationPriority
 
   const communication = await createWorkspaceCommunication(
     workspace.id,
@@ -152,6 +158,7 @@ export const POST = withErrorHandling(async (request: NextRequest, context: { pa
       message: payload.message,
       scope,
       audience,
+      priority,
       challengeId: payload.challengeId ?? null,
       activityId: payload.activityId ?? null
     },

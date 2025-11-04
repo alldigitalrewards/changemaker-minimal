@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 
 type CommunicationScopeOption = 'WORKSPACE' | 'CHALLENGE' | 'ACTIVITY'
 type CommunicationAudienceOption = 'ALL' | 'ENROLLED' | 'INVITED' | 'COMPLETED'
+type CommunicationPriorityOption = 'NORMAL' | 'IMPORTANT' | 'URGENT'
 
 interface ActivityOption {
   id: string
@@ -33,6 +34,12 @@ const AUDIENCE_OPTIONS: { value: CommunicationAudienceOption; label: string; des
   { value: 'ENROLLED', label: 'Currently enrolled', description: 'Participants actively enrolled' },
   { value: 'INVITED', label: 'Invited', description: 'Participants who have been invited but not enrolled yet' },
   { value: 'COMPLETED', label: 'Completed', description: 'Participants who completed or withdrew' },
+]
+
+const PRIORITY_OPTIONS: { value: CommunicationPriorityOption; label: string; description: string }[] = [
+  { value: 'NORMAL', label: 'Normal', description: 'Regular announcement' },
+  { value: 'IMPORTANT', label: 'Important', description: 'Needs attention' },
+  { value: 'URGENT', label: 'Urgent', description: 'Requires immediate action' },
 ]
 
 const SCOPE_LABELS: Record<CommunicationScopeOption, string> = {
@@ -61,6 +68,7 @@ export function CommunicationComposer({
 
   const [scope, setScope] = useState<CommunicationScopeOption>(initialScope)
   const [audience, setAudience] = useState<CommunicationAudienceOption>(defaultAudience)
+  const [priority, setPriority] = useState<CommunicationPriorityOption>('NORMAL')
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [activityId, setActivityId] = useState<string | null>(null)
@@ -112,6 +120,7 @@ export function CommunicationComposer({
         body: JSON.stringify({
           scope,
           audience,
+          priority,
           subject: subject.trim(),
           message: message.trim(),
           challengeId: readyChallengeId,
@@ -187,6 +196,25 @@ export function CommunicationComposer({
           </Select>
         </div>
 
+        <div className="grid gap-2">
+          <Label htmlFor="communication-priority">Priority level</Label>
+          <Select value={priority} onValueChange={(value) => setPriority(value as CommunicationPriorityOption)}>
+            <SelectTrigger id="communication-priority">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITY_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-sm">{option.label}</span>
+                    <span className="text-xs text-muted-foreground">{option.description}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {requiresActivity && (
           <div className="grid gap-2">
             <Label htmlFor="communication-activity">Select activity</Label>
@@ -234,10 +262,13 @@ export function CommunicationComposer({
             id="communication-message"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
-            placeholder="Write your announcement here..."
+            placeholder="Write your announcement here... (Markdown supported)"
             rows={6}
             required
           />
+          <p className="text-xs text-muted-foreground">
+            Markdown formatting is supported. Use **bold**, *italic*, and more.
+          </p>
         </div>
 
         <div className="flex justify-end">

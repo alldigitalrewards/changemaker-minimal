@@ -261,31 +261,55 @@ model PointsLedger {
 }
 
 model RewardIssuance {
-  id                    String              @id @db.Uuid
-  userId                String              @db.Uuid
-  workspaceId           String              @db.Uuid
-  challengeId           String?             @db.Uuid
+  id                    String       @id @db.Uuid
+  userId                String       @db.Uuid
+  workspaceId           String       @db.Uuid
+  challengeId           String?      @db.Uuid
   type                  RewardType
   amount                Int?
   currency              String?
   skuId                 String?
   provider              String?
-  status                RewardStatus        @default(PENDING)
+  status                RewardStatus @default(PENDING)
   issuedAt              DateTime?
   error                 String?
   metadata              Json?
   externalTransactionId String?
   externalStatus        String?
   externalResponse      Json?
-  ActivitySubmission    ActivitySubmission?
-  Challenge             Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  User                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Workspace             Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // RewardSTACK Integration Fields
+  rewardStackTransactionId   String?            @unique
+  rewardStackAdjustmentId    String?            @unique
+  rewardStackStatus          RewardStackStatus?
+  rewardStackWebhookReceived Boolean            @default(false)
+  rewardStackErrorMessage    String?
+
+  ActivitySubmission ActivitySubmission?
+  Challenge          Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([challengeId])
   @@index([status])
   @@index([userId])
   @@index([workspaceId])
+  @@index([rewardStackStatus])
+}
+
+model RewardStackWebhookLog {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @db.Uuid
+  eventType   String
+  payload     Json
+  receivedAt  DateTime  @default(now())
+  processed   Boolean   @default(false)
+  processedAt DateTime?
+  error       String?
+
+  @@index([workspaceId, receivedAt])
+  @@index([eventType])
+  @@index([processed])
 }
 
 model TenantSku {
@@ -301,38 +325,46 @@ model TenantSku {
 }
 
 model User {
-  id                                            String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                                         String                           @unique
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email String @unique
 
   // Identity & Display
-  firstName                                     String?
-  lastName                                      String?
-  displayName                                   String?
+  firstName   String?
+  lastName    String?
+  displayName String?
 
   // Contact Information
-  phone                                         String?
+  phone String?
 
   // Shipping Address (for reward fulfillment)
-  addressLine1                                  String?
-  addressLine2                                  String?
-  city                                          String?
-  state                                         String?
-  zipCode                                       String?
-  country                                       String?
+  addressLine1 String?
+  addressLine2 String?
+  city         String?
+  state        String?
+  zipCode      String?
+  country      String?
 
   // Professional/Organizational
-  company                                       String?
-  jobTitle                                      String?
-  department                                    String?
+  company    String?
+  jobTitle   String?
+  department String?
 
   // System fields
-  supabaseUserId                                String?                          @unique @db.Uuid
-  createdAt                                     DateTime                         @default(now())
-  updatedAt                                     DateTime                         @default(now())
-  isPending                                     Boolean                          @default(false)
-  emailChangePending                            Json?
-  permissions                                   String[]                         @default([])
-  tenantId                                      String                           @default("default")
+  supabaseUserId     String?  @unique @db.Uuid
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now())
+  isPending          Boolean  @default(false)
+  emailChangePending Json?
+  permissions        String[] @default([])
+  tenantId           String   @default("default")
+
+  // RewardSTACK Participant Sync
+  rewardStackParticipantId String?               @unique
+  rewardStackSyncStatus    RewardStackSyncStatus @default(NOT_SYNCED)
+  rewardStackLastSync      DateTime?
+  rewardStackSsoUrl        String?
+  rewardStackSsoExpiresAt  DateTime?
+
   ActivityEvent_ActivityEvent_actorUserIdToUser ActivityEvent[]                  @relation("ActivityEvent_actorUserIdToUser")
   ActivityEvent_ActivityEvent_userIdToUser      ActivityEvent[]                  @relation("ActivityEvent_userIdToUser")
   ActivitySubmission                            ActivitySubmission[]
@@ -358,14 +390,23 @@ model User {
 }
 
 model Workspace {
-  id                             String                           @id @db.Uuid
-  slug                           String                           @unique
-  name                           String
-  createdAt                      DateTime                         @default(now())
-  updatedAt                      DateTime                         @default(now())
-  active                         Boolean                          @default(true)
-  published                      Boolean                          @default(true)
-  tenantId                       String                           @default("default")
+  id        String   @id @db.Uuid
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  active    Boolean  @default(true)
+  published Boolean  @default(true)
+  tenantId  String   @default("default")
+
+  // RewardSTACK Integration
+  rewardStackOrgId       String?
+  rewardStackProgramId   String?
+  rewardStackApiKey      String? // Encrypted via pgcrypto
+  rewardStackEnabled     Boolean                 @default(false)
+  rewardStackEnvironment RewardStackEnvironment?
+  rewardStackSandboxMode Boolean                 @default(true)
+
   ActivityEvent                  ActivityEvent[]
   ActivityTemplate               ActivityTemplate[]
   Challenge                      Challenge[]
@@ -486,6 +527,7 @@ model WorkspaceCommunication {
   activityId  String?               @db.Uuid
   scope       CommunicationScope
   audience    CommunicationAudience @default(ALL)
+  priority    CommunicationPriority @default(NORMAL)
   subject     String
   message     String
   sentBy      String                @db.Uuid
@@ -551,6 +593,7 @@ enum EnrollmentStatus {
   INVITED
   ENROLLED
   WITHDRAWN
+  COMPLETED
 }
 
 enum RewardStatus {
@@ -592,4 +635,30 @@ enum CommunicationAudience {
   ENROLLED
   INVITED
   COMPLETED
+}
+
+enum CommunicationPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum RewardStackSyncStatus {
+  NOT_SYNCED
+  PENDING
+  SYNCED
+  FAILED
+}
+
+enum RewardStackEnvironment {
+  QA
+  PRODUCTION
+}
+
+enum RewardStackStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  RETURNED
 }
