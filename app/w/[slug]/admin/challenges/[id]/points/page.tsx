@@ -21,7 +21,17 @@ export default async function PointsPage({ params }: PageProps) {
     where: { challengeId: id },
     orderBy: { createdAt: 'desc' },
     take: 20,
-    include: { User_PointsLedger_toUserIdToUser: { select: { email: true } } }
+    include: {
+      User_PointsLedger_toUserIdToUser: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+        }
+      }
+    }
   })
 
   const workspaceRemaining = Math.max(0, (workspaceBudget?.totalBudget || 0) - (workspaceBudget?.allocated || 0))

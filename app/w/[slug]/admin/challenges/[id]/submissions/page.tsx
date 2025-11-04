@@ -64,7 +64,15 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
       },
       orderBy: statusFilter === 'PENDING' ? { submittedAt: 'asc' } : { submittedAt: 'desc' },
       include: {
-        User: { select: { email: true } },
+        User: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+          }
+        },
         Activity: {
           include: {
             ActivityTemplate: {

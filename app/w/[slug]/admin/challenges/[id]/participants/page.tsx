@@ -20,7 +20,15 @@ export default async function ParticipantsPage({ params, searchParams }: PagePro
     include: {
       Enrollment: {
         include: {
-          User: { select: { id: true, email: true } }
+          User: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              displayName: true,
+            }
+          }
         }
       }
     }
