@@ -1868,7 +1868,7 @@ export async function getChallengeEvents(challengeId: string) {
   return await (prisma as any).activityEvent.findMany({
     where: { challengeId },
     include: {
-      User: {
+      User_ActivityEvent_userIdToUser: {
         select: {
           id: true,
           email: true,
@@ -1877,7 +1877,7 @@ export async function getChallengeEvents(challengeId: string) {
           displayName: true
         }
       },
-      actor: {
+      User_ActivityEvent_actorUserIdToUser: {
         select: {
           id: true,
           email: true,
