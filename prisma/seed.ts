@@ -101,14 +101,21 @@ const managerUsers = [
   },
 ];
 
-// Participant users (domain-specific)
+// Participant users (domain-specific) - More participants for fuller leaderboard
 const participantUsers = [
-  // ACME participants
+  // ACME participants (10 total)
   { email: "john.doe@acme.com", name: "John Doe", workspace: "acme" },
   { email: "jane.smith@acme.com", name: "Jane Smith", workspace: "acme" },
   { email: "bob.wilson@acme.com", name: "Bob Wilson", workspace: "acme" },
+  { email: "alice.cooper@acme.com", name: "Alice Cooper", workspace: "acme" },
+  { email: "charlie.brown@acme.com", name: "Charlie Brown", workspace: "acme" },
+  { email: "diana.prince@acme.com", name: "Diana Prince", workspace: "acme" },
+  { email: "ethan.hunt@acme.com", name: "Ethan Hunt", workspace: "acme" },
+  { email: "fiona.green@acme.com", name: "Fiona Green", workspace: "acme" },
+  { email: "george.mason@acme.com", name: "George Mason", workspace: "acme" },
+  { email: "hannah.white@acme.com", name: "Hannah White", workspace: "acme" },
 
-  // AllDigitalRewards participants
+  // AllDigitalRewards participants (10 total)
   {
     email: "sarah.jones@alldigitalrewards.com",
     name: "Sarah Jones",
@@ -124,8 +131,43 @@ const participantUsers = [
     name: "Lisa Taylor",
     workspace: "alldigitalrewards",
   },
+  {
+    email: "robert.garcia@alldigitalrewards.com",
+    name: "Robert Garcia",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "emily.clark@alldigitalrewards.com",
+    name: "Emily Clark",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "james.martinez@alldigitalrewards.com",
+    name: "James Martinez",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "sophia.rodriguez@alldigitalrewards.com",
+    name: "Sophia Rodriguez",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "william.lee@alldigitalrewards.com",
+    name: "William Lee",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "olivia.walker@alldigitalrewards.com",
+    name: "Olivia Walker",
+    workspace: "alldigitalrewards",
+  },
+  {
+    email: "daniel.hall@alldigitalrewards.com",
+    name: "Daniel Hall",
+    workspace: "alldigitalrewards",
+  },
 
-  // Sharecare participants
+  // Sharecare participants (10 total)
   {
     email: "david.brown@sharecare.com",
     name: "David Brown",
@@ -139,6 +181,41 @@ const participantUsers = [
   {
     email: "alex.johnson@sharecare.com",
     name: "Alex Johnson",
+    workspace: "sharecare",
+  },
+  {
+    email: "maria.lopez@sharecare.com",
+    name: "Maria Lopez",
+    workspace: "sharecare",
+  },
+  {
+    email: "kevin.white@sharecare.com",
+    name: "Kevin White",
+    workspace: "sharecare",
+  },
+  {
+    email: "jennifer.adams@sharecare.com",
+    name: "Jennifer Adams",
+    workspace: "sharecare",
+  },
+  {
+    email: "thomas.baker@sharecare.com",
+    name: "Thomas Baker",
+    workspace: "sharecare",
+  },
+  {
+    email: "michelle.campbell@sharecare.com",
+    name: "Michelle Campbell",
+    workspace: "sharecare",
+  },
+  {
+    email: "christopher.evans@sharecare.com",
+    name: "Christopher Evans",
+    workspace: "sharecare",
+  },
+  {
+    email: "ashley.foster@sharecare.com",
+    name: "Ashley Foster",
     workspace: "sharecare",
   },
 ];
@@ -930,11 +1007,11 @@ async function seed() {
           },
         });
 
-        // Add activities to first 2 challenges of this workspace
+        // Add activities to ALL published challenges (not just first 2)
         const workspaceChallenges = allChallenges.filter(
-          (c) => c.workspaceId === workspace.id,
+          (c) => c.workspaceId === workspace.id && c.status === "PUBLISHED",
         );
-        for (const challenge of workspaceChallenges.slice(0, 2)) {
+        for (const challenge of workspaceChallenges) {
           await prisma.activity.create({
             data: {
               id: randomUUID(),
@@ -1015,7 +1092,7 @@ async function seed() {
       }
     }
 
-    // Create some sample activity submissions with points awards
+    // Create many sample activity submissions with varied timestamps for leaderboard testing
     console.log("\n📝 Creating sample activity submissions with points...");
     let submissionCount = 0;
     const enrolledEnrollments = await prisma.enrollment.findMany({
@@ -1025,20 +1102,40 @@ async function seed() {
         { Challenge: { Workspace: { slug: 'asc' } } },
         { User: { email: 'asc' } }
       ],
-      take: 10, // Limit to 10 for sample data
     });
 
+    // Time periods for varied data (for leaderboard filtering testing)
+    const now = new Date();
+    const timePeriods = [
+      { name: 'today', daysAgo: 0 },
+      { name: 'this week', daysAgo: 3 },
+      { name: 'this week', daysAgo: 5 },
+      { name: 'this month', daysAgo: 15 },
+      { name: 'this month', daysAgo: 25 },
+      { name: 'older', daysAgo: 35 },
+      { name: 'older', daysAgo: 50 },
+    ];
+
     for (const enrollment of enrolledEnrollments) {
-      // Find an activity for this challenge
-      const activity = await prisma.activity.findFirst({
+      // Find multiple activities for this challenge
+      const activities = await prisma.activity.findMany({
         where: { challengeId: enrollment.challengeId },
         include: { ActivityTemplate: true },
-        orderBy: { createdAt: 'asc' }
+        take: 5, // Up to 5 activities per enrollment
       });
 
-      if (activity) {
-        // Create submissions with varied statuses
-        const statuses = ["APPROVED", "PENDING", "REJECTED", "APPROVED"];
+      // Create 2-4 submissions per enrolled user with varied timestamps
+      const numSubmissions = 2 + (submissionCount % 3); // 2, 3, or 4 submissions
+      for (let i = 0; i < Math.min(numSubmissions, activities.length); i++) {
+        const activity = activities[i];
+        if (!activity) continue;
+
+        // Select time period for this submission
+        const timePeriod = timePeriods[submissionCount % timePeriods.length];
+        const submissionDate = new Date(now.getTime() - (timePeriod.daysAgo * 24 * 60 * 60 * 1000));
+
+        // Create submissions with varied statuses (more approved for leaderboard data)
+        const statuses = ["APPROVED", "APPROVED", "APPROVED", "APPROVED", "PENDING", "REJECTED"];
         const status = statuses[submissionCount % statuses.length] as
           | "APPROVED"
           | "PENDING"
@@ -1050,17 +1147,19 @@ async function seed() {
             activityId: activity.id,
             userId: enrollment.userId,
             enrollmentId: enrollment.id,
-            textContent: `Sample submission content for testing (${status})`,
+            textContent: `Sample submission content for testing (${status}, ${timePeriod.name})`,
             status: status,
             pointsAwarded: status === "APPROVED" ? activity.pointsValue : null,
             reviewedBy: status !== "PENDING" ? adminUserId : null,
-            reviewedAt: status !== "PENDING" ? new Date() : null,
+            reviewedAt: status !== "PENDING" ? submissionDate : null,
             reviewNotes:
               status === "APPROVED"
                 ? "Approved for testing"
                 : status === "REJECTED"
                   ? "Does not meet requirements"
                   : null,
+            createdAt: submissionDate,
+            updatedAt: submissionDate,
           },
         });
 
@@ -1075,11 +1174,8 @@ async function seed() {
               actorUserId: adminUserId,
               submissionId: submission.id,
             });
-            console.log(
-              `✓ Created submission and awarded ${activity.pointsValue} points`,
-            );
 
-            // Create submission approved event
+            // Create submission approved event with historical timestamp
             await prisma.activityEvent.create({
               data: {
                 workspaceId: enrollment.Challenge.workspaceId,
@@ -1092,6 +1188,7 @@ async function seed() {
                   submissionId: submission.id,
                   points: activity.pointsValue,
                 },
+                createdAt: submissionDate,
               },
             });
           } catch (error) {
@@ -1108,6 +1205,7 @@ async function seed() {
               actorUserId: adminUserId,
               type: ActivityEventType.SUBMISSION_REJECTED,
               metadata: { submissionId: submission.id },
+              createdAt: submissionDate,
             },
           });
         } else {
@@ -1120,6 +1218,7 @@ async function seed() {
               userId: enrollment.userId,
               type: ActivityEventType.SUBMISSION_CREATED,
               metadata: { submissionId: submission.id },
+              createdAt: submissionDate,
             },
           });
         }
@@ -1127,7 +1226,7 @@ async function seed() {
       }
     }
     console.log(
-      `✓ Created ${submissionCount} activity submissions (approved, pending, rejected)`,
+      `✓ Created ${submissionCount} activity submissions across different time periods (approved, pending, rejected)`,
     );
 
     // Award some initial points to participants (not tied to submissions)
