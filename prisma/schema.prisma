@@ -521,22 +521,28 @@ model WorkspaceParticipantSegment {
 }
 
 model WorkspaceCommunication {
-  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId String                @db.Uuid
-  challengeId String?               @db.Uuid
-  activityId  String?               @db.Uuid
-  scope       CommunicationScope
-  audience    CommunicationAudience @default(ALL)
-  priority    CommunicationPriority @default(NORMAL)
-  subject     String
-  message     String
-  sentBy      String                @db.Uuid
-  sentAt      DateTime              @default(now())
-  updatedAt   DateTime              @default(now()) @updatedAt
-  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  challenge   Challenge?            @relation(fields: [challengeId], references: [id])
-  activity    Activity?             @relation(fields: [activityId], references: [id])
-  sender      User                  @relation("CommunicationSender", fields: [sentBy], references: [id], onDelete: Cascade)
+  id                     String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId            String                @db.Uuid
+  challengeId            String?               @db.Uuid
+  activityId             String?               @db.Uuid
+  scope                  CommunicationScope
+  audience               CommunicationAudience @default(ALL)
+  priority               CommunicationPriority @default(NORMAL)
+  subject                String
+  message                String
+  sentBy                 String                @db.Uuid
+  sentAt                 DateTime              @default(now())
+  updatedAt              DateTime              @default(now()) @updatedAt
+  // AI-enhanced fields
+  tldr                   String?
+  highlights             Json?
+  aiDates                Json?
+  aiActions              Json?
+  aiPrioritySuggestion   String?
+  workspace              Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  challenge              Challenge?            @relation(fields: [challengeId], references: [id])
+  activity               Activity?             @relation(fields: [activityId], references: [id])
+  sender                 User                  @relation("CommunicationSender", fields: [sentBy], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([challengeId])

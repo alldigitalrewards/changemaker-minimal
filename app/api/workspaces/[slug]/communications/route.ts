@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { CommunicationScope, CommunicationAudience, CommunicationPriority } from '@prisma/client'
 import { sendCommunicationEmail } from '@/lib/email/communications'
 import { revalidatePath } from 'next/cache'
+import { generateTldrHighlights, extractDatesActions, suggestPriority } from '@/lib/ai/announcement-enhancements'
 
 const BATCH_SIZE = 50
 
@@ -151,6 +152,17 @@ export const POST = withErrorHandling(async (request: NextRequest, context: { pa
   const audience = rawAudience as CommunicationAudience
   const priority = rawPriority as CommunicationPriority
 
+  // Generate AI enhancements in parallel
+  const [tldrHighlightsResult, datesActionsResult, prioritySuggestionResult] = await Promise.allSettled([
+    generateTldrHighlights(payload.subject, payload.message),
+    extractDatesActions(payload.subject, payload.message),
+    suggestPriority(payload.subject, payload.message),
+  ])
+
+  const tldrHighlights = tldrHighlightsResult.status === 'fulfilled' ? tldrHighlightsResult.value : null
+  const datesActions = datesActionsResult.status === 'fulfilled' ? datesActionsResult.value : null
+  const prioritySuggestion = prioritySuggestionResult.status === 'fulfilled' ? prioritySuggestionResult.value : null
+
   const communication = await createWorkspaceCommunication(
     workspace.id,
     {
@@ -160,7 +172,13 @@ export const POST = withErrorHandling(async (request: NextRequest, context: { pa
       audience,
       priority,
       challengeId: payload.challengeId ?? null,
-      activityId: payload.activityId ?? null
+      activityId: payload.activityId ?? null,
+      // AI enhancements
+      tldr: tldrHighlights?.tldr,
+      highlights: tldrHighlights?.highlights,
+      aiDates: datesActions?.dates,
+      aiActions: datesActions?.actions,
+      aiPrioritySuggestion: prioritySuggestion ? JSON.stringify(prioritySuggestion) : undefined,
     },
     user.dbUser.id
   )

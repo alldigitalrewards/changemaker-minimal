@@ -1997,6 +1997,12 @@ export interface CreateCommunicationInput {
   priority?: CommunicationPriority
   challengeId?: string | null
   activityId?: string | null
+  // AI enhancements
+  tldr?: string
+  highlights?: string[]
+  aiDates?: Array<{ date: string; description: string }>
+  aiActions?: Array<{ action: string; urgent: boolean }>
+  aiPrioritySuggestion?: string
 }
 
 export async function createWorkspaceCommunication(
@@ -2065,6 +2071,12 @@ export async function createWorkspaceCommunication(
         subject,
         message,
         sentBy,
+        // AI enhancements
+        tldr: input.tldr,
+        highlights: input.highlights,
+        aiDates: input.aiDates,
+        aiActions: input.aiActions,
+        aiPrioritySuggestion: input.aiPrioritySuggestion,
       }
     })
   } catch (error) {
