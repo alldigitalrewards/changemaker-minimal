@@ -7,7 +7,7 @@ import JoinWorkspaceDialog from "./join-workspace-dialog"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { setPrimaryWorkspace } from "./actions"
-import { Star, Users, Trophy, Crown, ArrowRight } from "lucide-react"
+import { Star, Users as UsersIcon, Trophy, Crown, ArrowRight, Shield, UserCheck } from "lucide-react"
 
 interface WorkspaceCardProps {
   workspace: {
@@ -108,21 +108,28 @@ export default function WorkspaceCard({
               
               {/* Role Badge */}
               {isUserWorkspace && userRole && (
-                <Badge 
-                  variant="secondary" 
+                <Badge
+                  variant="outline"
                   className={cn(
-                    "text-xs font-medium transition-colors",
+                    "text-xs font-medium transition-colors flex items-center gap-1",
                     userRole === 'ADMIN' && [
-                      "bg-navy-100 text-navy-700 border-navy-200",
-                      "hover:bg-navy-200"
+                      "bg-blue-100 text-blue-800 border-blue-200",
+                      "hover:bg-blue-200"
+                    ],
+                    userRole === 'MANAGER' && [
+                      "bg-amber-100 text-amber-800 border-amber-200",
+                      "hover:bg-amber-200"
                     ],
                     userRole === 'PARTICIPANT' && [
-                      "bg-terracotta-100 text-terracotta-700 border-terracotta-200", 
-                      "hover:bg-terracotta-200"
+                      "bg-gray-100 text-gray-800 border-gray-200",
+                      "hover:bg-gray-200"
                     ]
                   )}
                 >
-                  {userRole === 'ADMIN' ? 'Admin' : 'Participant'}
+                  {userRole === 'ADMIN' && <Shield className="h-3 w-3" />}
+                  {userRole === 'MANAGER' && <UsersIcon className="h-3 w-3" />}
+                  {userRole === 'PARTICIPANT' && <UserCheck className="h-3 w-3" />}
+                  {userRole === 'ADMIN' ? 'ADMIN' : userRole === 'MANAGER' ? 'MANAGER' : 'PARTICIPANT'}
                 </Badge>
               )}
             </div>
@@ -159,7 +166,7 @@ export default function WorkspaceCard({
         {/* Workspace stats with enhanced styling */}
         <div className="flex items-center gap-3 mb-6">
           <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-coral-50 to-coral-100/50 rounded-lg border border-coral-200/50">
-            <Users className="h-4 w-4 text-coral-600" />
+            <UsersIcon className="h-4 w-4 text-coral-600" />
             <span className="text-sm font-semibold text-coral-800">{workspace._count.users}</span>
             <span className="text-xs text-coral-600/80 font-medium">members</span>
           </div>
