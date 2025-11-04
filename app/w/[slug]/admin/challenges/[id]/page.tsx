@@ -72,6 +72,9 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
               select: {
                 id: true,
                 email: true,
+                firstName: true,
+                lastName: true,
+                displayName: true,
               },
             },
           },
@@ -85,6 +88,9 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
                   select: {
                     id: true,
                     email: true,
+                    firstName: true,
+                    lastName: true,
+                    displayName: true,
                   }
                 },
                 Enrollment: true,
