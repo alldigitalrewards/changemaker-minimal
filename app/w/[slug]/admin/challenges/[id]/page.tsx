@@ -83,7 +83,26 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
           include: {
             ActivityTemplate: true,
             ActivitySubmission: {
-              include: {
+              select: {
+                id: true,
+                activityId: true,
+                userId: true,
+                enrollmentId: true,
+                textContent: true,
+                fileUrls: true,
+                linkUrl: true,
+                submittedAt: true,
+                status: true,
+                pointsAwarded: true,
+                reviewNotes: true,
+                reviewedAt: true,
+                reviewedBy: true,
+                managerReviewedBy: true,
+                managerReviewedAt: true,
+                managerNotes: true,
+                rewardIssuanceId: true,
+                rewardIssued: true,
+                updatedAt: true,
                 User: {
                   select: {
                     id: true,
