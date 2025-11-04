@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Trophy, Target, CheckCircle, Clock, ArrowRight, Plus, Eye } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
+import { AnnouncementCard } from "./announcement-card"
 
 interface EnrollmentCardProps {
   enrollment: {
@@ -168,25 +168,7 @@ export default async function ParticipantDashboard({
               <div className="text-sm text-gray-600">No announcements yet. New updates will appear here.</div>
             ) : (
               relevantCommunications.slice(0, 5).map((comm) => (
-                <div key={comm.id} className="border rounded-lg p-3 space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-sm text-gray-900 truncate">{comm.subject}</span>
-                    <span className="text-xs text-gray-500 whitespace-nowrap">
-                      {formatDistanceToNow(new Date(comm.sentAt), { addSuffix: true })}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                    {comm.scope === 'WORKSPACE' && 'Workspace Announcement'}
-                    {comm.scope === 'CHALLENGE' && `Challenge Update${comm.challenge?.title ? ` · ${comm.challenge.title}` : ''}`}
-                    {comm.scope === 'ACTIVITY' && `Activity Update${comm.challenge?.title ? ` · ${comm.challenge.title}` : ''}`}
-                  </div>
-                  <p className="text-sm text-gray-700 line-clamp-3 mt-1">
-                    {comm.message}
-                  </p>
-                  {comm.sender?.email && (
-                    <div className="text-xs text-gray-400">Sent by {comm.sender.email}</div>
-                  )}
-                </div>
+                <AnnouncementCard key={comm.id} communication={comm} />
               ))
             )}
           </CardContent>
