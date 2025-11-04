@@ -35,17 +35,30 @@ import { useRouter } from 'next/navigation'
 interface Manager {
   id: string
   email: string
+  firstName?: string | null
+  lastName?: string | null
+  displayName?: string | null
   assignedAt: string
 }
 
 interface WorkspaceManager {
   id: string
   email: string
+  firstName?: string | null
+  lastName?: string | null
+  displayName?: string | null
 }
 
 interface ChallengeManagersDialogProps {
   challengeId: string
   workspaceSlug: string
+}
+
+function getDisplayName(user: { email: string; firstName?: string | null; lastName?: string | null; displayName?: string | null }): string {
+  if (user.displayName) return user.displayName
+  if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`
+  if (user.firstName) return user.firstName
+  return user.email
 }
 
 export function ChallengeManagersDialog({ challengeId, workspaceSlug }: ChallengeManagersDialogProps) {
@@ -217,7 +230,8 @@ export function ChallengeManagersDialog({ challengeId, workspaceSlug }: Challeng
                       className="flex items-center justify-between p-3 border rounded-md bg-muted/20"
                     >
                       <div>
-                        <p className="text-sm font-medium">{manager.email}</p>
+                        <p className="text-sm font-medium">{getDisplayName(manager)}</p>
+                        <p className="text-xs text-muted-foreground">{manager.email}</p>
                         <p className="text-xs text-muted-foreground">
                           Assigned{' '}
                           {new Date(manager.assignedAt).toLocaleDateString('en-US', {
@@ -255,7 +269,10 @@ export function ChallengeManagersDialog({ challengeId, workspaceSlug }: Challeng
                     ) : (
                       availableManagers.map((manager) => (
                         <SelectItem key={manager.id} value={manager.id}>
-                          {manager.email}
+                          <div className="flex flex-col">
+                            <span>{getDisplayName(manager)}</span>
+                            <span className="text-xs text-muted-foreground">{manager.email}</span>
+                          </div>
                         </SelectItem>
                       ))
                     )}
@@ -293,7 +310,7 @@ export function ChallengeManagersDialog({ challengeId, workspaceSlug }: Challeng
           <AlertDialogHeader>
             <AlertDialogTitle>Remove Manager?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove <strong>{managerToRemove?.email}</strong> from this
+              Are you sure you want to remove <strong>{managerToRemove ? getDisplayName(managerToRemove) : ''}</strong> from this
               challenge? They will no longer be able to review submissions.
               {assignments.length === 1 && (
                 <span className="block mt-2 text-amber-600">

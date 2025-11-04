@@ -87,7 +87,17 @@ export const GET = withErrorHandling(
         workspace.id,
       );
 
-      return NextResponse.json({ assignments }, { status: 200 });
+      // Transform assignments to match frontend expectations
+      const managers = assignments.map((assignment) => ({
+        id: assignment.Manager.id,
+        email: assignment.Manager.email,
+        firstName: assignment.Manager.firstName,
+        lastName: assignment.Manager.lastName,
+        displayName: assignment.Manager.displayName,
+        assignedAt: assignment.assignedAt.toISOString(),
+      }));
+
+      return NextResponse.json({ managers }, { status: 200 });
     } catch (error) {
       // Helper function throws typed errors, re-throw for withErrorHandling
       if (error instanceof DatabaseError) {
