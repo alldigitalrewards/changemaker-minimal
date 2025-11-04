@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TimePeriodTabs } from "./time-period-tabs"
 import { ChallengeFilter } from "./challenge-filter"
 import { YourStatsCard } from "./your-stats-card"
@@ -8,9 +8,25 @@ import { TopPerformers } from "./top-performers"
 import { RankingRow } from "./ranking-row"
 import { WorkspaceStats } from "./workspace-stats"
 import { Button } from "@/components/ui/button"
-import { Download } from "lucide-react"
+import { Download, Loader2 } from "lucide-react"
 
 type TimePeriod = 'all' | 'month' | 'week' | 'day'
+
+interface LeaderboardData {
+  leaderboard: {
+    userId: string
+    name: string
+    email: string
+    activityCount: number
+    avatarUrl: string | null
+  }[]
+  stats: {
+    topCount: number
+    averageCount: number
+    participantCount: number
+    hiddenCount: number
+  }
+}
 
 interface LeaderboardEntry {
   User: {
@@ -63,16 +79,66 @@ export function LeaderboardClient({
 }: LeaderboardClientProps) {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>('all')
   const [selectedChallenge, setSelectedChallenge] = useState('all')
-  const [leaderboard] = useState(initialLeaderboard) // TODO: Fetch filtered data
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  const userIndex = leaderboard.findIndex(entry => entry.User.id === currentUserId)
+  // Convert initial data to new format
+  const initialData: LeaderboardData = {
+    leaderboard: initialLeaderboard.map(entry => ({
+      userId: entry.User.id,
+      name: getUserDisplayName(entry.User),
+      email: entry.User.email,
+      activityCount: entry.totalPoints,
+      avatarUrl: null
+    })),
+    stats: {
+      topCount: initialLeaderboard[0]?.totalPoints || 0,
+      averageCount: initialLeaderboard.length
+        ? Math.round(initialLeaderboard.reduce((s, e) => s + e.totalPoints, 0) / initialLeaderboard.length)
+        : 0,
+      participantCount: initialLeaderboard.length,
+      hiddenCount: 0
+    }
+  }
+
+  // Fetch filtered data when filters change
+  useEffect(() => {
+    async function fetchLeaderboard() {
+      if (timePeriod === 'all' && selectedChallenge === 'all') {
+        setLeaderboardData(initialData)
+        return
+      }
+
+      setIsLoading(true)
+      try {
+        const params = new URLSearchParams()
+        if (timePeriod !== 'all') params.set('period', timePeriod)
+        if (selectedChallenge !== 'all') params.set('challengeId', selectedChallenge)
+
+        const response = await fetch(`/api/workspaces/${workspaceName.toLowerCase().replace(/\s+/g, '-')}/leaderboard?${params}`)
+        if (response.ok) {
+          const data = await response.json()
+          setLeaderboardData(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch leaderboard:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchLeaderboard()
+  }, [timePeriod, selectedChallenge])
+
+  // Use current or initial data
+  const currentData = leaderboardData || initialData
+  const leaderboard = currentData.leaderboard
+
+  const userIndex = leaderboard.findIndex(entry => entry.userId === currentUserId)
   const userRank = userIndex >= 0 ? userIndex + 1 : 0
-  const userActivityCount = userIndex >= 0 ? leaderboard[userIndex].totalPoints : 0
+  const userActivityCount = userIndex >= 0 ? leaderboard[userIndex].activityCount : 0
 
-  const topCount = leaderboard[0]?.totalPoints || 0
-  const averageCount = leaderboard.length
-    ? Math.round(leaderboard.reduce((s, e) => s + e.totalPoints, 0) / leaderboard.length)
-    : 0
+  const { topCount, averageCount, participantCount, hiddenCount } = currentData.stats
 
   const handleExport = () => {
     // TODO: Implement CSV export
@@ -80,52 +146,15 @@ export function LeaderboardClient({
   }
 
   // Prepare top 3 performers
-  const top3: [
-    LeaderboardEntry | undefined,
-    LeaderboardEntry | undefined,
-    LeaderboardEntry | undefined
+  const topPerformers: [
+    typeof leaderboard[0] | undefined,
+    typeof leaderboard[1] | undefined,
+    typeof leaderboard[2] | undefined
   ] = [
     leaderboard[0],
     leaderboard[1],
     leaderboard[2]
   ]
-
-  const topPerformers: [
-    {
-      userId: string
-      name: string
-      email: string
-      activityCount: number
-      rankChange?: number
-      avatarUrl: string | null
-    } | undefined,
-    {
-      userId: string
-      name: string
-      email: string
-      activityCount: number
-      rankChange?: number
-      avatarUrl: string | null
-    } | undefined,
-    {
-      userId: string
-      name: string
-      email: string
-      activityCount: number
-      rankChange?: number
-      avatarUrl: string | null
-    } | undefined
-  ] = top3.map((entry) => {
-    if (!entry) return undefined
-    return {
-      userId: entry.User.id,
-      name: getUserDisplayName(entry.User),
-      email: entry.User.email,
-      activityCount: entry.totalPoints,
-      rankChange: undefined, // TODO: Calculate from historical data
-      avatarUrl: null
-    }
-  }) as any
 
   // Remaining ranks (4+)
   const remainingRanks = leaderboard.slice(3)
@@ -166,24 +195,31 @@ export function LeaderboardClient({
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-coral-500" />
+        </div>
+      )}
+
       {/* Your Stats */}
-      {userRank > 0 && (
+      {!isLoading && userRank > 0 && (
         <YourStatsCard
           rank={userRank}
           activityCount={userActivityCount}
           totalParticipants={leaderboard.length}
-          rankChange={undefined} // TODO: Calculate
+          rankChange={undefined}
           nextBadgeMilestone={getNextBadgeMilestone(userActivityCount)}
         />
       )}
 
       {/* Top 3 Performers */}
-      {leaderboard.length >= 3 && (
+      {!isLoading && leaderboard.length >= 3 && (
         <TopPerformers performers={topPerformers} />
       )}
 
       {/* Rankings Table */}
-      {remainingRanks.length > 0 && (
+      {!isLoading && remainingRanks.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-xl font-semibold text-slate-800 px-2">
             Leaderboard Rankings
@@ -191,20 +227,20 @@ export function LeaderboardClient({
           <div className="space-y-1">
             {remainingRanks.map((entry, index) => {
               const rank = index + 4
-              const isCurrentUser = entry.User.id === currentUserId
-              const percentOfTop = topCount > 0 ? Math.round((entry.totalPoints / topCount) * 100) : 0
+              const isCurrentUser = entry.userId === currentUserId
+              const percentOfTop = topCount > 0 ? Math.round((entry.activityCount / topCount) * 100) : 0
 
               return (
                 <RankingRow
-                  key={entry.User.id}
+                  key={entry.userId}
                   rank={rank}
-                  userId={entry.User.id}
-                  name={getUserDisplayName(entry.User)}
-                  email={entry.User.email}
-                  activityCount={entry.totalPoints}
+                  userId={entry.userId}
+                  name={entry.name}
+                  email={entry.email}
+                  activityCount={entry.activityCount}
                   percentOfTop={percentOfTop}
-                  rankChange={undefined} // TODO: Calculate
-                  avatarUrl={null}
+                  rankChange={undefined}
+                  avatarUrl={entry.avatarUrl}
                   isCurrentUser={isCurrentUser}
                 />
               )
@@ -214,12 +250,14 @@ export function LeaderboardClient({
       )}
 
       {/* Workspace Stats */}
-      <WorkspaceStats
-        topCount={topCount}
-        averageCount={averageCount}
-        participantCount={leaderboard.length}
-        hiddenCount={0} // TODO: Get from API
-      />
+      {!isLoading && (
+        <WorkspaceStats
+          topCount={topCount}
+          averageCount={averageCount}
+          participantCount={participantCount}
+          hiddenCount={hiddenCount}
+        />
+      )}
     </div>
   )
 }

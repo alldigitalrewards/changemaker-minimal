@@ -12,6 +12,7 @@ import { setPointsBalance } from "./actions"
 import { getUserBySupabaseId, getWorkspacePointsBudget, upsertWorkspacePointsBudget } from "@/lib/db/queries"
 import { isWorkspaceOwner } from "@/lib/db/workspace-membership"
 import { getWorkspaceEmailSettings } from "@/lib/db/queries"
+import { RewardStackConfig } from "@/components/admin/rewardstack-config"
 
 export default async function AdminSettingsPage({ 
   params 
@@ -45,10 +46,16 @@ export default async function AdminSettingsPage({
   // Check if current user is workspace owner
   const fullWorkspace = await prisma.workspace.findUnique({
     where: { id: workspace.id },
-    select: { 
+    select: {
       id: true,
       name: true,
-      slug: true
+      slug: true,
+      // RewardSTACK Configuration
+      rewardStackEnabled: true,
+      rewardStackEnvironment: true,
+      rewardStackOrgId: true,
+      rewardStackProgramId: true,
+      rewardStackSandboxMode: true
     }
   })
 
@@ -148,6 +155,19 @@ export default async function AdminSettingsPage({
             </form>
           </CardContent>
         </Card>
+
+        {/* RewardSTACK Integration */}
+        <RewardStackConfig
+          workspaceId={workspace.id}
+          workspaceSlug={slug}
+          initialConfig={{
+            rewardStackEnabled: fullWorkspace?.rewardStackEnabled || false,
+            rewardStackEnvironment: fullWorkspace?.rewardStackEnvironment || null,
+            rewardStackOrgId: fullWorkspace?.rewardStackOrgId || null,
+            rewardStackProgramId: fullWorkspace?.rewardStackProgramId || null,
+            rewardStackSandboxMode: fullWorkspace?.rewardStackSandboxMode || true
+          }}
+        />
 
         {/* General Settings */}
         <Card>

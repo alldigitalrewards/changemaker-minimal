@@ -4,7 +4,7 @@ import { getCurrentWorkspace, getUserWorkspaceRole } from '@/lib/workspace-conte
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CommunicationComposer } from '@/components/communications/communication-composer'
-import { MessageSquare, Send } from 'lucide-react'
+import { MessageSquare, Send, AlertCircle, Bell, Info } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 export const metadata = {
@@ -121,6 +121,28 @@ export default async function CommunicationsPage({
                     comm.sender.email
                   : 'System'
 
+                const getPriorityConfig = () => {
+                  const priority = comm.priority || 'NORMAL'
+                  switch (priority) {
+                    case 'URGENT':
+                      return {
+                        label: 'Urgent',
+                        className: 'bg-red-100 text-red-800',
+                        icon: AlertCircle
+                      }
+                    case 'IMPORTANT':
+                      return {
+                        label: 'Important',
+                        className: 'bg-orange-100 text-orange-800',
+                        icon: Bell
+                      }
+                    default:
+                      return null
+                  }
+                }
+
+                const priorityConfig = getPriorityConfig()
+
                 return (
                   <div
                     key={comm.id}
@@ -130,6 +152,12 @@ export default async function CommunicationsPage({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold text-gray-900">{comm.subject}</h3>
+                          {priorityConfig && (
+                            <span className={`shrink-0 px-2 py-0.5 text-xs font-medium rounded flex items-center gap-1 ${priorityConfig.className}`}>
+                              {priorityConfig.icon && <priorityConfig.icon className="w-3 h-3" />}
+                              {priorityConfig.label}
+                            </span>
+                          )}
                           <span className="shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
                             {comm.scope}
                           </span>
