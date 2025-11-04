@@ -116,7 +116,11 @@ async function getChallenge(workspaceSlug: string, challengeId: string) {
             updatedAt: true,
             position: true,
             rewardRules: true,
-            ActivityTemplate: true,
+            ActivityTemplate: {
+              select: {
+                name: true
+              }
+            },
             ActivitySubmission: {
               select: {
                 id: true,
