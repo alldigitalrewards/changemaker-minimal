@@ -21,7 +21,17 @@ export async function GET(
 
   const memberships = await prisma.workspaceMembership.findMany({
     where: { workspaceId: workspace.id },
-    include: { User: true },
+    include: {
+      User: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+        }
+      }
+    },
     orderBy: [{ role: 'asc' }, { joinedAt: 'asc' }]
   })
 

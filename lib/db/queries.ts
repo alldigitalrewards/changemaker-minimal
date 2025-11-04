@@ -336,10 +336,24 @@ export async function getWorkspaceUsers(workspaceId: WorkspaceId): Promise<User[
   try {
     const memberships = await prisma.workspaceMembership.findMany({
       where: { workspaceId },
-      include: { User: true },
+      include: {
+        User: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+            supabaseUserId: true,
+            isPending: true,
+            createdAt: true,
+            updatedAt: true,
+          }
+        }
+      },
       orderBy: { createdAt: 'asc' }
     })
-    return memberships.map(m => m.User)
+    return memberships.map(m => m.User as User)
   } catch (error) {
     throw new DatabaseError(`Failed to fetch workspace users: ${error}`)
   }

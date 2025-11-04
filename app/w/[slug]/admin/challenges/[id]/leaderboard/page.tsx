@@ -10,7 +10,22 @@ export default async function LeaderboardPage({ params }: PageProps) {
   // Compute leaderboard by summing approved submissions points within this challenge
   const activities = await prisma.activity.findMany({
     where: { challengeId: id },
-    include: { ActivitySubmission: { where: { status: 'APPROVED' }, include: { User: true } } }
+    include: {
+      ActivitySubmission: {
+        where: { status: 'APPROVED' },
+        include: {
+          User: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              displayName: true,
+            }
+          }
+        }
+      }
+    }
   })
 
   const byUser: Record<string, { email: string; points: number }> = {}

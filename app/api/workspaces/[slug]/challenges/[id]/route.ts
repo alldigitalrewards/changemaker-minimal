@@ -22,6 +22,9 @@ export const GET = withErrorHandling(async (
             select: {
               id: true,
               email: true,
+              firstName: true,
+              lastName: true,
+              displayName: true,
             },
           },
         },
@@ -184,7 +187,17 @@ export const PUT = withErrorHandling(async (
       // Snapshot previous enrollments to compute diffs for event logs
       const previousEnrollments = await prisma.enrollment.findMany({
         where: { challengeId: id },
-        include: { User: true }
+        include: {
+          User: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              displayName: true,
+            }
+          }
+        }
       })
 
       const prevByUserId = new Map(previousEnrollments.map(e => [e.userId, e]))
@@ -448,7 +461,17 @@ export const PATCH = withErrorHandling(async (
     try {
       const memberships = await prisma.enrollment.findMany({
         where: { challengeId: id, status: 'INVITED' },
-        include: { User: true }
+        include: {
+          User: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              displayName: true,
+            }
+          }
+        }
       })
       if (memberships.length > 0) {
         const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
