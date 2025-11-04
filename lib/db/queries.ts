@@ -747,10 +747,11 @@ export async function createChallengeEnrollments(
 
 /**
  * Update enrollment status (admin/participant, workspace-scoped)
+ * When status is set to COMPLETED, automatically triggers reward issuance if RewardSTACK is enabled
  */
 export async function updateEnrollmentStatus(
   enrollmentId: EnrollmentId,
-  status: 'INVITED' | 'ENROLLED' | 'WITHDRAWN',
+  status: 'INVITED' | 'ENROLLED' | 'WITHDRAWN' | 'COMPLETED',
   workspaceId: WorkspaceId
 ): Promise<Enrollment> {
   // Verify enrollment belongs to workspace via challenge
@@ -760,6 +761,28 @@ export async function updateEnrollmentStatus(
       Challenge: {
         workspaceId
       }
+    },
+    include: {
+      Challenge: {
+        select: {
+          id: true,
+          title: true,
+          rewardType: true,
+          rewardConfig: true,
+          workspaceId: true,
+          Workspace: {
+            select: {
+              rewardStackEnabled: true,
+            }
+          }
+        }
+      },
+      User: {
+        select: {
+          id: true,
+          email: true,
+        }
+      }
     }
   })
 
@@ -768,12 +791,163 @@ export async function updateEnrollmentStatus(
   }
 
   try {
-    return await prisma.enrollment.update({
+    // Update enrollment status
+    const updatedEnrollment = await prisma.enrollment.update({
       where: { id: enrollmentId },
-      data: { status }
+      data: {
+        status,
+        ...(status === 'COMPLETED' && { completedAt: new Date() })
+      }
     })
+
+    // If status is COMPLETED and RewardSTACK is enabled, trigger reward issuance
+    if (status === 'COMPLETED' && enrollment.Challenge.Workspace.rewardStackEnabled) {
+      await handleChallengeCompletionReward(
+        enrollment.id,
+        enrollment.userId,
+        enrollment.Challenge,
+        workspaceId
+      )
+    }
+
+    return updatedEnrollment
   } catch (error) {
     throw new DatabaseError(`Failed to update enrollment status: ${error}`)
+  }
+}
+
+/**
+ * Handle reward issuance when a challenge is completed
+ * Called automatically by updateEnrollmentStatus when status changes to COMPLETED
+ */
+async function handleChallengeCompletionReward(
+  enrollmentId: string,
+  userId: string,
+  challenge: {
+    id: string;
+    title: string;
+    rewardType: RewardType | null;
+    rewardConfig: any;
+    workspaceId: string;
+  },
+  workspaceId: string
+): Promise<void> {
+  try {
+    // Check if challenge has reward configured
+    if (!challenge.rewardType || !challenge.rewardConfig) {
+      console.log(
+        `Challenge ${challenge.id} has no reward configured, skipping reward issuance`
+      );
+      return;
+    }
+
+    // Parse reward configuration
+    const rewardConfig = challenge.rewardConfig as {
+      amount?: number;
+      skuId?: string;
+      description?: string;
+    };
+
+    // Validate reward configuration based on type
+    if (challenge.rewardType === 'points') {
+      if (!rewardConfig.amount || rewardConfig.amount <= 0) {
+        console.error(
+          `Invalid points reward configuration for challenge ${challenge.id}: amount is required and must be > 0`
+        );
+        return;
+      }
+    } else if (challenge.rewardType === 'sku') {
+      if (!rewardConfig.skuId) {
+        console.error(
+          `Invalid SKU reward configuration for challenge ${challenge.id}: skuId is required`
+        );
+        return;
+      }
+    } else {
+      console.log(
+        `Unsupported reward type ${challenge.rewardType} for challenge ${challenge.id}`
+      );
+      return;
+    }
+
+    // Check if reward already issued for this enrollment
+    const existingReward = await prisma.rewardIssuance.findFirst({
+      where: {
+        enrollmentId,
+        challengeId: challenge.id,
+      }
+    });
+
+    if (existingReward) {
+      console.log(
+        `Reward already issued for enrollment ${enrollmentId}, skipping duplicate issuance`
+      );
+      return;
+    }
+
+    // Create RewardIssuance record
+    const rewardIssuance = await prisma.rewardIssuance.create({
+      data: {
+        id: crypto.randomUUID(),
+        userId,
+        workspaceId,
+        challengeId: challenge.id,
+        enrollmentId,
+        type: challenge.rewardType,
+        amount: challenge.rewardType === 'points' ? rewardConfig.amount : null,
+        skuId: challenge.rewardType === 'sku' ? rewardConfig.skuId : null,
+        status: 'PENDING',
+        rewardStackStatus: 'PENDING',
+        metadata: {
+          challengeTitle: challenge.title,
+          rewardDescription: rewardConfig.description,
+          triggeredAt: new Date().toISOString(),
+          triggerType: 'challenge_completion',
+        },
+      }
+    });
+
+    console.log(
+      `Created RewardIssuance ${rewardIssuance.id} for enrollment ${enrollmentId}`
+    );
+
+    // Log reward issuance event
+    await logActivityEvent({
+      workspaceId,
+      challengeId: challenge.id,
+      enrollmentId,
+      userId,
+      actorUserId: userId,
+      type: 'WORKSPACE_SETTINGS_UPDATED',
+      metadata: {
+        action: 'reward_issuance_created',
+        rewardIssuanceId: rewardIssuance.id,
+        rewardType: challenge.rewardType,
+        timestamp: new Date().toISOString(),
+      }
+    });
+
+    // Issue the reward asynchronously (don't block enrollment update)
+    // Import dynamically to avoid circular dependencies
+    import('@/lib/rewardstack/reward-logic')
+      .then(({ issueRewardTransaction }) => {
+        issueRewardTransaction(rewardIssuance.id).catch((error) => {
+          console.error(
+            `Failed to issue reward ${rewardIssuance.id} for enrollment ${enrollmentId}:`,
+            error
+          );
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to load reward issuance module:', error);
+      });
+
+  } catch (error) {
+    console.error(
+      `Failed to handle challenge completion reward for enrollment ${enrollmentId}:`,
+      error
+    );
+    // Don't throw - we don't want to block enrollment completion if reward fails
   }
 }
 
