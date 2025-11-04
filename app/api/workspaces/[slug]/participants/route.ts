@@ -15,7 +15,17 @@ export const GET = withErrorHandling(async (
 
   const memberships = await prisma.workspaceMembership.findMany({
     where: { workspaceId: workspace.id },
-    include: { User: { select: { id: true, email: true } } },
+    include: {
+      User: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+        }
+      }
+    },
     orderBy: { createdAt: 'asc' }
   })
 

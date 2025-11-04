@@ -226,7 +226,15 @@ export async function listPendingInvites(userEmail: string): Promise<Array<{
       },
       include: {
         Workspace: { select: { name: true, slug: true } },
-        User: { select: { email: true } }
+        User: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     })
