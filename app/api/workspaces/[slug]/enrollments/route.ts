@@ -159,16 +159,38 @@ export const POST = withErrorHandling(async (
   // Create enrollment using standardized query (includes validation)
   try {
     const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id, enrollmentStatus)
+
     // Log enrollment event
-      await logActivityEvent({
+    await logActivityEvent({
       workspaceId: workspace.id,
       challengeId,
       enrollmentId: enrollment.id,
       userId: user.dbUser.id,
       actorUserId: user.dbUser.id,
-        type: 'ENROLLED',
-        metadata: { method: 'self_enroll' }
+      type: 'ENROLLED',
+      metadata: { method: 'self_enroll' }
     })
+
+    // Auto-sync participant to RewardSTACK if enabled
+    // This runs async in the background to not block enrollment response
+    if (workspace.rewardStackEnabled) {
+      // Import dynamically to avoid circular dependencies
+      import('@/lib/rewardstack/participant-sync')
+        .then(({ syncParticipantToRewardStack }) => {
+          syncParticipantToRewardStack(user.dbUser.id, workspace.id).catch(
+            (error) => {
+              console.error(
+                `Failed to auto-sync participant ${user.dbUser.id} to RewardSTACK:`,
+                error
+              );
+            }
+          );
+        })
+        .catch((error) => {
+          console.error('Failed to load participant sync module:', error);
+        });
+    }
+
     return NextResponse.json({ enrollment })
   } catch (error) {
     if (error instanceof ValidationError) {
