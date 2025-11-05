@@ -271,6 +271,7 @@ model RewardIssuance {
   skuId                 String?
   provider              String?
   status                RewardStatus @default(PENDING)
+  createdAt             DateTime     @default(now())
   issuedAt              DateTime?
   error                 String?
   metadata              Json?
@@ -295,6 +296,7 @@ model RewardIssuance {
   @@index([userId])
   @@index([workspaceId])
   @@index([rewardStackStatus])
+  @@index([createdAt])
 }
 
 model RewardStackWebhookLog {

@@ -328,28 +328,28 @@ async function seed() {
     console.log("🌱 Starting seed...\n");
 
     // Clear existing data (optional - comment out if you want to preserve data)
-    console.log("🗑️  Clearing existing data...");
-    await prisma.activityEvent.deleteMany();
-    await prisma.workspaceCommunication.deleteMany();
-    await prisma.pointsLedger.deleteMany();
-    await prisma.rewardIssuance.deleteMany();
-    await prisma.activitySubmission.deleteMany();
-    await prisma.enrollment.deleteMany();
-    await prisma.activity.deleteMany();
-    await prisma.activityTemplate.deleteMany();
-    await prisma.challengePointsBudget.deleteMany();
-    await prisma.challenge.deleteMany();
-    await prisma.inviteRedemption.deleteMany();
-    await prisma.inviteCode.deleteMany();
-    await prisma.pointsBalance.deleteMany();
-    await prisma.workspaceMembership.deleteMany();
-    await prisma.workspaceEmailTemplate.deleteMany();
-    await prisma.workspaceEmailSettings.deleteMany();
-    await prisma.workspaceParticipantSegment.deleteMany();
-    await prisma.workspacePointsBudget.deleteMany();
-    await (prisma as any).tenantSku.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.workspace.deleteMany();
+    // console.log("🗑️  Clearing existing data...");
+    // await prisma.activityEvent.deleteMany();
+    // await prisma.workspaceCommunication.deleteMany();
+    // await prisma.pointsLedger.deleteMany();
+    // await prisma.rewardIssuance.deleteMany();
+    // await prisma.activitySubmission.deleteMany();
+    // await prisma.enrollment.deleteMany();
+    // await prisma.activity.deleteMany();
+    // await prisma.activityTemplate.deleteMany();
+    // await prisma.challengePointsBudget.deleteMany();
+    // await prisma.challenge.deleteMany();
+    // await prisma.inviteRedemption.deleteMany();
+    // await prisma.inviteCode.deleteMany();
+    // await prisma.pointsBalance.deleteMany();
+    // await prisma.workspaceMembership.deleteMany();
+    // await prisma.workspaceEmailTemplate.deleteMany();
+    // await prisma.workspaceEmailSettings.deleteMany();
+    // await prisma.workspaceParticipantSegment.deleteMany();
+    // await prisma.workspacePointsBudget.deleteMany();
+    // await (prisma as any).tenantSku.deleteMany();
+    // await prisma.user.deleteMany();
+    // await prisma.workspace.deleteMany();
 
     // Create workspaces with unique tenantId per workspace (multi-tenancy)
     console.log("🏢 Creating workspaces...");

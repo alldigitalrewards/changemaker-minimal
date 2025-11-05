@@ -7,21 +7,20 @@ test.describe('Communications API - AI Enhancements', () => {
   let participantAuthToken: string
 
   test.beforeAll(async () => {
-    // Get test workspace
+    // Use existing workspace from seeded database
     const workspace = await prisma.workspace.findFirst({
-      where: { slug: 'test-workspace' }
+      where: { slug: 'alldigitalrewards' }
     })
 
     if (!workspace) {
-      throw new Error('Test workspace not found. Run seed script first.')
+      throw new Error('Workspace "alldigitalrewards" not found. Database may not be seeded.')
     }
 
     workspaceSlug = workspace.slug
 
-    // Get admin and participant users for auth
+    // Get admin user for the workspace
     const adminUser = await prisma.user.findFirst({
       where: {
-        email: 'admin@test.com',
         workspaceMemberships: {
           some: {
             workspaceId: workspace.id,
@@ -33,7 +32,6 @@ test.describe('Communications API - AI Enhancements', () => {
 
     const participantUser = await prisma.user.findFirst({
       where: {
-        email: 'participant@test.com',
         workspaceMemberships: {
           some: {
             workspaceId: workspace.id,
@@ -43,8 +41,12 @@ test.describe('Communications API - AI Enhancements', () => {
       }
     })
 
-    if (!adminUser || !participantUser) {
-      throw new Error('Test users not found. Run seed script first.')
+    if (!adminUser) {
+      throw new Error('Admin user not found for workspace. Database may not be seeded properly.')
+    }
+
+    if (!participantUser) {
+      throw new Error('Participant user not found for workspace. Database may not be seeded properly.')
     }
 
     // For Supabase auth, we'd get real tokens here

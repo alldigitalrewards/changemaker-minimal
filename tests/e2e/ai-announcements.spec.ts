@@ -1,13 +1,16 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('AI-Enhanced Announcements E2E', () => {
+  const WORKSPACE_SLUG = 'alldigitalrewards'
+
   test.beforeEach(async ({ page }) => {
-    // Login as admin
+    // Login as admin (using existing user from seeded database)
     await page.goto('/auth/signin')
-    await page.fill('input[type="email"]', 'admin@test.com')
-    await page.fill('input[type="password"]', 'Test123!')
+    // You'll need to replace with actual admin credentials for the workspace
+    await page.fill('input[type="email"]', 'admin@alldigitalrewards.com')
+    await page.fill('input[type="password"]', 'password')
     await page.click('button[type="submit"]')
-    await page.waitForURL('/w/test-workspace/admin/dashboard')
+    await page.waitForURL(`/w/${WORKSPACE_SLUG}/admin/dashboard`)
   })
 
   test('should create announcement with AI enhancements and display them correctly', async ({ page }) => {
@@ -17,7 +20,7 @@ test.describe('AI-Enhanced Announcements E2E', () => {
     }
 
     // Navigate to communications page
-    await page.goto('/w/test-workspace/admin/communications')
+    await page.goto(`/w/${WORKSPACE_SLUG}/admin/communications`)
 
     // Fill out announcement form
     await page.fill('input[name="subject"]', 'URGENT: System Maintenance Tonight')
@@ -42,7 +45,7 @@ Maintenance window: 11 PM - 1 AM EST on March 15th, 2025`)
     await page.waitForTimeout(5000) // Allow time for AI processing
 
     // Navigate to participant dashboard to view announcement
-    await page.goto('/w/test-workspace/participant/dashboard')
+    await page.goto(`/w/${WORKSPACE_SLUG}/participant/dashboard`)
 
     // Verify announcement card appears
     await expect(page.locator('text=System Maintenance Tonight')).toBeVisible()
@@ -83,7 +86,7 @@ Maintenance window: 11 PM - 1 AM EST on March 15th, 2025`)
       return
     }
 
-    await page.goto('/w/test-workspace/participant/dashboard')
+    await page.goto(`/w/${WORKSPACE_SLUG}/participant/dashboard`)
 
     // Check for URGENT priority badge (red)
     const urgentBadge = page.locator('.bg-red-100.text-red-800').first()
@@ -109,7 +112,7 @@ Maintenance window: 11 PM - 1 AM EST on March 15th, 2025`)
     const originalKey = process.env.OPENAI_API_KEY
     process.env.OPENAI_API_KEY = 'invalid-key'
 
-    await page.goto('/w/test-workspace/admin/communications')
+    await page.goto(`/w/${WORKSPACE_SLUG}/admin/communications`)
 
     await page.fill('input[name="subject"]', 'Simple Announcement')
     await page.fill('textarea[name="message"]', 'This is a simple announcement without AI enhancements.')
@@ -122,7 +125,7 @@ Maintenance window: 11 PM - 1 AM EST on March 15th, 2025`)
     // Restore key
     process.env.OPENAI_API_KEY = originalKey
 
-    await page.goto('/w/test-workspace/participant/dashboard')
+    await page.goto(`/w/${WORKSPACE_SLUG}/participant/dashboard`)
 
     // Announcement should still appear
     await expect(page.locator('text=Simple Announcement')).toBeVisible()
@@ -141,7 +144,7 @@ Maintenance window: 11 PM - 1 AM EST on March 15th, 2025`)
       return
     }
 
-    await page.goto('/w/test-workspace/participant/dashboard')
+    await page.goto(`/w/${WORKSPACE_SLUG}/participant/dashboard`)
 
     // Find an announcement card with actions
     const actionBadge = page.locator('.bg-orange-100.text-orange-800', { hasText: '' }).first()
@@ -164,7 +167,7 @@ Maintenance window: 11 PM - 1 AM EST on March 15th, 2025`)
       return
     }
 
-    await page.goto('/w/test-workspace/admin/communications')
+    await page.goto(`/w/${WORKSPACE_SLUG}/admin/communications`)
 
     // Create announcement with many action items
     await page.fill('input[name="subject"]', 'Complex Project Launch')
@@ -188,7 +191,7 @@ Important dates:
     await page.click('button[type="submit"]')
     await page.waitForTimeout(5000)
 
-    await page.goto('/w/test-workspace/participant/dashboard')
+    await page.goto(`/w/${WORKSPACE_SLUG}/participant/dashboard`)
 
     // Should show "+X more" badge if more than 2 actions
     const moreBadge = page.locator('text=+').first()
@@ -203,7 +206,7 @@ Important dates:
       return
     }
 
-    await page.goto('/w/test-workspace/participant/dashboard')
+    await page.goto(`/w/${WORKSPACE_SLUG}/participant/dashboard`)
 
     // Find date badges
     const dateBadge = page.locator('.bg-purple-100.text-purple-800').first()
@@ -225,7 +228,7 @@ Important dates:
       return
     }
 
-    await page.goto('/w/test-workspace/participant/dashboard')
+    await page.goto(`/w/${WORKSPACE_SLUG}/participant/dashboard`)
 
     // Click first announcement
     const firstAnnouncement = page.locator('[class*="border-l-4"]').first()

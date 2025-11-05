@@ -5,6 +5,9 @@ import path from 'path';
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+// Set test environment flag for Prisma to use direct connection
+process.env.PLAYWRIGHT_TEST = '1';
+
 /**
  * Playwright configuration for comprehensive testing
  * Supports multiple environments via BASE_URL environment variable
@@ -31,7 +34,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  
+
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',

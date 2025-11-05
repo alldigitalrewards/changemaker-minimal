@@ -9,10 +9,16 @@ const globalForPrisma = globalThis as unknown as {
 // - Pool size: Scales based on environment (5 in dev, 10+ in production)
 // - Timeout: 60s to handle long-running queries
 // - Connection lifetime: 300s to recycle stale connections
+// For tests, use DIRECT_URL to avoid connection pooling issues (port 5432 instead of 6543)
+const isTestEnvironment = process.env.NODE_ENV === 'test' || process.env.PLAYWRIGHT_TEST === '1'
+const databaseUrl = isTestEnvironment && process.env.DIRECT_URL
+  ? process.env.DIRECT_URL
+  : process.env.DATABASE_URL
+
 let prismaInstance = globalForPrisma.prisma ?? new PrismaClient({
   datasources: {
     db: {
-      url: process.env.DATABASE_URL
+      url: databaseUrl
     }
   },
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']

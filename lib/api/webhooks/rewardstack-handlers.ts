@@ -77,32 +77,15 @@ export async function handleTransactionEvent(
   }
 
   // Update RewardIssuance
-  const updates: {
-    rewardStackStatus: RewardStackStatus | null;
-    status?: RewardStatus;
-    rewardStackWebhookReceived?: boolean;
-    rewardStackErrorMessage?: string;
-    issuedAt?: Date;
-  } = {
-    rewardStackStatus: newStatus,
-    rewardStackWebhookReceived: true,
-  };
-
-  if (rewardStatus) {
-    updates.status = rewardStatus;
-  }
-
-  if (type === "transaction.completed" && !rewardIssuance.issuedAt) {
-    updates.issuedAt = new Date();
-  }
-
-  if (type === "transaction.failed" && data.error) {
-    updates.rewardStackErrorMessage = String(data.error);
-  }
-
   await prisma.rewardIssuance.update({
     where: { id: rewardIssuance.id },
-    data: updates,
+    data: {
+      rewardStackStatus: newStatus,
+      rewardStackWebhookReceived: true,
+      ...(rewardStatus && { status: rewardStatus }),
+      ...(type === "transaction.completed" && !rewardIssuance.issuedAt && { issuedAt: new Date() }),
+      ...(type === "transaction.failed" && data.error && { rewardStackErrorMessage: String(data.error) }),
+    },
   });
 
   console.log(
@@ -160,32 +143,15 @@ export async function handleAdjustmentEvent(
   }
 
   // Update RewardIssuance
-  const updates: {
-    rewardStackStatus: RewardStackStatus | null;
-    status?: RewardStatus;
-    rewardStackWebhookReceived?: boolean;
-    rewardStackErrorMessage?: string;
-    issuedAt?: Date;
-  } = {
-    rewardStackStatus: newStatus,
-    rewardStackWebhookReceived: true,
-  };
-
-  if (rewardStatus) {
-    updates.status = rewardStatus;
-  }
-
-  if (type === "adjustment.completed" && !rewardIssuance.issuedAt) {
-    updates.issuedAt = new Date();
-  }
-
-  if (type === "adjustment.failed" && data.error) {
-    updates.rewardStackErrorMessage = String(data.error);
-  }
-
   await prisma.rewardIssuance.update({
     where: { id: rewardIssuance.id },
-    data: updates,
+    data: {
+      rewardStackStatus: newStatus,
+      rewardStackWebhookReceived: true,
+      ...(rewardStatus && { status: rewardStatus }),
+      ...(type === "adjustment.completed" && !rewardIssuance.issuedAt && { issuedAt: new Date() }),
+      ...(type === "adjustment.failed" && data.error && { rewardStackErrorMessage: String(data.error) }),
+    },
   });
 
   console.log(
