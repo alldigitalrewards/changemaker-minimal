@@ -4,11 +4,9 @@ import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-conte
 import DashboardLayout from "@/components/layout/dashboard-layout"
 import DashboardHeader from "@/components/layout/dashboard-header"
 import { getWorkspacePointsBudget } from "@/lib/db/queries"
-import AdminSidebar from "@/components/navigation/admin-sidebar"
+import ManagerSidebar from "@/components/navigation/manager-sidebar"
 import { WorkspaceProvider } from "@/providers/workspace-provider"
 import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
-import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
-import { prisma } from "@/lib/prisma"
 import { ReactNode } from "react"
 
 // Force dynamic rendering - this layout requires database access at request time
@@ -42,14 +40,6 @@ export default async function ManagerLayout({
     redirect("/workspaces")
   }
 
-  const budget = await getWorkspacePointsBudget(workspace.id)
-
-  // Check if user is platform superadmin
-  const dbUser = await prisma.user.findUnique({
-    where: { email: user.email! }
-  })
-  const isSuperAdmin = isPlatformSuperAdmin(dbUser?.permissions, user.email!)
-
   const header = (
     <DashboardHeader
       title="Manager Dashboard"
@@ -57,11 +47,10 @@ export default async function ManagerLayout({
       user={user}
       role={role}
       showRoleSwitcher={true}
-      budgetBadge={budget ? { label: 'Budget', value: `${Math.max(0, (budget.totalBudget || 0) - (budget.allocated || 0))}/${budget.totalBudget || 0}` } : undefined}
     />
   )
 
-  const sidebar = <AdminSidebar workspace={workspace} isSuperAdmin={isSuperAdmin} />
+  const sidebar = <ManagerSidebar workspace={workspace} />
 
   // Get all user workspaces for the provider
   const userWorkspaces = await getUserWorkspacesServer()
