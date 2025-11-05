@@ -107,6 +107,188 @@ const canApprove = canApproveSubmission(
 );
 ```
 
+## UI Components
+
+### Submission Approval Actions
+**Component:** `/components/submissions/submission-approval-actions.tsx`
+
+Permission-aware approval UI that prevents self-approval:
+
+```tsx
+import { SubmissionApprovalActions } from '@/components/submissions/submission-approval-actions';
+
+<SubmissionApprovalActions
+  submission={{
+    id: submission.id,
+    userId: submission.userId,
+    status: submission.status,
+    challengeId: submission.challengeId
+  }}
+  workspaceSlug={workspaceSlug}
+  currentUserId={user.id}
+  onApprove={async (id) => {
+    await fetch(`/api/workspaces/${workspaceSlug}/submissions/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ status: 'APPROVED' })
+    });
+    router.refresh();
+  }}
+  onReject={async (id) => {
+    await fetch(`/api/workspaces/${workspaceSlug}/submissions/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ status: 'REJECTED' })
+    });
+    router.refresh();
+  }}
+/>
+```
+
+**Features:**
+- Shows "Your Submission" badge for own submissions
+- Displays approve/reject buttons only when authorized
+- Prevents self-approval (critical business rule)
+- Loading states during actions
+- Tooltips explaining disabled states
+
+---
+
+### Challenge Enrollment Button
+**Component:** `/components/challenges/challenge-enrollment-button.tsx`
+
+Smart enrollment button that adapts to permissions and enrollment state:
+
+```tsx
+import { ChallengeEnrollmentButton } from '@/components/challenges/challenge-enrollment-button';
+
+<ChallengeEnrollmentButton
+  challengeId={challenge.id}
+  workspaceSlug={workspaceSlug}
+  onEnroll={async () => {
+    await fetch(`/api/workspaces/${workspaceSlug}/enrollments`, {
+      method: 'POST',
+      body: JSON.stringify({ challengeId: challenge.id })
+    });
+    router.refresh();
+  }}
+  size="lg"
+  variant="default"
+/>
+```
+
+**States:**
+- **Can Enroll:** Shows "Enroll in Challenge" button
+- **Already Enrolled:** Shows green "Enrolled" badge with checkmark
+- **Cannot Enroll:** Shows disabled button with tooltip explanation
+
+**Features:**
+- Respects permission system (admins and managers can enroll)
+- Loading state during enrollment
+- Clear visual feedback for each state
+- Tooltips explain why enrollment is disabled
+
+---
+
+### Access Denied Component
+**Component:** `/components/auth/access-denied.tsx`
+
+User-friendly unauthorized access page:
+
+```tsx
+import { AccessDenied } from '@/components/auth/access-denied';
+
+<AccessDenied
+  message="You need manager or admin permissions to access this page."
+  returnUrl={`/w/${workspaceSlug}/participant/challenges`}
+  returnLabel="Return to Challenges"
+/>
+```
+
+**Features:**
+- Shield icon for security context
+- Customizable error message
+- Return button to appropriate page
+- Professional, non-threatening design
+
+---
+
+## Permission Guards
+
+### Server-Side Guards
+**File:** `/lib/auth/workspace-guards.ts`
+
+Protect server components and API routes:
+
+```tsx
+import { requireWorkspaceAdmin, requireWorkspaceAccess } from '@/lib/auth/workspace-guards';
+
+// In page.tsx (server component)
+export default async function AdminPage({ params }) {
+  const { user, workspace, membership } = await requireWorkspaceAdmin(params.slug);
+  // User is guaranteed to be ADMIN or MANAGER
+}
+
+// Or for any workspace member
+export default async function ParticipantPage({ params }) {
+  const { user, workspace, membership } = await requireWorkspaceAccess(params.slug);
+  // User is guaranteed to be a workspace member
+}
+```
+
+**Behavior:**
+- `requireWorkspaceAdmin()` - Requires ADMIN or MANAGER role
+- `requireWorkspaceAccess()` - Requires any workspace membership
+- Automatically redirects unauthorized users
+- Returns user, workspace, and membership data
+
+---
+
+### Client-Side Guard Hook
+**Hook:** `/hooks/use-permission-guard.ts`
+
+Protect client components with permission checks:
+
+```tsx
+'use client';
+import { useChallengePermissions } from '@/hooks/use-challenge-permissions';
+import { usePermissionGuard } from '@/hooks/use-permission-guard';
+import { AccessDenied } from '@/components/auth/access-denied';
+import { Loader2 } from 'lucide-react';
+
+export default function ChallengeManagePage({ params }) {
+  const { permissions, isLoading } = useChallengePermissions(
+    params.slug,
+    params.id
+  );
+
+  const { isAuthorized } = usePermissionGuard({
+    permissions,
+    isLoading,
+    requireCanManage: true
+  });
+
+  if (isLoading) {
+    return <Loader2 className="h-8 w-8 animate-spin" />;
+  }
+
+  if (!isAuthorized) {
+    return <AccessDenied message="Manager access required" />;
+  }
+
+  return <div>{/* Protected content */}</div>;
+}
+```
+
+**Options:**
+- `requireAdmin` - Requires workspace ADMIN
+- `requireManager` - Requires ADMIN or MANAGER
+- `requireCanManage` - Can manage this challenge
+- `requireCanApprove` - Can approve submissions
+- `requireCanEnroll` - Can enroll in challenge
+- `redirectUrl` - Optional automatic redirect
+- `onUnauthorized` - Custom callback
+
+---
+
 ## UI Guidelines
 
 ### Show Role Context
@@ -115,19 +297,139 @@ Always display the user's effective role(s) when viewing a challenge:
 - Show "Manager & Participant" when user has both roles
 
 ### Contextual Actions
-Filter available actions based on permissions:
-- Show "Approve Submissions" only if `canApproveSubmissions` is true
-- Hide approval button on user's own submissions
-- Show "Enroll" only if `canEnroll` is true
+Use permission-aware components:
+- `<SubmissionApprovalActions>` for submission approval
+- `<ChallengeEnrollmentButton>` for enrollment CTAs
+- Always check permissions before showing action buttons
 
-### Clear Role Switching
-If implementing role switching UI, clearly indicate which "hat" the user is wearing.
+### Clear Messaging
+- Explain why actions are disabled (use tooltips)
+- Show loading states during permission checks
+- Provide helpful error messages
+- Use badges to indicate current state
+
+### Self-Approval Prevention
+Always enforce self-approval prevention:
+- Show "Your Submission" badge for own submissions
+- Never display approval buttons on own submissions
+- This is a critical business rule - enforce at UI and API levels
+
+---
+
+## Route Protection Examples
+
+### Admin Layout (Server Component)
+```tsx
+// app/w/[slug]/admin/layout.tsx
+export default async function AdminLayout({ children, params }) {
+  const { slug } = await params;
+  const role = await getUserWorkspaceRole(slug);
+
+  // Allow both ADMIN and MANAGER roles
+  if (!role || (role !== "ADMIN" && role !== "MANAGER")) {
+    redirect("/workspaces");
+  }
+
+  return <>{children}</>;
+}
+```
+
+### Challenge Management (Client Component)
+```tsx
+// Protected challenge management page
+'use client';
+export default function ManageChallengeApprovals({ params }) {
+  const { permissions, isLoading } = useChallengePermissions(
+    params.slug,
+    params.id
+  );
+
+  const { isAuthorized } = usePermissionGuard({
+    permissions,
+    isLoading,
+    requireCanManage: true
+  });
+
+  if (isLoading) return <Loader />;
+  if (!isAuthorized) return <AccessDenied />;
+
+  return <ApprovalQueue />;
+}
+```
+
+---
 
 ## Testing Scenarios
 
-Test these multi-role scenarios:
-1. Admin enrolling and submitting in own workspace
-2. Manager approving others' submissions but not their own
-3. Participant promoted to manager mid-challenge
-4. User with multiple workspace memberships
-5. Permission resolution for each tier
+See `/docs/testing/multi-role-testing-scenarios.md` for comprehensive testing guide covering:
+
+1. **Submission Approval Tests** (5 scenarios)
+   - Admin views own submission
+   - Admin approves other's submission
+   - Manager approves in assigned challenge
+   - Manager cannot approve own submission
+   - Permission error handling
+
+2. **Enrollment Button Tests** (5 scenarios)
+   - Participant enrolls successfully
+   - Already enrolled user sees badge
+   - Admin can enroll as participant
+   - Manager can enroll as participant
+   - Enrollment button states
+
+3. **Route Guard Tests** (5 scenarios)
+   - Admin accesses admin pages
+   - Manager accesses admin pages
+   - Participant blocked from admin pages
+   - Unauthenticated user redirected
+   - Client-side route guards
+
+4. **Integration Tests** (3 workflows)
+   - Complete manager workflow
+   - Admin participation workflow
+   - Permission hierarchy test
+
+---
+
+## Implementation Checklist
+
+- [x] Create `SubmissionApprovalActions` component
+- [x] Create `ChallengeEnrollmentButton` component
+- [x] Create `AccessDenied` component
+- [x] Create `usePermissionGuard` hook
+- [x] Create `workspace-guards.ts` utilities
+- [x] Update admin layout to support MANAGER role
+- [x] Document all components and usage
+- [x] Create comprehensive testing scenarios
+- [ ] Integrate approval actions in submission pages
+- [ ] Integrate enrollment buttons in challenge pages
+- [ ] Add client-side guards to management pages
+- [ ] Run full test suite
+- [ ] Update user documentation
+
+---
+
+## Known Limitations
+
+1. **Enrollment Button Placement:** Currently optimized for detail pages; list card integration pending
+2. **Bulk Approvals:** No batch approval UI yet
+3. **Approval History:** Limited visibility of approval chain
+4. **Permission Caching:** Permissions refetched on each page load
+
+---
+
+## Future Enhancements
+
+1. Add enrollment buttons to challenge list cards
+2. Implement batch approval for managers
+3. Add approval history timeline
+4. Implement permission caching with revalidation
+5. Add real-time updates via WebSockets
+6. Add audit logs for all permission changes
+7. Enhanced role switcher UI
+
+---
+
+**Last Updated:** 2025-11-05
+**Version:** 2.0
+**Status:** Core components complete, integration in progress
