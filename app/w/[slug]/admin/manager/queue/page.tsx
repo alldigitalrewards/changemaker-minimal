@@ -258,8 +258,10 @@ export default async function ManagerQueuePage({ params, searchParams }: PagePro
           submissions.map((submission: any) => {
             const statusBadge = statusBadges[submission.status] || { className: '', label: submission.status }
             const challengeTitle = submission.Activity?.Challenge?.title || 'Unknown Challenge'
+            const challengeId = submission.Activity?.Challenge?.id || ''
             const activityName = submission.Activity?.ActivityTemplate?.name || 'Unknown Activity'
             const userEmail = submission.User?.email || 'Unknown User'
+            const submissionUserId = submission.User?.id || ''
 
             return (
               <Card key={submission.id} className="hover:shadow-md transition-shadow">
@@ -284,7 +286,7 @@ export default async function ManagerQueuePage({ params, searchParams }: PagePro
                       Submitted {formatDistanceToNow(new Date(submission.submittedAt), { addSuffix: true })}
                     </div>
                     <div className="flex gap-2">
-                      <Link href={`/w/${slug}/admin/challenges/${submission.Activity?.challengeId}/submissions`}>
+                      <Link href={`/w/${slug}/admin/challenges/${challengeId}/submissions`}>
                         <Button variant="outline" size="sm">
                           View Details
                         </Button>
@@ -292,7 +294,10 @@ export default async function ManagerQueuePage({ params, searchParams }: PagePro
                       {submission.status === 'PENDING' && (
                         <ManagerReviewButton
                           submissionId={submission.id}
+                          submissionUserId={submissionUserId}
+                          currentUserId={dbUser.id}
                           workspaceSlug={slug}
+                          challengeId={challengeId}
                           challengeTitle={challengeTitle}
                           activityName={activityName}
                           userEmail={userEmail}

@@ -13,12 +13,18 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { useChallengePermissions } from '@/hooks/use-challenge-permissions'
+import { canApproveSubmission } from '@/lib/auth/challenge-permissions'
 
 interface ManagerReviewButtonProps {
   submissionId: string
+  submissionUserId: string
+  currentUserId: string
   workspaceSlug: string
+  challengeId: string
   challengeTitle: string
   activityName: string
   userEmail: string
@@ -26,17 +32,28 @@ interface ManagerReviewButtonProps {
 
 export function ManagerReviewButton({
   submissionId,
+  submissionUserId,
+  currentUserId,
   workspaceSlug,
+  challengeId,
   challengeTitle,
   activityName,
   userEmail,
 }: ManagerReviewButtonProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { permissions, isLoading } = useChallengePermissions(workspaceSlug, challengeId)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [action, setAction] = useState<'approve' | 'reject' | null>(null)
   const [notes, setNotes] = useState('')
+
+  // Check if user can approve this submission
+  const canApprove = permissions
+    ? canApproveSubmission(permissions, submissionUserId, currentUserId)
+    : false
+
+  const isOwnSubmission = submissionUserId === currentUserId
 
   const handleSubmit = async () => {
     if (!action) return
@@ -110,6 +127,40 @@ export function ManagerReviewButton({
     }
   }
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span className="text-xs text-muted-foreground">Loading...</span>
+      </div>
+    )
+  }
+
+  // Self-approval prevention UI
+  if (isOwnSubmission) {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
+          Your Submission
+        </Badge>
+        <span className="text-xs text-muted-foreground">
+          Cannot approve own submissions
+        </span>
+      </div>
+    )
+  }
+
+  // No permission to approve
+  if (!canApprove) {
+    return (
+      <Badge variant="outline" className="text-xs">
+        Requires Manager Role
+      </Badge>
+    )
+  }
+
+  // Show approve/reject buttons
   return (
     <>
       <div className="flex gap-2">
