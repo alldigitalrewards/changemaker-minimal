@@ -6,6 +6,7 @@ import { LogOut, Settings, User, ChevronDown, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/components/auth/logout-button";
 import WorkspaceSwitcher from "@/components/workspace-switcher";
+import RoleViewSwitcher from "@/components/role-view-switcher";
 
 interface User {
   email?: string;
@@ -99,21 +100,28 @@ export default function DashboardHeader({
             </div>
           </div>
 
-          {/* Right side - Workspace switcher, role badge, user menu */}
+          {/* Right side - Workspace switcher, role view switcher, user menu */}
           <div className="flex items-center space-x-4">
             {/* Workspace Switcher */}
             {showWorkspaceSwitcher && <WorkspaceSwitcher />}
 
-            {/* Role badge */}
-            <div
-              className={`px-3 py-1 text-xs font-medium rounded-full ${
-                role === "ADMIN"
-                  ? "bg-coral-100 text-coral-800"
-                  : "bg-blue-100 text-blue-800"
-              }`}
-            >
-              {role === "ADMIN" ? "Admin" : "Participant"}
-            </div>
+            {/* Role View Switcher or Role Badge */}
+            {showRoleSwitcher ? (
+              <RoleViewSwitcher
+                workspaceSlug={workspace.slug}
+                workspaceRole={role}
+              />
+            ) : (
+              <div
+                className={`px-3 py-1 text-xs font-medium rounded-full ${
+                  role === "ADMIN"
+                    ? "bg-coral-100 text-coral-800"
+                    : "bg-blue-100 text-blue-800"
+                }`}
+              >
+                {role === "ADMIN" ? "Admin" : "Participant"}
+              </div>
+            )}
 
             {/* Optional points/budget badges */}
             {pointsBadge && (
