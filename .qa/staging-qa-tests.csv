@@ -1,0 +1,445 @@
+Test ID,Category,Priority,Test Scenario,Preconditions,Test Steps,Test Data,Expected Result,Actual Result,Status,Notes,URL
+AUTH-001,Authentication & Access Control,Critical,Login as AllDigitalRewards Admin,None,"1. Navigate to login page
+2. Enter email: krobinson@alldigitalrewards.com
+3. Enter password: Changemaker2025!
+4. Click login","Email: krobinson@alldigitalrewards.com
+Password: Changemaker2025!",User logs in successfully and lands on AllDigitalRewards admin dashboard,,,https://preview.changemaker.im/login
+AUTH-002,Authentication & Access Control,Critical,Login as ACME Admin,None,"1. Navigate to login page
+2. Enter email: admin@acme.com
+3. Enter password: Changemaker2025!
+4. Click login","Email: admin@acme.com
+Password: Changemaker2025!",User logs in successfully and lands on ACME admin dashboard,,,https://preview.changemaker.im/login
+AUTH-003,Authentication & Access Control,Critical,Login as Sharecare Manager,None,"1. Navigate to login page
+2. Enter email: manager@sharecare.com
+3. Enter password: Changemaker2025!
+4. Click login","Email: manager@sharecare.com
+Password: Changemaker2025!",User logs in successfully and lands on Sharecare manager dashboard,,,https://preview.changemaker.im/login
+AUTH-004,Authentication & Access Control,High,Login as AllDigitalRewards Participant,None,"1. Navigate to login page
+2. Enter email: participant1@alldigitalrewards.com
+3. Enter password: Changemaker2025!
+4. Click login","Email: participant1@alldigitalrewards.com
+Password: Changemaker2025!",User logs in successfully and lands on participant dashboard,,,https://preview.changemaker.im/login
+AUTH-005,Authentication & Access Control,High,Verify admin cannot access other workspace admin areas,Logged in as krobinson@alldigitalrewards.com,"1. Navigate to ACME workspace
+2. Attempt to access admin functions","User: krobinson@alldigitalrewards.com
+Workspace: ACME",User has ADMIN role in ACME (cross-workspace admin),,,https://preview.changemaker.im/w/acme/admin
+AUTH-006,Authentication & Access Control,High,Verify manager cannot access admin functions,Logged in as manager@acme.com,"1. Navigate to admin area
+2. Verify access level","User: manager@acme.com
+Role: MANAGER",Manager dashboard shown; admin functions hidden/disabled,,,https://preview.changemaker.im/w/acme/manager
+AUTH-007,Authentication & Access Control,Critical,Verify participant cannot access admin/manager areas,Logged in as participant1@acme.com,"1. Attempt to access /w/acme/admin
+2. Attempt to access /w/acme/manager","User: participant1@acme.com
+Role: PARTICIPANT",Access denied or redirected to participant dashboard,,,https://preview.changemaker.im/w/acme/participant
+AUTH-008,Authentication & Access Control,High,Password reset flow,None,"1. Click ""Forgot Password""
+2. Enter email
+3. Check for reset email
+4. Follow reset link","Email: participant1@acme.com",Password reset email sent and link works,,,https://preview.changemaker.im/login
+AUTH-009,Authentication & Access Control,Medium,Logout functionality,Logged in as any user,"1. Click logout button
+2. Verify redirect to login
+3. Attempt to access protected page","Any authenticated user",User logged out; protected pages redirect to login,,,https://preview.changemaker.im/
+AUTH-010,Authentication & Access Control,High,Session persistence,Logged in as any user,"1. Login
+2. Close browser
+3. Reopen browser
+4. Navigate to app","Any authenticated user",User remains logged in across browser sessions,,,https://preview.changemaker.im/
+AUTH-011,Authentication & Access Control,Medium,Invalid credentials handling,None,"1. Enter invalid email/password
+2. Submit login form","Email: invalid@test.com
+Password: wrongpassword",Error message displayed; no login,,,https://preview.changemaker.im/login
+AUTH-012,Authentication & Access Control,Medium,Empty form validation,None,"1. Leave email empty
+2. Leave password empty
+3. Submit login form",None,Validation errors displayed; form not submitted,,,https://preview.changemaker.im/login
+AUTH-013,Authentication & Access Control,High,Multi-role user navigation,Logged in as krobinson@alldigitalrewards.com,"1. Verify workspace switcher shows 3 workspaces
+2. Switch between workspaces
+3. Verify role in each","User: krobinson@alldigitalrewards.com
+Workspaces: AllDigitalRewards (ADMIN), ACME (ADMIN), Sharecare (PARTICIPANT)","Workspace switcher works; correct dashboard shown per role",,,https://preview.changemaker.im/
+AUTH-014,Authentication & Access Control,Medium,Concurrent session handling,Logged in on 2 devices,"1. Login on device 1
+2. Login on device 2
+3. Perform actions on both","Any user account",Both sessions work correctly; no conflicts,,,https://preview.changemaker.im/
+AUTH-015,Authentication & Access Control,Low,Profile viewing,Logged in as any user,"1. Navigate to profile page
+2. Verify user info displayed","Any user",Profile shows correct email and workspace roles,,,https://preview.changemaker.im/profile
+LEAD-001,Leaderboard Functionality,Critical,Leaderboard displays historical data from August 2025,Logged in with access to any workspace,"1. Navigate to leaderboard
+2. Select 'All Time' filter
+3. Verify dates span from Aug 1, 2025 to present","Workspace: AllDigitalRewards
+Filter: All Time","Leaderboard shows participants with points; historical dates visible in activity log",,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-002,Leaderboard Functionality,Critical,Top participant is Lisa Taylor with 226 points,Logged in to AllDigitalRewards,"1. Navigate to leaderboard
+2. Check top participant","Workspace: AllDigitalRewards
+Expected: Lisa Taylor, 226 points",Lisa Taylor appears at #1 with 226 points,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-003,Leaderboard Functionality,High,ACME workspace shows 1428 total points,Logged in to ACME,"1. Navigate to ACME leaderboard
+2. Sum all participant points","Workspace: ACME
+Expected total: 1,428 points",Total points across all participants equals 1,428,,,https://preview.changemaker.im/w/acme/leaderboard
+LEAD-004,Leaderboard Functionality,High,AllDigitalRewards workspace shows 1660 total points,Logged in to AllDigitalRewards,"1. Navigate to AllDigitalRewards leaderboard
+2. Sum all participant points","Workspace: AllDigitalRewards
+Expected total: 1,660 points",Total points across all participants equals 1,660,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-005,Leaderboard Functionality,High,Sharecare workspace shows 1840 total points,Logged in to Sharecare,"1. Navigate to Sharecare leaderboard
+2. Sum all participant points","Workspace: Sharecare
+Expected total: 1,840 points",Total points across all participants equals 1,840,,,https://preview.changemaker.im/w/sharecare/leaderboard
+LEAD-006,Leaderboard Functionality,Critical,Today filter shows 20 submissions,Logged in to any workspace,"1. Navigate to leaderboard
+2. Select 'Today' filter
+3. Count displayed submissions","Filter: Today
+Expected: ~20 submissions (varies by current date)","Leaderboard shows only today's submissions; count approximately 20",,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-007,Leaderboard Functionality,Critical,This Week filter shows 63 submissions,Logged in to any workspace,"1. Navigate to leaderboard
+2. Select 'This Week' filter
+3. Count displayed submissions","Filter: This Week
+Expected: ~63 submissions","Leaderboard shows this week's submissions; count approximately 63",,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-008,Leaderboard Functionality,Critical,This Month filter shows 75 submissions,Logged in to any workspace,"1. Navigate to leaderboard
+2. Select 'This Month' filter
+3. Count displayed submissions","Filter: This Month
+Expected: ~75 submissions","Leaderboard shows this month's submissions; count approximately 75",,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-009,Leaderboard Functionality,High,All Time filter shows all 314 submissions,Logged in to any workspace,"1. Navigate to leaderboard
+2. Select 'All Time' filter
+3. Count total submissions","Filter: All Time
+Expected: 314 submissions",Leaderboard shows all submissions from Aug 2025 to present,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-010,Leaderboard Functionality,High,Leaderboard ranking is correct,Logged in to any workspace,"1. Navigate to leaderboard
+2. Verify participants sorted by points descending
+3. Check top 5 rankings","Workspace: AllDigitalRewards
+Top 5 expected in order by points",Participants ranked correctly by total points,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-011,Leaderboard Functionality,Medium,Participant details expand/collapse,Logged in to any workspace,"1. Click on participant in leaderboard
+2. Verify details expand
+3. Click again to collapse","Any participant on leaderboard",Details panel expands/collapses with activity history,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-012,Leaderboard Functionality,Medium,Activity log shows submission dates,Logged in to any workspace,"1. Expand participant details
+2. Check activity log entries
+3. Verify dates are historical","Any participant with submissions",Activity log shows dates from Aug 2025 to present,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-013,Leaderboard Functionality,High,Points calculation is accurate,Logged in with access to database,"1. Select a participant
+2. Sum their activity points
+3. Compare to leaderboard total","Participant: Lisa Taylor
+Expected: 226 points",Sum of activity points matches leaderboard total,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-014,Leaderboard Functionality,Medium,Empty leaderboard message (new workspace),Logged in to workspace with no data,"1. Create new workspace
+2. Navigate to leaderboard","New workspace with no enrollments",Message displayed: "No participants yet" or similar,,,https://preview.changemaker.im/w/[new-workspace]/leaderboard
+LEAD-015,Leaderboard Functionality,Low,Leaderboard pagination (if >50 participants),Logged in to workspace with many participants,"1. Navigate to leaderboard
+2. Scroll to bottom
+3. Check for pagination","Workspace with >50 participants",Pagination controls displayed and functional,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-016,Leaderboard Functionality,Medium,Search/filter by participant name,Logged in to any workspace,"1. Enter participant name in search
+2. Verify filtered results","Search: ""Lisa""
+Expected: Lisa Taylor",Leaderboard filters to matching participants,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-017,Leaderboard Functionality,Medium,Export leaderboard data,Logged in as admin or manager,"1. Click export button
+2. Download CSV/Excel","Workspace: AllDigitalRewards",File downloads with participant data and points,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-018,Leaderboard Functionality,Low,Leaderboard auto-refresh,Leaderboard open; new submission added,"1. Keep leaderboard open
+2. Have another user submit activity
+3. Wait for auto-refresh","Any active workspace",Leaderboard updates without manual refresh,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-019,Leaderboard Functionality,Medium,Leaderboard shows correct challenge context,Logged in to any workspace,"1. Navigate to leaderboard
+2. Verify challenge names in activity log","Workspace: AllDigitalRewards
+5 challenges expected",Activity log entries show correct challenge titles,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+LEAD-020,Leaderboard Functionality,High,Leaderboard isolated by workspace,Logged in to multiple workspaces,"1. View AllDigitalRewards leaderboard
+2. Switch to ACME workspace
+3. View ACME leaderboard
+4. Compare participants","Workspaces: AllDigitalRewards vs ACME",Each leaderboard shows only that workspace's participants,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+HIST-001,Historical Data Verification,Critical,Submissions exist from August 1st 2025,Database access or admin dashboard,"1. Query submissions table
+2. Check earliest submission date","Expected: Aug 1, 2025 or later",Submissions exist with dates starting from Aug 1, 2025,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+HIST-002,Historical Data Verification,High,Submissions distributed across 5 months,Database access,"1. Query submissions by month
+2. Verify distribution","Aug 2025, Sep 2025, Oct 2025, Nov 2025",Submissions exist in each month from Aug to Nov 2025,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+HIST-003,Historical Data Verification,High,Recent submissions are more frequent,Database access,"1. Count submissions per week
+2. Verify exponential distribution","Recent weeks > older weeks",More submissions in recent weeks (exponential distribution),,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+HIST-004,Historical Data Verification,Medium,Challenge start dates span historical period,Admin dashboard,"1. View all challenges
+2. Check start dates","5 challenges per workspace
+Start dates: Aug - Nov 2025",Challenges started throughout Aug-Nov 2025 period,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges
+HIST-005,Historical Data Verification,Medium,Challenge end dates are 45 days after start,Admin dashboard,"1. View challenge details
+2. Verify duration","Each challenge: 45 days",End date is 45 days after start date for each challenge,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges
+HIST-006,Historical Data Verification,High,Points balances reflect historical activity,Database access,"1. Query points balances
+2. Verify against activity submissions","31 points balances expected",Points balances accurately reflect sum of historical activities,,,https://preview.changemaker.im/w/alldigitalrewards/admin/points
+HIST-007,Historical Data Verification,Medium,Activity timestamps match submission dates,Database access,"1. Query activities and submissions
+2. Compare timestamps","314 submissions with activities",Activity createdAt matches submission submittedAt,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+HIST-008,Historical Data Verification,Low,No future-dated submissions,Database access,"1. Query all submissions
+2. Check for dates > today","Current date: Nov 5, 2025",No submissions dated after Nov 5, 2025,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+HIST-009,Historical Data Verification,Medium,Each participant has 5-12 submissions,Database access,"1. Query submissions per user
+2. Verify count range","Expected: 5-12 submissions per enrolled user",Each participant has between 5-12 submissions,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+HIST-010,Historical Data Verification,High,Submission distribution matches time periods,Database access,"1. Count submissions by period
+2. Verify: Today ~20, This Week ~63, This Month ~75","Expected distribution:
+Today: 20
+This Week: 63
+This Month: 75
+Aug-Sep: 75",Submission counts match expected distribution,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+HIST-011,Historical Data Verification,Medium,Activity types are varied,Admin dashboard,"1. View submissions
+2. Check activity type distribution","Expected: Mix of Check-In, Exercise, Learning, Volunteer",Multiple activity types represented in submissions,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+HIST-012,Historical Data Verification,Low,Historical data performance,Logged in to leaderboard,"1. Navigate to leaderboard
+2. Switch time filters
+3. Measure load time","All time filter with 314 submissions",Leaderboard loads within 2-3 seconds,,,https://preview.changemaker.im/w/alldigitalrewards/leaderboard
+MULTI-001,Multi-Workspace Features,Critical,Admin can switch between 3 workspaces,Logged in as krobinson@alldigitalrewards.com,"1. Click workspace switcher
+2. Verify 3 workspaces listed
+3. Switch to each workspace","User: krobinson@alldigitalrewards.com
+Workspaces: AllDigitalRewards, ACME, Sharecare","Workspace switcher shows all 3; switching works correctly",,,https://preview.changemaker.im/
+MULTI-002,Multi-Workspace Features,High,User role changes per workspace,Logged in as krobinson@alldigitalrewards.com,"1. Switch to AllDigitalRewards
+2. Verify ADMIN role
+3. Switch to Sharecare
+4. Verify PARTICIPANT role","AllDigitalRewards: ADMIN
+ACME: ADMIN
+Sharecare: PARTICIPANT",Dashboard and available actions change per role,,,https://preview.changemaker.im/
+MULTI-003,Multi-Workspace Features,Critical,Workspace data isolation - participants,Logged in to multiple workspaces,"1. View ACME participants
+2. Switch to AllDigitalRewards
+3. Verify different participants list","ACME participants ≠ AllDigitalRewards participants",Each workspace shows only its own participants,,,https://preview.changemaker.im/w/acme/admin/participants
+MULTI-004,Multi-Workspace Features,Critical,Workspace data isolation - challenges,Logged in to multiple workspaces,"1. View ACME challenges
+2. Switch to Sharecare
+3. Verify different challenges list","5 challenges per workspace
+Challenges are workspace-specific",Each workspace shows only its own 5 challenges,,,https://preview.changemaker.im/w/acme/admin/challenges
+MULTI-005,Multi-Workspace Features,High,Workspace data isolation - leaderboards,Logged in to multiple workspaces,"1. View ACME leaderboard
+2. Note top participants
+3. Switch to AllDigitalRewards
+4. Compare leaderboards","Expected: Different participants and points per workspace",Each workspace has completely separate leaderboard data,,,https://preview.changemaker.im/w/acme/leaderboard
+MULTI-006,Multi-Workspace Features,High,Workspace data isolation - points budgets,Logged in as admin to multiple workspaces,"1. View ACME points budget
+2. Switch to Sharecare
+3. View Sharecare points budget","Each workspace: Independent budget
+ACME spent: 1,428
+AllDigitalRewards spent: 1,660
+Sharecare spent: 1,840",Each workspace has separate points budget and spend,,,https://preview.changemaker.im/w/acme/admin/points
+MULTI-007,Multi-Workspace Features,Medium,Workspace slug in URL,Navigating between workspaces,"1. Switch workspaces
+2. Check URL structure
+3. Verify slug changes","URL format: /w/[slug]/...",URL contains correct workspace slug for each workspace,,,https://preview.changemaker.im/w/acme
+MULTI-008,Multi-Workspace Features,High,Manager cross-workspace access limited,Logged in as kfelke@alldigitalrewards.com,"1. Verify access to AllDigitalRewards (ADMIN)
+2. Switch to ACME (MANAGER)
+3. Verify limited access","AllDigitalRewards: ADMIN
+ACME: MANAGER",Admin functions available in AllDigitalRewards only,,,https://preview.changemaker.im/w/acme
+MULTI-009,Multi-Workspace Features,Medium,Workspace branding/theming,Logged in to multiple workspaces,"1. View ACME workspace
+2. Switch to AllDigitalRewards
+3. Note any visual differences","If implemented: Different colors/logos per workspace",Each workspace displays its own branding (if implemented),,,https://preview.changemaker.im/w/acme
+MULTI-010,Multi-Workspace Features,High,Participant enrolled in multiple workspaces,Logged in as krobinson@alldigitalrewards.com,"1. View enrollments in AllDigitalRewards
+2. Switch to ACME
+3. View enrollments in ACME","User enrolled in challenges across 3 workspaces",User can participate in multiple workspaces simultaneously,,,https://preview.changemaker.im/w/alldigitalrewards/participant/challenges
+MULTI-011,Multi-Workspace Features,Medium,Create new workspace,Logged in as super admin (if exists),"1. Navigate to workspace creation
+2. Enter new workspace details
+3. Create workspace","New workspace slug: test-workspace",New workspace created and accessible,,,https://preview.changemaker.im/admin/workspaces
+MULTI-012,Multi-Workspace Features,Low,Workspace list pagination,Logged in to account with many workspaces,"1. View workspace list
+2. Check for pagination","If user has >10 workspaces",Workspace list paginates or scrolls properly,,,https://preview.changemaker.im/
+MULTI-013,Multi-Workspace Features,High,Workspace deletion restrictions,Logged in as workspace admin,"1. Attempt to delete workspace with active data
+2. Verify warning/restriction","Workspace with challenges and participants",Warning shown; deletion requires confirmation or disabled,,,https://preview.changemaker.im/w/acme/admin/settings
+MULTI-014,Multi-Workspace Features,Medium,Workspace settings isolation,Logged in as admin to multiple workspaces,"1. Change ACME workspace settings
+2. Switch to AllDigitalRewards
+3. Verify settings are independent","Settings: Workspace name, descriptions, features",Settings changes apply only to current workspace,,,https://preview.changemaker.im/w/acme/admin/settings
+MULTI-015,Multi-Workspace Features,High,Points budget per workspace,Logged in as admin,"1. View AllDigitalRewards budget: 1,660 spent
+2. View ACME budget: 1,428 spent
+3. View Sharecare budget: 1,840 spent","AllDigitalRewards: 1,660
+ACME: 1,428
+Sharecare: 1,840",Each workspace has independent points budget tracking,,,https://preview.changemaker.im/w/alldigitalrewards/admin/points
+MULTI-016,Multi-Workspace Features,High,Workspace admins list,Logged in as admin,"1. Navigate to workspace users
+2. Filter by ADMIN role
+3. Verify admin list","AllDigitalRewards admins:
+- krobinson@alldigitalrewards.com
+- kfelke@alldigitalrewards.com
+- jfelke@alldigitalrewards.com
+- jhoughtelin@alldigitalrewards.com",Correct admins listed for workspace,,,https://preview.changemaker.im/w/alldigitalrewards/admin/users
+MULTI-017,Multi-Workspace Features,Medium,Workspace analytics isolation,Logged in as admin to multiple workspaces,"1. View ACME analytics
+2. Switch to AllDigitalRewards
+3. Compare analytics data","Expected: Different metrics per workspace",Analytics show data only for current workspace,,,https://preview.changemaker.im/w/acme/admin/analytics
+MULTI-018,Multi-Workspace Features,Low,Workspace activity feed,Logged in to any workspace,"1. View workspace activity feed
+2. Switch workspaces
+3. Compare activity feeds","Expected: Recent activities per workspace",Activity feed shows only current workspace's activities,,,https://preview.changemaker.im/w/acme/admin/activity
+CHAL-001,Challenge Management,Critical,View all 5 challenges in workspace,Logged in as admin to any workspace,"1. Navigate to challenges page
+2. Count challenges","Expected: 5 challenges per workspace
+Titles vary by workspace",All 5 challenges displayed with titles and descriptions,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges
+CHAL-002,Challenge Management,High,Create new challenge,Logged in as admin,"1. Click ""Create Challenge""
+2. Enter challenge details
+3. Set start and end dates
+4. Save challenge","New challenge:
+Title: Test Challenge
+Start: Today
+End: 30 days from now",Challenge created successfully and appears in list,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges/new
+CHAL-003,Challenge Management,High,Edit existing challenge,Logged in as admin,"1. Select a challenge
+2. Click edit
+3. Modify title or description
+4. Save changes","Any existing challenge",Changes saved and reflected in challenge list,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges/edit/[id]
+CHAL-004,Challenge Management,Medium,Delete challenge,Logged in as admin,"1. Select a challenge
+2. Click delete
+3. Confirm deletion","Challenge with no enrollments (if possible)",Challenge deleted successfully,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges
+CHAL-005,Challenge Management,High,Challenge with historical start date,Logged in as admin or participant,"1. View challenge list
+2. Check start dates
+3. Verify historical dates","Challenges started: Aug - Nov 2025",Challenges show start dates from Aug 2025 onwards,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges
+CHAL-006,Challenge Management,Medium,Challenge duration is 45 days,Logged in as admin,"1. View challenge details
+2. Calculate duration (end - start)","Each challenge: 45 days",All challenges have 45-day duration,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges/[id]
+CHAL-007,Challenge Management,High,View challenge enrollments,Logged in as admin,"1. Select a challenge
+2. View enrolled participants
+3. Count enrollments","Expected: Multiple enrollments per challenge",Enrolled participants listed with enrollment dates,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges/[id]/enrollments
+CHAL-008,Challenge Management,Medium,Challenge has multiple activities,Logged in as admin or participant,"1. View challenge details
+2. Check activities list","Expected: 8 activities per challenge",Challenge shows all 8 defined activities,,,https://preview.changemaker.im/w/alldigitalrewards/participant/challenges/[id]
+CHAL-009,Challenge Management,High,Enroll in challenge as participant,Logged in as participant,"1. View available challenges
+2. Click ""Enroll"" on a challenge
+3. Confirm enrollment","Participant: participant1@acme.com
+Challenge: Any available challenge",Enrollment successful; challenge appears in ""My Challenges"",,,https://preview.changemaker.im/w/acme/participant/challenges
+CHAL-010,Challenge Management,Medium,Unenroll from challenge,Logged in as enrolled participant,"1. View enrolled challenges
+2. Click ""Unenroll"" on a challenge
+3. Confirm unenrollment","Enrolled participant and challenge",Unenrollment successful; challenge removed from ""My Challenges"",,,https://preview.changemaker.im/w/acme/participant/challenges/[id]
+CHAL-011,Challenge Management,Medium,Challenge search/filter,Logged in as admin or participant,"1. Enter search term
+2. Filter by status (active/completed)
+3. Verify filtered results","Search: Challenge title keyword
+Filter: Active",Challenges filtered correctly,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges
+CHAL-012,Challenge Management,Low,Challenge sorting,Logged in as admin or participant,"1. Sort by start date
+2. Sort by title
+3. Sort by enrollment count","Sortable columns available",Challenges sort correctly by selected column,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges
+CHAL-013,Challenge Management,High,Challenge details page,Logged in as any user,"1. Click on a challenge
+2. View full details
+3. Check all information displayed","Any challenge",Details show: Title, description, dates, activities, enrollments,,,https://preview.changemaker.im/w/alldigitalrewards/participant/challenges/[id]
+CHAL-014,Challenge Management,Medium,Challenge with no enrollments,Logged in as admin,"1. Create new challenge
+2. View challenge
+3. Check enrollment count","Newly created challenge",Shows ""0 enrollments"" message,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges/[id]
+CHAL-015,Challenge Management,Low,Challenge analytics,Logged in as admin or manager,"1. View challenge analytics
+2. Check participation metrics","Any challenge with enrollments",Analytics show: Total enrollments, active participants, submissions,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges/[id]/analytics
+ACT-001,Activity & Submissions,Critical,Submit activity as participant,Logged in as enrolled participant,"1. Navigate to enrolled challenge
+2. Select an activity
+3. Fill submission form
+4. Submit","Participant: participant1@acme.com
+Challenge: Any enrolled challenge",Activity submitted successfully; confirmation shown,,,https://preview.changemaker.im/w/acme/participant/challenges/[id]/submit
+ACT-002,Activity & Submissions,High,View submission history,Logged in as participant,"1. Navigate to submissions page
+2. View submission history","Participant with submissions",All submitted activities listed with dates and points,,,https://preview.changemaker.im/w/acme/participant/submissions
+ACT-003,Activity & Submissions,High,Submission awards points,Logged in as participant,"1. Note current points balance
+2. Submit new activity
+3. Check updated points balance","Participant with points balance",Points balance increases by activity point value,,,https://preview.changemaker.im/w/acme/participant/dashboard
+ACT-004,Activity & Submissions,Medium,Edit pending submission,Logged in as participant,"1. Submit activity
+2. Edit submission before approval
+3. Save changes","Pending submission",Changes saved successfully,,,https://preview.changemaker.im/w/acme/participant/submissions/[id]/edit
+ACT-005,Activity & Submissions,Medium,Delete pending submission,Logged in as participant,"1. Submit activity
+2. Delete submission before approval
+3. Confirm deletion","Pending submission",Submission deleted; points not awarded,,,https://preview.changemaker.im/w/acme/participant/submissions/[id]
+ACT-006,Activity & Submissions,High,Admin/Manager view all submissions,Logged in as admin or manager,"1. Navigate to submissions dashboard
+2. View all workspace submissions","Admin/Manager access",All submissions across all participants visible,,,https://preview.changemaker.im/w/acme/admin/submissions
+ACT-007,Activity & Submissions,High,Filter submissions by participant,Logged in as admin or manager,"1. Navigate to submissions
+2. Filter by participant name","Any participant with submissions",Submissions filtered to show only selected participant,,,https://preview.changemaker.im/w/acme/admin/submissions
+ACT-008,Activity & Submissions,Medium,Filter submissions by challenge,Logged in as admin or manager,"1. Navigate to submissions
+2. Filter by challenge","Any challenge",Submissions filtered to show only selected challenge,,,https://preview.changemaker.im/w/acme/admin/submissions
+ACT-009,Activity & Submissions,Medium,Filter submissions by date range,Logged in as admin or manager,"1. Navigate to submissions
+2. Set date range filter
+3. Apply filter","Date range: Aug 1 - Aug 31, 2025",Submissions filtered to show only dates in range,,,https://preview.changemaker.im/w/acme/admin/submissions
+ACT-010,Activity & Submissions,High,Activity type distribution,Logged in as admin,"1. View submissions
+2. Check activity type variety","Expected: Check-In, Exercise, Learning, Volunteer, etc.",Multiple activity types represented in submissions,,,https://preview.changemaker.im/w/acme/admin/submissions
+ACT-011,Activity & Submissions,Medium,Submission includes timestamp,Logged in as participant or admin,"1. View submission details
+2. Check submitted timestamp","Any submission",Timestamp displayed in submission details,,,https://preview.changemaker.im/w/acme/participant/submissions/[id]
+ACT-012,Activity & Submissions,Low,Submission validation,Logged in as participant,"1. Attempt to submit with missing fields
+2. Attempt to submit invalid data","Empty or invalid form fields",Validation errors shown; submission blocked,,,https://preview.changemaker.im/w/acme/participant/challenges/[id]/submit
+ACT-013,Activity & Submissions,Medium,Bulk submission approval (if implemented),Logged in as admin or manager,"1. Select multiple pending submissions
+2. Click ""Approve All""
+3. Confirm action","Multiple pending submissions",All selected submissions approved; points awarded,,,https://preview.changemaker.im/w/acme/admin/submissions
+ACT-014,Activity & Submissions,Medium,Submission rejection (if implemented),Logged in as admin or manager,"1. Select a submission
+2. Click ""Reject""
+3. Provide reason
+4. Confirm","Pending submission",Submission rejected; participant notified,,,https://preview.changemaker.im/w/acme/admin/submissions/[id]
+ACT-015,Activity & Submissions,High,Each participant has 5-12 submissions,Database verification or admin view,"1. View participant profiles
+2. Count submissions per participant","Expected: 5-12 submissions per enrolled participant",Each participant has between 5-12 submissions,,,https://preview.changemaker.im/w/acme/admin/participants
+ACT-016,Activity & Submissions,Medium,Submission export,Logged in as admin or manager,"1. Navigate to submissions
+2. Click export
+3. Download file","All submissions",CSV/Excel file downloads with submission data,,,https://preview.changemaker.im/w/acme/admin/submissions
+ACT-017,Activity & Submissions,Low,Submission pagination,Logged in as admin with many submissions,"1. Navigate to submissions list
+2. Check pagination controls","Workspace with >50 submissions",Pagination controls displayed and functional,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+ACT-018,Activity & Submissions,High,Submissions count: 314 total,Database verification or admin dashboard,"1. View submission analytics
+2. Check total count","Expected: 314 total submissions across all workspaces",Total submission count equals 314,,,https://preview.changemaker.im/w/alldigitalrewards/admin/analytics
+PTS-001,Points System,Critical,Points balance per participant,Logged in as participant,"1. Navigate to dashboard
+2. View points balance","Participant: Lisa Taylor
+Expected: 226 points",Points balance displayed accurately,,,https://preview.changemaker.im/w/alldigitalrewards/participant/dashboard
+PTS-002,Points System,High,Points ledger shows transaction history,Logged in as participant,"1. Navigate to points history
+2. View ledger entries","Any participant with points",All point awards listed with dates and sources,,,https://preview.changemaker.im/w/alldigitalrewards/participant/points
+PTS-003,Points System,High,Points awarded per activity,Logged in as admin or participant,"1. View activity details
+2. Check point value
+3. Submit activity
+4. Verify points awarded","Activity point values: 5-100 points",Points awarded match activity point value,,,https://preview.changemaker.im/w/acme/participant/challenges/[id]
+PTS-004,Points System,High,Workspace points budget tracking,Logged in as admin,"1. Navigate to points budget
+2. View total budget and spent","AllDigitalRewards: 1,660 spent
+ACME: 1,428 spent
+Sharecare: 1,840 spent",Budget shows total and remaining points,,,https://preview.changemaker.im/w/alldigitalrewards/admin/points
+PTS-005,Points System,Medium,Points budget alert (if implemented),Logged in as admin,"1. View points budget
+2. Check for low balance warning","If budget < 20% remaining",Warning displayed for low budget,,,https://preview.changemaker.im/w/acme/admin/points
+PTS-006,Points System,High,Points distribution across workspaces,Database verification or admin view,"1. Sum points per workspace
+2. Compare distributions","ACME: 1,428
+AllDigitalRewards: 1,660
+Sharecare: 1,840",Points properly isolated per workspace,,,https://preview.changemaker.im/admin/analytics
+PTS-007,Points System,Medium,Points ledger entry includes metadata,Logged in as participant or admin,"1. View points ledger entry
+2. Check metadata fields","Any ledger entry",Entry shows: Amount, date, source (activity/challenge), description,,,https://preview.changemaker.im/w/acme/participant/points
+PTS-008,Points System,Medium,Negative points (deduction) if implemented,Logged in as admin,"1. Add negative points entry
+2. Check participant balance","Admin action: Deduct points",Balance decreases; ledger shows negative entry,,,https://preview.changemaker.im/w/acme/admin/participants/[id]/points
+PTS-009,Points System,Low,Points export,Logged in as admin,"1. Navigate to points report
+2. Export data","All points data",CSV/Excel file downloads with points data,,,https://preview.changemaker.im/w/acme/admin/points/export
+PTS-010,Points System,High,31 points balances total,Database verification or admin view,"1. Query or view all points balances
+2. Count total records","Expected: 31 points balances",Total points balance records equals 31,,,https://preview.changemaker.im/admin/analytics
+PTS-011,Points System,Medium,Points calculation accuracy,Database verification,"1. Select a participant
+2. Sum all points ledger entries
+3. Compare to points balance","Any participant with multiple activities",Ledger sum equals current balance,,,https://preview.changemaker.im/w/acme/admin/participants/[id]
+PTS-012,Points System,Low,Points balance display formatting,Logged in as any user,"1. View points balances
+2. Check number formatting","Various point amounts",Points formatted with proper separators (e.g. 1,428),,,https://preview.changemaker.im/w/acme/participant/dashboard
+ADMIN-001,Admin Dashboard,Critical,Admin dashboard loads,Logged in as krobinson@alldigitalrewards.com,"1. Login as admin
+2. Navigate to admin dashboard","User: krobinson@alldigitalrewards.com
+Workspace: AllDigitalRewards",Dashboard loads with workspace overview,,,https://preview.changemaker.im/w/alldigitalrewards/admin
+ADMIN-002,Admin Dashboard,High,Dashboard shows workspace stats,Logged in as admin,"1. View admin dashboard
+2. Check displayed statistics","Expected stats: Participants, challenges, submissions, points",Key metrics displayed on dashboard,,,https://preview.changemaker.im/w/alldigitalrewards/admin
+ADMIN-003,Admin Dashboard,High,View all participants,Logged in as admin,"1. Navigate to participants page
+2. View participant list","Workspace with participants",All participants listed with roles and enrollment info,,,https://preview.changemaker.im/w/alldigitalrewards/admin/participants
+ADMIN-004,Admin Dashboard,High,Add new participant,Logged in as admin,"1. Click ""Add Participant""
+2. Enter participant email
+3. Assign to workspace
+4. Save","New participant email: test@example.com",Participant added successfully,,,https://preview.changemaker.im/w/alldigitalrewards/admin/participants/new
+ADMIN-005,Admin Dashboard,Medium,Edit participant role,Logged in as admin,"1. Select a participant
+2. Change role (PARTICIPANT to MANAGER)
+3. Save changes","Any participant",Role updated successfully,,,https://preview.changemaker.im/w/alldigitalrewards/admin/participants/[id]/edit
+ADMIN-006,Admin Dashboard,Medium,Remove participant from workspace,Logged in as admin,"1. Select a participant
+2. Click ""Remove""
+3. Confirm action","Participant with no critical data",Participant removed from workspace,,,https://preview.changemaker.im/w/alldigitalrewards/admin/participants/[id]
+ADMIN-007,Admin Dashboard,High,View workspace challenges,Logged in as admin,"1. Navigate to challenges page
+2. View challenge list","Expected: 5 challenges",All challenges listed with details,,,https://preview.changemaker.im/w/alldigitalrewards/admin/challenges
+ADMIN-008,Admin Dashboard,High,View all submissions,Logged in as admin,"1. Navigate to submissions page
+2. View submission list","Expected: ~104 submissions per workspace (314 total / 3 workspaces)",All submissions listed across all challenges,,,https://preview.changemaker.im/w/alldigitalrewards/admin/submissions
+ADMIN-009,Admin Dashboard,Medium,View points budget,Logged in as admin,"1. Navigate to points management
+2. View budget details","AllDigitalRewards: 1,660 spent",Budget shows total, spent, and remaining,,,https://preview.changemaker.im/w/alldigitalrewards/admin/points
+ADMIN-010,Admin Dashboard,Medium,Workspace settings,Logged in as admin,"1. Navigate to workspace settings
+2. View editable fields","Settings: Name, slug, description, features",Settings page loads with current workspace config,,,https://preview.changemaker.im/w/alldigitalrewards/admin/settings
+ADMIN-011,Admin Dashboard,Low,Admin navigation menu,Logged in as admin,"1. View navigation menu
+2. Check available options","Expected: Dashboard, Participants, Challenges, Submissions, Points, Settings",All admin menu items visible and functional,,,https://preview.changemaker.im/w/alldigitalrewards/admin
+ADMIN-012,Admin Dashboard,Medium,Recent activity feed,Logged in as admin,"1. View admin dashboard
+2. Check recent activity section","Expected: Recent submissions, enrollments, point awards",Activity feed shows recent workspace events,,,https://preview.changemaker.im/w/alldigitalrewards/admin
+ADMIN-013,Admin Dashboard,Low,Analytics/Reports section,Logged in as admin,"1. Navigate to analytics
+2. View available reports","Expected: Engagement metrics, points trends, challenge performance",Analytics page shows workspace metrics,,,https://preview.changemaker.im/w/alldigitalrewards/admin/analytics
+ADMIN-014,Admin Dashboard,Medium,Admin notifications,Logged in as admin,"1. Check notifications icon
+2. View notification list","Expected: New submissions, low budget warnings",Notifications displayed for admin actions needed,,,https://preview.changemaker.im/w/alldigitalrewards/admin
+ADMIN-015,Admin Dashboard,High,Admin-only access verification,Logged in as participant,"1. Attempt to access /w/[slug]/admin
+2. Verify access denied","User: participant1@acme.com",Access denied; redirected or 403 error,,,https://preview.changemaker.im/w/acme/admin
+MGR-001,Manager Dashboard,Critical,Manager dashboard loads,Logged in as manager@acme.com,"1. Login as manager
+2. Navigate to manager dashboard","User: manager@acme.com
+Workspace: ACME",Dashboard loads with limited management view,,,https://preview.changemaker.im/w/acme/manager
+MGR-002,Manager Dashboard,High,Manager can view participants,Logged in as manager,"1. Navigate to participants page
+2. View participant list","Manager access to ACME",Participants visible in read-only or limited edit mode,,,https://preview.changemaker.im/w/acme/manager/participants
+MGR-003,Manager Dashboard,High,Manager can view challenges,Logged in as manager,"1. Navigate to challenges page
+2. View challenge list","Manager access to challenges",Challenges visible (create/edit may be limited),,,https://preview.changemaker.im/w/acme/manager/challenges
+MGR-004,Manager Dashboard,High,Manager can view submissions,Logged in as manager,"1. Navigate to submissions page
+2. View submission list","Manager access to submissions",All workspace submissions visible,,,https://preview.changemaker.im/w/acme/manager/submissions
+MGR-005,Manager Dashboard,Medium,Manager cannot access admin-only features,Logged in as manager,"1. Check for admin-only options
+2. Attempt to access workspace settings","Manager role limitations",Admin-only features hidden or disabled,,,https://preview.changemaker.im/w/acme/manager
+MGR-006,Manager Dashboard,Medium,Manager can approve submissions (if allowed),Logged in as manager,"1. View pending submissions
+2. Approve a submission","Pending submission",Submission approved; points awarded,,,https://preview.changemaker.im/w/acme/manager/submissions
+MGR-007,Manager Dashboard,Low,Manager navigation menu,Logged in as manager,"1. View navigation menu
+2. Check available options","Expected: Dashboard, Participants, Challenges, Submissions (limited vs admin)",Manager menu shows appropriate options,,,https://preview.changemaker.im/w/acme/manager
+MGR-008,Manager Dashboard,Medium,Manager points view (read-only),Logged in as manager,"1. Navigate to points section
+2. View points data","Expected: Read-only access to points",Points data visible but not editable,,,https://preview.changemaker.im/w/acme/manager/points
+MGR-009,Manager Dashboard,High,Manager in multiple workspaces,Logged in as kfelke@alldigitalrewards.com,"1. Switch to AllDigitalRewards (ADMIN)
+2. Switch to ACME (MANAGER)
+3. Verify different access levels","AllDigitalRewards: ADMIN
+ACME: MANAGER",Access level changes appropriately per workspace,,,https://preview.changemaker.im/
+MGR-010,Manager Dashboard,Medium,Manager analytics access,Logged in as manager,"1. Navigate to analytics
+2. View available reports","Expected: Read-only analytics",Analytics visible for manager review,,,https://preview.changemaker.im/w/acme/manager/analytics
+MGR-011,Manager Dashboard,Low,Manager notifications,Logged in as manager,"1. Check notifications
+2. View notification list","Expected: Submission alerts, challenge updates",Manager receives relevant notifications,,,https://preview.changemaker.im/w/acme/manager
+MGR-012,Manager Dashboard,Medium,Manager-only access verification,Logged in as participant,"1. Attempt to access /w/[slug]/manager
+2. Verify access denied","User: participant1@acme.com",Access denied; redirected or 403 error,,,https://preview.changemaker.im/w/acme/manager
+PART-001,Participant Dashboard,Critical,Participant dashboard loads,Logged in as participant1@acme.com,"1. Login as participant
+2. Navigate to dashboard","User: participant1@acme.com
+Workspace: ACME",Dashboard loads with participant view,,,https://preview.changemaker.im/w/acme/participant/dashboard
+PART-002,Participant Dashboard,High,Dashboard shows points balance,Logged in as participant,"1. View dashboard
+2. Check points display","Participant with points",Points balance prominently displayed,,,https://preview.changemaker.im/w/acme/participant/dashboard
+PART-003,Participant Dashboard,High,Dashboard shows enrolled challenges,Logged in as participant,"1. View dashboard
+2. Check enrolled challenges section","Participant enrolled in challenges",Enrolled challenges listed with progress,,,https://preview.changemaker.im/w/acme/participant/dashboard
+PART-004,Participant Dashboard,Medium,View available challenges,Logged in as participant,"1. Navigate to challenges page
+2. View available challenges","Workspace with 5 challenges",All challenges visible with enroll option,,,https://preview.changemaker.im/w/acme/participant/challenges
+PART-005,Participant Dashboard,High,Enroll in challenge,Logged in as participant,"1. Select available challenge
+2. Click ""Enroll""
+3. Confirm enrollment","Any available challenge",Enrollment successful; challenge appears in enrolled list,,,https://preview.changemaker.im/w/acme/participant/challenges/[id]
+PART-006,Participant Dashboard,High,Submit activity,Logged in as enrolled participant,"1. Navigate to enrolled challenge
+2. Select activity
+3. Fill form and submit","Enrolled challenge with activities",Activity submitted; confirmation shown; points awarded,,,https://preview.changemaker.im/w/acme/participant/challenges/[id]/submit
+PART-007,Participant Dashboard,Medium,View submission history,Logged in as participant,"1. Navigate to submissions
+2. View personal submission history","Participant with submissions",All personal submissions listed with status,,,https://preview.changemaker.im/w/acme/participant/submissions
+PART-008,Participant Dashboard,Medium,View points history,Logged in as participant,"1. Navigate to points
+2. View points ledger","Participant with points transactions",All point awards listed with sources,,,https://preview.changemaker.im/w/acme/participant/points
+PART-009,Participant Dashboard,High,View leaderboard,Logged in as participant,"1. Navigate to leaderboard
+2. View rankings","Workspace leaderboard",Leaderboard shows all participants ranked by points,,,https://preview.changemaker.im/w/acme/leaderboard
+PART-010,Participant Dashboard,Low,Profile settings,Logged in as participant,"1. Navigate to profile
+2. View/edit profile settings","Participant account",Profile page loads with editable fields,,,https://preview.changemaker.im/w/acme/participant/profile
+PART-011,Participant Dashboard,Medium,Participant navigation menu,Logged in as participant,"1. View navigation menu
+2. Check available options","Expected: Dashboard, Challenges, Submissions, Points, Leaderboard, Profile",Participant menu shows appropriate options,,,https://preview.changemaker.im/w/acme/participant
+PART-012,Participant Dashboard,High,Participant cannot access admin/manager areas,Logged in as participant,"1. Attempt to access /w/[slug]/admin
+2. Attempt to access /w/[slug]/manager","User: participant1@acme.com",Access denied to both admin and manager areas,,,https://preview.changemaker.im/w/acme/admin
+PART-013,Participant Dashboard,Medium,Challenge progress indicator,Logged in as enrolled participant,"1. View enrolled challenge
+2. Check progress indicator","Challenge with submissions",Progress bar/percentage shows completion,,,https://preview.changemaker.im/w/acme/participant/challenges/[id]
+PART-014,Participant Dashboard,Low,Participant notifications,Logged in as participant,"1. Check notifications
+2. View notification list","Expected: Submission approved, points awarded, new challenges",Participant receives relevant notifications,,,https://preview.changemaker.im/w/acme/participant
+PART-015,Participant Dashboard,Medium,Participant in multiple workspaces,Logged in as krobinson@alldigitalrewards.com,"1. View Sharecare (PARTICIPANT)
+2. Switch to AllDigitalRewards (ADMIN)
+3. Compare dashboards","Sharecare: PARTICIPANT
+AllDigitalRewards: ADMIN",Dashboard changes based on role per workspace,,,https://preview.changemaker.im/w/sharecare/participant
