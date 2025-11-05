@@ -15,6 +15,11 @@ import * as dotenv from "dotenv";
 // Load environment variables
 dotenv.config({ path: ".env.local" });
 
+// Ensure Prisma uses DIRECT_URL to bypass PgBouncer for seeding operations
+if (!process.env.DATABASE_URL && process.env.DIRECT_URL) {
+  process.env.DATABASE_URL = process.env.DIRECT_URL;
+}
+
 const prisma = new PrismaClient();
 
 // Initialize Supabase Admin client
