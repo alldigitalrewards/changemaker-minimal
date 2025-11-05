@@ -52,8 +52,8 @@ export default async function ParticipantLayout({
       title="Dashboard"
       workspace={workspace}
       user={user}
-      role="PARTICIPANT"
-      showRoleSwitcher={role === "ADMIN"}
+      role={role}
+      showRoleSwitcher={true}
       pointsBadge={{ label: 'Activities completed', value: `${balance.totalPoints}` }}
     />
   )
