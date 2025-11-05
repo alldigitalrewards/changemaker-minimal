@@ -11,7 +11,7 @@
 import { prisma } from "../prisma";
 import { generateRewardStackToken, getRewardStackBaseUrl } from "./auth";
 import { syncParticipantToRewardStack } from "./participant-sync";
-import { RewardStackStatus, RewardStatus, RewardType } from "@prisma/client";
+import { Prisma, RewardStackStatus, RewardStatus, RewardType } from "@prisma/client";
 
 /**
  * RewardSTACK point adjustment request
@@ -138,7 +138,7 @@ async function updateRewardIssuance(
     rewardStackAdjustmentId?: string;
     rewardStackErrorMessage?: string;
     issuedAt?: Date;
-    externalResponse?: unknown;
+    externalResponse?: Prisma.InputJsonValue;
   }
 ): Promise<void> {
   await prisma.rewardIssuance.update({
@@ -1079,9 +1079,9 @@ export async function retryFailedRewardIssuance(
     await updateRewardIssuance(rewardIssuanceId, {
       status: "PENDING",
       rewardStackStatus: "PENDING",
-      rewardStackErrorMessage: null,
-      rewardStackTransactionId: null,
-      rewardStackAdjustmentId: null,
+      rewardStackErrorMessage: undefined,
+      rewardStackTransactionId: undefined,
+      rewardStackAdjustmentId: undefined,
     });
 
     // Log retry attempt

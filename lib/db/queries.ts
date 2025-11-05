@@ -870,17 +870,17 @@ async function handleChallengeCompletionReward(
       return;
     }
 
-    // Check if reward already issued for this enrollment
+    // Check if reward already issued for this user/challenge combination
     const existingReward = await prisma.rewardIssuance.findFirst({
       where: {
-        enrollmentId,
+        userId,
         challengeId: challenge.id,
       }
     });
 
     if (existingReward) {
       console.log(
-        `Reward already issued for enrollment ${enrollmentId}, skipping duplicate issuance`
+        `Reward already issued for user ${userId} on challenge ${challenge.id}, skipping duplicate issuance`
       );
       return;
     }
@@ -892,7 +892,6 @@ async function handleChallengeCompletionReward(
         userId,
         workspaceId,
         challengeId: challenge.id,
-        enrollmentId,
         type: challenge.rewardType,
         amount: challenge.rewardType === 'points' ? rewardConfig.amount : null,
         skuId: challenge.rewardType === 'sku' ? rewardConfig.skuId : null,
@@ -903,6 +902,7 @@ async function handleChallengeCompletionReward(
           rewardDescription: rewardConfig.description,
           triggeredAt: new Date().toISOString(),
           triggerType: 'challenge_completion',
+          enrollmentId, // Store enrollment ID in metadata for tracking
         },
       }
     });
@@ -911,21 +911,8 @@ async function handleChallengeCompletionReward(
       `Created RewardIssuance ${rewardIssuance.id} for enrollment ${enrollmentId}`
     );
 
-    // Log reward issuance event
-    await logActivityEvent({
-      workspaceId,
-      challengeId: challenge.id,
-      enrollmentId,
-      userId,
-      actorUserId: userId,
-      type: 'WORKSPACE_SETTINGS_UPDATED',
-      metadata: {
-        action: 'reward_issuance_created',
-        rewardIssuanceId: rewardIssuance.id,
-        rewardType: challenge.rewardType,
-        timestamp: new Date().toISOString(),
-      }
-    });
+    // TODO: Log reward issuance event when proper ActivityLogType is added
+    // Activity logging temporarily disabled due to missing REWARD_ISSUED type in enum
 
     // Issue the reward asynchronously (don't block enrollment update)
     // Import dynamically to avoid circular dependencies

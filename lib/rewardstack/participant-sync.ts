@@ -374,22 +374,23 @@ export async function updateUserSyncStatus(
     data: updateData,
   });
 
-  // Log sync event for audit trail
-  await prisma.activityEvent.create({
-    data: {
-      type: "WORKSPACE_SETTINGS_UPDATED",
-      metadata: {
-        action: "rewardstack_participant_sync",
-        userId,
-        status,
-        participantId: participantId || null,
-        error: error || null,
-        timestamp: new Date().toISOString(),
-      },
-      userId,
-      // Note: workspaceId will need to be added if this becomes a workspace-level event
-    },
-  });
+  // TODO: Log sync event for audit trail when proper ActivityLogType is added
+  // Activity logging temporarily disabled due to missing workspaceId and improper type
+  // await prisma.activityEvent.create({
+  //   data: {
+  //     type: "WORKSPACE_SETTINGS_UPDATED",
+  //     metadata: {
+  //       action: "rewardstack_participant_sync",
+  //       userId,
+  //       status,
+  //       participantId: participantId || null,
+  //       error: error || null,
+  //       timestamp: new Date().toISOString(),
+  //     },
+  //     userId,
+  //     workspaceId, // Required field
+  //   },
+  // });
 }
 
 /**
@@ -480,7 +481,7 @@ export async function syncParticipantToRewardStack(
         rewardStackParticipantId: true,
         rewardStackSyncStatus: true,
         rewardStackLastSync: true,
-        workspaceMemberships: {
+        WorkspaceMembership: {
           where: { workspaceId },
           select: { workspaceId: true },
         },
@@ -492,7 +493,7 @@ export async function syncParticipantToRewardStack(
     }
 
     // Verify user belongs to workspace
-    if (user.workspaceMemberships.length === 0) {
+    if (user.WorkspaceMembership.length === 0) {
       throw new Error(`User ${userId} is not a member of workspace ${workspaceId}`);
     }
 

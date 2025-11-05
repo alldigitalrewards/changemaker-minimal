@@ -128,7 +128,7 @@ class IdempotencyCache {
         },
         processed: true,
       },
-      select: { id: true, createdAt: true },
+      select: { id: true, receivedAt: true },
     });
 
     if (existingLog) {
@@ -192,18 +192,18 @@ export async function getUnprocessedWebhooks(
       where: {
         workspaceId,
         processed: false,
-        createdAt: {
+        receivedAt: {
           lt: cutoffTime,
         },
       },
       orderBy: {
-        createdAt: "asc",
+        receivedAt: "asc",
       },
       take: limit,
       select: {
         id: true,
         eventType: true,
-        createdAt: true,
+        receivedAt: true,
         error: true,
       },
     });
@@ -242,18 +242,18 @@ export async function getFailedWebhooks(
         error: {
           not: null,
         },
-        createdAt: {
+        receivedAt: {
           gte: since,
         },
       },
       orderBy: {
-        createdAt: "desc",
+        receivedAt: "desc",
       },
       take: limit,
       select: {
         id: true,
         eventType: true,
-        createdAt: true,
+        receivedAt: true,
         error: true,
       },
     });
@@ -296,7 +296,7 @@ export async function retryFailedWebhooks(
         ...(webhookLogIds && { id: { in: webhookLogIds } }),
       },
       orderBy: {
-        createdAt: "asc",
+        receivedAt: "asc",
       },
       take: maxRetries,
       select: {
@@ -407,17 +407,17 @@ export async function getWebhookHealthStats(
 
     const [total, processed, failed, pending] = await Promise.all([
       prisma.rewardStackWebhookLog.count({
-        where: { workspaceId, createdAt: { gte: since } },
+        where: { workspaceId, receivedAt: { gte: since } },
       }),
       prisma.rewardStackWebhookLog.count({
-        where: { workspaceId, processed: true, createdAt: { gte: since } },
+        where: { workspaceId, processed: true, receivedAt: { gte: since } },
       }),
       prisma.rewardStackWebhookLog.count({
         where: {
           workspaceId,
           processed: false,
           error: { not: null },
-          createdAt: { gte: since },
+          receivedAt: { gte: since },
         },
       }),
       prisma.rewardStackWebhookLog.count({
@@ -425,7 +425,7 @@ export async function getWebhookHealthStats(
           workspaceId,
           processed: false,
           error: null,
-          createdAt: { gte: since },
+          receivedAt: { gte: since },
         },
       }),
     ]);
@@ -439,10 +439,10 @@ export async function getWebhookHealthStats(
         workspaceId,
         processed: true,
         processedAt: { not: null },
-        createdAt: { gte: since },
+        receivedAt: { gte: since },
       },
       select: {
-        createdAt: true,
+        receivedAt: true,
         processedAt: true,
       },
       take: 100,
@@ -452,7 +452,7 @@ export async function getWebhookHealthStats(
     if (processedLogs.length > 0) {
       const totalProcessingTime = processedLogs.reduce((sum, log) => {
         if (log.processedAt) {
-          return sum + (log.processedAt.getTime() - log.createdAt.getTime());
+          return sum + (log.processedAt.getTime() - log.receivedAt.getTime());
         }
         return sum;
       }, 0);
@@ -495,7 +495,7 @@ export async function cleanupOldWebhookLogs(
         workspaceId,
         processed: true,
         error: null,
-        createdAt: {
+        receivedAt: {
           lt: cutoffDate,
         },
       },
