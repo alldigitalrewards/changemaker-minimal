@@ -111,7 +111,7 @@ export default async function ParticipantDashboard({
   }
 
   const role = await getUserWorkspaceRole(slug)
-  if (!role || role !== "PARTICIPANT") {
+  if (!role) {
     redirect("/workspaces")
   }
 

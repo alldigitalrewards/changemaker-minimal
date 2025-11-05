@@ -55,7 +55,7 @@ export default async function AdminLayout({
       title="Admin Dashboard"
       workspace={workspace}
       user={user}
-      role="ADMIN"
+      role={role}
       showRoleSwitcher={true}
       budgetBadge={budget ? { label: 'Budget', value: `${Math.max(0, (budget.totalBudget || 0) - (budget.allocated || 0))}/${budget.totalBudget || 0}` } : undefined}
     />

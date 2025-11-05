@@ -55,7 +55,7 @@ export default async function ManagerLayout({
       title="Manager Dashboard"
       workspace={workspace}
       user={user}
-      role="MANAGER"
+      role={role}
       showRoleSwitcher={true}
       budgetBadge={budget ? { label: 'Budget', value: `${Math.max(0, (budget.totalBudget || 0) - (budget.allocated || 0))}/${budget.totalBudget || 0}` } : undefined}
     />
