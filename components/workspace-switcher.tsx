@@ -10,6 +10,7 @@
 import React, { useState } from 'react'
 import { ChevronDown, Building, Crown, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,6 +80,7 @@ export default function WorkspaceSwitcher({
           {availableWorkspaces.map((workspace) => {
             const isCurrentWorkspace = workspace.slug === currentWorkspace?.slug
             const isWorkspacePrimary = isPrimary(workspace)
+            const workspaceRole = (workspace as any).role
 
             return (
               <DropdownMenuItem
@@ -102,9 +104,19 @@ export default function WorkspaceSwitcher({
                         <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 truncate">
-                      /{workspace.slug}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-gray-500 truncate">
+                        /{workspace.slug}
+                      </p>
+                      {workspaceRole && (
+                        <Badge
+                          variant={workspaceRole === 'ADMIN' ? 'default' : 'outline'}
+                          className="text-[10px] px-1.5 py-0 h-4"
+                        >
+                          {workspaceRole}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {isCurrentWorkspace && (

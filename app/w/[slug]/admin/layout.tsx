@@ -33,7 +33,7 @@ export default async function AdminLayout({
   }
 
   const role = await getUserWorkspaceRole(slug)
-  if (!role || role !== "ADMIN") {
+  if (!role || (role !== "ADMIN" && role !== "MANAGER")) {
     redirect("/workspaces")
   }
 
