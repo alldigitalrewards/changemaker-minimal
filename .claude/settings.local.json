@@ -70,7 +70,8 @@
       "mcp__zen__chat",
       "Bash(killall:*)",
       "mcp__vercel-awesome-ai__list_projects",
-      "Bash(pnpm tsx:*)"
+      "Bash(pnpm tsx:*)",
+      "mcp__supabase-stage__execute_sql"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

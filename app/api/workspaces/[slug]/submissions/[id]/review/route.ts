@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth"
 import { reviewActivitySubmission, DatabaseError, ResourceNotFoundError, awardPointsWithBudget, issueReward, logActivityEvent } from "@/lib/db/queries"
 import { prisma } from "@/lib/db"
+import { fetchUserChallengeContext, canApproveSubmission } from "@/lib/auth/challenge-permissions"
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
@@ -47,6 +48,21 @@ export const POST = withErrorHandling(async (
     // Allow PENDING (direct admin review) or MANAGER_APPROVED (final approval after manager review)
     if (existingSubmission.status !== 'PENDING' && existingSubmission.status !== 'MANAGER_APPROVED') {
       return NextResponse.json({ error: 'Submission has already been reviewed' }, { status: 400 })
+    }
+
+    // Check permission to approve using multi-role system
+    const permissionContext = await fetchUserChallengeContext(
+      user.dbUser.id,
+      existingSubmission.Activity.challengeId,
+      workspace.id
+    )
+
+    // Prevent self-approval
+    if (!canApproveSubmission(permissionContext.permissions, existingSubmission.userId, user.dbUser.id)) {
+      return NextResponse.json(
+        { error: 'You cannot approve your own submission' },
+        { status: 403 }
+      )
     }
 
     // Detect admin override: admin rejects a manager-approved submission

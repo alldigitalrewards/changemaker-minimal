@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/queries"
 import { prisma } from "@/lib/db"
 import { logActivityEvent } from "@/lib/db/queries"
+import { fetchUserChallengeContext } from "@/lib/auth/challenge-permissions"
 
 export const POST = withErrorHandling(async (
   request: NextRequest,
@@ -156,8 +157,31 @@ export const POST = withErrorHandling(async (
   // Determine enrollment status: use provided status or default to 'ENROLLED'
   const enrollmentStatus = status || 'ENROLLED'
 
-  // Create enrollment using standardized query (includes validation)
+  // Check if user can enroll using permission resolver
   try {
+    const permissionContext = await fetchUserChallengeContext(
+      user.dbUser.id,
+      challengeId,
+      workspace.id
+    )
+
+    // If already enrolled, return error
+    if (permissionContext.enrollment) {
+      return NextResponse.json(
+        { error: 'User is already enrolled in this challenge' },
+        { status: 400 }
+      )
+    }
+
+    // Check if user has permission to enroll
+    if (!permissionContext.permissions.canEnroll) {
+      return NextResponse.json(
+        { error: 'User does not have permission to enroll in this challenge' },
+        { status: 403 }
+      )
+    }
+
+    // Create enrollment using standardized query (includes validation)
     const enrollment = await createEnrollment(user.dbUser.id, challengeId, workspace.id, enrollmentStatus)
 
     // Log enrollment event

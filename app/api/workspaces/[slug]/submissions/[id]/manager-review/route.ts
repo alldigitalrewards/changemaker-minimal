@@ -8,6 +8,8 @@ import {
   DatabaseError,
   ResourceNotFoundError,
 } from "@/lib/db/queries";
+import { fetchUserChallengeContext, canApproveSubmission } from "@/lib/auth/challenge-permissions";
+import { prisma } from "@/lib/db";
 
 /**
  * POST /api/workspaces/[slug]/submissions/[id]/manager-review
@@ -39,6 +41,47 @@ export const POST = withErrorHandling(
     }
 
     try {
+      // First, get the submission to check ownership
+      const existingSubmission = await prisma.activitySubmission.findFirst({
+        where: {
+          id: submissionId,
+          Activity: {
+            Challenge: {
+              workspaceId: workspace.id
+            }
+          }
+        },
+        include: {
+          Activity: {
+            include: {
+              Challenge: true
+            }
+          }
+        }
+      });
+
+      if (!existingSubmission) {
+        return NextResponse.json(
+          { error: 'Submission not found' },
+          { status: 404 }
+        );
+      }
+
+      // Check permission to approve using multi-role system
+      const permissionContext = await fetchUserChallengeContext(
+        user.dbUser.id,
+        existingSubmission.Activity.challengeId,
+        workspace.id
+      );
+
+      // Prevent self-approval
+      if (!canApproveSubmission(permissionContext.permissions, existingSubmission.userId, user.dbUser.id)) {
+        return NextResponse.json(
+          { error: 'You cannot approve your own submission' },
+          { status: 403 }
+        );
+      }
+
       // Map action to status
       const status =
         action === "approve" ? "MANAGER_APPROVED" : "NEEDS_REVISION";
