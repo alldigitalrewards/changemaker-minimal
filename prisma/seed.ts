@@ -1158,8 +1158,7 @@ async function seed() {
                 : status === "REJECTED"
                   ? "Does not meet requirements"
                   : null,
-            createdAt: submissionDate,
-            updatedAt: submissionDate,
+            submittedAt: submissionDate,
           },
         });
 

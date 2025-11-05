@@ -400,12 +400,14 @@ model Workspace {
   tenantId  String   @default("default")
 
   // RewardSTACK Integration
-  rewardStackOrgId       String?
-  rewardStackProgramId   String?
-  rewardStackApiKey      String? // Encrypted via pgcrypto
-  rewardStackEnabled     Boolean                 @default(false)
-  rewardStackEnvironment RewardStackEnvironment?
-  rewardStackSandboxMode Boolean                 @default(true)
+  rewardStackOrgId         String?
+  rewardStackProgramId     String?
+  rewardStackApiKey        String? // Encrypted via pgcrypto
+  rewardStackEnabled       Boolean                 @default(false)
+  rewardStackEnvironment   RewardStackEnvironment?
+  rewardStackSandboxMode   Boolean                 @default(true)
+  rewardStackWebhookId     String? // RewardSTACK webhook ID
+  rewardStackWebhookSecret String? // Webhook signature secret
 
   ActivityEvent                  ActivityEvent[]
   ActivityTemplate               ActivityTemplate[]
