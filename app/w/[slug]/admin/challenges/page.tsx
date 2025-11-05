@@ -27,6 +27,7 @@ import { format } from 'date-fns';
 import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { CreateChallengeButton } from '@/components/challenges/CreateChallengeButton';
+import { ChallengeRoleBadge } from '@/components/challenges/challenge-role-badge';
 
 interface Challenge {
   id: string;
@@ -165,7 +166,12 @@ export default function ChallengesPage() {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{challenge.title}</CardTitle>
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-lg">{challenge.title}</CardTitle>
+                      {params?.slug && (
+                        <ChallengeRoleBadge challengeId={challenge.id} workspaceSlug={params.slug} />
+                      )}
+                    </div>
                     <CardDescription className="mt-1">
                       {challenge.description}
                     </CardDescription>

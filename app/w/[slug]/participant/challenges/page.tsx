@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, requireWorkspaceAccessCanonical } from '@/lib/auth/session';
 import EnrollButton from './enroll-button';
+import { ChallengeRoleBadge } from '@/components/challenges/challenge-role-badge';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -98,7 +99,10 @@ export default async function ParticipantChallengesPage({ params }: PageProps) {
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <CardTitle className="text-lg">{challenge.title}</CardTitle>
+                        <div className="flex items-center gap-2 mb-1">
+                          <CardTitle className="text-lg">{challenge.title}</CardTitle>
+                          <ChallengeRoleBadge challengeId={challenge.id} workspaceSlug={slug} />
+                        </div>
                         <CardDescription className="mt-1">
                           {challenge.description}
                         </CardDescription>

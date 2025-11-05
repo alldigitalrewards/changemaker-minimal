@@ -3,11 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Users, 
-  Trophy, 
+import {
+  ArrowLeft,
+  Calendar,
+  Users,
+  Trophy,
   Edit,
   UserPlus,
   Clock,
@@ -41,6 +41,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { revalidatePath } from 'next/cache'
 import { CommunicationComposer } from '@/components/communications/communication-composer'
+import { RoleContextBadgeWrapper } from './role-context-badge-wrapper';
 
 interface PageProps {
   params: Promise<{
@@ -284,6 +285,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card className="md:col-span-6">
           <CardContent className="flex flex-wrap items-center gap-3 py-4">
+            <RoleContextBadgeWrapper workspaceSlug={slug} challengeId={id} showDetails />
             <Badge variant={statusVariant}>{challengeStatus}</Badge>
             {now < startDate && (
               <span className="text-sm text-gray-700 flex items-center gap-1"><Clock className="h-4 w-4" /> Starts in {daysUntilStart} day{daysUntilStart === 1 ? '' : 's'}</span>

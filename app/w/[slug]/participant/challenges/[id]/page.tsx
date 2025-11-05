@@ -3,11 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Users, 
-  Trophy, 
+import {
+  ArrowLeft,
+  Calendar,
+  Users,
+  Trophy,
   Clock,
   Target,
   CheckCircle,
@@ -30,6 +30,7 @@ import { getChallengeLeaderboard } from '@/lib/db/queries';
 import JoinButton, { SimpleSubmissionDialog } from './join-button';
 import { TabNavigationButtons } from './tab-navigation-buttons';
 import { getRewardLabel, formatRewardValue, getRewardUnit } from '@/lib/reward-utils';
+import { RoleContextBadgeWrapper } from './role-context-badge-wrapper';
 
 interface PageProps {
   params: Promise<{
@@ -401,9 +402,12 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
               Back to Challenges
             </Button>
           </Link>
-          <div className="space-y-2 md:space-y-0">
+          <div className="space-y-2">
             <h1 className="text-2xl md:text-3xl font-bold text-navy-900">{challenge.title}</h1>
-            <p className="text-gray-600 md:hidden">{challenge._count.Enrollment} participants enrolled</p>
+            <div className="flex items-center gap-3">
+              <RoleContextBadgeWrapper workspaceSlug={slug} challengeId={challenge.id} showDetails />
+              <p className="text-gray-600 md:hidden">{challenge._count.Enrollment} participants enrolled</p>
+            </div>
           </div>
         </div>
         <div className="flex items-center justify-between md:justify-end md:space-x-3">
