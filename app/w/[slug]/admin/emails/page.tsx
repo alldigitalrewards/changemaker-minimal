@@ -40,7 +40,7 @@ export default async function EmailsPage({ params }: EmailsPageProps) {
         </TabsContent>
 
         <TabsContent value="templates">
-          <TemplatesPanel slug={slug} />
+          <TemplatesPanel slug={slug} userEmail={user.email || ''} />
         </TabsContent>
 
         <TabsContent value="settings">

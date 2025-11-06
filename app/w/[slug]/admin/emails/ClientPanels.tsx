@@ -72,12 +72,14 @@ export type TemplateRow = {
   updatedAt: string
 }
 
-export function TemplatesPanel({ slug }: { slug: string }) {
+export function TemplatesPanel({ slug, userEmail }: { slug: string; userEmail: string }) {
   const [templates, setTemplates] = useState<TemplateRow[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null)
   const [workspaceInfo, setWorkspaceInfo] = useState<{ name: string; brandColor?: string } | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
+  const [sendingTest, setSendingTest] = useState<string | null>(null)
+  const [testEmails, setTestEmails] = useState<Record<string, string>>({})
   const [editState, setEditState] = useState<Record<string, { subject: string; html: string; enabled: boolean }>>({})
 
   const load = async () => {
@@ -89,14 +91,17 @@ export function TemplatesPanel({ slug }: { slug: string }) {
 
       // Load initial edit state
       const initialState: Record<string, { subject: string; html: string; enabled: boolean }> = {}
+      const initialTestEmails: Record<string, string> = {}
       data.templates?.forEach((t: TemplateRow) => {
         initialState[t.type] = {
           subject: t.subject ?? '',
           html: t.html ?? '',
           enabled: t.enabled
         }
+        initialTestEmails[t.type] = userEmail
       })
       setEditState(initialState)
+      setTestEmails(initialTestEmails)
     } catch (e) {
       toast.error('Failed to load templates')
     } finally {
@@ -176,6 +181,42 @@ export function TemplatesPanel({ slug }: { slug: string }) {
     }
   }
 
+  const sendTestEmail = async (type: TemplateRow['type']) => {
+    setSendingTest(type)
+    try {
+      const state = editState[type]
+      const testEmail = testEmails[type]
+
+      if (!testEmail) {
+        toast.error('Please enter a test email address')
+        return
+      }
+
+      const res = await fetch(`/api/workspaces/${slug}/emails/templates/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: testEmail,
+          subject: state.subject,
+          html: state.html,
+          templateType: type
+        })
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to send test email')
+      }
+
+      const data = await res.json()
+      toast.success(`Test email sent to ${data.sentTo}`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to send test email')
+    } finally {
+      setSendingTest(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {types.map(type => {
@@ -242,13 +283,33 @@ export function TemplatesPanel({ slug }: { slug: string }) {
                   brandColor={workspaceInfo?.brandColor}
                   subject={state.subject}
                 />
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => save(type)}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? 'Saving...' : 'Save Template'}
-                  </Button>
+                <div className="border-t pt-4">
+                  <div className="flex items-end gap-2 mb-4">
+                    <div className="flex-1">
+                      <label className="text-sm text-gray-600 block mb-2">Send test email to</label>
+                      <Input
+                        type="email"
+                        value={testEmails[type] || ''}
+                        onChange={(e) => setTestEmails(prev => ({ ...prev, [type]: e.target.value }))}
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => sendTestEmail(type)}
+                      disabled={sendingTest === type || !testEmails[type]}
+                    >
+                      {sendingTest === type ? 'Sending...' : 'Send Test Email'}
+                    </Button>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => save(type)}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save Template'}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             )}
