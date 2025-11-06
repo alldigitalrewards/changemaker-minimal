@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -46,6 +47,7 @@ interface Challenge {
 
 export default function ChallengesPage() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [challengeToDelete, setChallengeToDelete] = useState<{ id: string; title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -61,6 +63,7 @@ export default function ChallengesPage() {
 
   const fetchChallenges = async () => {
     if (!params?.slug) return;
+    setIsLoading(true);
     try {
       const response = await fetch(`/api/workspaces/${params.slug}/challenges`, { cache: 'no-store' });
       if (response.ok) {
@@ -74,6 +77,8 @@ export default function ChallengesPage() {
         description: 'Failed to load challenges',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   const getStatusChip = (c: Challenge) => {
@@ -133,6 +138,30 @@ export default function ChallengesPage() {
     router.push(`/w/${params?.slug}/admin/challenges/${challengeId}`);
   };
 
+  const ChallengeSkeleton = () => (
+    <Card className="relative">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
+          <Skeleton className="h-8 w-8 rounded-md" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Skeleton className="h-3 w-32" />
+      </CardFooter>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -146,7 +175,13 @@ export default function ChallengesPage() {
       </div>
 
       {/* Challenges Grid */}
-      {challenges.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <ChallengeSkeleton key={i} />
+          ))}
+        </div>
+      ) : challenges.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <Trophy className="h-12 w-12 mx-auto text-gray-400 mb-4" />
