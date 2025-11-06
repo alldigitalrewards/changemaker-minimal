@@ -1121,6 +1121,7 @@ async function seed() {
       const activities = await prisma.activity.findMany({
         where: { challengeId: enrollment.challengeId },
         include: { ActivityTemplate: true },
+        orderBy: { createdAt: 'asc' }, // Deterministic ordering
         take: 5, // Up to 5 activities per enrollment
       });
 
@@ -1471,6 +1472,7 @@ async function seed() {
       // Get invite codes for this workspace
       const workspaceInvites = await prisma.inviteCode.findMany({
         where: { workspaceId: workspace.id },
+        orderBy: { createdAt: 'asc' }, // Deterministic ordering
       });
 
       // Create redemptions for first 2 participants using the general invite

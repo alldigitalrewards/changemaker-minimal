@@ -20,7 +20,7 @@ import { Coins, ShoppingCart } from 'lucide-react';
 
 const formSchema = z
   .object({
-    rewardType: z.enum(['points', 'sku'], { required_error: 'Please select a reward type' }),
+    rewardType: z.enum(['points', 'sku', 'monetary'], { message: 'Please select a reward type' }),
     title: z.string().trim().min(3, 'Title must be at least 3 characters').max(100, 'Title must be at most 100 characters'),
     description: z.string().trim().min(10, 'Description must be at least 10 characters').max(500, 'Description must be at most 500 characters'),
     startDate: z.string().min(1, 'Start date is required').refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid start date'),

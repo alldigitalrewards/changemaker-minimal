@@ -1,16 +1,40 @@
--- Fix missing default value for ActivitySubmission.id
+-- Fix missing default value for ActivitySubmission.id (if table exists)
 -- This is needed because Prisma schema has @id but no @default(uuid())
-ALTER TABLE "ActivitySubmission" ALTER COLUMN id SET DEFAULT gen_random_uuid();
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ActivitySubmission') THEN
+    ALTER TABLE "ActivitySubmission" ALTER COLUMN id SET DEFAULT gen_random_uuid();
+  END IF;
+END $$;
 
--- Enable RLS on all tables
-ALTER TABLE "Workspace" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "WorkspaceMembership" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Challenge" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "ChallengeAssignment" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Enrollment" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Activity" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "ActivitySubmission" ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on all tables (conditionally - only if they exist)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Workspace') THEN
+    ALTER TABLE "Workspace" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'User') THEN
+    ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'WorkspaceMembership') THEN
+    ALTER TABLE "WorkspaceMembership" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Challenge') THEN
+    ALTER TABLE "Challenge" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ChallengeAssignment') THEN
+    ALTER TABLE "ChallengeAssignment" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Enrollment') THEN
+    ALTER TABLE "Enrollment" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Activity') THEN
+    ALTER TABLE "Activity" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ActivitySubmission') THEN
+    ALTER TABLE "ActivitySubmission" ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- Helper function to get current user's internal ID from supabaseUserId
 CREATE OR REPLACE FUNCTION current_user_id()

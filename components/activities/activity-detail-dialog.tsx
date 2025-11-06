@@ -38,9 +38,9 @@ interface Challenge {
   startDate: string | Date;
   endDate: string | Date;
   status: string;
-  rewardType?: 'points' | 'sku' | 'monetary';
+  rewardType: 'points' | 'sku' | 'monetary' | null;
   _count?: {
-    enrollments: number;
+    Enrollment: number;
   };
 }
 
@@ -48,8 +48,8 @@ interface ActivityTemplate {
   id: string;
   name: string;
   description: string | null;
-  submissionType: string;
-  rewardType?: 'points' | 'sku' | 'monetary';
+  type: string;
+  rewardType: 'points' | 'sku' | 'monetary' | null;
   rewardConfig?: any;
 }
 
@@ -212,7 +212,7 @@ export function ActivityDetailDialog({
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Users className="h-4 w-4" />
-                <span>{challenge._count?.enrollments || 0} enrolled</span>
+                <span>{challenge._count?.Enrollment || 0} enrolled</span>
               </div>
             </div>
 
@@ -262,7 +262,7 @@ export function ActivityDetailDialog({
                       <Label className="text-gray-600 text-sm">Submission Type</Label>
                       <div className="mt-2">
                         <Badge variant="outline" className="font-medium">
-                          {activity.ActivityTemplate.submissionType}
+                          {activity.ActivityTemplate.type}
                         </Badge>
                       </div>
                     </div>

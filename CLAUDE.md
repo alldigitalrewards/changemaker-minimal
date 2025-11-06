@@ -145,3 +145,6 @@ Follow this sequence – execute via agents or direct code changes. Commit/push 
 ## Task Master AI Instructions
 **Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskmaster/CLAUDE.md
+- 1. Always use prisma migrate deploy (not prisma db push) for schema changes
+  2. Always use supabase db push or apply migrations through Supabase CLI for Supabase migrations
+  3. Never manually edit the _prisma_migrations or supabase_migrations.schema_migrations tables

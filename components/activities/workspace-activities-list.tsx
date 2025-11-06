@@ -15,9 +15,9 @@ interface Challenge {
   startDate: string | Date;
   endDate: string | Date;
   status: string;
-  rewardType?: 'points' | 'sku' | 'monetary';
+  rewardType: 'points' | 'sku' | 'monetary' | null;
   _count?: {
-    enrollments: number;
+    Enrollment: number;
   };
 }
 
@@ -25,8 +25,8 @@ interface ActivityTemplate {
   id: string;
   name: string;
   description: string | null;
-  submissionType: string;
-  rewardType?: 'points' | 'sku' | 'monetary';
+  type: string;
+  rewardType: 'points' | 'sku' | 'monetary' | null;
   rewardConfig?: any;
 }
 
@@ -164,7 +164,7 @@ export function WorkspaceActivitiesList({
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Users className="h-4 w-4" />
-                    <span>{challenge._count?.enrollments || 0} enrolled</span>
+                    <span>{challenge._count?.Enrollment || 0} enrolled</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Trophy className="h-4 w-4" />
@@ -250,7 +250,7 @@ export function WorkspaceActivitiesList({
 
                         <div className="pt-2 border-t">
                           <Badge variant="outline" className="text-xs">
-                            {a.ActivityTemplate.submissionType}
+                            {a.ActivityTemplate.type}
                           </Badge>
                         </div>
                       </div>
