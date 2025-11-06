@@ -5,6 +5,7 @@ import { getCurrentWorkspace, getUserWorkspaceRole } from '@/lib/workspace-conte
 import { getWorkspaceActivityTemplates, getWorkspaceChallenges, getChallengeActivities } from '@/lib/db/queries'
 import ActivityTemplateCard from '@/components/activities/activity-template-card'
 import ActivityTemplateForm from '@/components/activities/activity-template-form'
+import { WorkspaceActivitiesList } from '@/components/activities/workspace-activities-list'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus, ClipboardList } from 'lucide-react'
@@ -57,7 +58,7 @@ export default async function ActivityTemplatesPage({ params }: ActivityTemplate
 
         <TabsContent value="activities">
           <Suspense fallback={<ActivitiesLoading />}>
-            <WorkspaceActivities workspaceId={workspace.id} />
+            <WorkspaceActivities workspaceId={workspace.id} workspaceSlug={workspace.slug} />
           </Suspense>
         </TabsContent>
 
@@ -151,7 +152,7 @@ function ActivityTemplatesLoading() {
   )
 }
 
-async function WorkspaceActivities({ workspaceId }: { workspaceId: string }) {
+async function WorkspaceActivities({ workspaceId, workspaceSlug }: { workspaceId: string; workspaceSlug: string }) {
   try {
     const challenges = await getWorkspaceChallenges(workspaceId)
     const activitiesByChallenge = await Promise.all(
@@ -161,43 +162,7 @@ async function WorkspaceActivities({ workspaceId }: { workspaceId: string }) {
       }))
     )
 
-    if (activitiesByChallenge.every(g => g.activities.length === 0)) {
-      return (
-        <Card>
-          <CardContent className="py-8 text-center text-gray-600">No activities yet. Create activities from a challenge.</CardContent>
-        </Card>
-      )
-    }
-
-    return (
-      <div className="space-y-6">
-        {activitiesByChallenge.map(({ challenge, activities }) => (
-          activities.length > 0 ? (
-            <Card key={challenge.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{challenge.title}</span>
-                </CardTitle>
-                <CardDescription>{challenge.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {activities.map(a => (
-                    <div key={a.id} className="border rounded-lg p-4">
-                      <div className="font-medium">{a.ActivityTemplate.name}</div>
-                      <div className="text-sm text-gray-600">Points: {a.pointsValue}</div>
-                      {a.deadline && (
-                        <div className="text-xs text-gray-500">Deadline: {new Date(a.deadline).toLocaleString()}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : null
-        ))}
-      </div>
-    )
+    return <WorkspaceActivitiesList activitiesByChallenge={activitiesByChallenge} workspaceSlug={workspaceSlug} />
   } catch (error) {
     console.error('Error loading activities:', error)
     return (
