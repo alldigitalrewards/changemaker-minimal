@@ -232,54 +232,65 @@ export function ActivityDetailDialog({
 
             {!isEditing ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-gray-600">Points Value</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Coins className="h-4 w-4 text-amber-600" />
-                      <span className="font-semibold text-gray-900">{activity.pointsValue}</span>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-gray-600 text-sm">Points Value</Label>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Coins className="h-5 w-5 text-amber-600" />
+                        <span className="font-semibold text-lg text-gray-900">{activity.pointsValue}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-600 text-sm">Max Submissions</Label>
+                      <div className="mt-2">
+                        <span className="font-semibold text-lg text-gray-900">
+                          {activity.maxSubmissions || 'Unlimited'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-gray-600">Max Submissions</Label>
-                    <div className="mt-1">
-                      <span className="font-semibold text-gray-900">
-                        {activity.maxSubmissions || 'Unlimited'}
-                      </span>
+                  <Separator />
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <Label className="text-gray-600 text-sm">Submission Type</Label>
+                      <div className="mt-2">
+                        <Badge variant="outline" className="font-medium">
+                          {activity.ActivityTemplate.submissionType}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-600 text-sm">Required Activity</Label>
+                      <div className="mt-2">
+                        <Badge variant={activity.isRequired ? 'default' : 'secondary'} className="font-medium">
+                          {activity.isRequired ? 'Yes' : 'No'}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <Label className="text-gray-600">Submission Type</Label>
-                    <div className="mt-1">
-                      <Badge variant="outline">{activity.ActivityTemplate.submissionType}</Badge>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-gray-600">Required</Label>
-                    <div className="mt-1">
-                      <Badge variant={activity.isRequired ? 'default' : 'secondary'}>
-                        {activity.isRequired ? 'Yes' : 'No'}
-                      </Badge>
-                    </div>
-                  </div>
+                  {activity.deadline && (
+                    <>
+                      <Separator />
+                      <div>
+                        <Label className="text-gray-600 text-sm">Deadline</Label>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Clock className="h-4 w-4 text-gray-600" />
+                          <span className="font-medium text-gray-900">
+                            {format(new Date(activity.deadline), 'MMM d, yyyy h:mm a')}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {activity.deadline && (
-                  <div>
-                    <Label className="text-gray-600">Deadline</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Clock className="h-4 w-4 text-gray-600" />
-                      <span className="text-gray-900">
-                        {format(new Date(activity.deadline), 'MMM d, yyyy h:mm a')}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <Button onClick={() => setIsEditing(true)} className="w-full">
+                <Button onClick={() => setIsEditing(true)} className="w-full mt-6">
                   Edit Activity
                 </Button>
               </>
