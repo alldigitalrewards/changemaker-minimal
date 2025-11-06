@@ -49,6 +49,8 @@ interface ActivityTemplate {
   name: string;
   description: string | null;
   submissionType: string;
+  rewardType?: 'points' | 'sku' | 'monetary';
+  rewardConfig?: any;
 }
 
 interface Activity {

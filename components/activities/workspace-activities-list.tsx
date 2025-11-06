@@ -26,6 +26,8 @@ interface ActivityTemplate {
   name: string;
   description: string | null;
   submissionType: string;
+  rewardType?: 'points' | 'sku' | 'monetary';
+  rewardConfig?: any;
 }
 
 interface Activity {
@@ -197,10 +199,41 @@ export function WorkspaceActivitiesList({
                       )}
 
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Coins className="h-4 w-4 text-amber-600" />
-                          <span className="font-medium text-gray-900">{a.pointsValue} points</span>
-                        </div>
+                        {/* Reward Display */}
+                        {(() => {
+                          const rewardType = a.ActivityTemplate.rewardType || 'points';
+                          const rewardConfig = a.ActivityTemplate.rewardConfig;
+
+                          if (rewardType === 'sku' && rewardConfig) {
+                            return (
+                              <div className="flex items-center gap-2 text-sm">
+                                <ShoppingCart className="h-4 w-4 text-purple-600" />
+                                <span className="font-medium text-gray-900">
+                                  {rewardConfig.label || 'SKU Reward'}
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          if (rewardType === 'monetary' && rewardConfig) {
+                            return (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Coins className="h-4 w-4 text-green-600" />
+                                <span className="font-medium text-gray-900">
+                                  ${rewardConfig.amount} {rewardConfig.currency || 'USD'}
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          // Default to points
+                          return (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Coins className="h-4 w-4 text-amber-600" />
+                              <span className="font-medium text-gray-900">{a.pointsValue} points</span>
+                            </div>
+                          );
+                        })()}
 
                         {a.deadline && (
                           <div className="flex items-center gap-2 text-xs text-gray-500">
