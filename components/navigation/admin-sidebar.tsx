@@ -10,6 +10,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Building2,
   ClipboardList,
   Link2,
@@ -20,6 +21,7 @@ import {
   UserCog,
   Code,
   MessageSquare,
+  Mail,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -30,17 +32,29 @@ interface AdminSidebarProps {
   isSuperAdmin?: boolean;
 }
 
-const workspaceNavigation = [
+const primaryNavigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { name: 'Participants', href: '/admin/participants', icon: Users },
+];
+
+const challengeManagement = [
   { name: 'Challenges', href: '/admin/challenges', icon: Trophy },
-  { name: 'Manager Queue', href: '/admin/manager/queue', icon: ClipboardList },
-  { name: 'Points', href: '/admin/points', icon: Coins },
   { name: 'Activities', href: '/admin/activity-templates', icon: ClipboardList },
-  { name: 'Emails', href: '/admin/emails', icon: Settings },
-  { name: 'Communications', href: '/admin/communications', icon: MessageSquare },
+  { name: 'Manager Queue', href: '/admin/manager/queue', icon: ClipboardList },
+];
+
+const participantManagement = [
+  { name: 'Participants', href: '/admin/participants', icon: Users },
+  { name: 'Points', href: '/admin/points', icon: Coins },
   { name: 'Invites', href: '/admin/invites', icon: Link2 },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+];
+
+const communications = [
+  { name: 'Announcements', href: '/admin/communications', icon: MessageSquare },
+  { name: 'Email Settings', href: '/admin/emails', icon: Mail },
+];
+
+const configuration = [
+  { name: 'Workspace Settings', href: '/admin/settings', icon: Settings },
   { name: 'API Docs', href: '/admin/api-docs', icon: Code },
   { name: 'Profile', href: '/admin/profile', icon: UserIcon },
 ];
@@ -51,6 +65,98 @@ const superAdminNavigation = [
   { name: 'Manage Members', href: '/admin/users', icon: UserCog, superAdminOnly: true },
   { name: 'Platform Settings', href: '/admin/platform-settings', icon: Settings, superAdminOnly: true },
 ];
+
+interface CollapsibleSectionProps {
+  title: string;
+  items: Array<{ name: string; href: string; icon: any }>;
+  workspace: { slug: string };
+  pathname: string;
+  collapsed: boolean;
+  defaultExpanded?: boolean;
+}
+
+function CollapsibleSection({ title, items, workspace, pathname, collapsed, defaultExpanded = true }: CollapsibleSectionProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  // Check if any item in this section is active
+  const hasActiveItem = items.some(item => pathname === `/w/${workspace.slug}${item.href}`);
+
+  if (collapsed) {
+    // In collapsed mode, show items without section headers
+    return (
+      <ul className="space-y-2">
+        {items.map((item) => {
+          const href = `/w/${workspace.slug}${item.href}`;
+          const isActive = pathname === href;
+
+          return (
+            <li key={item.name}>
+              <Link
+                href={href}
+                className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-coral-50 text-coral-700 border border-coral-200'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
+                }`}
+                title={item.name}
+              >
+                <item.icon
+                  className={`flex-shrink-0 h-5 w-5 mx-auto ${
+                    isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
+                  }`}
+                />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors rounded-lg ${
+          hasActiveItem ? 'text-coral-700 bg-coral-50' : 'text-gray-600 hover:bg-gray-50'
+        }`}
+      >
+        <span>{title}</span>
+        <ChevronDown
+          className={`h-4 w-4 transition-transform ${expanded ? 'transform rotate-180' : ''}`}
+        />
+      </button>
+      {expanded && (
+        <ul className="space-y-1 mt-1">
+          {items.map((item) => {
+            const href = `/w/${workspace.slug}${item.href}`;
+            const isActive = pathname === href;
+
+            return (
+              <li key={item.name}>
+                <Link
+                  href={href}
+                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-coral-50 text-coral-700 border border-coral-200'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
+                  }`}
+                >
+                  <item.icon
+                    className={`flex-shrink-0 h-5 w-5 mr-3 ${
+                      isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
+                    }`}
+                  />
+                  <span>{item.name}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -95,7 +201,7 @@ export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminS
 
         {/* Navigation */}
         <nav className="flex-1 p-4 overflow-y-auto">
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Superadmin Section */}
             {isSuperAdmin && (
               <div>
@@ -133,41 +239,77 @@ export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminS
               </div>
             )}
 
-            {/* Workspace Section */}
-            <div>
-              {!collapsed && isSuperAdmin && (
-                <h3 className="px-3 text-xs font-semibold text-coral-600 uppercase tracking-wider mb-2">
-                  Workspace Admin
-                </h3>
-              )}
-              <ul className="space-y-2">
-                {workspaceNavigation.map((item) => {
-                  const href = `/w/${workspace.slug}${item.href}`;
-                  const isActive = pathname === href;
+            {/* Primary Navigation - Always visible, not collapsible */}
+            {!collapsed && isSuperAdmin && (
+              <h3 className="px-3 text-xs font-semibold text-coral-600 uppercase tracking-wider">
+                Workspace Admin
+              </h3>
+            )}
 
-                  return (
-                    <li key={item.name}>
-                      <Link
-                        href={href}
-                        className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                          isActive
-                            ? 'bg-coral-50 text-coral-700 border border-coral-200'
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
-                        }`}
-                        title={collapsed ? item.name : undefined}
-                      >
-                        <item.icon
-                          className={`flex-shrink-0 h-5 w-5 ${
-                            isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
-                          } ${collapsed ? 'mx-auto' : 'mr-3'}`}
-                        />
-                        {!collapsed && <span>{item.name}</span>}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+            <ul className="space-y-2">
+              {primaryNavigation.map((item) => {
+                const href = `/w/${workspace.slug}${item.href}`;
+                const isActive = pathname === href;
+
+                return (
+                  <li key={item.name}>
+                    <Link
+                      href={href}
+                      className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-coral-50 text-coral-700 border border-coral-200'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
+                      }`}
+                      title={collapsed ? item.name : undefined}
+                    >
+                      <item.icon
+                        className={`flex-shrink-0 h-5 w-5 ${
+                          isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
+                        } ${collapsed ? 'mx-auto' : 'mr-3'}`}
+                      />
+                      {!collapsed && <span>{item.name}</span>}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Collapsible Sections */}
+            <CollapsibleSection
+              title="Challenge Management"
+              items={challengeManagement}
+              workspace={workspace}
+              pathname={pathname}
+              collapsed={collapsed}
+              defaultExpanded={true}
+            />
+
+            <CollapsibleSection
+              title="Participant Management"
+              items={participantManagement}
+              workspace={workspace}
+              pathname={pathname}
+              collapsed={collapsed}
+              defaultExpanded={true}
+            />
+
+            <CollapsibleSection
+              title="Communications"
+              items={communications}
+              workspace={workspace}
+              pathname={pathname}
+              collapsed={collapsed}
+              defaultExpanded={false}
+            />
+
+            <CollapsibleSection
+              title="Configuration"
+              items={configuration}
+              workspace={workspace}
+              pathname={pathname}
+              collapsed={collapsed}
+              defaultExpanded={false}
+            />
           </div>
         </nav>
       </div>

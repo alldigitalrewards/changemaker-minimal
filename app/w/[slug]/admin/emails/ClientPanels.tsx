@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { SplitViewEditor } from '@/components/emails/split-view-editor'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 export function DefaultEmailsPanel({ slug, workspaceName, userEmail }: { slug: string; workspaceName: string; userEmail: string }) {
   const [toEmail, setToEmail] = useState(userEmail)
@@ -73,6 +75,10 @@ export type TemplateRow = {
 export function TemplatesPanel({ slug }: { slug: string }) {
   const [templates, setTemplates] = useState<TemplateRow[] | null>(null)
   const [loading, setLoading] = useState(true)
+  const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null)
+  const [workspaceInfo, setWorkspaceInfo] = useState<{ name: string; brandColor?: string } | null>(null)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [editState, setEditState] = useState<Record<string, { subject: string; html: string; enabled: boolean }>>({})
 
   const load = async () => {
     setLoading(true)
@@ -80,6 +86,17 @@ export function TemplatesPanel({ slug }: { slug: string }) {
       const res = await fetch(`/api/workspaces/${slug}/emails/templates`)
       const data = await res.json()
       setTemplates(data.templates || [])
+
+      // Load initial edit state
+      const initialState: Record<string, { subject: string; html: string; enabled: boolean }> = {}
+      data.templates?.forEach((t: TemplateRow) => {
+        initialState[t.type] = {
+          subject: t.subject ?? '',
+          html: t.html ?? '',
+          enabled: t.enabled
+        }
+      })
+      setEditState(initialState)
     } catch (e) {
       toast.error('Failed to load templates')
     } finally {
@@ -87,7 +104,24 @@ export function TemplatesPanel({ slug }: { slug: string }) {
     }
   }
 
-  useEffect(() => { load() // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadWorkspaceInfo = async () => {
+    try {
+      const res = await fetch(`/api/workspaces/${slug}/emails/settings`)
+      const data = await res.json()
+      setWorkspaceInfo({
+        name: data.settings?.fromName || slug,
+        brandColor: data.settings?.brandColor || '#F97316'
+      })
+    } catch (e) {
+      // Fallback to basic info
+      setWorkspaceInfo({ name: slug })
+    }
+  }
+
+  useEffect(() => {
+    load()
+    loadWorkspaceInfo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const types: TemplateRow['type'][] = ['INVITE', 'EMAIL_RESENT', 'ENROLLMENT_UPDATE', 'REMINDER', 'GENERIC']
@@ -105,54 +139,119 @@ export function TemplatesPanel({ slug }: { slug: string }) {
     return found || { type: t, subject: null, html: null, enabled: false, updatedAt: new Date().toISOString() }
   }
 
+  const toggleExpanded = (type: string) => {
+    setExpandedTemplate(expandedTemplate === type ? null : type)
+  }
+
+  const updateEditState = (type: string, field: 'subject' | 'html' | 'enabled', value: string | boolean) => {
+    setEditState(prev => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: value
+      }
+    }))
+  }
+
+  const save = async (type: TemplateRow['type']) => {
+    setSaving(type)
+    try {
+      const state = editState[type]
+      const res = await fetch(`/api/workspaces/${slug}/emails/templates/${type.toLowerCase()}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: state.subject,
+          html: state.html,
+          enabled: state.enabled
+        })
+      })
+      if (!res.ok) throw new Error('Save failed')
+      toast.success(`${type} template saved`)
+      await load()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save template')
+    } finally {
+      setSaving(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {types.map(type => {
         const row = getRow(type)
-        const [subject, setSubject] = [row.subject ?? '', (v: string) => { row.subject = v }]
-        const [html, setHtml] = [row.html ?? '', (v: string) => { row.html = v }]
-        const [enabled, setEnabled] = [row.enabled, (v: boolean) => { row.enabled = v }]
-
-        const save = async () => {
-          try {
-            const res = await fetch(`/api/workspaces/${slug}/emails/templates/${type.toLowerCase()}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ subject: row.subject, html: row.html, enabled: row.enabled })
-            })
-            if (!res.ok) throw new Error('Save failed')
-            toast.success(`${type} template saved`)
-            await load()
-          } catch (e) {
-            toast.error(e instanceof Error ? e.message : 'Failed to save template')
-          }
-        }
+        const isExpanded = expandedTemplate === type
+        const state = editState[type] || { subject: row.subject ?? '', html: row.html ?? '', enabled: row.enabled }
+        const isSaving = saving === type
 
         return (
           <Card key={type}>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{type}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <span>{type}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleExpanded(type)}
+                      className="h-8"
+                    >
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="h-4 w-4 mr-1" />
+                          Collapse
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4 mr-1" />
+                          Edit Template
+                        </>
+                      )}
+                    </Button>
+                  </CardTitle>
+                  <CardDescription>
+                    Override subject and body to customize this email for the workspace.
+                  </CardDescription>
+                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-gray-600">Enabled</span>
-                  <Switch checked={enabled} onCheckedChange={setEnabled as any} />
+                  <Switch
+                    checked={state.enabled}
+                    onCheckedChange={(checked) => updateEditState(type, 'enabled', checked)}
+                  />
                 </div>
-              </CardTitle>
-              <CardDescription>Override subject and body to customize this email for the workspace.</CardDescription>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-600">Subject</label>
-                <Input defaultValue={subject} onChange={e => setSubject(e.target.value)} placeholder={`Subject for ${type}`} />
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">HTML</label>
-                <Textarea defaultValue={html} onChange={e => setHtml(e.target.value)} placeholder="HTML content with tokens like {{workspace.name}}" rows={8} />
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={save}>Save</Button>
-              </div>
-            </CardContent>
+            {isExpanded && (
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">Subject</label>
+                  <Input
+                    value={state.subject}
+                    onChange={e => updateEditState(type, 'subject', e.target.value)}
+                    placeholder={`Subject for ${type}`}
+                  />
+                </div>
+                <SplitViewEditor
+                  value={state.html}
+                  onChange={(html) => updateEditState(type, 'html', html)}
+                  workspaceSlug={slug}
+                  templateType={type}
+                  workspaceName={workspaceInfo?.name}
+                  brandColor={workspaceInfo?.brandColor}
+                  subject={state.subject}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => save(type)}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? 'Saving...' : 'Save Template'}
+                  </Button>
+                </div>
+              </CardContent>
+            )}
           </Card>
         )
       })}
