@@ -1095,9 +1095,12 @@ async function seed() {
             },
           });
 
-          // Add activities to ALL published challenges
+          // Add activities to published challenges that match the template's reward type
           const workspaceChallenges = allChallenges.filter(
-            (c) => c.workspaceId === workspace.id && c.status === "PUBLISHED",
+            (c) =>
+              c.workspaceId === workspace.id &&
+              c.status === "PUBLISHED" &&
+              c.rewardType === template.rewardType, // Only match same reward type
           );
           for (const challenge of workspaceChallenges) {
             await prisma.activity.create({
@@ -1229,6 +1232,7 @@ async function seed() {
       const activities = await prisma.activity.findMany({
         where: { challengeId: enrollment.challengeId },
         include: { ActivityTemplate: true },
+        orderBy: { createdAt: 'asc' }, // Deterministic ordering
         take: 8, // Up to 8 activities per enrollment for richer data
       });
 
@@ -1520,6 +1524,7 @@ async function seed() {
       // Get invite codes for this workspace
       const workspaceInvites = await prisma.inviteCode.findMany({
         where: { workspaceId: workspace.id },
+        orderBy: { createdAt: 'asc' }, // Deterministic ordering
       });
 
       // Create redemptions for first 2 participants using the general invite
