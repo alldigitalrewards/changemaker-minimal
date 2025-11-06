@@ -97,19 +97,41 @@ export async function ensureAuthUser(
       createError?.message?.includes("already been registered") ||
       createError?.message?.includes("already exists")
     ) {
-      const { data: userData } = await supabase.auth.admin.listUsers();
-      const existingUser = userData?.users?.find((u) => u.email === email);
+      // Search through paginated users to find the existing user
+      let page = 1;
+      const perPage = 1000;
+      let existingUser = null;
+
+      while (page < 10 && !existingUser) {
+        // Max 10 pages = 10,000 users
+        const { data: userData } = await supabase.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+
+        if (!userData?.users || userData.users.length === 0) break;
+
+        existingUser = userData.users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        page++;
+      }
 
       if (existingUser) {
-        // Optionally update metadata
-        if (Object.keys(metadata).length > 0) {
-          await supabase.auth.admin.updateUserById(existingUser.id, {
-            user_metadata: metadata,
-          });
-        }
+        // Update user password and metadata to ensure consistency
+        await supabase.auth.admin.updateUserById(existingUser.id, {
+          password,
+          user_metadata: metadata,
+        });
 
         return { userId: existingUser.id, created: false };
       }
+
+      // If we still can't find the user, log details for debugging
+      console.warn(
+        `Could not find existing user ${email} after searching ${(page - 1) * perPage} users`
+      );
     }
 
     // Failed to create or find user

@@ -456,11 +456,26 @@ model WorkspaceEmailTemplate {
   updatedBy   String?           @db.Uuid
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @default(now())
+
+  // AI-specific fields
+  name                String?  // User-friendly name: "Challenge Invitation", "Weekly Reminder"
+  description         String?  // Brief description of template purpose
+  tags                String[] @default([]) // Tags for categorization: ["onboarding", "reminder"]
+  conversationHistory Json?    // Array of AI conversation messages that generated this template
+  aiModel             String?  // Model used: "claude-sonnet-4-5-20250929"
+  generatedByAI       Boolean  @default(false) // Whether created via AI composer
+
+  // Version tracking
+  version             Int      @default(1)
+  previousVersionId   String?  @db.Uuid // Parent template if this is a version
+
   User        User?             @relation(fields: [updatedBy], references: [id])
   Workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, type])
   @@index([workspaceId])
+  @@index([workspaceId, type])
+  @@index([workspaceId, generatedByAI])
 }
 
 model WorkspaceMembership {

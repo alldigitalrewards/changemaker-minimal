@@ -9,6 +9,11 @@
  *   pnpm seed                     # Defaults to demo
  */
 
+import * as dotenv from "dotenv";
+
+// Load environment variables from .env.local
+dotenv.config({ path: ".env.local" });
+
 import { runSeedProfile, type SeedProfile } from "../lib/test-support/seeds/profiles";
 import { prisma } from "../lib/prisma";
 

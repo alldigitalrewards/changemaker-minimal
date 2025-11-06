@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { SplitViewEditor } from '@/components/emails/split-view-editor'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { TemplateBrowser, EmailTemplate } from '@/components/emails/TemplateBrowser'
+import { AIConversationPanel } from '@/components/emails/AIConversationPanel'
 
 export function DefaultEmailsPanel({ slug, workspaceName, userEmail }: { slug: string; workspaceName: string; userEmail: string }) {
   const [toEmail, setToEmail] = useState(userEmail)
@@ -316,6 +318,82 @@ export function TemplatesPanel({ slug, userEmail }: { slug: string; userEmail: s
           </Card>
         )
       })}
+    </div>
+  )
+}
+
+export function AIComposerPanel({ slug, workspaceName }: { slug: string; workspaceName: string }) {
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null)
+  const [brandColor, setBrandColor] = useState<string>('#F97316')
+
+  // Load workspace settings for brand color
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await fetch(`/api/workspaces/${slug}/emails/settings`)
+        const data = await res.json()
+        if (data.settings?.brandColor) {
+          setBrandColor(data.settings.brandColor)
+        }
+      } catch (error) {
+        console.error('Failed to load workspace settings:', error)
+      }
+    }
+    loadSettings()
+  }, [slug])
+
+  const handleLoadTemplate = useCallback((template: EmailTemplate) => {
+    setSelectedTemplate(template)
+  }, [])
+
+  const handleStartBlank = useCallback(() => {
+    setSelectedTemplate(null)
+  }, [])
+
+  const handleSave = useCallback(async (data: {
+    subject: string
+    html: string
+    conversationHistory: any[]
+  }) => {
+    try {
+      // TODO: Implement save to database (Phase 3)
+      toast.success('Template saved (Phase 3 coming soon)')
+      console.log('Save data:', data)
+    } catch (error) {
+      toast.error('Failed to save template')
+    }
+  }, [])
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left: Template Browser */}
+      <div className="lg:col-span-1">
+        <div className="sticky top-6">
+          <TemplateBrowser
+            workspaceSlug={slug}
+            onLoadTemplate={handleLoadTemplate}
+            onStartBlank={handleStartBlank}
+          />
+        </div>
+      </div>
+
+      {/* Right: AI Conversation Panel */}
+      <div className="lg:col-span-2">
+        <AIConversationPanel
+          workspaceSlug={slug}
+          workspaceName={workspaceName}
+          brandColor={brandColor}
+          initialTemplate={selectedTemplate ? {
+            id: selectedTemplate.id,
+            name: selectedTemplate.name,
+            type: selectedTemplate.type,
+            subject: selectedTemplate.subject,
+            html: selectedTemplate.html,
+            conversationHistory: selectedTemplate.conversationHistory as any,
+          } : undefined}
+          onSave={handleSave}
+        />
+      </div>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentWorkspace, getUserWorkspaceRole } from '@/lib/workspace-context'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { DefaultEmailsPanel, TemplatesPanel, EmailSettingsPanel } from './ClientPanels'
+import { DefaultEmailsPanel, TemplatesPanel, EmailSettingsPanel, AIComposerPanel } from './ClientPanels'
 
 interface EmailsPageProps {
   params: Promise<{ slug: string }>
@@ -32,6 +32,7 @@ export default async function EmailsPage({ params }: EmailsPageProps) {
         <TabsList>
           <TabsTrigger value="default">Default Emails</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="ai-composer">AI Composer</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -41,6 +42,10 @@ export default async function EmailsPage({ params }: EmailsPageProps) {
 
         <TabsContent value="templates">
           <TemplatesPanel slug={slug} userEmail={user.email || ''} />
+        </TabsContent>
+
+        <TabsContent value="ai-composer">
+          <AIComposerPanel slug={slug} workspaceName={workspace.name} />
         </TabsContent>
 
         <TabsContent value="settings">
