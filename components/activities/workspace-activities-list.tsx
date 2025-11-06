@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ActivityDetailDialog } from './activity-detail-dialog';
-import { Calendar, Users, Coins, Clock, CheckCircle, XCircle, AlertTriangle, Trophy, ExternalLink } from 'lucide-react';
+import { Calendar, Users, Coins, Clock, CheckCircle, XCircle, AlertTriangle, Trophy, ExternalLink, ShoppingCart } from 'lucide-react';
 import { format } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
@@ -15,6 +15,7 @@ interface Challenge {
   startDate: string | Date;
   endDate: string | Date;
   status: string;
+  rewardType?: 'points' | 'sku' | 'monetary';
   _count?: {
     enrollments: number;
   };
@@ -78,6 +79,17 @@ export function WorkspaceActivitiesList({
     return { label: 'ENDED', variant: 'secondary' as const, icon: XCircle };
   };
 
+  const getRewardTypeBadge = (rewardType: 'points' | 'sku' | 'monetary') => {
+    switch (rewardType) {
+      case 'points':
+        return { label: 'Points', icon: Coins, className: 'bg-amber-100 text-amber-800 border-amber-300' };
+      case 'sku':
+        return { label: 'SKU Rewards', icon: ShoppingCart, className: 'bg-purple-100 text-purple-800 border-purple-300' };
+      case 'monetary':
+        return { label: 'Monetary', icon: Coins, className: 'bg-green-100 text-green-800 border-green-300' };
+    }
+  };
+
   const handleChallengeClick = (challengeId: string) => {
     router.push(`/w/${workspaceSlug}/admin/challenges/${challengeId}`);
   };
@@ -113,6 +125,16 @@ export function WorkspaceActivitiesList({
                           <Badge variant={status.variant} className="flex items-center gap-1">
                             <StatusIcon className="h-3 w-3" />
                             {status.label}
+                          </Badge>
+                        );
+                      })()}
+                      {challenge.rewardType && (() => {
+                        const rewardBadge = getRewardTypeBadge(challenge.rewardType);
+                        const RewardIcon = rewardBadge.icon;
+                        return (
+                          <Badge variant="outline" className={`flex items-center gap-1 ${rewardBadge.className}`}>
+                            <RewardIcon className="h-3 w-3" />
+                            {rewardBadge.label}
                           </Badge>
                         );
                       })()}

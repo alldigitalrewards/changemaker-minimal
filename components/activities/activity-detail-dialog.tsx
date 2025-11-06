@@ -38,6 +38,7 @@ interface Challenge {
   startDate: string | Date;
   endDate: string | Date;
   status: string;
+  rewardType?: 'points' | 'sku' | 'monetary';
   _count?: {
     enrollments: number;
   };
