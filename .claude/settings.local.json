@@ -71,7 +71,8 @@
       "Bash(killall:*)",
       "mcp__vercel-awesome-ai__list_projects",
       "Bash(pnpm tsx:*)",
-      "mcp__supabase-stage__execute_sql"
+      "mcp__supabase-stage__execute_sql",
+      "mcp__context7__resolve-library-id"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

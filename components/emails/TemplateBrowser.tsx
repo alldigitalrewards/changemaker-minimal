@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Bot, FileText, Plus, Search } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Bot, FileText, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { EmailTemplateType } from '@prisma/client'
 
 export interface EmailTemplate {
@@ -30,6 +37,9 @@ interface TemplateBrowserProps {
   onStartBlank?: () => void
 }
 
+type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'type'
+type SourceFilter = 'all' | 'ai' | 'traditional'
+
 export function TemplateBrowser({
   workspaceSlug,
   onLoadTemplate,
@@ -38,6 +48,11 @@ export function TemplateBrowser({
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [tagFilter, setTagFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<SortOption>('recent')
+  const [showFilters, setShowFilters] = useState(false)
 
   // Load templates on mount
   const loadTemplates = async () => {
@@ -54,26 +69,89 @@ export function TemplateBrowser({
     }
   }
 
-  // Load templates on mount
   useEffect(() => {
     loadTemplates()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Filter templates based on search
-  const filteredTemplates = templates.filter(template => {
-    const query = searchQuery.toLowerCase()
-    return (
-      (template.name?.toLowerCase().includes(query)) ||
-      (template.description?.toLowerCase().includes(query)) ||
-      (template.type?.toLowerCase().includes(query)) ||
-      (template.tags?.some(tag => tag.toLowerCase().includes(query)))
-    )
-  })
+  // Get unique tags from all templates
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>()
+    templates.forEach(template => {
+      template.tags.forEach(tag => tagSet.add(tag))
+    })
+    return Array.from(tagSet).sort()
+  }, [templates])
 
-  // Group templates by AI-generated vs traditional
-  const aiTemplates = filteredTemplates.filter(t => t.generatedByAI)
-  const traditionalTemplates = filteredTemplates.filter(t => !t.generatedByAI)
+  // Filter and sort templates
+  const filteredTemplates = useMemo(() => {
+    let result = [...templates]
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      result = result.filter(template => {
+        return (
+          (template.name?.toLowerCase().includes(query)) ||
+          (template.description?.toLowerCase().includes(query)) ||
+          (template.type?.toLowerCase().includes(query)) ||
+          (template.tags?.some(tag => tag.toLowerCase().includes(query)))
+        )
+      })
+    }
+
+    // Type filter
+    if (typeFilter !== 'all') {
+      result = result.filter(template => template.type === typeFilter)
+    }
+
+    // Source filter
+    if (sourceFilter === 'ai') {
+      result = result.filter(template => template.generatedByAI)
+    } else if (sourceFilter === 'traditional') {
+      result = result.filter(template => !template.generatedByAI)
+    }
+
+    // Tag filter
+    if (tagFilter !== 'all') {
+      result = result.filter(template => template.tags.includes(tagFilter))
+    }
+
+    // Sort
+    switch (sortBy) {
+      case 'name-asc':
+        result.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        break
+      case 'name-desc':
+        result.sort((a, b) => (b.name || '').localeCompare(a.name || ''))
+        break
+      case 'type':
+        result.sort((a, b) => a.type.localeCompare(b.type))
+        break
+      case 'recent':
+      default:
+        result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        break
+    }
+
+    return result
+  }, [templates, searchQuery, typeFilter, sourceFilter, tagFilter, sortBy])
+
+  // Group templates by type when no search is active
+  const groupedTemplates = useMemo(() => {
+    if (searchQuery || typeFilter !== 'all' || sourceFilter !== 'all' || tagFilter !== 'all') {
+      return { flat: filteredTemplates }
+    }
+
+    const groups: Record<string, EmailTemplate[]> = {}
+    filteredTemplates.forEach(template => {
+      if (!groups[template.type]) {
+        groups[template.type] = []
+      }
+      groups[template.type].push(template)
+    })
+    return groups
+  }, [filteredTemplates, searchQuery, typeFilter, sourceFilter, tagFilter])
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -88,6 +166,8 @@ export function TemplateBrowser({
     return date.toLocaleDateString()
   }
 
+  const hasActiveFilters = typeFilter !== 'all' || sourceFilter !== 'all' || tagFilter !== 'all'
+
   return (
     <div className="space-y-4">
       {/* Quick Start Actions */}
@@ -101,23 +181,125 @@ export function TemplateBrowser({
             <Plus className="h-4 w-4 mr-2" />
             Start from Blank
           </Button>
-          <Button variant="outline" className="flex-1" disabled={templates.length === 0}>
-            <FileText className="h-4 w-4 mr-2" />
-            Load Template
-          </Button>
         </CardContent>
       </Card>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search templates by name, type, or tags..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* Search and Filters */}
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search templates by name, type, or tags..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Filter Toggle */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="gap-2"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {showFilters ? 'Hide' : 'Show'} Filters
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-1">
+                  {[typeFilter !== 'all', sourceFilter !== 'all', tagFilter !== 'all'].filter(Boolean).length}
+                </Badge>
+              )}
+            </Button>
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setTypeFilter('all')
+                  setSourceFilter('all')
+                  setTagFilter('all')
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+
+          {/* Filter Controls */}
+          {showFilters && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t">
+              {/* Type Filter */}
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Type</label>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="INVITE">Invite</SelectItem>
+                    <SelectItem value="EMAIL_RESENT">Email Resent</SelectItem>
+                    <SelectItem value="ENROLLMENT_UPDATE">Enrollment Update</SelectItem>
+                    <SelectItem value="REMINDER">Reminder</SelectItem>
+                    <SelectItem value="GENERIC">Generic</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Source Filter */}
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Source</label>
+                <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    <SelectItem value="ai">AI Generated</SelectItem>
+                    <SelectItem value="traditional">Traditional</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tag Filter */}
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Tag</label>
+                <Select value={tagFilter} onValueChange={setTagFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tags</SelectItem>
+                    {allTags.map(tag => (
+                      <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* Sort */}
+          <div className="flex items-center justify-between pt-2 border-t">
+            <span className="text-sm text-muted-foreground">Sort by:</span>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">Recent</SelectItem>
+                <SelectItem value="name-asc">Name A-Z</SelectItem>
+                <SelectItem value="name-desc">Name Z-A</SelectItem>
+                <SelectItem value="type">Type</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Templates List */}
       {loading ? (
@@ -136,19 +318,52 @@ export function TemplateBrowser({
             </p>
           </CardContent>
         </Card>
+      ) : filteredTemplates.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <p className="text-muted-foreground">No templates match your filters</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() => {
+                setSearchQuery('')
+                setTypeFilter('all')
+                setSourceFilter('all')
+                setTagFilter('all')
+              }}
+            >
+              Clear all filters
+            </Button>
+          </CardContent>
+        </Card>
+      ) : 'flat' in groupedTemplates ? (
+        // Flat list when filters are active
+        <div className="space-y-3">
+          {groupedTemplates.flat.map(template => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              onLoad={() => onLoadTemplate?.(template)}
+              formatDate={formatDate}
+            />
+          ))}
+        </div>
       ) : (
+        // Grouped by type when no filters
         <div className="space-y-6">
-          {/* AI-Generated Templates */}
-          {aiTemplates.length > 0 && (
-            <div className="space-y-3">
+          {Object.entries(groupedTemplates).map(([type, typeTemplates]) => (
+            <div key={type} className="space-y-3">
               <div className="flex items-center gap-2">
-                <Bot className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  AI-Generated Templates
+                  {type.replace(/_/g, ' ')}
                 </h3>
+                <Badge variant="outline" className="text-xs">
+                  {typeTemplates.length}
+                </Badge>
               </div>
               <div className="grid gap-3">
-                {aiTemplates.map(template => (
+                {typeTemplates.map(template => (
                   <TemplateCard
                     key={template.id}
                     template={template}
@@ -158,35 +373,7 @@ export function TemplateBrowser({
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Traditional Templates */}
-          {traditionalTemplates.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Traditional Templates
-              </h3>
-              <div className="grid gap-3">
-                {traditionalTemplates.map(template => (
-                  <TemplateCard
-                    key={template.id}
-                    template={template}
-                    onLoad={() => onLoadTemplate?.(template)}
-                    formatDate={formatDate}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* No results */}
-          {filteredTemplates.length === 0 && searchQuery && (
-            <Card>
-              <CardContent className="py-10 text-center text-muted-foreground">
-                No templates match your search
-              </CardContent>
-            </Card>
-          )}
+          ))}
         </div>
       )}
     </div>

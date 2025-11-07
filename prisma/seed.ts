@@ -294,13 +294,30 @@ async function getOrCreateSupabaseUser(
       return createData.user;
     }
 
-    // If user already exists (error code 'user_already_exists'), get the existing user
-    if (createError?.message?.includes("already been registered")) {
-      const { data: userData } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = userData?.users?.find((u) => u.email === email);
+    // If user already exists, search through paginated results to find them
+    if (createError?.message?.includes("already been registered") || createError?.message?.includes("already exists")) {
+      // List users with pagination to find the existing user
+      let page = 1;
+      const perPage = 1000;
+      let existingUser = null;
+
+      while (page <= 10 && !existingUser) { // Max 10 pages = 10,000 users
+        const { data: userData } = await supabaseAdmin.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+
+        if (!userData?.users || userData.users.length === 0) break;
+
+        existingUser = userData.users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        page++;
+      }
 
       if (existingUser) {
-        // Update user metadata and password
+        // Update user metadata and password to ensure consistency
         const { data: updateData } =
           await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
             password,
@@ -308,6 +325,11 @@ async function getOrCreateSupabaseUser(
           });
         return updateData?.user || existingUser;
       }
+
+      // If we still can't find the user after pagination, log warning
+      console.warn(
+        `Could not find existing user ${email} after searching ${(page - 1) * perPage} users`
+      );
     }
 
     console.error(`Failed to create/get user ${email}:`, createError);

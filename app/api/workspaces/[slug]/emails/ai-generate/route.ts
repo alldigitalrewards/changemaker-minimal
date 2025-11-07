@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
-import { streamText } from 'ai'
+import { streamText, tool } from 'ai'
 import { emailAIConfig, buildPrompt } from '@/lib/ai/email-ai-config'
+import { z } from 'zod'
 
 // Note: Using default Node.js runtime instead of Edge to support crypto module
 // export const runtime = 'edge'
@@ -66,57 +67,88 @@ export async function POST(
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const result = await streamText({
+          const result = streamText({
             model: emailAIConfig.model,
             messages,
             system: emailAIConfig.systemPrompt,
             temperature: emailAIConfig.temperature,
+            tools: {
+              saveTemplate: tool({
+                description: 'Save the current email template. Use this when the user asks to save, wants to save the template, or says "save this template", "save it", "please save", etc.',
+                parameters: z.object({
+                  reason: z.string().optional().describe('Optional note about why the template is being saved'),
+                }),
+                execute: async ({ reason }) => {
+                  // This is a client-side action, so we just return a signal
+                  return { action: 'save', reason }
+                },
+              }),
+            },
           })
 
           let accumulatedText = ''
           let extractedSubject = existingSubject
           let extractedHtml = ''
 
-          for await (const chunk of result.textStream) {
-            accumulatedText += chunk
+          // Listen to the full stream to handle both text and tool calls
+          for await (const part of result.fullStream) {
+            if (part.type === 'text-delta') {
+              accumulatedText += part.textDelta
 
-            // Try to extract subject and HTML as they stream in
-            // Look for subject in various formats
-            const subjectMatch = accumulatedText.match(/<title>(.*?)<\/title>/i)
-            if (subjectMatch && !extractedSubject) {
-              extractedSubject = subjectMatch[1].trim()
+              // Try to extract subject and HTML as they stream in
+              const subjectMatch = accumulatedText.match(/<title>(.*?)<\/title>/i)
+              if (subjectMatch && !extractedSubject) {
+                extractedSubject = subjectMatch[1].trim()
+              }
+
+              // Extract HTML (everything after DOCTYPE or starting with <html>)
+              const htmlMatch = accumulatedText.match(/(<!DOCTYPE[^>]*>[\s\S]*|<html[\s\S]*)/i)
+              if (htmlMatch) {
+                extractedHtml = htmlMatch[0]
+              } else {
+                extractedHtml = accumulatedText
+              }
+
+              // Send SSE update
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({
+                  type: 'text-delta',
+                  subject: extractedSubject,
+                  html: extractedHtml,
+                  done: false,
+                })}\n\n`)
+              )
+            } else if (part.type === 'tool-call') {
+              // Send tool call to client
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({
+                  type: 'tool-call',
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  args: part.args,
+                })}\n\n`)
+              )
+            } else if (part.type === 'tool-result') {
+              // Send tool result to client (optional, for debugging)
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({
+                  type: 'tool-result',
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  result: part.result,
+                })}\n\n`)
+              )
             }
-
-            // Extract HTML (everything after DOCTYPE or starting with <html>)
-            const htmlMatch = accumulatedText.match(/(<!DOCTYPE[^>]*>[\s\S]*|<html[\s\S]*)/i)
-            if (htmlMatch) {
-              extractedHtml = htmlMatch[0]
-            } else {
-              // If no DOCTYPE or <html>, use the whole accumulated text as HTML
-              extractedHtml = accumulatedText
-            }
-
-            // Send SSE update
-            const data = {
-              subject: extractedSubject,
-              html: extractedHtml,
-              done: false,
-            }
-
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-            )
           }
 
           // Send final message
-          const finalData = {
-            subject: extractedSubject,
-            html: extractedHtml,
-            done: true,
-          }
-
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(finalData)}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({
+              type: 'finish',
+              subject: extractedSubject,
+              html: extractedHtml,
+              done: true,
+            })}\n\n`)
           )
 
           controller.close()

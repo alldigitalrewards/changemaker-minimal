@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Bot, User, Send, Loader2, Save, Code } from 'lucide-react'
+import { Bot, User, Send, Loader2, Save, Code, X } from 'lucide-react'
 import { EmailPreview } from '@/components/emails/email-preview'
 import { cn } from '@/lib/utils'
 import { EmailTemplateType } from '@prisma/client'
+import { SaveTemplateModal } from './SaveTemplateModal'
+import { toast } from 'sonner'
 
 export interface ConversationMessage {
   role: 'user' | 'assistant'
@@ -26,6 +28,8 @@ interface AIConversationPanelProps {
     type: EmailTemplateType
     subject: string | null
     html: string | null
+    description?: string | null
+    tags?: string[]
     conversationHistory?: ConversationMessage[]
   }
   onSave?: (data: {
@@ -50,6 +54,9 @@ export function AIConversationPanel({
   const [currentHtml, setCurrentHtml] = useState(initialTemplate?.html || '')
   const [currentSubject, setCurrentSubject] = useState(initialTemplate?.subject || '')
   const [showHtmlEditor, setShowHtmlEditor] = useState(false)
+  const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(initialTemplate?.id || null)
+  const [loadedTemplateName, setLoadedTemplateName] = useState<string | null>(initialTemplate?.name || null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -104,7 +111,6 @@ export function AIConversationPanel({
 
       let accumulatedHtml = ''
       let accumulatedSubject = ''
-      let isReadingSubject = true
 
       // Add assistant message placeholder
       const assistantMessageIndex = messages.length + 1
@@ -129,24 +135,56 @@ export function AIConversationPanel({
             try {
               const data = JSON.parse(line.slice(6))
 
-              if (data.subject) {
-                accumulatedSubject = data.subject
-                setCurrentSubject(accumulatedSubject)
-              }
+              // Handle different event types from AI SDK
+              if (data.type === 'text-delta') {
+                // Text is being generated
+                if (data.subject) {
+                  accumulatedSubject = data.subject
+                  setCurrentSubject(accumulatedSubject)
+                }
 
-              if (data.html) {
-                accumulatedHtml = data.html
-                setCurrentHtml(accumulatedHtml)
-              }
+                if (data.html) {
+                  accumulatedHtml = data.html
+                  setCurrentHtml(accumulatedHtml)
+                }
+              } else if (data.type === 'tool-call') {
+                // AI wants to call a tool
+                if (data.toolName === 'saveTemplate') {
+                  // AI wants to save the template - open the modal
+                  setShowSaveModal(true)
 
-              if (data.done) {
+                  // Update the assistant message to reflect the action
+                  setMessages(prev => {
+                    const updated = [...prev]
+                    updated[assistantMessageIndex] = {
+                      role: 'assistant',
+                      content: 'I\'ll help you save this template.',
+                      timestamp: new Date(),
+                    }
+                    return updated
+                  })
+                }
+              } else if (data.type === 'finish') {
+                // Generation complete
+                if (data.subject) {
+                  accumulatedSubject = data.subject
+                  setCurrentSubject(accumulatedSubject)
+                }
+
+                if (data.html) {
+                  accumulatedHtml = data.html
+                  setCurrentHtml(accumulatedHtml)
+                }
+
                 // Update the assistant message with final content
                 setMessages(prev => {
                   const updated = [...prev]
-                  updated[assistantMessageIndex] = {
-                    role: 'assistant',
-                    content: `Generated email template with subject: "${accumulatedSubject}"`,
-                    timestamp: new Date(),
+                  if (updated[assistantMessageIndex]?.content === 'Generating...') {
+                    updated[assistantMessageIndex] = {
+                      role: 'assistant',
+                      content: `Generated email template with subject: "${accumulatedSubject}"`,
+                      timestamp: new Date(),
+                    }
                   }
                   return updated
                 })
@@ -179,26 +217,195 @@ export function AIConversationPanel({
     }
   }
 
+  // Update when initialTemplate changes
+  useEffect(() => {
+    if (initialTemplate) {
+      setMessages(initialTemplate.conversationHistory || [])
+      setCurrentHtml(initialTemplate.html || '')
+      setCurrentSubject(initialTemplate.subject || '')
+      setLoadedTemplateId(initialTemplate.id)
+      setLoadedTemplateName(initialTemplate.name)
+    }
+  }, [initialTemplate?.id])
+
+  const handleClearTemplate = () => {
+    setLoadedTemplateId(null)
+    setLoadedTemplateName(null)
+    setMessages([])
+    setCurrentHtml('')
+    setCurrentSubject('')
+  }
+
   const handleSaveTemplate = () => {
-    if (onSave) {
-      onSave({
+    setShowSaveModal(true)
+  }
+
+  const handleSaveModalSubmit = async (data: {
+    name: string
+    type: EmailTemplateType
+    description?: string
+    tags: string[]
+    updateExisting?: boolean
+  }) => {
+    try {
+      const payload = {
+        name: data.name,
+        type: data.type,
         subject: currentSubject,
         html: currentHtml,
+        description: data.description,
+        tags: data.tags,
         conversationHistory: messages,
-      })
+        aiModel: 'claude-sonnet-4-5-20250929',
+        updateExisting: data.updateExisting,
+        existingTemplateId: loadedTemplateId,
+      }
+
+      const response = await fetch(
+        `/api/workspaces/${workspaceSlug}/emails/templates/ai-save`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      )
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save template')
+      }
+
+      const result = await response.json()
+      toast.success(
+        data.updateExisting
+          ? 'Template updated successfully'
+          : 'Template saved successfully'
+      )
+
+      // Update loaded template info
+      setLoadedTemplateId(result.template.id)
+      setLoadedTemplateName(result.template.name)
+
+      // Call parent onSave if provided
+      if (onSave) {
+        onSave({
+          subject: currentSubject,
+          html: currentHtml,
+          conversationHistory: messages,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to save template:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to save template')
+      throw error
     }
   }
 
-  const suggestedPrompts = [
-    'Make the header more colorful',
-    'Add recipient name personalization',
-    'Include workspace logo',
-    'Make it more professional',
-    'Add a bold call-to-action button',
-  ]
+  // Context-aware suggestions based on conversation state
+  const getSuggestedPrompts = () => {
+    // No messages yet - show template type examples
+    if (messages.length === 0) {
+      const typeExamples = {
+        INVITE: [
+          'Create a professional challenge invitation with call-to-action',
+          'Generate an exciting invitation email with deadline',
+          'Design a formal invitation with RSVP button',
+        ],
+        REMINDER: [
+          'Generate a friendly reminder email with urgency',
+          'Create a reminder with clear action items',
+          'Design a reminder email with deadline emphasis',
+        ],
+        ENROLLMENT_UPDATE: [
+          'Create an enrollment status update email',
+          'Generate a progress update with next steps',
+          'Design an update email with achievement highlights',
+        ],
+        GENERIC: [
+          'Design a newsletter-style email with sections',
+          'Create a professional announcement email',
+          'Generate a branded communication template',
+        ],
+        EMAIL_RESENT: [
+          'Create a follow-up email template',
+          'Generate a resend notification',
+          'Design a polite reminder to check inbox',
+        ],
+      }
+
+      return typeExamples[initialTemplate?.type || 'GENERIC'] || [
+        'Create a professional email template',
+        'Generate a branded email with clear structure',
+        'Design an engaging email with call-to-action',
+      ]
+    }
+
+    // After generation - show refinement suggestions
+    const refinements = []
+
+    // Add save suggestion if there's content
+    if (currentHtml) {
+      refinements.push('Save this template')
+    }
+
+    // Check for missing personalization
+    if (currentHtml && !currentHtml.includes('{{recipientName}}') && !currentHtml.includes('{{firstName}}')) {
+      refinements.push('Add recipient name personalization')
+    }
+
+    // Check for CTA button
+    if (currentHtml && !currentHtml.toLowerCase().includes('button') && !currentHtml.includes('{{actionUrl}}')) {
+      refinements.push('Add a clear call-to-action button')
+    }
+
+    // Check for workspace branding
+    if (currentHtml && !currentHtml.includes(workspaceName)) {
+      refinements.push('Include workspace name and branding')
+    }
+
+    // General refinements
+    refinements.push('Make it more formal')
+    refinements.push('Make it more casual')
+    refinements.push('Shorten the content')
+
+    // Template type specific suggestions
+    if (initialTemplate?.type === 'INVITE') {
+      refinements.push('Add RSVP deadline')
+      refinements.push('Include challenge details section')
+    } else if (initialTemplate?.type === 'REMINDER') {
+      refinements.push('Add sense of urgency')
+      refinements.push('List action items clearly')
+    }
+
+    return refinements.slice(0, 5) // Limit to 5 suggestions
+  }
+
+  const suggestedPrompts = getSuggestedPrompts()
 
   return (
     <div className="space-y-4">
+      {/* Loaded Template Indicator */}
+      {loadedTemplateName && (
+        <Card className="bg-muted/50">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Editing:</span>
+                <Badge variant="secondary">{loadedTemplateName}</Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearTemplate}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Conversation History */}
       <Card>
         <CardHeader>
@@ -290,21 +497,21 @@ export function AIConversationPanel({
           {/* Input Area */}
           <div className="mt-4 space-y-3">
             {/* Suggested Prompts */}
-            {messages.length === 0 && (
-              <div className="flex flex-wrap gap-2">
-                <span className="text-sm text-muted-foreground">Suggestions:</span>
-                {suggestedPrompts.map((prompt, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="cursor-pointer hover:bg-secondary/80"
-                    onClick={() => setInput(prompt)}
-                  >
-                    {prompt}
-                  </Badge>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground">
+                {messages.length === 0 ? 'Try:' : 'Refine:'}
+              </span>
+              {suggestedPrompts.map((prompt, index) => (
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="cursor-pointer hover:bg-secondary/80"
+                  onClick={() => setInput(prompt)}
+                >
+                  {prompt}
+                </Badge>
+              ))}
+            </div>
 
             {/* Input Field */}
             <div className="flex gap-2">
@@ -373,6 +580,24 @@ export function AIConversationPanel({
           />
         </CardContent>
       </Card>
+
+      {/* Save Template Modal */}
+      <SaveTemplateModal
+        open={showSaveModal}
+        onOpenChange={setShowSaveModal}
+        onSave={handleSaveModalSubmit}
+        existingTemplate={
+          loadedTemplateId && initialTemplate
+            ? {
+                id: loadedTemplateId,
+                name: loadedTemplateName,
+                type: initialTemplate.type,
+                description: initialTemplate.description || null,
+                tags: initialTemplate.tags || [],
+              }
+            : undefined
+        }
+      />
     </div>
   )
 }

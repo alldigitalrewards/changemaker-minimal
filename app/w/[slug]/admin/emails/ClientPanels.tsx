@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
 import { SplitViewEditor } from '@/components/emails/split-view-editor'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Bot } from 'lucide-react'
 import { TemplateBrowser, EmailTemplate } from '@/components/emails/TemplateBrowser'
 import { AIConversationPanel } from '@/components/emails/AIConversationPanel'
 
@@ -67,14 +68,20 @@ export function DefaultEmailsPanel({ slug, workspaceName, userEmail }: { slug: s
 }
 
 export type TemplateRow = {
+  id?: string
   type: 'INVITE' | 'EMAIL_RESENT' | 'ENROLLMENT_UPDATE' | 'REMINDER' | 'GENERIC'
   subject: string | null
   html: string | null
   enabled: boolean
   updatedAt: string
+  name?: string | null
+  description?: string | null
+  tags?: string[]
+  generatedByAI?: boolean
+  conversationHistory?: any
 }
 
-export function TemplatesPanel({ slug, userEmail }: { slug: string; userEmail: string }) {
+export function TemplatesPanel({ slug, userEmail, onOpenInAI }: { slug: string; userEmail: string; onOpenInAI?: (templateData: any) => void }) {
   const [templates, setTemplates] = useState<TemplateRow[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null)
@@ -234,6 +241,12 @@ export function TemplatesPanel({ slug, userEmail }: { slug: string; userEmail: s
                 <div className="flex-1">
                   <CardTitle className="flex items-center gap-2">
                     <span>{type}</span>
+                    {row.generatedByAI && (
+                      <Badge variant="secondary" className="shrink-0">
+                        <Bot className="h-3 w-3 mr-1" />
+                        AI
+                      </Badge>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -252,6 +265,17 @@ export function TemplatesPanel({ slug, userEmail }: { slug: string; userEmail: s
                         </>
                       )}
                     </Button>
+                    {row.generatedByAI && onOpenInAI && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onOpenInAI(row)}
+                        className="h-8"
+                      >
+                        <Bot className="h-4 w-4 mr-1" />
+                        Open in AI Composer
+                      </Button>
+                    )}
                   </CardTitle>
                   <CardDescription>
                     Override subject and body to customize this email for the workspace.
@@ -322,9 +346,16 @@ export function TemplatesPanel({ slug, userEmail }: { slug: string; userEmail: s
   )
 }
 
-export function AIComposerPanel({ slug, workspaceName }: { slug: string; workspaceName: string }) {
-  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null)
+export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug: string; workspaceName: string; initialTemplate?: EmailTemplate | null }) {
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(initialTemplate || null)
   const [brandColor, setBrandColor] = useState<string>('#F97316')
+
+  // Update selectedTemplate when initialTemplate changes
+  useEffect(() => {
+    if (initialTemplate) {
+      setSelectedTemplate(initialTemplate)
+    }
+  }, [initialTemplate])
 
   // Load workspace settings for brand color
   useEffect(() => {
