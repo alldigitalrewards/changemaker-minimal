@@ -276,7 +276,7 @@ export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminS
 
             {/* Collapsible Sections */}
             <CollapsibleSection
-              title="Challenge Management"
+              title="Challenges"
               items={challengeManagement}
               workspace={workspace}
               pathname={pathname}
@@ -285,7 +285,7 @@ export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminS
             />
 
             <CollapsibleSection
-              title="Participant Management"
+              title="Participants"
               items={participantManagement}
               workspace={workspace}
               pathname={pathname}
