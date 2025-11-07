@@ -118,8 +118,10 @@ function CollapsibleSection({ title, items, workspace, pathname, collapsed, defa
     <div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors rounded-lg ${
-          hasActiveItem ? 'text-coral-700 bg-coral-50' : 'text-gray-600 hover:bg-gray-50'
+        className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors rounded-lg border ${
+          hasActiveItem
+            ? 'text-coral-700 bg-coral-50 border-coral-200'
+            : 'text-gray-600 hover:bg-gray-50 border-gray-200 hover:border-gray-300'
         }`}
       >
         <span>{title}</span>
@@ -188,13 +190,13 @@ export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminS
             )}
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-100 hover:border-gray-300 transition-colors"
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               {collapsed ? (
-                <ChevronRight className="h-4 w-4 text-gray-500" />
+                <ChevronRight className="h-4 w-4 text-gray-600" />
               ) : (
-                <ChevronLeft className="h-4 w-4 text-gray-500" />
+                <ChevronLeft className="h-4 w-4 text-gray-600" />
               )}
             </button>
           </div>

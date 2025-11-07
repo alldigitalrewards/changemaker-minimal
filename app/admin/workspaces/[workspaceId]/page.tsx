@@ -11,7 +11,6 @@ import {
   Trophy,
   Award,
   DollarSign,
-  Settings,
   Calendar,
   Building2,
   CheckCircle2,
@@ -19,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { getUserDisplayName } from '@/lib/user-utils';
+import { WorkspaceDetailHeader } from '@/components/admin/workspace-detail-header';
 
 interface PageProps {
   params: Promise<{
@@ -103,18 +103,11 @@ export default async function WorkspaceDetailPage(props: PageProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" asChild>
-              <Link href={`/w/${workspace.slug}/admin/dashboard`}>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                View as Admin
-              </Link>
-            </Button>
-            <Button>
-              <Settings className="h-4 w-4 mr-2" />
-              Edit Workspace
-            </Button>
-          </div>
+          <WorkspaceDetailHeader
+            workspaceId={workspace.id}
+            workspaceName={workspace.name}
+            workspaceSlug={workspace.slug}
+          />
         </div>
       </div>
 

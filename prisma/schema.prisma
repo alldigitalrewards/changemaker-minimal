@@ -261,7 +261,7 @@ model PointsLedger {
 }
 
 model RewardIssuance {
-  id                    String       @id @db.Uuid
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                String       @db.Uuid
   workspaceId           String       @db.Uuid
   challengeId           String?      @db.Uuid
@@ -274,6 +274,8 @@ model RewardIssuance {
   createdAt             DateTime     @default(now())
   issuedAt              DateTime?
   error                 String?
+  description           String? // Reason for reward issuance
+  issuedBy              String? @db.Uuid // Admin who issued the reward
   metadata              Json?
   externalTransactionId String?
   externalStatus        String?
@@ -286,10 +288,11 @@ model RewardIssuance {
   rewardStackWebhookReceived Boolean            @default(false)
   rewardStackErrorMessage    String?
 
-  ActivitySubmission ActivitySubmission?
-  Challenge          Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  User               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ActivitySubmission       ActivitySubmission?
+  Challenge                Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User                     User                @relation("RewardRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  IssuedByUser             User?               @relation("RewardIssuer", fields: [issuedBy], references: [id], onDelete: SetNull)
+  Workspace                Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([challengeId])
   @@index([status])
@@ -379,7 +382,8 @@ model User {
   PointsBalance                                 PointsBalance[]
   PointsLedger_PointsLedger_actorUserIdToUser   PointsLedger[]                   @relation("PointsLedger_actorUserIdToUser")
   PointsLedger_PointsLedger_toUserIdToUser      PointsLedger[]                   @relation("PointsLedger_toUserIdToUser")
-  RewardIssuance                                RewardIssuance[]
+  RewardIssuance_Recipient                      RewardIssuance[]                 @relation("RewardRecipient")
+  RewardIssuance_Issuer                         RewardIssuance[]                 @relation("RewardIssuer")
   WorkspaceEmailSettings                        WorkspaceEmailSettings[]
   WorkspaceEmailTemplate                        WorkspaceEmailTemplate[]
   WorkspaceMembership                           WorkspaceMembership[]
@@ -387,6 +391,7 @@ model User {
   WorkspacePointsBudget                         WorkspacePointsBudget[]
   WorkspaceParticipantSegment                   WorkspaceParticipantSegment[]    @relation("SegmentCreator")
   WorkspaceCommunication                        WorkspaceCommunication[]         @relation("CommunicationSender")
+  WorkspaceSku                                  WorkspaceSku[]                   @relation("SkuAddedBy")
 
   @@index([tenantId])
 }
@@ -427,8 +432,31 @@ model Workspace {
   WorkspacePointsBudget          WorkspacePointsBudget?
   WorkspaceParticipantSegment    WorkspaceParticipantSegment[]
   WorkspaceCommunication         WorkspaceCommunication[]
+  WorkspaceSku                   WorkspaceSku[]
 
   @@index([tenantId])
+}
+
+model WorkspaceSku {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @db.Uuid
+  skuId       String    // RewardSTACK SKU ID (e.g., "CVSEC100", "CPEC50", "APPLEWTCH")
+  name        String    // Display name
+  description String?   // Optional description
+  value       Int?      // Point value equivalent
+  isDefault   Boolean   @default(false) // Default SKUs assigned to all workspaces
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  addedBy     String?   @db.Uuid // Platform admin who added this SKU
+
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  User        User?     @relation("SkuAddedBy", fields: [addedBy], references: [id])
+
+  @@unique([workspaceId, skuId])
+  @@index([workspaceId])
+  @@index([skuId])
+  @@index([isDefault])
 }
 
 model WorkspaceEmailSettings {

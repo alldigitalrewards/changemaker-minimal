@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { Trophy, Target, CheckCircle, Clock, ArrowRight, Plus, Eye } from "lucide-react"
 import { AnnouncementCard } from "./announcement-card"
+import { RewardIssuancesCard } from "@/components/rewards/reward-issuances-card"
 
 interface EnrollmentCardProps {
   enrollment: {
@@ -158,21 +159,31 @@ export default async function ParticipantDashboard({
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Announcements & Updates</CardTitle>
-            <CardDescription>Stay up to date with workspace and challenge communications.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {relevantCommunications.length === 0 ? (
-              <div className="text-sm text-gray-600">No announcements yet. New updates will appear here.</div>
-            ) : (
-              relevantCommunications.slice(0, 5).map((comm) => (
-                <AnnouncementCard key={comm.id} communication={comm} />
-              ))
-            )}
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Announcements & Updates</CardTitle>
+              <CardDescription>Stay up to date with workspace and challenge communications.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {relevantCommunications.length === 0 ? (
+                <div className="text-sm text-gray-600">No announcements yet. New updates will appear here.</div>
+              ) : (
+                relevantCommunications.slice(0, 5).map((comm) => (
+                  <AnnouncementCard key={comm.id} communication={comm} />
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <RewardIssuancesCard
+            userId={dbUser.id}
+            workspaceId={workspace.id}
+            title="Your Rewards"
+            description="Your recent reward issuances"
+            maxDisplay={5}
+          />
+        </div>
 
         {/* Enhanced Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

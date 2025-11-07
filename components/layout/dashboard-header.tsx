@@ -150,7 +150,7 @@ export default function DashboardHeader({
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center space-x-3 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
                 <div className="w-8 h-8 bg-gradient-to-r from-coral-400 to-terracotta-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
@@ -161,7 +161,7 @@ export default function DashboardHeader({
                   {userName}
                 </span>
                 <ChevronDown
-                  className={`h-4 w-4 text-gray-500 transition-transform ${
+                  className={`h-4 w-4 text-gray-600 transition-transform ${
                     showUserMenu ? "rotate-180" : ""
                   }`}
                 />
@@ -187,7 +187,7 @@ export default function DashboardHeader({
 
                   <div className="border-t border-gray-100 mt-2 pt-2">
                     <Link href="/account">
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
+                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:border-l-2 hover:border-coral-500 flex items-center space-x-2 transition-all">
                         <Settings className="h-4 w-4" />
                         <span>My Account Settings</span>
                       </button>
@@ -197,7 +197,7 @@ export default function DashboardHeader({
                       <Link
                         href={`/w/${workspace.slug}/${role === "ADMIN" ? "admin" : "participant"}/profile`}
                       >
-                        <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2">
+                        <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:border-l-2 hover:border-coral-500 flex items-center space-x-2 transition-all">
                           <User className="h-4 w-4" />
                           <span>Workspace Profile</span>
                         </button>

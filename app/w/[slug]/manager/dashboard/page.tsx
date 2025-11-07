@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Users, Trophy, ClipboardList, Eye, MessageSquare } from "lucide-react"
 import { CollapsibleActivityFeed } from "../../admin/dashboard/collapsible-activity-feed"
+import { RewardIssuancesCard } from "@/components/rewards/reward-issuances-card"
 import { formatDistanceToNow } from "date-fns"
 
 export default async function ManagerDashboard({
@@ -320,65 +321,74 @@ export default async function ManagerDashboard({
         />
       </div>
 
-      {/* Recent Challenges */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Recent Challenges</CardTitle>
-              <CardDescription>Latest challenges in your workspace</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {stats?.Challenge.length === 0 ? (
-            <div className="text-center py-12 px-4">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Trophy className="h-8 w-8 text-gray-400" />
+      {/* Recent Challenges and Rewards side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recent Challenges</CardTitle>
+                <CardDescription>Latest challenges in your workspace</CardDescription>
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-2">No challenges yet</h3>
-              <p className="text-sm text-gray-600 max-w-sm mx-auto">
-                Challenges will appear here once they are created by workspace admins
-              </p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {stats?.Challenge.slice(0, 3).map((challenge) => (
-                <div
-                  key={challenge.id}
-                  className="group p-4 border border-gray-200 rounded-lg hover:border-coral-300 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 group-hover:text-coral-600 transition-colors">
-                          {challenge.title}
-                        </h3>
-                        <span className="shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                          {challenge.Enrollment.length} enrolled
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 line-clamp-1">{challenge.description}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" className="shrink-0" asChild>
-                      <Link href={`/w/${slug}/admin/challenges/${challenge.id}`}>
-                        View
-                      </Link>
-                    </Button>
-                  </div>
+          </CardHeader>
+          <CardContent>
+            {stats?.Challenge.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <Trophy className="h-8 w-8 text-gray-400" />
                 </div>
-              ))}
-              {stats?.Challenge && stats.Challenge.length > 3 && (
-                <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                  <Link href={`/w/${slug}/admin/challenges`}>
-                    View all {stats.Challenge.length} challenges
-                  </Link>
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <h3 className="text-base font-semibold text-gray-900 mb-2">No challenges yet</h3>
+                <p className="text-sm text-gray-600 max-w-sm mx-auto">
+                  Challenges will appear here once they are created by workspace admins
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {stats?.Challenge.slice(0, 3).map((challenge) => (
+                  <div
+                    key={challenge.id}
+                    className="group p-4 border border-gray-200 rounded-lg hover:border-coral-300 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-gray-900 group-hover:text-coral-600 transition-colors">
+                            {challenge.title}
+                          </h3>
+                          <span className="shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
+                            {challenge.Enrollment.length} enrolled
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-1">{challenge.description}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" className="shrink-0" asChild>
+                        <Link href={`/w/${slug}/admin/challenges/${challenge.id}`}>
+                          View
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {stats?.Challenge && stats.Challenge.length > 3 && (
+                  <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                    <Link href={`/w/${slug}/admin/challenges`}>
+                      View all {stats.Challenge.length} challenges
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <RewardIssuancesCard
+          workspaceId={workspace.id}
+          title="Recent Reward Issuances"
+          description="Latest rewards issued in workspace"
+          maxDisplay={5}
+        />
+      </div>
 
       {/* Quick Actions */}
       <Card>

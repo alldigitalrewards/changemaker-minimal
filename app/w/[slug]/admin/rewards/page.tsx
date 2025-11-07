@@ -22,9 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { AlertCircle, CheckCircle2, Clock, XCircle, RefreshCw, Search, RotateCw } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, XCircle, RefreshCw, Search, RotateCw, Plus } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
+import { RewardIssuanceDialog } from '@/components/admin/reward-issuance-dialog'
+import { RewardIssuanceDetailDialog } from '@/components/admin/reward-issuance-detail-dialog'
 
 interface RewardIssuance {
   id: string
@@ -37,15 +39,26 @@ interface RewardIssuance {
   rewardStackErrorMessage: string | null
   createdAt: string
   issuedAt: string | null
+  description: string | null
+  type: string
+  skuId: string | null
+  externalTransactionId: string | null
+  error: string | null
   User: {
     id: string
     email: string
     firstName: string | null
     lastName: string | null
+    displayName: string | null
   }
   Challenge: {
     id: string
     title: string
+  } | null
+  IssuedByUser?: {
+    email: string
+    firstName: string | null
+    lastName: string | null
   } | null
 }
 
@@ -98,14 +111,21 @@ export default function RewardsAdminPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Filter state
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [rewardStackStatusFilter, setRewardStackStatusFilter] = useState<string>('')
-  const [hasErrorFilter, setHasErrorFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [rewardStackStatusFilter, setRewardStackStatusFilter] = useState<string>('all')
+  const [hasErrorFilter, setHasErrorFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
   // Retry state
   const [selectedRewards, setSelectedRewards] = useState<Set<string>>(new Set())
   const [retrying, setRetrying] = useState(false)
+
+  // Issuance dialog state
+  const [issuanceDialogOpen, setIssuanceDialogOpen] = useState(false)
+
+  // Detail dialog state
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [selectedReward, setSelectedReward] = useState<RewardIssuance | null>(null)
 
   const load = async () => {
     if (!params?.slug) return
@@ -118,9 +138,9 @@ export default function RewardsAdminPage() {
         limit: '50',
       })
 
-      if (statusFilter) queryParams.set('status', statusFilter)
-      if (rewardStackStatusFilter) queryParams.set('rewardStackStatus', rewardStackStatusFilter)
-      if (hasErrorFilter) queryParams.set('hasError', hasErrorFilter)
+      if (statusFilter && statusFilter !== 'all') queryParams.set('status', statusFilter)
+      if (rewardStackStatusFilter && rewardStackStatusFilter !== 'all') queryParams.set('rewardStackStatus', rewardStackStatusFilter)
+      if (hasErrorFilter && hasErrorFilter !== 'all') queryParams.set('hasError', hasErrorFilter)
       if (searchQuery) queryParams.set('search', searchQuery)
 
       const res = await fetch(`/api/workspaces/${params.slug}/rewards?${queryParams.toString()}`)
@@ -291,13 +311,18 @@ export default function RewardsAdminPage() {
     return User.email
   }
 
+  const handleRowClick = (reward: RewardIssuance) => {
+    setSelectedReward(reward)
+    setDetailDialogOpen(true)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-navy-900">Reward Management</h1>
           <p className="text-sm text-gray-600">
-            Monitor and manage reward issuances across all challenges
+            Issue and monitor reward distributions to participants
           </p>
         </div>
         <div className="flex gap-2">
@@ -312,6 +337,14 @@ export default function RewardsAdminPage() {
               Retry Selected ({selectedRewards.size})
             </Button>
           )}
+          <Button
+            onClick={() => setIssuanceDialogOpen(true)}
+            className="bg-coral-500 hover:bg-coral-600"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Issue Reward
+          </Button>
           <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -364,7 +397,7 @@ export default function RewardsAdminPage() {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="PENDING">PENDING</SelectItem>
                   <SelectItem value="ISSUED">ISSUED</SelectItem>
                   <SelectItem value="FAILED">FAILED</SelectItem>
@@ -380,7 +413,7 @@ export default function RewardsAdminPage() {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="all">All statuses</SelectItem>
                   <SelectItem value="PENDING">PENDING</SelectItem>
                   <SelectItem value="PROCESSING">PROCESSING</SelectItem>
                   <SelectItem value="COMPLETED">COMPLETED</SelectItem>
@@ -397,7 +430,7 @@ export default function RewardsAdminPage() {
                   <SelectValue placeholder="All rewards" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All rewards</SelectItem>
+                  <SelectItem value="all">All rewards</SelectItem>
                   <SelectItem value="true">With errors only</SelectItem>
                 </SelectContent>
               </Select>
@@ -468,8 +501,12 @@ export default function RewardsAdminPage() {
                     {rewards.map((reward) => {
                       const canRetry = isRewardEligibleForRetry(reward)
                       return (
-                        <TableRow key={reward.id}>
-                          <TableCell>
+                        <TableRow
+                          key={reward.id}
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleRowClick(reward)}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selectedRewards.has(reward.id)}
                               disabled={!canRetry}
@@ -520,7 +557,7 @@ export default function RewardsAdminPage() {
                           <TableCell className="text-sm text-gray-600">
                             {formatDate(reward.issuedAt)}
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -598,6 +635,20 @@ export default function RewardsAdminPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Reward Issuance Dialog */}
+      <RewardIssuanceDialog
+        open={issuanceDialogOpen}
+        onOpenChange={setIssuanceDialogOpen}
+        onSuccess={load}
+      />
+
+      {/* Reward Issuance Detail Dialog */}
+      <RewardIssuanceDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        reward={selectedReward}
+      />
     </div>
   )
 }

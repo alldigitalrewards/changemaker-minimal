@@ -185,6 +185,26 @@ export async function requireManagerOrAdmin(
 }
 
 /**
+ * Requires authentication and platform super admin privileges
+ * Returns authenticated user with verified platform admin status
+ * Use this for platform-level administrative endpoints
+ */
+export async function requirePlatformAdmin(): Promise<AuthenticatedUser> {
+  const user = await requireAuth();
+
+  if (!isPlatformSuperAdmin(user)) {
+    throw NextResponse.json(
+      {
+        error: "Platform administrator privileges required for this operation",
+      },
+      { status: 403 },
+    );
+  }
+
+  return user;
+}
+
+/**
  * Wrapper for API route handlers with standardized error handling
  */
 export function withErrorHandling<T extends any[]>(

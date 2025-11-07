@@ -78,12 +78,20 @@ export async function GET(
               email: true,
               firstName: true,
               lastName: true,
+              displayName: true,
             },
           },
           Challenge: {
             select: {
               id: true,
               title: true,
+            },
+          },
+          IssuedByUser: {
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true,
             },
           },
         },
