@@ -136,8 +136,8 @@ export function AIConversationPanel({
               const data = JSON.parse(line.slice(6))
 
               // Handle different event types from AI SDK
-              if (data.type === 'text-delta') {
-                // Text is being generated
+              if (data.type === 'object-delta') {
+                // Structured object is being generated (streamObject)
                 if (data.subject) {
                   accumulatedSubject = data.subject
                   setCurrentSubject(accumulatedSubject)
@@ -146,23 +146,6 @@ export function AIConversationPanel({
                 if (data.html) {
                   accumulatedHtml = data.html
                   setCurrentHtml(accumulatedHtml)
-                }
-              } else if (data.type === 'tool-call') {
-                // AI wants to call a tool
-                if (data.toolName === 'saveTemplate') {
-                  // AI wants to save the template - open the modal
-                  setShowSaveModal(true)
-
-                  // Update the assistant message to reflect the action
-                  setMessages(prev => {
-                    const updated = [...prev]
-                    updated[assistantMessageIndex] = {
-                      role: 'assistant',
-                      content: 'I\'ll help you save this template.',
-                      timestamp: new Date(),
-                    }
-                    return updated
-                  })
                 }
               } else if (data.type === 'finish') {
                 // Generation complete

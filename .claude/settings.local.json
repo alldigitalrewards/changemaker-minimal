@@ -72,7 +72,8 @@
       "mcp__vercel-awesome-ai__list_projects",
       "Bash(pnpm tsx:*)",
       "mcp__supabase-stage__execute_sql",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "WebFetch(domain:ai-sdk.dev)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

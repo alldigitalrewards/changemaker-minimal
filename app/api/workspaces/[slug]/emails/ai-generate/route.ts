@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { streamText, tool } from 'ai'
+import { streamObject } from 'ai'
 import { emailAIConfig, buildPrompt } from '@/lib/ai/email-ai-config'
 import { z } from 'zod'
 
@@ -62,91 +62,47 @@ export async function POST(
       content: contextPrompt,
     })
 
-    // Create streaming response
+    // Define the output schema
+    const emailSchema = z.object({
+      subject: z.string().describe('Email subject line'),
+      html: z.string().describe('Complete HTML email template with inline CSS'),
+    })
+
+    // Create streaming response with structured output
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const result = streamText({
+          const result = streamObject({
             model: emailAIConfig.model,
+            schema: emailSchema,
             messages,
             system: emailAIConfig.systemPrompt,
             temperature: emailAIConfig.temperature,
-            tools: {
-              saveTemplate: tool({
-                description: 'Save the current email template. Use this when the user asks to save, wants to save the template, or says "save this template", "save it", "please save", etc.',
-                parameters: z.object({
-                  reason: z.string().optional().describe('Optional note about why the template is being saved'),
-                }),
-                execute: async ({ reason }) => {
-                  // This is a client-side action, so we just return a signal
-                  return { action: 'save', reason }
-                },
-              }),
-            },
           })
 
-          let accumulatedText = ''
-          let extractedSubject = existingSubject
-          let extractedHtml = ''
-
-          // Listen to the full stream to handle both text and tool calls
-          for await (const part of result.fullStream) {
-            if (part.type === 'text-delta') {
-              accumulatedText += part.textDelta
-
-              // Try to extract subject and HTML as they stream in
-              const subjectMatch = accumulatedText.match(/<title>(.*?)<\/title>/i)
-              if (subjectMatch && !extractedSubject) {
-                extractedSubject = subjectMatch[1].trim()
-              }
-
-              // Extract HTML (everything after DOCTYPE or starting with <html>)
-              const htmlMatch = accumulatedText.match(/(<!DOCTYPE[^>]*>[\s\S]*|<html[\s\S]*)/i)
-              if (htmlMatch) {
-                extractedHtml = htmlMatch[0]
-              } else {
-                extractedHtml = accumulatedText
-              }
-
-              // Send SSE update
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({
-                  type: 'text-delta',
-                  subject: extractedSubject,
-                  html: extractedHtml,
-                  done: false,
-                })}\n\n`)
-              )
-            } else if (part.type === 'tool-call') {
-              // Send tool call to client
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({
-                  type: 'tool-call',
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  args: part.args,
-                })}\n\n`)
-              )
-            } else if (part.type === 'tool-result') {
-              // Send tool result to client (optional, for debugging)
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({
-                  type: 'tool-result',
-                  toolCallId: part.toolCallId,
-                  toolName: part.toolName,
-                  result: part.result,
-                })}\n\n`)
-              )
-            }
+          // Stream the partial object updates
+          for await (const partialObject of result.partialObjectStream) {
+            // Send incremental updates
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({
+                type: 'object-delta',
+                subject: partialObject.subject || existingSubject || '',
+                html: partialObject.html || existingHtml || '',
+                done: false,
+              })}\n\n`)
+            )
           }
+
+          // Get final complete object
+          const finalObject = await result.object
 
           // Send final message
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({
               type: 'finish',
-              subject: extractedSubject,
-              html: extractedHtml,
+              subject: finalObject.subject,
+              html: finalObject.html,
               done: true,
             })}\n\n`)
           )
