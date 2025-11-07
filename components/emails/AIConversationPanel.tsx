@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { EmailTemplateType } from '@prisma/client'
 import { SaveTemplateModal } from './SaveTemplateModal'
 import { toast } from 'sonner'
+import type { GenerationSettings } from './GenerationSettingsPanel'
 
 export interface ConversationMessage {
   role: 'user' | 'assistant'
@@ -22,6 +23,7 @@ interface AIConversationPanelProps {
   workspaceSlug: string
   workspaceName: string
   brandColor?: string
+  generationSettings?: GenerationSettings
   initialTemplate?: {
     id: string
     name: string | null
@@ -45,6 +47,7 @@ export function AIConversationPanel({
   workspaceSlug,
   workspaceName,
   brandColor,
+  generationSettings,
   initialTemplate,
   onSave,
   onContentUpdate,
@@ -100,6 +103,7 @@ export function AIConversationPanel({
           templateType: initialTemplate?.type || 'GENERIC',
           workspaceName,
           brandColor,
+          generationSettings,
         }),
       })
 

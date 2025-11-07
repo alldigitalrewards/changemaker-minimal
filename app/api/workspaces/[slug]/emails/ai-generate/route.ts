@@ -12,6 +12,17 @@ interface ConversationMessage {
   timestamp: Date
 }
 
+interface GenerationSettings {
+  tone?: 'professional' | 'casual' | 'friendly' | 'formal' | 'conversational'
+  length?: 'concise' | 'standard' | 'detailed'
+  creativity?: 'conservative' | 'balanced' | 'creative'
+  designElements?: {
+    includeCTA?: boolean
+    includeImages?: boolean
+    useTables?: boolean
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -27,6 +38,7 @@ export async function POST(
       templateType = 'GENERIC',
       workspaceName,
       brandColor = '#F97316',
+      generationSettings,
     } = body
 
     if (!prompt) {
@@ -36,6 +48,16 @@ export async function POST(
       })
     }
 
+    // Determine temperature based on creativity setting
+    const creativityTemperature: Record<string, number> = {
+      conservative: 0.3,
+      balanced: 0.7,
+      creative: 1.0,
+    }
+    const temperature = generationSettings?.creativity
+      ? creativityTemperature[generationSettings.creativity]
+      : 0.7
+
     // Build context-aware prompt
     const contextPrompt = buildPrompt({
       prompt,
@@ -43,6 +65,7 @@ export async function POST(
       workspaceName: workspaceName || 'Your Workspace',
       brandColor,
       existingHtml: existingHtml || undefined,
+      generationSettings,
     })
 
     // Build conversation messages for Claude
@@ -78,7 +101,7 @@ export async function POST(
             schema: emailSchema,
             messages,
             system: emailAIConfig.systemPrompt,
-            temperature: emailAIConfig.temperature,
+            temperature,
           })
 
           // Stream the partial object updates

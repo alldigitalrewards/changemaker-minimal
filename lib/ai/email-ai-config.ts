@@ -37,6 +37,17 @@ Template Structure:
 Output only the complete HTML template without any markdown formatting or explanations.`,
 };
 
+interface GenerationSettings {
+  tone?: 'professional' | 'casual' | 'friendly' | 'formal' | 'conversational'
+  length?: 'concise' | 'standard' | 'detailed'
+  creativity?: 'conservative' | 'balanced' | 'creative'
+  designElements?: {
+    includeCTA?: boolean
+    includeImages?: boolean
+    useTables?: boolean
+  }
+}
+
 /**
  * Build a context-aware prompt for email template generation
  */
@@ -46,8 +57,9 @@ export function buildPrompt(options: {
   workspaceName?: string;
   brandColor?: string;
   existingHtml?: string;
+  generationSettings?: GenerationSettings;
 }): string {
-  const { prompt, templateType, workspaceName, brandColor, existingHtml } = options;
+  const { prompt, templateType, workspaceName, brandColor, existingHtml, generationSettings } = options;
 
   let contextPrompt = `Generate an HTML email template for: ${templateType}\n\n`;
 
@@ -57,6 +69,58 @@ export function buildPrompt(options: {
 
   if (brandColor) {
     contextPrompt += `Brand Color: ${brandColor} (use for primary buttons and accents)\n`;
+  }
+
+  // Add generation settings instructions
+  if (generationSettings) {
+    contextPrompt += `\nGENERATION SETTINGS:\n`;
+
+    // Tone
+    if (generationSettings.tone) {
+      const toneInstructions = {
+        professional: 'Use clear, polished business communication. Maintain professionalism while being approachable.',
+        casual: 'Use relaxed, approachable language. Keep it conversational but still respectful.',
+        friendly: 'Use warm and personable tone. Make the reader feel valued and welcomed.',
+        formal: 'Use traditional, strictly professional language. Maintain formality throughout.',
+        conversational: 'Use natural, dialogue-like approach. Write as if speaking directly to the reader.',
+      }
+      contextPrompt += `Tone: ${generationSettings.tone} - ${toneInstructions[generationSettings.tone]}\n`;
+    }
+
+    // Length
+    if (generationSettings.length) {
+      const lengthInstructions = {
+        concise: 'Keep content brief and to the point. Use short paragraphs and minimal text.',
+        standard: 'Use balanced length with key details. Include necessary information without being verbose.',
+        detailed: 'Provide comprehensive content with full explanations. Include supporting details and context.',
+      }
+      contextPrompt += `Length: ${generationSettings.length} - ${lengthInstructions[generationSettings.length]}\n`;
+    }
+
+    // Design elements
+    if (generationSettings.designElements) {
+      contextPrompt += `\nDesign Requirements:\n`;
+
+      if (generationSettings.designElements.includeCTA !== undefined) {
+        contextPrompt += generationSettings.designElements.includeCTA
+          ? `- MUST include prominent call-to-action buttons with clear labels\n`
+          : `- DO NOT include call-to-action buttons\n`;
+      }
+
+      if (generationSettings.designElements.includeImages !== undefined) {
+        contextPrompt += generationSettings.designElements.includeImages
+          ? `- Include image placeholders with proper alt text and dimensions\n`
+          : `- DO NOT include images or image placeholders\n`;
+      }
+
+      if (generationSettings.designElements.useTables !== undefined) {
+        contextPrompt += generationSettings.designElements.useTables
+          ? `- Use table-based layout for maximum email client compatibility\n`
+          : `- Use simplified HTML structure without complex table layouts\n`;
+      }
+    }
+
+    contextPrompt += `\n`;
   }
 
   // Add comprehensive list of available template variables

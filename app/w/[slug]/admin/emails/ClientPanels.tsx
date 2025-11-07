@@ -14,6 +14,7 @@ import { EmailTemplate } from '@/components/emails/TemplateBrowser'
 import { AIConversationPanel } from '@/components/emails/AIConversationPanel'
 import { TemplateLoadSavePanel } from '@/components/emails/TemplateLoadSavePanel'
 import { EmailLivePreview } from '@/components/emails/EmailLivePreview'
+import { GenerationSettingsPanel, DEFAULT_GENERATION_SETTINGS, type GenerationSettings } from '@/components/emails/GenerationSettingsPanel'
 
 export function DefaultEmailsPanel({ slug, workspaceName, userEmail }: { slug: string; workspaceName: string; userEmail: string }) {
   const [toEmail, setToEmail] = useState(userEmail)
@@ -354,6 +355,7 @@ export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug
   const [currentSubject, setCurrentSubject] = useState<string>('')
   const [currentHtml, setCurrentHtml] = useState<string>('')
   const [isGenerating, setIsGenerating] = useState<boolean>(false)
+  const [generationSettings, setGenerationSettings] = useState<GenerationSettings>(DEFAULT_GENERATION_SETTINGS)
 
   // Update selectedTemplate when initialTemplate changes
   useEffect(() => {
@@ -460,6 +462,7 @@ export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug
           workspaceSlug={slug}
           workspaceName={workspaceName}
           brandColor={brandColor}
+          generationSettings={generationSettings}
           initialTemplate={selectedTemplate ? {
             id: selectedTemplate.id,
             name: selectedTemplate.name,
@@ -487,9 +490,16 @@ export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug
         />
       </div>
 
-      {/* Right Side (1/3): Template Management */}
+      {/* Right Side (1/3): Settings & Template Management */}
       <div className="lg:col-span-1">
-        <div className="sticky top-6">
+        <div className="sticky top-6 space-y-6">
+          {/* Generation Settings */}
+          <GenerationSettingsPanel
+            settings={generationSettings}
+            onChange={setGenerationSettings}
+          />
+
+          {/* Template Management */}
           <TemplateLoadSavePanel
             workspaceSlug={slug}
             currentTemplate={selectedTemplate ? {
