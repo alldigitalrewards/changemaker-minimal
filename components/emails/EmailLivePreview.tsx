@@ -81,7 +81,7 @@ export function EmailLivePreview({
               {previewHtml ? (
                 <iframe
                   srcDoc={previewHtml}
-                  className="w-full h-[600px] border-0"
+                  className="w-full h-[calc(100vh-280px)] min-h-[700px] border-0"
                   title="Email Preview"
                   sandbox="allow-same-origin"
                   style={{
@@ -92,7 +92,7 @@ export function EmailLivePreview({
                   }}
                 />
               ) : (
-                <div className="h-[600px] flex items-center justify-center text-center text-muted-foreground">
+                <div className="h-[calc(100vh-280px)] min-h-[700px] flex items-center justify-center text-center text-muted-foreground">
                   <div>
                     <Eye className="h-12 w-12 mx-auto mb-2 opacity-20" />
                     <p className="text-sm">Email preview will appear here...</p>
