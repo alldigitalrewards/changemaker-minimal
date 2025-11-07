@@ -4,6 +4,45 @@
  */
 
 /**
+ * Configuration for RewardSTACK API client
+ */
+export interface RewardStackConfig {
+  apiUrl: string;
+  username: string;
+  password: string;
+  programId: string;
+  orgId: string;
+}
+
+/**
+ * JWT Token response from authentication
+ */
+export interface TokenResponse {
+  token: string;
+  expires_in: number; // Seconds until token expires (typically 7200 = 2 hours)
+}
+
+/**
+ * Point adjustment response from API
+ */
+export interface PointAdjustmentResponse {
+  adjustmentId: string;
+  amount: number;
+  type: 'credit' | 'debit';
+  timestamp: string;
+  balance?: number;
+}
+
+/**
+ * API error response structure
+ */
+export interface RewardStackError {
+  error: string;
+  message: string;
+  statusCode: number;
+}
+
+/**
  * Participant data structure
  */
 export interface RewardStackParticipant {

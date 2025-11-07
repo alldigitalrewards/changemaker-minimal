@@ -420,26 +420,42 @@ export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug
         return
       }
 
-      // TODO: Implement actual save to database
-      toast.success('Template saved (implementation pending)')
-      console.log('Save template:', { ...metadata, subject: currentSubject, html: currentHtml })
+      const response = await fetch(`/api/workspaces/${slug}/emails/templates/ai-save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: metadata.name,
+          type: metadata.type,
+          subject: currentSubject,
+          html: currentHtml,
+          description: metadata.description,
+          tags: [],
+          conversationHistory: selectedTemplate?.conversationHistory || [],
+          aiModel: 'claude-sonnet-4-5-20250929',
+          updateExisting: !!selectedTemplate?.id,
+          existingTemplateId: selectedTemplate?.id,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save template')
+      }
+
+      const { template } = await response.json()
+      setSelectedTemplate(template)
+      toast.success('Template saved successfully')
     } catch (error) {
-      toast.error('Failed to save template')
+      console.error('Save error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to save template')
     }
-  }, [currentSubject, currentHtml])
+  }, [currentSubject, currentHtml, selectedTemplate, slug])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Side (2/3): Preview + Conversation */}
+      {/* Left Side (2/3): Conversation + Preview */}
       <div className="lg:col-span-2 space-y-6">
-        {/* Live Preview - Top */}
-        <EmailLivePreview
-          subject={currentSubject}
-          html={currentHtml}
-          isGenerating={isGenerating}
-        />
-
-        {/* Conversation - Bottom */}
+        {/* Conversation - Top */}
         <AIConversationPanel
           workspaceSlug={slug}
           workspaceName={workspaceName}
@@ -459,6 +475,15 @@ export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug
           onGeneratingChange={(generating: boolean) => {
             setIsGenerating(generating)
           }}
+        />
+
+        {/* Live Preview - Bottom */}
+        <EmailLivePreview
+          subject={currentSubject}
+          html={currentHtml}
+          isGenerating={isGenerating}
+          workspaceName={workspaceName}
+          workspaceSlug={slug}
         />
       </div>
 

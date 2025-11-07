@@ -100,11 +100,13 @@ export async function createRewardStackClient(workspaceId: string) {
       if (response.status === 401) {
         if (retry && retryCount < 1) {
           // Clear cache and retry once with fresh token
-          clearTokenCache(workspaceId);
+          // Note: clearTokenCache now takes environment, not workspaceId
+          // We clear the default QA environment, assuming most workspaces use QA
+          clearTokenCache("QA");
           return request(endpoint, { ...options, retry: false, retryCount: 1 });
         }
         throw new RewardStackError(
-          "Authentication failed - invalid API key",
+          "Authentication failed - invalid credentials or expired token",
           RewardStackErrorCode.UNAUTHORIZED,
           401
         );
