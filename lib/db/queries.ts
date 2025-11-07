@@ -2854,7 +2854,7 @@ export async function getPlatformStats(tenantId: string = 'default'): Promise<{
  * Get all workspaces with admin details (superadmin only)
  * Returns workspace data with membership and activity metrics
  */
-export async function getAllWorkspacesWithDetails(tenantId: string = 'default'): Promise<(Workspace & {
+export async function getAllWorkspacesWithDetails(tenantId?: string | null): Promise<(Workspace & {
   _count: {
     WorkspaceMembership: number
     Challenge: number
@@ -2866,7 +2866,7 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
 })[]> {
   try {
     return await prisma.workspace.findMany({
-      where: { tenantId },
+      where: tenantId ? { tenantId } : {},
       include: {
         _count: {
           select: {

@@ -10,8 +10,10 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { SplitViewEditor } from '@/components/emails/split-view-editor'
 import { ChevronDown, ChevronUp, Bot } from 'lucide-react'
-import { TemplateBrowser, EmailTemplate } from '@/components/emails/TemplateBrowser'
+import { EmailTemplate } from '@/components/emails/TemplateBrowser'
 import { AIConversationPanel } from '@/components/emails/AIConversationPanel'
+import { TemplateLoadSavePanel } from '@/components/emails/TemplateLoadSavePanel'
+import { EmailLivePreview } from '@/components/emails/EmailLivePreview'
 
 export function DefaultEmailsPanel({ slug, workspaceName, userEmail }: { slug: string; workspaceName: string; userEmail: string }) {
   const [toEmail, setToEmail] = useState(userEmail)
@@ -349,11 +351,16 @@ export function TemplatesPanel({ slug, userEmail, onOpenInAI }: { slug: string; 
 export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug: string; workspaceName: string; initialTemplate?: EmailTemplate | null }) {
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(initialTemplate || null)
   const [brandColor, setBrandColor] = useState<string>('#F97316')
+  const [currentSubject, setCurrentSubject] = useState<string>('')
+  const [currentHtml, setCurrentHtml] = useState<string>('')
+  const [isGenerating, setIsGenerating] = useState<boolean>(false)
 
   // Update selectedTemplate when initialTemplate changes
   useEffect(() => {
     if (initialTemplate) {
       setSelectedTemplate(initialTemplate)
+      setCurrentSubject(initialTemplate.subject || '')
+      setCurrentHtml(initialTemplate.html || '')
     }
   }, [initialTemplate])
 
@@ -373,43 +380,58 @@ export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug
     loadSettings()
   }, [slug])
 
-  const handleLoadTemplate = useCallback((template: EmailTemplate) => {
-    setSelectedTemplate(template)
-  }, [])
+  const handleLoadTemplate = useCallback(async (templateId: string) => {
+    try {
+      const res = await fetch(`/api/workspaces/${slug}/emails/templates/ai-list`)
+      const data = await res.json()
+      const template = data.templates?.find((t: EmailTemplate) => t.id === templateId)
+      if (template) {
+        setSelectedTemplate(template)
+        setCurrentSubject(template.subject || '')
+        setCurrentHtml(template.html || '')
+      }
+    } catch (error) {
+      toast.error('Failed to load template')
+    }
+  }, [slug])
 
-  const handleStartBlank = useCallback(() => {
+  const handleNewTemplate = useCallback(() => {
     setSelectedTemplate(null)
+    setCurrentSubject('')
+    setCurrentHtml('')
   }, [])
 
-  const handleSave = useCallback(async (data: {
-    subject: string
-    html: string
-    conversationHistory: any[]
+  const handleSaveTemplate = useCallback(async (metadata: {
+    name: string
+    description: string
+    type: any
   }) => {
     try {
-      // TODO: Implement save to database (Phase 3)
-      toast.success('Template saved (Phase 3 coming soon)')
-      console.log('Save data:', data)
+      if (!currentSubject || !currentHtml) {
+        toast.error('Please generate email content before saving')
+        return
+      }
+
+      // TODO: Implement actual save to database
+      toast.success('Template saved (implementation pending)')
+      console.log('Save template:', { ...metadata, subject: currentSubject, html: currentHtml })
     } catch (error) {
       toast.error('Failed to save template')
     }
-  }, [])
+  }, [currentSubject, currentHtml])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left: Template Browser */}
-      <div className="lg:col-span-1">
-        <div className="sticky top-6">
-          <TemplateBrowser
-            workspaceSlug={slug}
-            onLoadTemplate={handleLoadTemplate}
-            onStartBlank={handleStartBlank}
-          />
-        </div>
-      </div>
+      {/* Left Side (2/3): Preview + Conversation */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Live Preview - Top */}
+        <EmailLivePreview
+          subject={currentSubject}
+          html={currentHtml}
+          isGenerating={isGenerating}
+        />
 
-      {/* Right: AI Conversation Panel */}
-      <div className="lg:col-span-2">
+        {/* Conversation - Bottom */}
         <AIConversationPanel
           workspaceSlug={slug}
           workspaceName={workspaceName}
@@ -422,8 +444,32 @@ export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug
             html: selectedTemplate.html,
             conversationHistory: selectedTemplate.conversationHistory as any,
           } : undefined}
-          onSave={handleSave}
+          onContentUpdate={(subject: string, html: string) => {
+            setCurrentSubject(subject)
+            setCurrentHtml(html)
+          }}
+          onGeneratingChange={(generating: boolean) => {
+            setIsGenerating(generating)
+          }}
         />
+      </div>
+
+      {/* Right Side (1/3): Template Management */}
+      <div className="lg:col-span-1">
+        <div className="sticky top-6">
+          <TemplateLoadSavePanel
+            workspaceSlug={slug}
+            currentTemplate={selectedTemplate ? {
+              id: selectedTemplate.id,
+              name: selectedTemplate.name || undefined,
+              type: selectedTemplate.type,
+              description: selectedTemplate.description || undefined,
+            } : null}
+            onLoadTemplate={handleLoadTemplate}
+            onNewTemplate={handleNewTemplate}
+            onSaveTemplate={handleSaveTemplate}
+          />
+        </div>
       </div>
     </div>
   )

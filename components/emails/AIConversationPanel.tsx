@@ -37,6 +37,8 @@ interface AIConversationPanelProps {
     html: string
     conversationHistory: ConversationMessage[]
   }) => void
+  onContentUpdate?: (subject: string, html: string) => void
+  onGeneratingChange?: (isGenerating: boolean) => void
 }
 
 export function AIConversationPanel({
@@ -45,6 +47,8 @@ export function AIConversationPanel({
   brandColor,
   initialTemplate,
   onSave,
+  onContentUpdate,
+  onGeneratingChange,
 }: AIConversationPanelProps) {
   const [messages, setMessages] = useState<ConversationMessage[]>(
     initialTemplate?.conversationHistory || []
@@ -82,6 +86,7 @@ export function AIConversationPanel({
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsGenerating(true)
+    onGeneratingChange?.(true)
 
     try {
       const response = await fetch(`/api/workspaces/${workspaceSlug}/emails/ai-generate`, {
@@ -147,6 +152,9 @@ export function AIConversationPanel({
                   accumulatedHtml = data.html
                   setCurrentHtml(accumulatedHtml)
                 }
+
+                // Notify parent of content updates
+                onContentUpdate?.(accumulatedSubject, accumulatedHtml)
               } else if (data.type === 'finish') {
                 // Generation complete
                 if (data.subject) {
@@ -158,6 +166,9 @@ export function AIConversationPanel({
                   accumulatedHtml = data.html
                   setCurrentHtml(accumulatedHtml)
                 }
+
+                // Notify parent of final content
+                onContentUpdate?.(accumulatedSubject, accumulatedHtml)
 
                 // Update the assistant message with final content
                 setMessages(prev => {
@@ -190,6 +201,7 @@ export function AIConversationPanel({
       ])
     } finally {
       setIsGenerating(false)
+      onGeneratingChange?.(false)
     }
   }
 
@@ -217,6 +229,7 @@ export function AIConversationPanel({
     setMessages([])
     setCurrentHtml('')
     setCurrentSubject('')
+    onContentUpdate?.('', '')
   }
 
   const handleSaveTemplate = () => {
@@ -545,24 +558,6 @@ export function AIConversationPanel({
           </CardContent>
         </Card>
       )}
-
-      {/* Live Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Live Preview</CardTitle>
-          <CardDescription>
-            Email preview updates as AI generates
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmailPreview
-            html={currentHtml}
-            subject={currentSubject}
-            workspaceName={workspaceName}
-            workspaceSlug={workspaceSlug}
-          />
-        </CardContent>
-      </Card>
 
       {/* Save Template Modal */}
       <SaveTemplateModal
