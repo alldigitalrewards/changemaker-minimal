@@ -22,6 +22,7 @@ import {
   Code,
   MessageSquare,
   Mail,
+  Gift,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -44,7 +45,7 @@ const challengeManagement = [
 
 const participantManagement = [
   { name: 'Participants', href: '/admin/participants', icon: Users },
-  { name: 'Points', href: '/admin/points', icon: Coins },
+  { name: 'Rewards', href: '/admin/rewards', icon: Gift },
   { name: 'Invites', href: '/admin/invites', icon: Link2 },
 ];
 

@@ -38,7 +38,45 @@ export function EmailLivePreview({
   }, [subject, previewData])
 
   const previewHtml = useMemo(() => {
-    return html ? replaceVariables(html, previewData) : ''
+    if (!html) return ''
+    let replacedHtml = replaceVariables(html, previewData)
+
+    // If AI generated complete HTML with dark body background, fix it
+    if (replacedHtml.includes('<!DOCTYPE') || replacedHtml.includes('<html')) {
+      // Replace dark body backgrounds with light backgrounds for email preview
+      replacedHtml = replacedHtml.replace(
+        /(body\s*{[^}]*background-color:\s*)(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|[a-z]+)([^}]*})/gi,
+        (match, prefix, color, suffix) => {
+          // Only replace if it's a dark color (simple heuristic)
+          const isDark = color.includes('#000') || color.includes('#1') || color.includes('#2') ||
+                        color.includes('#3') || color.includes('black') || color.includes('dark')
+          return isDark ? `${prefix}#f5f5f5${suffix}` : match
+        }
+      )
+      return replacedHtml
+    }
+
+    // Wrap in proper HTML document if not already wrapped
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+${replacedHtml}
+</body>
+</html>`
   }, [html, previewData])
 
   return (
@@ -83,12 +121,13 @@ export function EmailLivePreview({
                   srcDoc={previewHtml}
                   className="w-full h-[calc(100vh-280px)] min-h-[700px] border-0"
                   title="Email Preview"
-                  sandbox="allow-same-origin"
+                  sandbox="allow-same-origin allow-popups"
                   style={{
                     display: 'block',
                     margin: 0,
                     padding: 0,
-                    border: 'none'
+                    border: 'none',
+                    backgroundColor: 'white'
                   }}
                 />
               ) : (
