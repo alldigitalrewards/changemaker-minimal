@@ -2763,7 +2763,7 @@ export async function reconcileRewards(
  * Get platform-wide statistics for superadmin dashboard
  * Returns aggregated metrics across all workspaces
  */
-export async function getPlatformStats(tenantId: string = 'default'): Promise<{
+export async function getPlatformStats(tenantId?: string | null): Promise<{
   totalWorkspaces: number
   activeWorkspaces: number
   totalUsers: number
@@ -2792,16 +2792,18 @@ export async function getPlatformStats(tenantId: string = 'default'): Promise<{
       recentPointsResult
     ] = await Promise.all([
       // Total counts
-      prisma.workspace.count({ where: { tenantId } }),
-      prisma.workspace.count({ where: { tenantId, active: true, published: true } }),
+      prisma.workspace.count({ where: tenantId ? { tenantId } : {} }),
+      prisma.workspace.count({ where: tenantId ? { tenantId, active: true, published: true } : { active: true, published: true } }),
       prisma.workspaceMembership.count(),
       prisma.challenge.count(),
       prisma.pointsBalance.aggregate({ _sum: { totalPoints: true } }),
 
       // Trend data (last 30 days)
       prisma.workspace.count({
-        where: {
+        where: tenantId ? {
           tenantId,
+          createdAt: { gte: thirtyDaysAgo }
+        } : {
           createdAt: { gte: thirtyDaysAgo }
         }
       }),

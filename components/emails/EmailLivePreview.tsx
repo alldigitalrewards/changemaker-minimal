@@ -47,17 +47,22 @@ export function EmailLivePreview({ subject, html, isGenerating }: EmailLivePrevi
             <div className="text-xs font-medium text-muted-foreground mb-1">
               Email Body
             </div>
-            <div className="border rounded-lg bg-white">
+            <div className="border rounded-lg bg-white overflow-hidden">
               {html ? (
                 <iframe
                   srcDoc={html}
-                  className="w-full h-[500px] rounded-lg"
+                  className="w-full h-[500px] border-0"
                   title="Email Preview"
                   sandbox="allow-same-origin"
+                  style={{ display: 'block' }}
                 />
               ) : (
-                <div className="p-10 text-center text-muted-foreground italic">
-                  Email preview will appear here...
+                <div className="h-[500px] flex items-center justify-center text-center text-muted-foreground italic bg-muted/20">
+                  <div>
+                    <Eye className="h-12 w-12 mx-auto mb-2 opacity-20" />
+                    <p>Email preview will appear here...</p>
+                    <p className="text-xs mt-1">Start a conversation to generate content</p>
+                  </div>
                 </div>
               )}
             </div>

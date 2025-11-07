@@ -364,6 +364,14 @@ export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug
     }
   }, [initialTemplate])
 
+  // Sync initial template content to preview on mount
+  useEffect(() => {
+    if (initialTemplate?.subject || initialTemplate?.html) {
+      setCurrentSubject(initialTemplate.subject || '')
+      setCurrentHtml(initialTemplate.html || '')
+    }
+  }, [])
+
   // Load workspace settings for brand color
   useEffect(() => {
     const loadSettings = async () => {
