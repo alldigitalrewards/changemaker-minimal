@@ -3,8 +3,8 @@
  * Handles JWT bearer token generation and management for ADR Marketplace Platform API
  *
  * API Documentation: https://admin.adrqa.info/api (QA)
- * Authentication: JWT Bearer Token obtained via POST /token endpoint
- * Token Expiration: 2 hours (7200 seconds)
+ * Authentication: JWT Bearer Token obtained via POST /token endpoint with Basic Auth
+ * Token Expiration: 1 year (8760 hours) - configurable via hoursUntilExpiry
  *
  * Credentials are platform-wide (not workspace-specific) and stored in environment variables:
  * - REWARDSTACK_USERNAME (e.g., admin@alldigitalrewards.com)
@@ -67,14 +67,18 @@ async function obtainJwtToken(environment: keyof typeof REWARDSTACK_ENDPOINTS): 
   const tokenEndpoint = `${baseUrl}/token`;
 
   try {
+    // Create Basic Auth header
+    const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+
     const response = await fetch(tokenEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Basic ${basicAuth}`,
       },
       body: JSON.stringify({
-        username,
-        password,
+        hoursUntilExpiry: 8760, // 1 year
+        tokenName: "Changemaker Platform",
       }),
     });
 
@@ -87,13 +91,13 @@ async function obtainJwtToken(environment: keyof typeof REWARDSTACK_ENDPOINTS): 
 
     const data: TokenResponse = await response.json();
 
-    if (!data.token || !data.expires_in) {
+    if (!data.token || !data.expires) {
       throw new Error("Invalid token response from RewardSTACK API");
     }
 
     // Calculate expiration time with safety buffer
-    // expires_in is in seconds, convert to milliseconds and subtract buffer
-    const expiresAt = Date.now() + (data.expires_in * 1000) - TOKEN_REFRESH_BUFFER;
+    // expires is a Unix timestamp in seconds, convert to milliseconds and subtract buffer
+    const expiresAt = (data.expires * 1000) - TOKEN_REFRESH_BUFFER;
 
     return {
       token: data.token,
