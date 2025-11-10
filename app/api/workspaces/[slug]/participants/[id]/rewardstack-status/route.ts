@@ -57,7 +57,7 @@ export const GET = withErrorHandling(
       user.rewardStackSyncStatus === "SYNCED" &&
       user.rewardStackParticipantId !== null;
 
-    return NextResponse.json({
+    const response = {
       enabled: true,
       synced: isSynced,
       status: user.rewardStackSyncStatus,
@@ -67,6 +67,23 @@ export const GET = withErrorHandling(
       message: isSynced
         ? `Participant exists in program ${programId}`
         : `Participant will be created in program ${programId}`,
-    });
+    };
+
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📊 REWARDSTACK STATUS CHECK');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Participant:', user.email);
+    console.log('Name:', `${user.firstName || ''} ${user.lastName || ''}`.trim() || '(not set)');
+    console.log('\nRewardSTACK Integration:');
+    console.log('  Enabled:', response.enabled);
+    console.log('  Synced:', response.synced ? '✅ YES' : '❌ NO');
+    console.log('  Status:', response.status || 'NEVER_SYNCED');
+    console.log('  Participant ID:', response.participantId || '(not yet synced)');
+    console.log('  Program ID:', response.programId);
+    console.log('  Last Sync:', response.lastSync ? new Date(response.lastSync).toLocaleString() : '(never)');
+    console.log('\nMessage:', response.message);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    return NextResponse.json(response);
   }
 );

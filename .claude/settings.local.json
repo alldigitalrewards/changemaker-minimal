@@ -75,7 +75,8 @@
       "mcp__context7__resolve-library-id",
       "WebFetch(domain:ai-sdk.dev)",
       "mcp__zen__tracer",
-      "mcp__serena__get_symbols_overview"
+      "mcp__serena__get_symbols_overview",
+      "WebFetch(domain:context7.com)"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

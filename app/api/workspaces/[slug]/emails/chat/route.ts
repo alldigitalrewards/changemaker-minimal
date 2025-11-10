@@ -35,17 +35,59 @@ export async function POST(
     // Check authentication and workspace access
     const { workspace } = await requireWorkspaceAdmin(slug);
 
-    // Parse request body - useChat sends { messages, data }
+    // Parse request body
     const body = await request.json();
-    const { messages, data } = body;
 
-    // Extract context from data
+    // Handle both formats:
+    // 1. useChat format: { messages, data }
+    // 2. Current format: { prompt, conversationHistory, templateType, ... }
+    let messages = body.messages;
+    let prompt = body.prompt;
+    let conversationHistory = body.conversationHistory;
+
+    // Extract context
     const {
       templateType = 'GENERIC',
       workspaceName,
       brandColor,
       generationSettings,
-    } = data || {};
+      existingHtml,
+      existingSubject,
+    } = body.data || body;
+
+    // Build messages array
+    if (!messages) {
+      messages = [];
+    }
+
+    // If we have conversationHistory, start with that
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      messages = [...conversationHistory];
+    }
+
+    // If we have a new prompt, add it to the conversation
+    if (prompt && typeof prompt === 'string') {
+      messages.push({ role: 'user', content: prompt });
+    }
+
+    // Ensure messages is always an array
+    if (!Array.isArray(messages)) {
+      messages = [];
+    }
+
+    // If still no messages, return error
+    if (messages.length === 0) {
+      return new Response(
+        JSON.stringify({
+          error: 'No messages provided',
+          message: 'Either messages, conversationHistory, or prompt must be provided',
+        }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     // Check rate limits
     const rateLimitCheck = rateLimiter.checkLimit(workspace.id);
@@ -119,6 +161,7 @@ Always wrap your HTML output in \`\`\`html and \`\`\` markers. This is critical 
           templateType,
           workspaceName: workspaceName || workspace.name,
           brandColor,
+          existingHtml,
           generationSettings,
         });
         lastMessage.content = enhancedPrompt;

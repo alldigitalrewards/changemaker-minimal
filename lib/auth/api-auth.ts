@@ -17,22 +17,13 @@ import type { User } from "@prisma/client";
 export async function requireAuth(): Promise<AuthenticatedUser> {
   const supabase = await createClient();
 
-  console.log('[requireAuth] Checking authentication...');
-
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
 
-  console.log('[requireAuth] Supabase getUser result:', {
-    hasUser: !!user,
-    userId: user?.id,
-    userEmail: user?.email,
-    error: error?.message,
-  });
-
   if (error) {
-    console.error("[requireAuth] Auth error:", error);
+    console.error("🔒 Authentication error:", error.message);
     throw NextResponse.json(
       { error: "Authentication failed" },
       { status: 401 },

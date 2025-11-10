@@ -429,9 +429,9 @@ export function AIConversationPanel({
               </div>
             )}
 
-            {messages.map((message: { id: string; role: string; content: string }) => (
+            {messages.map((message, index) => (
               <div
-                key={message.id}
+                key={index}
                 className={cn(
                   'flex gap-3 items-start',
                   message.role === 'user' ? 'justify-end' : 'justify-start'
@@ -451,6 +451,9 @@ export function AIConversationPanel({
                   )}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-xs opacity-70 mt-1">
+                    {message.timestamp.toLocaleTimeString()}
+                  </p>
                 </div>
                 {message.role === 'user' && (
                   <div className="shrink-0 mt-1">

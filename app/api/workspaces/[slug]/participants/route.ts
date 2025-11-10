@@ -29,6 +29,7 @@ export const GET = withErrorHandling(
         lastName: true,
         displayName: true,
         addressLine1: true,
+        addressLine2: true,
         city: true,
         state: true,
         zipCode: true,
