@@ -1,0 +1,745 @@
+---
+title: RewardStack Integration
+description: Complete guide to setting up and using RewardStack for reward distribution
+order: 1
+tags: ['integration', 'rewardstack', 'rewards', 'setup']
+author: Changemaker Team
+date: 2025-01-10
+---
+
+# RewardStack Integration
+
+RewardStack powers Changemaker's reward distribution, enabling you to send digital gift cards, experiences, and other rewards to participants instantly.
+
+## What is RewardStack?
+
+RewardStack is a rewards API platform that provides:
+- **Global reward catalog**: Thousands of digital gift cards and experiences
+- **Instant delivery**: Rewards sent via email in real-time
+- **Multi-currency support**: Distribute rewards in local currencies
+- **Compliance**: Built-in tax and regulatory compliance
+- **Analytics**: Detailed reporting and tracking
+
+## Prerequisites
+
+Before integrating RewardStack:
+
+1. **Changemaker workspace**: Admin access required
+2. **RewardStack account**: Sign up at [rewardstack.com](https://rewardstack.com)
+3. **Funded account**: Add funds to your RewardStack balance
+4. **API credentials**: Client ID and Secret from RewardStack dashboard
+
+## Initial Setup
+
+### Step 1: Create RewardStack Account
+
+1. Visit [rewardstack.com/signup](https://rewardstack.com/signup)
+2. Complete registration:
+   - Business information
+   - Contact details
+   - Billing information
+3. Verify your email address
+4. Complete identity verification (may take 1-2 business days)
+
+### Step 2: Fund Your Account
+
+1. Log into RewardStack dashboard
+2. Navigate to **Billing → Add Funds**
+3. Choose funding method:
+   - Credit card
+   - Bank transfer
+   - Wire transfer (for large amounts)
+4. Add initial balance (minimum $100 recommended)
+
+### Step 3: Get API Credentials
+
+1. In RewardStack dashboard, go to **Settings → API**
+2. Click **Generate New Credentials**
+3. Save your credentials securely:
+   ```
+   Client ID: rs_client_abc123
+   Client Secret: rs_secret_xyz789
+   ```
+4. Choose environment:
+   - **Sandbox**: For testing (no real money)
+   - **Production**: For live rewards
+
+### Step 4: Connect to Changemaker
+
+1. Log into Changemaker as workspace admin
+2. Navigate to **Admin → Settings → Integrations**
+3. Find **RewardStack** section
+4. Click **Connect RewardStack**
+5. Enter API credentials:
+   - Client ID
+   - Client Secret
+   - Environment (sandbox or production)
+6. Click **Test Connection**
+7. If successful, click **Save Configuration**
+
+### Step 5: Sync SKU Catalog
+
+1. After connecting, click **Sync SKUs**
+2. Wait for sync to complete (may take 30-60 seconds)
+3. Review imported SKUs in **Admin → Rewards → SKU Catalog**
+4. Activate desired SKUs
+5. Set default options
+
+## Configuration Options
+
+### Environment Settings
+
+**Sandbox Environment**
+- Use for testing and development
+- No real money spent
+- Test email delivery
+- Practice workflows
+- Realistic behavior
+
+**Production Environment**
+- Use for live rewards
+- Real money spent
+- Actual email delivery
+- Track in RewardStack dashboard
+- Full analytics
+
+### Default Settings
+
+Configure default behaviors:
+
+**Default SKU**
+- Quick issuance without selecting
+- Common reward type
+- Example: Amazon $25 gift card
+
+**Default Currency**
+- Primary currency for rewards
+- Options: USD, EUR, GBP, CAD, AUD, etc.
+- Can override per reward
+
+**Email Template**
+- Customize reward notification emails
+- Add branding
+- Personalize message
+- Include instructions
+
+**Budget Alerts**
+- Low balance warnings
+- Spending threshold alerts
+- Monthly budget notifications
+
+## Managing SKUs
+
+### Understanding the SKU Catalog
+
+Each SKU represents a reward product:
+
+**SKU Properties**
+- **ID**: Unique identifier (e.g., `sku_amazon_25_usd`)
+- **Name**: Display name ("Amazon $25 Gift Card")
+- **Brand**: Merchant (Amazon, Visa, Starbucks, etc.)
+- **Face Value**: Recipient receives this amount
+- **Cost**: What you pay (usually same as face value)
+- **Currency**: USD, EUR, GBP, etc.
+- **Type**: Gift card, experience, prepaid card
+- **Status**: Active, inactive, out of stock
+- **Geographic Restrictions**: Available countries
+
+### Popular SKU Categories
+
+**Gift Cards**
+- Amazon
+- Visa/Mastercard prepaid
+- Target
+- Walmart
+- Best Buy
+- iTunes/App Store
+- Google Play
+- Starbucks
+
+**Experiences**
+- Streaming services (Netflix, Spotify)
+- Online courses (Udemy, Coursera)
+- Food delivery (Uber Eats, DoorDash)
+- Gaming platforms (Steam, Xbox, PlayStation)
+
+**International Options**
+- Regional gift cards
+- Local merchants
+- Currency-specific
+- Country restrictions apply
+
+### Activating SKUs
+
+Enable SKUs for your workspace:
+
+1. Go to **Admin → Rewards → SKU Catalog**
+2. Browse available SKUs
+3. For each SKU you want to use:
+   - Click **Activate**
+   - Confirm activation
+4. Activated SKUs appear in reward selection dropdowns
+
+**Best practice**: Start with 5-10 popular options
+- Reduces selection overwhelm
+- Easier to manage
+- Simplifies reporting
+- Can expand later
+
+### Custom SKUs
+
+Create non-RewardStack rewards:
+
+1. Navigate to **Admin → Rewards → Custom SKUs**
+2. Click **Create Custom SKU**
+3. Configure:
+   - **Name**: "Company Swag Package"
+   - **Description**: What it includes
+   - **Internal Cost**: Your cost
+   - **Fulfillment**: How you deliver it
+   - **Instructions**: For recipients
+4. Save and activate
+
+**Use cases:**
+- Physical merchandise
+- Company perks
+- Internal recognition
+- Manual fulfillment items
+- Non-monetary rewards
+
+## Issuing Rewards
+
+### Single Reward Issuance
+
+**From Participant Profile**
+
+1. Navigate to participant
+2. Click **Issue Reward**
+3. Select reward:
+   - Choose active SKU
+   - Or enter custom amount for flexible SKUs
+4. Add personal message (optional)
+5. Review cost and details
+6. Click **Issue Reward**
+
+**From Challenge Enrollment**
+
+1. Open challenge detail
+2. Find completed enrollment
+3. Click **Issue Reward**
+4. Follow same process as above
+
+### Bulk Reward Issuance
+
+**Issue to Multiple Participants**
+
+1. Navigate to challenge detail page
+2. Filter enrollments:
+   - Status: Completed
+   - Or custom criteria
+3. Select participants:
+   - Check individual boxes
+   - Or **Select All**
+4. Click **Bulk Issue Rewards**
+5. Choose reward option:
+   - **Same SKU for all**: Everyone gets same reward
+   - **Same amount for all**: Everyone gets same value
+   - **Custom per participant**: Upload CSV with individual rewards
+6. Add message (sent to all)
+7. Review total cost
+8. Confirm bulk issuance
+
+**CSV Format for Custom Rewards**
+```csv
+email,sku_id,amount,message
+john@example.com,sku_amazon_25_usd,25,"Great job on the innovation challenge!"
+jane@example.com,sku_visa_50_usd,50,"Outstanding submission!"
+```
+
+### Automated Reward Issuance
+
+**Configure Automatic Rewards**
+
+1. Edit challenge settings
+2. Navigate to **Rewards** tab
+3. Enable **Automatic Reward Issuance**
+4. Set trigger:
+   - On enrollment completion
+   - On submission approval
+   - When challenge ends
+   - Custom criteria
+5. Select reward:
+   - Fixed SKU
+   - Fixed amount
+   - Tiered by performance
+6. Add automatic message template
+7. Save settings
+
+When criteria are met:
+- Reward issued automatically
+- Participant receives email
+- Admin receives confirmation
+- Logged in reward history
+
+## Reward Delivery and Tracking
+
+### Email Delivery
+
+**What Participants Receive**
+
+Reward emails include:
+- Congratulations message
+- Reward details (type and value)
+- Redemption instructions
+- Claim link or code
+- Expiration date (if applicable)
+- Support contact
+
+**Email Customization**
+
+Customize reward emails:
+1. Go to **Settings → Email Templates**
+2. Find **Reward Notification** template
+3. Edit:
+   - Header/footer branding
+   - Message tone and content
+   - Call-to-action button
+   - Support information
+4. Preview changes
+5. Save template
+
+### Tracking Reward Status
+
+**Status Lifecycle**
+
+1. **Pending**: Reward queued for issuance
+2. **Processing**: Being sent to RewardStack
+3. **Sent**: Email delivered to participant
+4. **Claimed**: Participant redeemed reward
+5. **Failed**: Delivery or redemption failed
+
+**Monitoring in Changemaker**
+
+View reward status:
+1. Go to **Admin → Rewards → Activity**
+2. See recent rewards with status
+3. Filter by:
+   - Status
+   - Date range
+   - Challenge
+   - Participant
+4. Click reward for details
+
+**Monitoring in RewardStack**
+
+Cross-reference in RewardStack:
+1. Log into RewardStack dashboard
+2. Navigate to **Rewards → History**
+3. View detailed transaction log
+4. Check redemption status
+5. Access detailed analytics
+
+### Handling Delivery Issues
+
+**Email Not Received**
+
+Common causes:
+- Spam/junk folder
+- Incorrect email address
+- Email server blocking
+
+Solutions:
+1. Check participant email address
+2. Ask participant to check spam
+3. Resend reward notification
+4. Use alternative email if needed
+
+**Claim Link Not Working**
+
+Common causes:
+- Link expired
+- Browser cache issues
+- Geographic restriction
+
+Solutions:
+1. Issue replacement reward
+2. Clear browser cache
+3. Try different browser
+4. Verify SKU availability in participant location
+
+**Redemption Problems**
+
+Contact RewardStack support:
+- Email: support@rewardstack.com
+- Include transaction ID
+- Describe the issue
+- Provide participant email
+
+## Cost Management
+
+### Understanding Pricing
+
+**RewardStack Fees**
+
+Typical fee structure:
+- Face value of reward (what you pay)
+- Platform fee (percentage, usually 2-5%)
+- Currency conversion (if applicable)
+- Minimum balance requirements
+
+**Example Calculation**
+```
+Reward: Amazon $25 gift card
+Face value: $25.00
+Platform fee (3%): $0.75
+Total cost: $25.75
+```
+
+### Budget Tracking
+
+**In Changemaker**
+
+Track spending:
+1. View **Admin → Rewards → Budget Dashboard**
+2. See:
+   - Total spent this month
+   - Pending rewards value
+   - Remaining budget
+   - Projected spend
+3. Set budget alerts
+4. Export reports
+
+**In RewardStack**
+
+Monitor account balance:
+1. RewardStack dashboard shows:
+   - Current balance
+   - Total spent
+   - Transaction history
+   - Projected usage
+2. Receive low balance alerts
+3. Auto-reload options available
+
+### Optimizing Costs
+
+**Strategies**
+
+1. **Negotiate Volume Discounts**
+   - Contact RewardStack sales
+   - Annual commitments
+   - Bulk purchasing
+
+2. **Choose Cost-Effective SKUs**
+   - Some brands have lower fees
+   - Digital delivery cheaper than physical
+   - Regional options may save money
+
+3. **Right-Size Rewards**
+   - Match reward to effort
+   - Don't over-reward simple tasks
+   - Use tiered approach
+
+4. **Use Custom SKUs**
+   - Internal rewards have no platform fees
+   - Company perks as alternatives
+   - Non-monetary recognition
+
+## Analytics and Reporting
+
+### Changemaker Reports
+
+**Reward Summary Report**
+
+Access from **Admin → Reports → Rewards**
+
+Includes:
+- Total rewards issued
+- Total value distributed
+- Average reward value
+- Rewards by challenge
+- Rewards by participant
+- Status breakdown
+- Cost analysis
+
+**Custom Reports**
+
+Build custom reports:
+1. Select metrics
+2. Choose date range
+3. Apply filters
+4. Generate report
+5. Export as CSV or PDF
+
+### RewardStack Analytics
+
+**Dashboard Metrics**
+
+In RewardStack dashboard:
+- Redemption rates
+- Popular SKUs
+- Geographic distribution
+- Time to redemption
+- Claim rates
+- Failed deliveries
+
+**Advanced Analytics**
+
+Available reports:
+- Transaction history
+- SKU performance
+- Participant engagement
+- Cost trending
+- ROI analysis
+
+### Exporting Data
+
+**From Changemaker**
+
+Export reward data:
+1. Go to **Admin → Rewards → Export**
+2. Select format (CSV, JSON, Excel)
+3. Choose data range
+4. Apply filters
+5. Download
+
+**From RewardStack**
+
+Export transaction data:
+1. RewardStack dashboard → **Reports**
+2. Choose report type
+3. Select date range
+4. Export to CSV
+5. Integrate with accounting tools
+
+## Security and Compliance
+
+### API Security
+
+**Credential Management**
+
+Best practices:
+- Store credentials securely
+- Never commit to source control
+- Rotate periodically
+- Use environment variables
+- Restrict access to admins only
+
+**API Rate Limits**
+
+RewardStack enforces limits:
+- Standard: 100 requests/minute
+- Burst: 200 requests/minute
+- Contact for higher limits
+
+### Data Privacy
+
+**Participant Information**
+
+What's shared with RewardStack:
+- Email address (for delivery)
+- Name (optional)
+- Country (for SKU availability)
+
+What's NOT shared:
+- Password
+- Full profile data
+- Challenge submissions
+- Other personal information
+
+**GDPR Compliance**
+
+Both Changemaker and RewardStack:
+- Process data lawfully
+- Honor deletion requests
+- Provide data portability
+- Maintain security standards
+- Have data processing agreements
+
+### Tax Considerations
+
+**Tax Reporting**
+
+Important notes:
+- Rewards may be taxable income
+- Requirements vary by country
+- Consult tax professional
+- Keep detailed records
+- Provide documentation to participants
+
+**Compliance Features**
+
+RewardStack provides:
+- Transaction records
+- Recipient information
+- Value documentation
+- Export for tax reporting
+- 1099 support (US) if needed
+
+## Troubleshooting
+
+### Connection Issues
+
+**Cannot Connect to RewardStack**
+
+Check:
+1. API credentials are correct
+2. Environment setting matches (sandbox vs. production)
+3. RewardStack account is active
+4. No service outages
+5. Firewall/network not blocking
+
+Solutions:
+- Verify credentials in RewardStack dashboard
+- Test with sandbox first
+- Check RewardStack status page
+- Contact support
+
+### SKU Sync Failures
+
+**SKUs Not Importing**
+
+Common causes:
+- API connection issue
+- RewardStack account not verified
+- Geographic restrictions
+- SKU catalog not available
+
+Solutions:
+1. Reconnect integration
+2. Complete RewardStack verification
+3. Contact RewardStack support
+4. Retry sync after 24 hours
+
+### Reward Issuance Failures
+
+**Reward Not Sent**
+
+Check:
+1. Sufficient balance in RewardStack account
+2. SKU is active and available
+3. Participant email is valid
+4. No geographic restrictions
+5. API connection is active
+
+Solutions:
+- Add funds to RewardStack account
+- Verify SKU availability
+- Correct participant email
+- Choose different SKU
+- Retry issuance
+
+## Advanced Features
+
+### Webhook Integration
+
+Receive real-time updates:
+
+**Available Webhooks**
+- `reward.sent`: When reward email sent
+- `reward.claimed`: When participant claims
+- `reward.failed`: When delivery fails
+- `balance.low`: When balance below threshold
+
+**Setup**
+1. RewardStack dashboard → **Webhooks**
+2. Add webhook URL from Changemaker
+3. Select events to monitor
+4. Save configuration
+
+### API Integration
+
+For custom implementations:
+
+**Changemaker API**
+```bash
+POST /api/workspaces/:slug/rewards/issue
+{
+  "participantId": "uuid",
+  "skuId": "sku_amazon_25_usd",
+  "message": "Congratulations!"
+}
+```
+
+**RewardStack API**
+
+Direct API usage (advanced):
+- See [RewardStack API docs](https://docs.rewardstack.com)
+- Use for custom workflows
+- Requires technical expertise
+
+### Custom Workflows
+
+**Approval Workflows**
+
+Create multi-step approval:
+1. Participant completes challenge
+2. Manager reviews and approves
+3. Finance approves if >$100
+4. Reward issued automatically
+
+Configure in **Settings → Workflows**
+
+## Best Practices
+
+### Setup
+
+✅ **Do:**
+- Start with sandbox for testing
+- Test end-to-end flow before going live
+- Activate only SKUs you'll use
+- Set budget alerts
+- Document your process
+
+❌ **Don't:**
+- Use production before testing
+- Activate every available SKU
+- Ignore balance alerts
+- Share API credentials
+- Skip monitoring setup
+
+### Ongoing Management
+
+**Regular Tasks**
+
+Weekly:
+- Review reward activity
+- Check pending rewards
+- Monitor budget spend
+- Address failed deliveries
+
+Monthly:
+- Analyze reward effectiveness
+- Review SKU usage
+- Optimize reward strategy
+- Reconcile accounting
+- Export reports
+
+Quarterly:
+- Review RewardStack fees
+- Negotiate better rates
+- Evaluate SKU catalog
+- Update email templates
+- Assess ROI
+
+## Related Resources
+
+- [Reward Distribution Guide](/docs/guides/rewards)
+- [Challenge Management](/docs/guides/challenges)
+- [API Reference](/docs/api-reference)
+- [RewardStack Documentation](https://docs.rewardstack.com)
+
+## Support
+
+### Changemaker Support
+
+For integration questions:
+- Email: [support@changemaker.im](mailto:support@changemaker.im)
+- Documentation: [/docs](/docs)
+- Status: [status.changemaker.im](https://status.changemaker.im)
+
+### RewardStack Support
+
+For reward delivery issues:
+- Email: [support@rewardstack.com](mailto:support@rewardstack.com)
+- Documentation: [docs.rewardstack.com](https://docs.rewardstack.com)
+- Status: [status.rewardstack.com](https://status.rewardstack.com)

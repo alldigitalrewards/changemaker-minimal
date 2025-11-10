@@ -1,0 +1,154 @@
+---
+title: API Reference
+description: Complete reference for the Changemaker REST API
+order: 2
+tags: ['api', 'reference', 'developers']
+---
+
+# API Reference
+
+The Changemaker API provides programmatic access to manage workspaces, challenges, participants, and rewards.
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://your-workspace.changemaker.im/api
+```
+
+## Authentication
+
+The API uses bearer token authentication. Include your API key in the Authorization header:
+
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  https://your-workspace.changemaker.im/api/challenges
+```
+
+## Endpoints
+
+### Challenges
+
+#### List Challenges
+
+```http
+GET /api/workspaces/:slug/challenges
+```
+
+Returns a list of all challenges in the workspace.
+
+**Response:**
+
+```json
+{
+  "challenges": [
+    {
+      "id": "uuid",
+      "title": "Innovation Challenge 2025",
+      "description": "Submit your best innovation ideas",
+      "status": "active",
+      "startDate": "2025-01-01",
+      "endDate": "2025-12-31"
+    }
+  ]
+}
+```
+
+#### Create Challenge
+
+```http
+POST /api/workspaces/:slug/challenges
+```
+
+**Request Body:**
+
+```json
+{
+  "title": "New Challenge",
+  "description": "Challenge description",
+  "requirements": "Markdown formatted requirements"
+}
+```
+
+### Participants
+
+#### Enroll Participant
+
+```http
+POST /api/workspaces/:slug/challenges/:id/enroll
+```
+
+Enrolls the authenticated user in a challenge.
+
+### Rewards
+
+#### Issue Reward
+
+```http
+POST /api/workspaces/:slug/rewards/issue
+```
+
+Issues a reward to a participant via RewardStack integration.
+
+**Request Body:**
+
+```json
+{
+  "participantId": "uuid",
+  "challengeId": "uuid",
+  "skuId": "sku_123",
+  "amount": 50.00
+}
+```
+
+## Rate Limits
+
+API requests are limited to:
+- **100 requests per minute** for authenticated users
+- **10 requests per minute** for unauthenticated requests
+
+## Error Codes
+
+| Code | Description |
+|------|-------------|
+| 400 | Bad Request - Invalid parameters |
+| 401 | Unauthorized - Invalid or missing API key |
+| 403 | Forbidden - Insufficient permissions |
+| 404 | Not Found - Resource doesn't exist |
+| 429 | Too Many Requests - Rate limit exceeded |
+| 500 | Internal Server Error |
+
+## Webhooks
+
+Subscribe to events using webhooks:
+
+```json
+{
+  "event": "challenge.created",
+  "data": {
+    "challengeId": "uuid",
+    "workspaceId": "uuid"
+  }
+}
+```
+
+### Available Events
+
+- `challenge.created`
+- `challenge.updated`
+- `enrollment.created`
+- `reward.issued`
+- `participant.joined`
+
+## SDKs
+
+Official SDKs are available for:
+
+- **JavaScript/TypeScript**: `npm install @changemaker/sdk`
+- **Python**: `pip install changemaker-sdk`
+- **Ruby**: `gem install changemaker`
+
+## Support
+
+For API support, contact [api@changemaker.im](mailto:api@changemaker.im)
