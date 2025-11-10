@@ -11,7 +11,7 @@
 
 import { prisma } from "../prisma";
 import { generateRewardStackToken, getRewardStackBaseUrl } from "./auth";
-import { syncParticipantToRewardStack } from "./participant-sync";
+import { syncParticipantToRewardStack, getParticipantFromRewardStack, getCountryCode } from "./participant-sync";
 import { Prisma, RewardStackStatus, RewardStatus, RewardType } from "@prisma/client";
 
 /**
@@ -619,6 +619,82 @@ export async function issueCatalogReward(
     console.log('\n✅ Address validation passed - All required fields present');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
+    // Fetch participant from RewardSTACK to verify address data
+    if (participant.rewardStackParticipantId) {
+      console.log('🔍 Fetching participant data from RewardSTACK...\n');
+      try {
+        const rewardStackParticipant = await getParticipantFromRewardStack(
+          rewardIssuance.workspaceId,
+          programId,
+          participant.rewardStackParticipantId
+        );
+
+      if (rewardStackParticipant) {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📡 PARTICIPANT DATA IN REWARDSTACK');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('Participant ID:', rewardStackParticipant.unique_id);
+        console.log('Email:', rewardStackParticipant.email_address);
+        console.log('Name:', `${rewardStackParticipant.firstname || ''} ${rewardStackParticipant.lastname || ''}`.trim() || '(not set)');
+        console.log('\nAddress in RewardSTACK:');
+
+        // Handle nested address object (new format)
+        const address = (rewardStackParticipant as any).address;
+        if (address && typeof address === 'object') {
+          console.log('  Line 1:', address.address1 || '❌ MISSING');
+          console.log('  Line 2:', address.address2 || '(not set)');
+          console.log('  City:   ', address.city || '❌ MISSING');
+          console.log('  State:  ', address.state || '❌ MISSING');
+          console.log('  Zip:    ', address.zip || '❌ MISSING');
+          console.log('  Country:', address.country || '❌ MISSING');
+        } else {
+          // Fallback to flat structure (old format)
+          console.log('  Line 1:', (rewardStackParticipant as any).address1 || '❌ MISSING');
+          console.log('  Line 2:', (rewardStackParticipant as any).address2 || '(not set)');
+          console.log('  City:   ', (rewardStackParticipant as any).city || '❌ MISSING');
+          console.log('  State:  ', (rewardStackParticipant as any).state || '❌ MISSING');
+          console.log('  Zip:    ', (rewardStackParticipant as any).zip || '❌ MISSING');
+          console.log('  Country:', (rewardStackParticipant as any).country || '❌ MISSING');
+        }
+        console.log('  Phone:  ', rewardStackParticipant.phone || '(not set)');
+
+        // Check if RewardSTACK has the required fields (nested or flat)
+        const rewardStackMissingFields: string[] = [];
+        if (address && typeof address === 'object') {
+          if (!address.address1) rewardStackMissingFields.push('Street Address');
+          if (!address.city) rewardStackMissingFields.push('City');
+          if (!address.state) rewardStackMissingFields.push('State');
+          if (!address.zip) rewardStackMissingFields.push('Zip Code');
+          if (!address.country) rewardStackMissingFields.push('Country');
+        } else {
+          if (!(rewardStackParticipant as any).address1) rewardStackMissingFields.push('Street Address');
+          if (!(rewardStackParticipant as any).city) rewardStackMissingFields.push('City');
+          if (!(rewardStackParticipant as any).state) rewardStackMissingFields.push('State');
+          if (!(rewardStackParticipant as any).zip) rewardStackMissingFields.push('Zip Code');
+          if (!(rewardStackParticipant as any).country) rewardStackMissingFields.push('Country');
+        }
+
+        if (rewardStackMissingFields.length > 0) {
+          console.log('\n❌ REWARDSTACK MISSING FIELDS:', rewardStackMissingFields.join(', '));
+          console.log('⚠️  This explains why the catalog transaction is failing!');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+          throw new Error(
+            `Participant in RewardSTACK is missing required address fields: ${rewardStackMissingFields.join(', ')}. The participant needs to be re-synced.`
+          );
+        } else {
+          console.log('\n✅ RewardSTACK has all required address fields');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        }
+      } else {
+        console.log('⚠️  Could not fetch participant from RewardSTACK');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      }
+      } catch (error: any) {
+        console.log('⚠️  Error fetching participant from RewardSTACK:', error.message);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      }
+    }
+
     // Update status to PROCESSING
     await updateRewardIssuance(rewardIssuanceId, {
       status: "PENDING",
@@ -626,6 +702,9 @@ export async function issueCatalogReward(
     });
 
     // Prepare transaction request (per RewardSTACK API v2 docs)
+    // Note: Use "shipping" property (not "shipping_address") per API spec
+    // Note: issue_points: true automatically gives participant enough points for the reward
+    const countryCode = getCountryCode(participant.country);
     const transactionRequest = {
       products: [
         {
@@ -633,6 +712,17 @@ export async function issueCatalogReward(
           quantity: 1,
         },
       ],
+      shipping: {
+        firstname: participant.firstName || '',
+        lastname: participant.lastName || '',
+        address1: participant.addressLine1 || '',
+        address2: participant.addressLine2 || '',
+        city: participant.city || '',
+        state: participant.state || '',
+        zip: participant.zipCode || '',
+        country: countryCode || participant.country || '',
+      },
+      issue_points: true,
       metadata: {
         ...(rewardIssuance.metadata as Record<string, unknown>),
         changemaker_reward_id: rewardIssuanceId,
@@ -645,6 +735,12 @@ export async function issueCatalogReward(
     console.log('  Quantity: 1');
     console.log('  Participant ID:', uniqueId);
     console.log('  Program ID:', programId);
+    console.log('  Auto-issue points: true');
+    console.log('  Shipping Address:');
+    console.log('    Name:', transactionRequest.shipping.firstname, transactionRequest.shipping.lastname);
+    console.log('    Address:', transactionRequest.shipping.address1);
+    console.log('    City/State/Zip:', `${transactionRequest.shipping.city}, ${transactionRequest.shipping.state} ${transactionRequest.shipping.zip}`);
+    console.log('    Country:', transactionRequest.shipping.country);
 
     // Call RewardSTACK API with retry
     const result = await executeWithRetry(async () => {

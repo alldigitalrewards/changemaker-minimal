@@ -19,15 +19,18 @@ interface RewardStackParticipant {
   firstname?: string;
   lastname?: string;
   phone?: string;
-  address1?: string;
-  address2?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  country?: string;
+  address?: {
+    firstname?: string;
+    lastname?: string;
+    address1?: string;
+    address2?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string; // ISO 3166-1 numeric country code (e.g., "840" for USA)
+  };
   program?: string; // Program unique ID (required for creation)
   external_id?: string; // Our user ID for reference
-  meta?: Record<string, unknown>;
 }
 
 /**
@@ -55,6 +58,32 @@ export interface ParticipantSyncResult {
  * @param user - Prisma User object
  * @returns RewardStackParticipant data structure
  */
+/**
+ * Convert country name to ISO 3166-1 numeric code
+ * RewardSTACK requires numeric country codes for addresses
+ */
+export function getCountryCode(countryName?: string | null): string | undefined {
+  if (!countryName) return undefined;
+
+  const normalized = countryName.toLowerCase().trim();
+
+  // Common country codes
+  const countryMap: Record<string, string> = {
+    'united states': '840',
+    'usa': '840',
+    'us': '840',
+    'canada': '124',
+    'mexico': '484',
+    'united kingdom': '826',
+    'uk': '826',
+    'australia': '036',
+    'germany': '276',
+    'france': '250',
+  };
+
+  return countryMap[normalized];
+}
+
 export function mapUserToParticipant(
   user: {
     id: string;
@@ -80,13 +109,29 @@ export function mapUserToParticipant(
   if (user.lastName) participant.lastname = user.lastName;
   if (user.phone) participant.phone = user.phone;
 
-  // Add address fields if present
-  if (user.addressLine1) participant.address1 = user.addressLine1;
-  if (user.addressLine2) participant.address2 = user.addressLine2;
-  if (user.city) participant.city = user.city;
-  if (user.state) participant.state = user.state;
-  if (user.zipCode) participant.zip = user.zipCode;
-  if (user.country) participant.country = user.country;
+  // Build nested address object if any address fields are present
+  const hasAddress = user.addressLine1 || user.city || user.state || user.zipCode || user.country;
+
+  if (hasAddress) {
+    participant.address = {};
+
+    // Include name in address object (required by RewardSTACK)
+    if (user.firstName) participant.address.firstname = user.firstName;
+    if (user.lastName) participant.address.lastname = user.lastName;
+
+    // Add address fields
+    if (user.addressLine1) participant.address.address1 = user.addressLine1;
+    if (user.addressLine2) participant.address.address2 = user.addressLine2;
+    if (user.city) participant.address.city = user.city;
+    if (user.state) participant.address.state = user.state;
+    if (user.zipCode) participant.address.zip = user.zipCode;
+
+    // Convert country name to numeric code
+    const countryCode = getCountryCode(user.country);
+    if (countryCode) {
+      participant.address.country = countryCode;
+    }
+  }
 
   return participant;
 }
@@ -116,12 +161,7 @@ export async function createParticipant(
     program: programId,
   };
 
-  console.log('[createParticipant] Request details:', {
-    url,
-    programId,
-    participantEmail: participantData.email_address,
-    tokenPrefix: token.substring(0, 20) + '...'
-  });
+  console.log('[createParticipant] Sending participant data to RewardSTACK:', JSON.stringify(participantData, null, 2));
 
   const response = await fetch(url, {
     method: "POST",
@@ -182,18 +222,33 @@ export async function createParticipant(
 
   const data = await response.json();
 
+  // Log raw response for debugging
+  console.log('\n[DEBUG] Raw API Response:', JSON.stringify(data, null, 2));
+
   console.log('\n✅ Participant Created in RewardSTACK:');
   console.log('  Unique ID:', data.unique_id);
   console.log('  Email:', data.email_address);
   console.log('  Name:', data.firstname || '(none)', data.lastname || '');
   console.log('  Phone:', data.phone || '(none)');
   console.log('  Address:');
-  console.log('    Line 1:', data.address1 || '(none)');
-  console.log('    Line 2:', data.address2 || '(none)');
-  console.log('    City:', data.city || '(none)');
-  console.log('    State:', data.state || '(none)');
-  console.log('    Zip:', data.zip || '(none)');
-  console.log('    Country:', data.country || '(none)');
+
+  // Handle nested address object
+  if (data.address && typeof data.address === 'object') {
+    console.log('    Line 1:', data.address.address1 || '(none)');
+    console.log('    Line 2:', data.address.address2 || '(none)');
+    console.log('    City:', data.address.city || '(none)');
+    console.log('    State:', data.address.state || '(none)');
+    console.log('    Zip:', data.address.zip || '(none)');
+    console.log('    Country:', data.address.country || '(none)');
+  } else {
+    // Fallback to flat structure
+    console.log('    Line 1:', data.address1 || '(none)');
+    console.log('    Line 2:', data.address2 || '(none)');
+    console.log('    City:', data.city || '(none)');
+    console.log('    State:', data.state || '(none)');
+    console.log('    Zip:', data.zip || '(none)');
+    console.log('    Country:', data.country || '(none)');
+  }
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   return {
@@ -223,13 +278,7 @@ export async function updateParticipant(
 
   const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(participantId)}`;
 
-  console.log('[updateParticipant] Request details:', {
-    url,
-    programId,
-    participantId,
-    participantEmail: participant.email_address,
-    tokenPrefix: token.substring(0, 20) + '...'
-  });
+  console.log('[updateParticipant] Sending participant data to RewardSTACK:', JSON.stringify(participant, null, 2));
 
   const response = await fetch(url, {
     method: "PATCH",
@@ -280,23 +329,38 @@ export async function updateParticipant(
 
   const data = await response.json();
 
-  console.log('[updateParticipant] Response from RewardSTACK:', {
-    unique_id: data.unique_id,
-    email_address: data.email_address,
-    firstname: data.firstname,
-    lastname: data.lastname,
-    phone: data.phone,
-    address1: data.address1,
-    address2: data.address2,
-    city: data.city,
-    state: data.state,
-    zip: data.zip,
-    country: data.country,
-    fullResponse: data,
-  });
+  // Log raw response for debugging
+  console.log('\n[DEBUG] Raw API Response:', JSON.stringify(data, null, 2));
+
+  console.log('\n✅ Participant Updated in RewardSTACK:');
+  console.log('  Unique ID:', data.unique_id);
+  console.log('  Email:', data.email_address);
+  console.log('  Name:', data.firstname || '(none)', data.lastname || '');
+  console.log('  Phone:', data.phone || '(none)');
+  console.log('  Address:');
+
+  // Handle nested address object
+  if (data.address && typeof data.address === 'object') {
+    console.log('    Line 1:', data.address.address1 || '(none)');
+    console.log('    Line 2:', data.address.address2 || '(none)');
+    console.log('    City:', data.address.city || '(none)');
+    console.log('    State:', data.address.state || '(none)');
+    console.log('    Zip:', data.address.zip || '(none)');
+    console.log('    Country:', data.address.country || '(none)');
+  } else {
+    // Fallback to flat structure
+    console.log('    Line 1:', data.address1 || '(none)');
+    console.log('    Line 2:', data.address2 || '(none)');
+    console.log('    City:', data.city || '(none)');
+    console.log('    State:', data.state || '(none)');
+    console.log('    Zip:', data.zip || '(none)');
+    console.log('    Country:', data.country || '(none)');
+  }
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
   return data;
 }
+
 
 /**
  * Get participant details from RewardSTACK
@@ -648,6 +712,7 @@ export async function syncParticipantToRewardStack(
       participantId = result.id;
       action = "created";
     }
+
 
     // Update status to SYNCED
     await updateUserSyncStatus(userId, "SYNCED", participantId);
