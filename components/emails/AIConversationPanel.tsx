@@ -57,7 +57,7 @@ export function AIConversationPanel({
     initialTemplate?.conversationHistory || []
   )
   const [input, setInput] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [currentHtml, setCurrentHtml] = useState(initialTemplate?.html || '')
   const [currentSubject, setCurrentSubject] = useState(initialTemplate?.subject || '')
   const [showHtmlEditor, setShowHtmlEditor] = useState(false)
@@ -66,6 +66,25 @@ export function AIConversationPanel({
   const [showSaveModal, setShowSaveModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Helper function to extract HTML from AI response
+  const extractHtmlFromResponse = (content: string): { subject: string; html: string } | null => {
+    // Look for HTML code blocks
+    const htmlMatch = content.match(/```html\s*([\s\S]*?)```/);
+    if (htmlMatch && htmlMatch[1]) {
+      const html = htmlMatch[1].trim();
+
+      // Try to extract subject from HTML title or h1
+      let subject = currentSubject;
+      const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+      if (titleMatch && titleMatch[1]) {
+        subject = titleMatch[1];
+      }
+
+      return { subject, html };
+    }
+    return null;
+  }
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -78,7 +97,7 @@ export function AIConversationPanel({
   }, [])
 
   const handleSend = async () => {
-    if (!input.trim() || isGenerating) return
+    if (!input.trim() || isLoading) return
 
     const userMessage: ConversationMessage = {
       role: 'user',
@@ -86,29 +105,36 @@ export function AIConversationPanel({
       timestamp: new Date(),
     }
 
-    setMessages(prev => [...prev, userMessage])
+    // Add user message to conversation
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
     setInput('')
-    setIsGenerating(true)
+    setIsLoading(true)
     onGeneratingChange?.(true)
 
     try {
-      const response = await fetch(`/api/workspaces/${workspaceSlug}/emails/ai-generate`, {
+      // Prepare messages for API (convert ConversationMessage to simple format)
+      const apiMessages = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }))
+
+      const response = await fetch(`/api/workspaces/${workspaceSlug}/emails/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: userMessage.content,
-          conversationHistory: messages,
-          existingHtml: currentHtml,
-          existingSubject: currentSubject,
-          templateType: initialTemplate?.type || 'GENERIC',
-          workspaceName,
-          brandColor,
-          generationSettings,
+          messages: apiMessages,
+          data: {
+            templateType: initialTemplate?.type || 'GENERIC',
+            workspaceName,
+            brandColor,
+            generationSettings,
+          },
         }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate email')
+        throw new Error('Failed to generate response')
       }
 
       const reader = response.body?.getReader()
@@ -118,93 +144,46 @@ export function AIConversationPanel({
         throw new Error('No response stream available')
       }
 
-      let accumulatedHtml = ''
-      let accumulatedSubject = ''
+      let accumulatedText = ''
 
-      // Add assistant message placeholder
-      const assistantMessageIndex = messages.length + 1
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: 'Generating...',
-          timestamp: new Date(),
-        },
-      ])
-
+      // Read the stream
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
         const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6))
-
-              // Handle different event types from AI SDK
-              if (data.type === 'object-delta') {
-                // Structured object is being generated (streamObject)
-                if (data.subject) {
-                  accumulatedSubject = data.subject
-                  setCurrentSubject(accumulatedSubject)
-                }
-
-                if (data.html) {
-                  accumulatedHtml = data.html
-                  setCurrentHtml(accumulatedHtml)
-                }
-
-                // Notify parent of content updates
-                onContentUpdate?.(accumulatedSubject, accumulatedHtml)
-              } else if (data.type === 'finish') {
-                // Generation complete
-                if (data.subject) {
-                  accumulatedSubject = data.subject
-                  setCurrentSubject(accumulatedSubject)
-                }
-
-                if (data.html) {
-                  accumulatedHtml = data.html
-                  setCurrentHtml(accumulatedHtml)
-                }
-
-                // Notify parent of final content
-                onContentUpdate?.(accumulatedSubject, accumulatedHtml)
-
-                // Update the assistant message with final content
-                setMessages(prev => {
-                  const updated = [...prev]
-                  if (updated[assistantMessageIndex]?.content === 'Generating...') {
-                    updated[assistantMessageIndex] = {
-                      role: 'assistant',
-                      content: `Generated email template with subject: "${accumulatedSubject}"`,
-                      timestamp: new Date(),
-                    }
-                  }
-                  return updated
-                })
-              }
-            } catch (e) {
-              console.error('Error parsing SSE data:', e)
-            }
-          }
-        }
+        accumulatedText += chunk
       }
-    } catch (error) {
-      console.error('Error generating email:', error)
+
+      // Extract HTML from response
+      const extracted = extractHtmlFromResponse(accumulatedText)
+      if (extracted) {
+        setCurrentHtml(extracted.html)
+        setCurrentSubject(extracted.subject)
+        onContentUpdate?.(extracted.subject, extracted.html)
+      }
+
+      // Add assistant message
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content: 'Sorry, I encountered an error generating the email. Please try again.',
+          content: accumulatedText,
+          timestamp: new Date(),
+        },
+      ])
+    } catch (error) {
+      console.error('Error generating response:', error)
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error. Please try again.',
           timestamp: new Date(),
         },
       ])
     } finally {
-      setIsGenerating(false)
+      setIsLoading(false)
       onGeneratingChange?.(false)
     }
   }
@@ -219,7 +198,8 @@ export function AIConversationPanel({
   // Update when initialTemplate changes
   useEffect(() => {
     if (initialTemplate) {
-      setMessages(initialTemplate.conversationHistory || [])
+      // Note: useChat initialMessages are set on mount, so we handle template loading
+      // by reloading the component when a new template is selected
       setCurrentHtml(initialTemplate.html || '')
       setCurrentSubject(initialTemplate.subject || '')
       setLoadedTemplateId(initialTemplate.id)
@@ -248,6 +228,9 @@ export function AIConversationPanel({
     updateExisting?: boolean
   }) => {
     try {
+      // Messages are already in ConversationMessage format
+      const conversationHistory = messages;
+
       const payload = {
         name: data.name,
         type: data.type,
@@ -255,7 +238,7 @@ export function AIConversationPanel({
         html: currentHtml,
         description: data.description,
         tags: data.tags,
-        conversationHistory: messages,
+        conversationHistory,
         aiModel: 'claude-sonnet-4-5-20250929',
         updateExisting: data.updateExisting,
         existingTemplateId: loadedTemplateId,
@@ -291,7 +274,7 @@ export function AIConversationPanel({
         onSave({
           subject: currentSubject,
           html: currentHtml,
-          conversationHistory: messages,
+          conversationHistory,
         })
       }
     } catch (error) {
@@ -446,9 +429,9 @@ export function AIConversationPanel({
               </div>
             )}
 
-            {messages.map((message, index) => (
+            {messages.map((message: { id: string; role: string; content: string }) => (
               <div
-                key={index}
+                key={message.id}
                 className={cn(
                   'flex gap-3 items-start',
                   message.role === 'user' ? 'justify-end' : 'justify-start'
@@ -468,9 +451,6 @@ export function AIConversationPanel({
                   )}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1">
-                    {message.timestamp.toLocaleTimeString()}
-                  </p>
                 </div>
                 {message.role === 'user' && (
                   <div className="shrink-0 mt-1">
@@ -480,7 +460,7 @@ export function AIConversationPanel({
               </div>
             ))}
 
-            {isGenerating && (
+            {isLoading && (
               <div className="flex gap-3 items-start">
                 <div className="shrink-0 mt-1">
                   <Loader2 className="h-5 w-5 text-primary animate-spin" />
@@ -522,14 +502,14 @@ export function AIConversationPanel({
                 onKeyDown={handleKeyDown}
                 placeholder="Type your message or use suggestions..."
                 className="min-h-[60px] resize-none"
-                disabled={isGenerating}
+                disabled={isLoading}
               />
               <Button
                 onClick={handleSend}
-                disabled={!input.trim() || isGenerating}
+                disabled={!input.trim() || isLoading}
                 className="shrink-0"
               >
-                {isGenerating ? (
+                {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="h-4 w-4" />

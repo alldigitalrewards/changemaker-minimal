@@ -36,12 +36,10 @@ export function CoralButton({
         variant="outline"
         size={size}
         asChild={asChild}
-        className={cn(baseStyles, "border-2")}
-        style={{
-          borderColor: '#FF6B6B',
-          color: '#FF6B6B',
-          backgroundColor: isHovered ? '#FFF5F5' : 'transparent'
-        }}
+        className={cn(
+          baseStyles,
+          "border-2 border-coral-500 text-coral-500 hover:bg-coral-50"
+        )}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         {...props}
@@ -71,11 +69,10 @@ export function CoralButton({
     <Button
       size={size}
       asChild={asChild}
-      className={cn(baseStyles, "text-white shadow-xl hover:shadow-2xl transform hover:scale-105")}
-      style={{
-        backgroundColor: isHovered ? '#FF5252' : '#FF6B6B',
-        color: 'white'
-      }}
+      className={cn(
+        baseStyles,
+        "bg-coral-500 hover:bg-coral-600 text-white shadow-xl hover:shadow-2xl transform hover:scale-105"
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       {...props}

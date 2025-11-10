@@ -10,7 +10,7 @@ import ProfileNameForm from "@/components/ui/profile-name-form"
 import ProfileParticipantForm from "@/components/ui/profile-participant-form"
 import ProfileStats from "@/components/ui/profile-stats"
 import { PasswordResetDialog } from "@/components/ui/password-reset-dialog"
-import { ProfileAddress } from "@/components/ui/profile-address"
+import { InlineAddressEditor } from "@/components/ui/inline-address-editor"
 import { getUserDisplayName } from "@/lib/user-utils"
 
 export default async function ParticipantProfilePage({
@@ -141,7 +141,9 @@ export default async function ParticipantProfilePage({
       </Card>
 
       {/* Shipping Address */}
-      <ProfileAddress
+      <InlineAddressEditor
+        userId={dbUser.id}
+        workspaceSlug={slug}
         initialAddress={{
           addressLine1: dbUser.addressLine1,
           addressLine2: dbUser.addressLine2,
@@ -151,6 +153,7 @@ export default async function ParticipantProfilePage({
           country: dbUser.country,
           phone: dbUser.phone
         }}
+        isAdmin={false}
       />
 
       {/* Enrollment Summary */}

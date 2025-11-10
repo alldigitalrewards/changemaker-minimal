@@ -14,21 +14,20 @@ import { RewardStackSyncStatus } from "@prisma/client";
  * RewardSTACK Participant data structure (API v2.2)
  */
 interface RewardStackParticipant {
-  id?: string; // Participant ID (returned by API)
-  email: string;
-  firstName?: string;
-  lastName?: string;
+  unique_id?: string; // Participant ID (returned by API)
+  email_address: string;
+  firstname?: string;
+  lastname?: string;
   phone?: string;
-  address?: {
-    line1?: string;
-    line2?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    country?: string;
-  };
-  externalId?: string; // Our user ID for reference
-  metadata?: Record<string, unknown>;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  program?: string; // Program unique ID (required for creation)
+  external_id?: string; // Our user ID for reference
+  meta?: Record<string, unknown>;
 }
 
 /**
@@ -72,31 +71,22 @@ export function mapUserToParticipant(
   }
 ): RewardStackParticipant {
   const participant: RewardStackParticipant = {
-    email: user.email,
-    externalId: user.id,
+    email_address: user.email,
+    external_id: user.id,
   };
 
   // Add optional fields if present
-  if (user.firstName) participant.firstName = user.firstName;
-  if (user.lastName) participant.lastName = user.lastName;
+  if (user.firstName) participant.firstname = user.firstName;
+  if (user.lastName) participant.lastname = user.lastName;
   if (user.phone) participant.phone = user.phone;
 
-  // Add address if any address fields are present
-  if (
-    user.addressLine1 ||
-    user.city ||
-    user.state ||
-    user.zipCode ||
-    user.country
-  ) {
-    participant.address = {};
-    if (user.addressLine1) participant.address.line1 = user.addressLine1;
-    if (user.addressLine2) participant.address.line2 = user.addressLine2;
-    if (user.city) participant.address.city = user.city;
-    if (user.state) participant.address.state = user.state;
-    if (user.zipCode) participant.address.zipCode = user.zipCode;
-    if (user.country) participant.address.country = user.country;
-  }
+  // Add address fields if present
+  if (user.addressLine1) participant.address1 = user.addressLine1;
+  if (user.addressLine2) participant.address2 = user.addressLine2;
+  if (user.city) participant.city = user.city;
+  if (user.state) participant.state = user.state;
+  if (user.zipCode) participant.zip = user.zipCode;
+  if (user.country) participant.country = user.country;
 
   return participant;
 }
@@ -118,7 +108,20 @@ export async function createParticipant(
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant`;
+
+  // Add program ID to participant data
+  const participantData = {
+    ...participant,
+    program: programId,
+  };
+
+  console.log('[createParticipant] Request details:', {
+    url,
+    programId,
+    participantEmail: participantData.email_address,
+    tokenPrefix: token.substring(0, 20) + '...'
+  });
 
   const response = await fetch(url, {
     method: "POST",
@@ -126,7 +129,7 @@ export async function createParticipant(
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(participant),
+    body: JSON.stringify(participantData),
   });
 
   // Handle error responses
@@ -134,6 +137,12 @@ export async function createParticipant(
     const errorData: RewardStackError = await response
       .json()
       .catch(() => ({ message: `HTTP ${response.status}` }));
+
+    console.error('[createParticipant] API error:', {
+      status: response.status,
+      errorData,
+      url
+    });
 
     // Handle specific error cases
     if (response.status === 400) {
@@ -143,7 +152,7 @@ export async function createParticipant(
     }
 
     if (response.status === 401) {
-      throw new Error("Authentication failed: Invalid API key");
+      throw new Error(`Authentication failed: ${errorData.message || "Invalid API key"}`);
     }
 
     if (response.status === 403) {
@@ -172,8 +181,23 @@ export async function createParticipant(
   }
 
   const data = await response.json();
+
+  console.log('\n✅ Participant Created in RewardSTACK:');
+  console.log('  Unique ID:', data.unique_id);
+  console.log('  Email:', data.email_address);
+  console.log('  Name:', data.firstname || '(none)', data.lastname || '');
+  console.log('  Phone:', data.phone || '(none)');
+  console.log('  Address:');
+  console.log('    Line 1:', data.address1 || '(none)');
+  console.log('    Line 2:', data.address2 || '(none)');
+  console.log('    City:', data.city || '(none)');
+  console.log('    State:', data.state || '(none)');
+  console.log('    Zip:', data.zip || '(none)');
+  console.log('    Country:', data.country || '(none)');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
   return {
-    id: data.id || data.participantId,
+    id: data.unique_id,
     data: data,
   };
 }
@@ -197,7 +221,15 @@ export async function updateParticipant(
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(participantId)}`;
+
+  console.log('[updateParticipant] Request details:', {
+    url,
+    programId,
+    participantId,
+    participantEmail: participant.email_address,
+    tokenPrefix: token.substring(0, 20) + '...'
+  });
 
   const response = await fetch(url, {
     method: "PATCH",
@@ -213,10 +245,20 @@ export async function updateParticipant(
       .json()
       .catch(() => ({ message: `HTTP ${response.status}` }));
 
+    console.error('[updateParticipant] API error:', {
+      status: response.status,
+      errorData,
+      url
+    });
+
     if (response.status === 400) {
       throw new Error(
         `Invalid participant data: ${errorData.message || "Validation failed"}`
       );
+    }
+
+    if (response.status === 401) {
+      throw new Error(`Authentication failed: ${errorData.message || "Invalid API key"}`);
     }
 
     if (response.status === 404) {
@@ -236,7 +278,24 @@ export async function updateParticipant(
     );
   }
 
-  return await response.json();
+  const data = await response.json();
+
+  console.log('[updateParticipant] Response from RewardSTACK:', {
+    unique_id: data.unique_id,
+    email_address: data.email_address,
+    firstname: data.firstname,
+    lastname: data.lastname,
+    phone: data.phone,
+    address1: data.address1,
+    address2: data.address2,
+    city: data.city,
+    state: data.state,
+    zip: data.zip,
+    country: data.country,
+    fullResponse: data,
+  });
+
+  return data;
 }
 
 /**
@@ -256,7 +315,7 @@ export async function getParticipantFromRewardStack(
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(participantId)}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -305,7 +364,7 @@ export async function deleteParticipant(
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(participantId)}`;
 
   const response = await fetch(url, {
     method: "DELETE",
@@ -524,6 +583,25 @@ export async function syncParticipantToRewardStack(
     // Map user to participant format
     const participantData = mapUserToParticipant(user);
 
+    // Log participant data from Changemaker
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔄 PARTICIPANT SYNC - Changemaker → RewardSTACK');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Participant:', user.email);
+    console.log('Action:', user.rewardStackParticipantId ? 'UPDATE' : 'CREATE');
+    console.log('\nData from Changemaker DB:');
+    console.log('  Name:', user.firstName || '(none)', user.lastName || '');
+    console.log('  Phone:', user.phone || '(none)');
+    console.log('  Address Line 1:', user.addressLine1 || '(none)');
+    console.log('  Address Line 2:', user.addressLine2 || '(none)');
+    console.log('  City:', user.city || '(none)');
+    console.log('  State:', user.state || '(none)');
+    console.log('  Zip:', user.zipCode || '(none)');
+    console.log('  Country:', user.country || '(none)');
+    console.log('\nSync Status:');
+    console.log('  Current RewardSTACK ID:', user.rewardStackParticipantId || '(not yet synced)');
+    console.log('  Sync Status:', user.rewardStackSyncStatus || 'NEVER_SYNCED');
+
     let participantId: string;
     let action: "created" | "updated";
 
@@ -540,8 +618,15 @@ export async function syncParticipantToRewardStack(
         participantId = user.rewardStackParticipantId;
         action = "updated";
       } catch (error) {
-        // If participant not found, create new one
-        if (error instanceof Error && error.message.includes("not found")) {
+        // If participant not found or server error (stale ID), create new one
+        if (
+          error instanceof Error &&
+          (error.message.includes("not found") ||
+            error.message.includes("server error"))
+        ) {
+          console.log(
+            `[syncParticipantToRewardStack] Update failed for ${user.email}, creating new participant...`
+          );
           const result = await createParticipant(
             workspaceId,
             workspace.rewardStackProgramId,

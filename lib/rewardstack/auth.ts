@@ -145,11 +145,14 @@ export async function generateRewardStackToken(
   const cacheKey = environment;
   const cached = tokenCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
+    console.log('[generateRewardStackToken] Using cached token for', environment);
     return cached.token;
   }
 
   // Obtain fresh token
+  console.log('[generateRewardStackToken] Obtaining fresh token for', environment);
   const tokenEntry = await obtainJwtToken(environment);
+  console.log('[generateRewardStackToken] Token obtained, expires at', new Date(tokenEntry.expiresAt));
 
   // Cache token
   tokenCache.set(cacheKey, tokenEntry);

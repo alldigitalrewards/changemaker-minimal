@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth";
 import { prisma } from "@/lib/prisma";
-import { issuePoints, createTransaction } from "@/lib/rewardstack/service";
+import { issueRewardTransaction } from "@/lib/rewardstack/reward-logic";
 
 type Params = Promise<{ slug: string }>;
 
@@ -75,16 +75,44 @@ export const POST = withErrorHandling(
           );
         }
 
-        // Issue points via RewardSTACK API
+        // Create issuance record first (with PENDING status)
+        const issuance = await prisma.rewardIssuance.create({
+          data: {
+            workspaceId: workspace.id,
+            userId,
+            amount,
+            type: "points",
+            description,
+            status: "PENDING",
+            issuedBy: user.dbUser.id,
+          },
+          include: {
+            User: {
+              select: {
+                email: true,
+                firstName: true,
+                lastName: true,
+                displayName: true,
+              },
+            },
+          },
+        });
+
+        // Issue points via RewardSTACK (handles participant sync automatically)
         let rewardStackResponse;
         if (workspace.rewardStackEnabled) {
           try {
-            rewardStackResponse = await issuePoints(
-              workspace.id,
-              userId,
-              amount,
-              description
-            );
+            rewardStackResponse = await issueRewardTransaction(issuance.id);
+
+            if (!rewardStackResponse.success) {
+              return NextResponse.json(
+                {
+                  error: "Failed to issue points via RewardSTACK",
+                  details: rewardStackResponse.error,
+                },
+                { status: 500 }
+              );
+            }
           } catch (error: any) {
             console.error("RewardSTACK API error:", error);
             return NextResponse.json(
@@ -95,20 +123,17 @@ export const POST = withErrorHandling(
               { status: 500 }
             );
           }
+        } else {
+          // If RewardSTACK not enabled, mark as issued anyway
+          await prisma.rewardIssuance.update({
+            where: { id: issuance.id },
+            data: { status: "ISSUED" },
+          });
         }
 
-        // Record issuance in database
-        const issuance = await prisma.rewardIssuance.create({
-          data: {
-            workspaceId: workspace.id,
-            userId,
-            amount,
-            type: "points",
-            description,
-            status: "ISSUED",
-            issuedBy: user.dbUser.id,
-            rewardStackTransactionId: rewardStackResponse?.adjustmentId || null,
-          },
+        // Fetch updated issuance record
+        const updatedIssuance = await prisma.rewardIssuance.findUnique({
+          where: { id: issuance.id },
           include: {
             User: {
               select: {
@@ -124,7 +149,7 @@ export const POST = withErrorHandling(
         return NextResponse.json({
           success: true,
           message: `Successfully issued ${amount} points to ${participant.email}`,
-          issuance,
+          issuance: updatedIssuance,
           rewardStackResponse,
         });
       } else if (type === "sku") {
@@ -156,16 +181,45 @@ export const POST = withErrorHandling(
           );
         }
 
-        // Issue SKU via RewardSTACK API
+        // Create issuance record first (with PENDING status)
+        const issuance = await prisma.rewardIssuance.create({
+          data: {
+            workspaceId: workspace.id,
+            userId,
+            amount: workspaceSku.value || 0,
+            type: "sku",
+            skuId,
+            description,
+            status: "PENDING",
+            issuedBy: user.dbUser.id,
+          },
+          include: {
+            User: {
+              select: {
+                email: true,
+                firstName: true,
+                lastName: true,
+                displayName: true,
+              },
+            },
+          },
+        });
+
+        // Issue SKU via RewardSTACK (handles participant sync automatically)
         let rewardStackResponse;
         if (workspace.rewardStackEnabled) {
           try {
-            rewardStackResponse = await createTransaction(
-              workspace.id,
-              userId,
-              skuId,
-              description
-            );
+            rewardStackResponse = await issueRewardTransaction(issuance.id);
+
+            if (!rewardStackResponse.success) {
+              return NextResponse.json(
+                {
+                  error: "Failed to issue SKU via RewardSTACK",
+                  details: rewardStackResponse.error,
+                },
+                { status: 500 }
+              );
+            }
           } catch (error: any) {
             console.error("RewardSTACK API error:", error);
             return NextResponse.json(
@@ -176,21 +230,17 @@ export const POST = withErrorHandling(
               { status: 500 }
             );
           }
+        } else {
+          // If RewardSTACK not enabled, mark as issued anyway
+          await prisma.rewardIssuance.update({
+            where: { id: issuance.id },
+            data: { status: "ISSUED" },
+          });
         }
 
-        // Record SKU issuance in database
-        const issuance = await prisma.rewardIssuance.create({
-          data: {
-            workspaceId: workspace.id,
-            userId,
-            amount: workspaceSku.value || 0,
-            type: "sku",
-            skuId,
-            description,
-            status: "ISSUED",
-            issuedBy: user.dbUser.id,
-            rewardStackTransactionId: rewardStackResponse?.transactionId || null,
-          },
+        // Fetch updated issuance record
+        const updatedIssuance = await prisma.rewardIssuance.findUnique({
+          where: { id: issuance.id },
           include: {
             User: {
               select: {
@@ -206,7 +256,7 @@ export const POST = withErrorHandling(
         return NextResponse.json({
           success: true,
           message: `Successfully issued ${workspaceSku.name} to ${participant.email}`,
-          issuance,
+          issuance: updatedIssuance,
           sku: workspaceSku,
           rewardStackResponse,
         });

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { MDXProvider } from '@mdx-js/react';
+import React from 'react';
 import { mdxComponents } from './mdx-components';
 import { run } from '@mdx-js/mdx';
-import * as runtime from 'react/jsx-runtime';
+import * as prodRuntime from 'react/jsx-runtime';
+import * as devRuntime from 'react/jsx-dev-runtime';
 
 interface MDXRendererProps {
   compiledSource: string;
@@ -18,15 +18,29 @@ export function MDXRenderer({ compiledSource, components }: MDXRendererProps) {
   const [Content, setContent] = React.useState<React.ComponentType | null>(null);
   const [error, setError] = React.useState<Error | null>(null);
 
+  const mergedComponents = React.useMemo(
+    () => ({
+      ...mdxComponents,
+      ...components,
+    }),
+    [components]
+  );
+
   React.useEffect(() => {
     async function loadMDX() {
       try {
-        // Run the compiled MDX function body
+        // Use dev runtime in development, prod runtime in production
+        const runtime = process.env.NODE_ENV === 'development' ? devRuntime : prodRuntime;
+
+        // Run the compiled MDX function body with components
         const { default: MDXContent } = await run(compiledSource, {
           ...runtime,
           baseUrl: import.meta.url,
         });
-        setContent(() => MDXContent);
+
+        // Create wrapper component that passes components
+        const WrappedContent = () => <MDXContent components={mergedComponents} />;
+        setContent(() => WrappedContent);
       } catch (err) {
         console.error('Error rendering MDX:', err);
         setError(err instanceof Error ? err : new Error('Unknown error'));
@@ -34,12 +48,7 @@ export function MDXRenderer({ compiledSource, components }: MDXRendererProps) {
     }
 
     loadMDX();
-  }, [compiledSource]);
-
-  const mergedComponents = {
-    ...mdxComponents,
-    ...components,
-  };
+  }, [compiledSource, mergedComponents]);
 
   if (error) {
     return (
@@ -59,11 +68,9 @@ export function MDXRenderer({ compiledSource, components }: MDXRendererProps) {
   }
 
   return (
-    <MDXProvider components={mergedComponents}>
-      <div className="mdx-content">
-        <Content />
-      </div>
-    </MDXProvider>
+    <div className="mdx-content prose prose-lg max-w-none">
+      <Content />
+    </div>
   );
 }
 

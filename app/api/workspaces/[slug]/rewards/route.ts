@@ -79,6 +79,7 @@ export async function GET(
               firstName: true,
               lastName: true,
               displayName: true,
+              rewardStackParticipantId: true,
             },
           },
           Challenge: {

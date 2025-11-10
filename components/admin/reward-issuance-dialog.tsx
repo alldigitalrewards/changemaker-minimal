@@ -72,6 +72,15 @@ export function RewardIssuanceDialog({
   const [loadingSkus, setLoadingSkus] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  // Participant RewardSTACK status
+  const [participantStatus, setParticipantStatus] = useState<{
+    enabled: boolean
+    synced: boolean
+    message: string
+    programId?: string
+  } | null>(null)
+  const [loadingStatus, setLoadingStatus] = useState(false)
+
   // Load participants and SKUs when dialog opens
   useEffect(() => {
     if (open && workspaceSlug) {
@@ -79,6 +88,33 @@ export function RewardIssuanceDialog({
       loadSkus()
     }
   }, [open, workspaceSlug])
+
+  // Check participant RewardSTACK status when participant is selected
+  useEffect(() => {
+    const checkParticipantStatus = async () => {
+      if (!selectedUserId || !workspaceSlug) {
+        setParticipantStatus(null)
+        return
+      }
+
+      setLoadingStatus(true)
+      try {
+        const res = await fetch(
+          `/api/workspaces/${workspaceSlug}/participants/${selectedUserId}/rewardstack-status`
+        )
+        if (res.ok) {
+          const data = await res.json()
+          setParticipantStatus(data)
+        }
+      } catch (error) {
+        console.error('Failed to check participant status:', error)
+      } finally {
+        setLoadingStatus(false)
+      }
+    }
+
+    checkParticipantStatus()
+  }, [selectedUserId, workspaceSlug])
 
   const loadParticipants = async () => {
     if (!workspaceSlug) return
@@ -283,6 +319,28 @@ export function RewardIssuanceDialog({
                     ))}
                   </SelectContent>
                 </Select>
+              )}
+
+              {/* RewardSTACK Status */}
+              {selectedUserId && (
+                <div className="mt-2">
+                  {loadingStatus ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Checking participant status...
+                    </div>
+                  ) : participantStatus?.enabled ? (
+                    <div
+                      className={`rounded-md px-3 py-2 text-xs ${
+                        participantStatus.synced
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}
+                    >
+                      {participantStatus.message}
+                    </div>
+                  ) : null}
+                </div>
               )}
             </div>
 

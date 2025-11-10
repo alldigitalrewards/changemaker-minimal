@@ -130,7 +130,7 @@ export default function DashboardHeader({
               </div>
             )}
             {budgetBadge && (
-              <div className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-900">
+              <div className="px-3 py-1 text-xs font-medium rounded-full bg-coral-100 text-coral-900">
                 {budgetBadge.label}: {budgetBadge.value}
               </div>
             )}

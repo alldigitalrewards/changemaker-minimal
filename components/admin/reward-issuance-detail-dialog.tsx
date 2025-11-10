@@ -21,7 +21,9 @@ interface RewardIssuance {
   status: string
   rewardStackStatus: string | null
   rewardStackTransactionId: string | null
+  rewardStackAdjustmentId: string | null
   rewardStackErrorMessage: string | null
+  externalResponse: any
   createdAt: string | Date
   issuedAt: string | Date | null
   description: string | null
@@ -35,6 +37,7 @@ interface RewardIssuance {
     firstName: string | null
     lastName: string | null
     displayName: string | null
+    rewardStackParticipantId: string | null
   }
   Challenge?: {
     id: string
@@ -151,6 +154,14 @@ export function RewardIssuanceDetailDialog({
                   </code>
                 </div>
               )}
+              {reward.rewardStackAdjustmentId && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Adjustment ID</span>
+                  <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                    {reward.rewardStackAdjustmentId}
+                  </code>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -171,6 +182,14 @@ export function RewardIssuanceDetailDialog({
                 <span className="text-sm text-gray-600">Email</span>
                 <span className="text-sm">{reward.User.email}</span>
               </div>
+              {reward.User.rewardStackParticipantId && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">RewardSTACK ID</span>
+                  <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                    {reward.User.rewardStackParticipantId}
+                  </code>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -249,6 +268,25 @@ export function RewardIssuanceDetailDialog({
               </div>
             </CardContent>
           </Card>
+
+          {/* RewardSTACK API Response */}
+          {reward.externalResponse && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  RewardSTACK API Response
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-50 p-3 rounded-lg overflow-auto max-h-96">
+                  <pre className="text-xs font-mono whitespace-pre-wrap">
+                    {JSON.stringify(reward.externalResponse, null, 2)}
+                  </pre>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Webhook Event History */}
           {params?.slug && (
