@@ -11,7 +11,7 @@
  * - REWARDSTACK_PASSWORD
  */
 
-import { getWorkspaceBySlug } from "../db/queries";
+import { prisma } from "../prisma";
 import type { TokenResponse } from "./types";
 
 /**
@@ -122,7 +122,15 @@ export async function generateRewardStackToken(
   workspaceId: string
 ): Promise<string> {
   // Fetch workspace to determine environment
-  const workspace = await getWorkspaceBySlug(workspaceId);
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: {
+      slug: true,
+      rewardStackEnabled: true,
+      rewardStackEnvironment: true,
+    },
+  });
+
   if (!workspace) {
     throw new Error(`Workspace not found: ${workspaceId}`);
   }
@@ -158,7 +166,11 @@ export async function generateRewardStackToken(
 export async function getRewardStackBaseUrl(
   workspaceId: string
 ): Promise<string> {
-  const workspace = await getWorkspaceBySlug(workspaceId);
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { rewardStackEnvironment: true },
+  });
+
   if (!workspace) {
     throw new Error(`Workspace not found: ${workspaceId}`);
   }
