@@ -28,6 +28,11 @@ export const GET = withErrorHandling(
         firstName: true,
         lastName: true,
         displayName: true,
+        addressLine1: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
       },
       orderBy: [
         { firstName: "asc" },

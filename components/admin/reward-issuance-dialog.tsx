@@ -30,6 +30,11 @@ interface Participant {
   firstName: string | null
   lastName: string | null
   displayName: string | null
+  addressLine1: string | null
+  city: string | null
+  state: string | null
+  zipCode: string | null
+  country: string | null
 }
 
 interface WorkspaceSku {
@@ -80,6 +85,8 @@ export function RewardIssuanceDialog({
     programId?: string
   } | null>(null)
   const [loadingStatus, setLoadingStatus] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [hasCompleteAddress, setHasCompleteAddress] = useState(false)
 
   // Load participants and SKUs when dialog opens
   useEffect(() => {
@@ -94,7 +101,21 @@ export function RewardIssuanceDialog({
     const checkParticipantStatus = async () => {
       if (!selectedUserId || !workspaceSlug) {
         setParticipantStatus(null)
+        setHasCompleteAddress(false)
         return
+      }
+
+      // Check if selected participant has complete address
+      const selectedParticipant = participants.find(p => p.id === selectedUserId)
+      if (selectedParticipant) {
+        const addressComplete = !!(
+          selectedParticipant.addressLine1 &&
+          selectedParticipant.city &&
+          selectedParticipant.state &&
+          selectedParticipant.zipCode &&
+          selectedParticipant.country
+        )
+        setHasCompleteAddress(addressComplete)
       }
 
       setLoadingStatus(true)
@@ -114,7 +135,7 @@ export function RewardIssuanceDialog({
     }
 
     checkParticipantStatus()
-  }, [selectedUserId, workspaceSlug])
+  }, [selectedUserId, workspaceSlug, participants])
 
   const loadParticipants = async () => {
     if (!workspaceSlug) return
@@ -157,6 +178,50 @@ export function RewardIssuanceDialog({
       })
     } finally {
       setLoadingSkus(false)
+    }
+  }
+
+  const syncParticipant = async () => {
+    if (!selectedUserId || !workspaceSlug) return
+
+    setSyncing(true)
+    try {
+      const res = await fetch(
+        `/api/workspaces/${workspaceSlug}/participants/${selectedUserId}/rewardstack-sync`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}))
+        throw new Error(error.error || 'Failed to sync participant')
+      }
+
+      const data = await res.json()
+
+      toast({
+        title: 'Participant Synced',
+        description: 'Participant data has been synced to RewardSTACK',
+      })
+
+      // Refresh the participant status
+      const statusRes = await fetch(
+        `/api/workspaces/${workspaceSlug}/participants/${selectedUserId}/rewardstack-status`
+      )
+      if (statusRes.ok) {
+        const statusData = await statusRes.json()
+        setParticipantStatus(statusData)
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Sync Failed',
+        description: error.message || 'Failed to sync participant to RewardSTACK',
+        variant: 'destructive',
+      })
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -232,9 +297,13 @@ export function RewardIssuanceDialog({
 
       const data = await res.json()
 
+      const successMessage = rewardType === 'sku'
+        ? `SKU reward issued successfully. Transaction ID: ${data.rewardStackResponse?.rewardStackTransactionId || 'pending'}`
+        : `${amount} points issued successfully`
+
       toast({
         title: 'Reward Issued Successfully',
-        description: data.message || 'The reward has been issued to the participant',
+        description: data.message || successMessage,
       })
 
       // Reset form
@@ -330,14 +399,35 @@ export function RewardIssuanceDialog({
                       Checking participant status...
                     </div>
                   ) : participantStatus?.enabled ? (
-                    <div
-                      className={`rounded-md px-3 py-2 text-xs ${
-                        participantStatus.synced
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-blue-50 text-blue-700 border border-blue-200'
-                      }`}
-                    >
-                      {participantStatus.message}
+                    <div className="space-y-2">
+                      <div
+                        className={`rounded-md px-3 py-2 text-xs ${
+                          participantStatus.synced
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                        }`}
+                      >
+                        {participantStatus.message}
+                      </div>
+                      {!participantStatus.synced && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={syncParticipant}
+                          disabled={syncing}
+                          className="w-full"
+                        >
+                          {syncing ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                              Syncing to RewardSTACK...
+                            </>
+                          ) : (
+                            'Sync to RewardSTACK'
+                          )}
+                        </Button>
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -398,6 +488,24 @@ export function RewardIssuanceDialog({
                     </SelectContent>
                   </Select>
                 )}
+
+                {/* Address requirement warning for SKU */}
+                {selectedUserId && (
+                  <div className={`mt-2 rounded-md px-3 py-2 text-xs border ${
+                    hasCompleteAddress
+                      ? 'bg-green-50 text-green-700 border-green-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    {hasCompleteAddress ? (
+                      <span>Participant has complete shipping address</span>
+                    ) : (
+                      <span>
+                        Participant is missing required shipping address fields.
+                        Please ask them to complete their profile before issuing catalog rewards.
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -424,7 +532,10 @@ export function RewardIssuanceDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button
+              type="submit"
+              disabled={submitting || (rewardType === 'sku' && !hasCompleteAddress)}
+            >
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
