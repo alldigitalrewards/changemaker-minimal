@@ -1,63 +1,60 @@
 'use client'
 
-import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { type Role } from '@/lib/types'
+import { signupAction } from './actions'
 
 function SignupPageContent() {
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [role, setRole] = useState<Role>('PARTICIPANT')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
-  const supabase = createClient()
   const searchParams = useSearchParams()
 
   // Prefill email from invite link if present
-  const inviteEmail = searchParams.get('email')
-  if (inviteEmail && !email) {
-    // note: simple guard to avoid re-renders loops
-    setEmail(inviteEmail)
-  }
+  useEffect(() => {
+    const inviteEmail = searchParams.get('email')
+    if (inviteEmail) {
+      setEmail(inviteEmail)
+    }
+  }, [searchParams])
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+    const formData = new FormData(e.currentTarget)
+    const redirectTo = searchParams.get('redirectTo')
+    const lockedRole = searchParams.get('role') as Role | null
+
+    if (redirectTo) {
+      formData.append('redirectTo', redirectTo)
+    }
+    // Use locked role from query params if present, otherwise use form value
+    if (lockedRole) {
+      formData.set('role', lockedRole)
+    }
+
     try {
-      const next = searchParams.get('redirectTo') || '/workspaces'
-      const lockedRole = (searchParams.get('role') as Role) || undefined
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { role: lockedRole || role },
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(next)}`
-        }
-      })
-
-      if (error) throw error
-
-      if (data.user && !data.user.email_confirmed_at) {
-        router.push('/auth/login?message=Please check your email to confirm your account')
-      } else if (data.user) {
-        await fetch('/api/auth/sync-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user: data.user })
-        })
-        router.push('/auth/login?message=Account created successfully! Please sign in.')
+      const result = await signupAction(formData)
+      if (result?.error) {
+        setError(result.error)
+        setLoading(false)
       }
-    } catch (error: any) {
-      setError(error.message || 'Failed to create account')
-    } finally {
+      // If no error, signupAction will redirect (throws NEXT_REDIRECT)
+    } catch (err: any) {
+      // Next.js redirect() throws an error - check if it's a redirect
+      if (err?.message?.includes('NEXT_REDIRECT')) {
+        // This is expected, don't treat as error
+        return
+      }
+      setError(err.message || 'Failed to create account')
       setLoading(false)
     }
   }
@@ -76,6 +73,7 @@ function SignupPageContent() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -83,14 +81,13 @@ function SignupPageContent() {
                 placeholder="you@example.com"
               />
             </div>
-            
+
             <div>
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
                 minLength={6}
@@ -98,12 +95,13 @@ function SignupPageContent() {
             </div>
 
             {searchParams.get('role') ? (
-              <input type="hidden" value={searchParams.get('role')!} />
+              <input type="hidden" name="role" value={searchParams.get('role')!} />
             ) : (
               <div>
                 <Label htmlFor="role">Role</Label>
                 <select
                   id="role"
+                  name="role"
                   value={role}
                   onChange={(e) => setRole(e.target.value as Role)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

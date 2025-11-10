@@ -16,19 +16,9 @@ import {
 import { Clock, CheckCircle2, XCircle, AlertCircle, DollarSign, Trophy, Settings, Plus } from 'lucide-react'
 import { RewardIssuanceDialog } from '@/components/admin/reward-issuance-dialog'
 import { RewardIssuanceDetailDialog } from '@/components/admin/reward-issuance-detail-dialog'
+import type { RewardIssuance as PrismaRewardIssuance, Challenge } from '@prisma/client'
 
-interface RewardIssuance {
-  id: string
-  userId: string
-  amount: number
-  status: string
-  rewardStackStatus: string | null
-  rewardStackTransactionId: string | null
-  rewardStackErrorMessage: string | null
-  createdAt: string
-  issuedAt: string | null
-  description: string | null
-  type: string
+type RewardIssuance = PrismaRewardIssuance & {
   User: {
     id: string
     email: string
@@ -36,6 +26,7 @@ interface RewardIssuance {
     lastName: string | null
     displayName: string | null
   }
+  Challenge?: Challenge | null
 }
 
 interface Summary {
@@ -89,7 +80,7 @@ export default function ChallengeRewardsPage() {
       setRewards(data.rewards || [])
 
       // Calculate summary
-      const totalAmount = (data.rewards || []).reduce((sum: number, r: RewardIssuance) => sum + r.amount, 0)
+      const totalAmount = (data.rewards || []).reduce((sum: number, r: RewardIssuance) => sum + (r.amount ?? 0), 0)
       const byStatus = data.summary?.byStatus || []
       setSummary({
         totalCount: data.rewards?.length || 0,
@@ -112,9 +103,9 @@ export default function ChallengeRewardsPage() {
     setDetailDialogOpen(true)
   }
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (date: string | Date | null) => {
+    if (!date) return 'N/A'
+    return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -295,7 +286,7 @@ export default function ChallengeRewardsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        ${(reward.amount / 100).toFixed(2)}
+                        ${((reward.amount ?? 0) / 100).toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

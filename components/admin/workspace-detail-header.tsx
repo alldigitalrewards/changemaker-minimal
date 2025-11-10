@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Settings } from "lucide-react";
+import { ExternalLink, Settings, Award } from "lucide-react";
 import { WorkspaceEditDialog } from "./workspace-edit-dialog";
 
 interface WorkspaceDetailHeaderProps {
@@ -26,6 +26,12 @@ export function WorkspaceDetailHeader({
           <Link href={`/w/${workspaceSlug}/admin/dashboard`}>
             <ExternalLink className="h-4 w-4 mr-2" />
             View as Admin
+          </Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href={`/admin/workspaces/${workspaceId}/rewards`}>
+            <Award className="h-4 w-4 mr-2" />
+            View Rewards
           </Link>
         </Button>
         <Button onClick={() => setEditDialogOpen(true)}>

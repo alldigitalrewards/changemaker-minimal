@@ -361,6 +361,7 @@ model User {
   isPending          Boolean  @default(false)
   emailChangePending Json?
   permissions        String[] @default([])
+  platformSuperAdmin Boolean  @default(false)
   tenantId           String   @default("default")
 
   // RewardSTACK Participant Sync

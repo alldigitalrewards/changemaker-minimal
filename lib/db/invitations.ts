@@ -8,6 +8,7 @@
 import { prisma } from './index'
 import { type Role } from '@/lib/types'
 import { createMembership } from './workspace-membership'
+import { syncParticipant } from '@/lib/rewardstack/service'
 
 /**
  * Generate a random 8-character alphanumeric invite code
@@ -193,6 +194,35 @@ export async function redeemInviteCode(
         })
       }
     })
+
+    // Auto-sync participant to RewardSTACK if enabled
+    // Do this AFTER transaction completes, and log errors without failing the redemption
+    try {
+      if (invite.Workspace.rewardStackEnabled) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true
+          }
+        })
+
+        if (user) {
+          await syncParticipant(invite.workspaceId, {
+            uniqueId: user.id,
+            email: user.email,
+            firstName: user.firstName || undefined,
+            lastName: user.lastName || undefined
+          })
+          console.log(`Auto-synced participant ${user.email} to RewardSTACK for workspace ${invite.Workspace.slug}`)
+        }
+      }
+    } catch (error: any) {
+      // Log but don't fail redemption
+      console.error('Failed to auto-sync participant to RewardSTACK:', error.message)
+    }
 
     return {
       success: true,

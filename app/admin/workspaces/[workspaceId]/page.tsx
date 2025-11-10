@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { getUserDisplayName } from '@/lib/user-utils';
 import { WorkspaceDetailHeader } from '@/components/admin/workspace-detail-header';
+import { PlatformRewardStackConfig } from '@/components/admin/platform-rewardstack-config';
 
 interface PageProps {
   params: Promise<{
@@ -36,9 +37,25 @@ export default async function WorkspaceDetailPage(props: PageProps) {
   // Fetch workspace details with all related data
   const workspace = await prisma.workspace.findUnique({
     where: { id: params.workspaceId },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      active: true,
+      published: true,
+      createdAt: true,
+      tenantId: true,
+      // RewardSTACK fields for Platform Admin config
+      rewardStackEnabled: true,
+      rewardStackEnvironment: true,
+      rewardStackOrgId: true,
+      rewardStackProgramId: true,
+      rewardStackSandboxMode: true,
+      // Relations
       WorkspaceMembership: {
-        include: {
+        select: {
+          id: true,
+          role: true,
           User: {
             select: {
               id: true,
@@ -310,65 +327,16 @@ export default async function WorkspaceDetailPage(props: PageProps) {
                 Manage RewardSTACK marketplace integration for this workspace
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Integration Status</label>
-                <div className="flex items-center gap-2 mt-2">
-                  {workspace.rewardStackEnabled ? (
-                    <>
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <span className="text-sm font-medium text-green-900">Enabled</span>
-                      <Badge className="bg-green-100 text-green-800 ml-2">Active</Badge>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-5 w-5 text-gray-400" />
-                      <span className="text-sm text-gray-600">Not enabled</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <h3 className="text-sm font-medium text-gray-900 mb-4">Platform Configuration</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Program ID:</span>
-                    <span className="font-mono">{process.env.REWARDSTACK_PROGRAM_ID || 'Not configured'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Organization ID:</span>
-                    <span className="font-mono">{process.env.REWARDSTACK_ORG_ID || 'Not configured'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Environment:</span>
-                    <span className="font-mono">{process.env.REWARDSTACK_ENVIRONMENT || 'Not configured'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">QA Marketplace:</span>
-                    <a
-                      href="https://changemaker.adrsandbox.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-600 hover:text-purple-900 hover:underline flex items-center gap-1"
-                    >
-                      changemaker.adrsandbox.com
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 pt-6">
-                <Button>
-                  {workspace.rewardStackEnabled ? 'Update Configuration' : 'Enable RewardSTACK'}
-                </Button>
-                {workspace.rewardStackEnabled && (
-                  <Button variant="outline">
-                    Disable Integration
-                  </Button>
-                )}
-              </div>
+            <CardContent>
+              <PlatformRewardStackConfig
+                workspaceId={workspace.id}
+                initialEnabled={workspace.rewardStackEnabled}
+                initialProgramId={workspace.rewardStackProgramId || undefined}
+                initialOrgId={workspace.rewardStackOrgId || undefined}
+                initialEnvironment={workspace.rewardStackEnvironment || undefined}
+                defaultUsername={process.env.REWARDSTACK_USERNAME}
+                defaultPassword={process.env.REWARDSTACK_PASSWORD}
+              />
             </CardContent>
           </Card>
         </TabsContent>

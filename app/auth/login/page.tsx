@@ -1,23 +1,19 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import PublicNavbar from '@/components/navigation/public-navbar'
+import { loginAction } from './actions'
 
 function LoginForm() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClient()
 
   useEffect(() => {
     const messageParam = searchParams.get('message')
@@ -26,35 +22,31 @@ function LoginForm() {
     }
   }, [searchParams])
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+    const formData = new FormData(e.currentTarget)
+    const redirectTo = searchParams.get('redirectTo')
+    if (redirectTo) {
+      formData.append('redirectTo', redirectTo)
+    }
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
-      if (error) throw error
-
-      // Sync user to Prisma on successful login
-      if (data.user) {
-        await fetch('/api/auth/sync-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user: data.user })
-        })
+      const result = await loginAction(formData)
+      if (result?.error) {
+        setError(result.error)
+        setLoading(false)
       }
-
-      // Redirect to workspace hub or specified redirect URL
-      const redirectTo = searchParams.get('redirectTo') || '/workspaces'
-      router.push(redirectTo)
-      router.refresh()
-    } catch (error: any) {
-      setError(error.message || 'Failed to login')
-    } finally {
+      // If no error, loginAction will redirect (throws NEXT_REDIRECT)
+    } catch (err: any) {
+      // Next.js redirect() throws an error - check if it's a redirect
+      if (err?.message?.includes('NEXT_REDIRECT')) {
+        // This is expected, don't treat as error
+        return
+      }
+      setError(err.message || 'Failed to login')
       setLoading(false)
     }
   }
@@ -68,28 +60,26 @@ function LoginForm() {
           <h2 className="text-3xl font-bold">Login</h2>
           <p className="mt-2 text-gray-600">Sign in to your account</p>
         </div>
-        
+
         <form onSubmit={handleLogin} className="mt-8 space-y-6">
           <div className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                name="email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@example.com"
               />
             </div>
-            
+
             <div>
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
               />

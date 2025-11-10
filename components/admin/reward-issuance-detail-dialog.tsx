@@ -17,13 +17,13 @@ interface RewardIssuance {
   id: string
   userId: string
   challengeId: string | null
-  amount: number
+  amount: number | null
   status: string
   rewardStackStatus: string | null
   rewardStackTransactionId: string | null
   rewardStackErrorMessage: string | null
-  createdAt: string
-  issuedAt: string | null
+  createdAt: string | Date
+  issuedAt: string | Date | null
   description: string | null
   type: string
   skuId: string | null
@@ -36,7 +36,7 @@ interface RewardIssuance {
     lastName: string | null
     displayName: string | null
   }
-  Challenge: {
+  Challenge?: {
     id: string
     title: string
   } | null
@@ -93,10 +93,10 @@ export function RewardIssuanceDetailDialog({
     return reward.IssuedByUser.email
   }
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-'
-    const date = new Date(dateString)
-    return date.toLocaleString('en-US', {
+  const formatDate = (date: string | Date | null) => {
+    if (!date) return '-'
+    const dateObj = new Date(date)
+    return dateObj.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -190,7 +190,7 @@ export function RewardIssuanceDetailDialog({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Amount</span>
                 <span className="font-mono font-medium text-lg">
-                  ${(reward.amount / 100).toFixed(2)}
+                  ${((reward.amount ?? 0) / 100).toFixed(2)}
                 </span>
               </div>
               {reward.skuId && (

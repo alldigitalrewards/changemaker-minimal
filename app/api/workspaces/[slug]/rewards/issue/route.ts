@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth";
 import { prisma } from "@/lib/prisma";
-import { issuePoints } from "@/lib/rewardstack/service";
+import { issuePoints, createTransaction } from "@/lib/rewardstack/service";
 
 type Params = Promise<{ slug: string }>;
 
@@ -156,6 +156,28 @@ export const POST = withErrorHandling(
           );
         }
 
+        // Issue SKU via RewardSTACK API
+        let rewardStackResponse;
+        if (workspace.rewardStackEnabled) {
+          try {
+            rewardStackResponse = await createTransaction(
+              workspace.id,
+              userId,
+              skuId,
+              description
+            );
+          } catch (error: any) {
+            console.error("RewardSTACK API error:", error);
+            return NextResponse.json(
+              {
+                error: "Failed to issue SKU via RewardSTACK",
+                details: error.message,
+              },
+              { status: 500 }
+            );
+          }
+        }
+
         // Record SKU issuance in database
         const issuance = await prisma.rewardIssuance.create({
           data: {
@@ -165,8 +187,9 @@ export const POST = withErrorHandling(
             type: "sku",
             skuId,
             description,
-            status: "PENDING", // SKU rewards may require fulfillment
+            status: "ISSUED",
             issuedBy: user.dbUser.id,
+            rewardStackTransactionId: rewardStackResponse?.transactionId || null,
           },
           include: {
             User: {
@@ -185,6 +208,7 @@ export const POST = withErrorHandling(
           message: `Successfully issued ${workspaceSku.name} to ${participant.email}`,
           issuance,
           sku: workspaceSku,
+          rewardStackResponse,
         });
       } else {
         return NextResponse.json(

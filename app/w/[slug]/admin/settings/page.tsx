@@ -12,7 +12,7 @@ import { setPointsBalance } from "./actions"
 import { getUserBySupabaseId, getWorkspacePointsBudget, upsertWorkspacePointsBudget } from "@/lib/db/queries"
 import { isWorkspaceOwner } from "@/lib/db/workspace-membership"
 import { getWorkspaceEmailSettings } from "@/lib/db/queries"
-import { RewardStackConfig } from "@/components/admin/rewardstack-config"
+import { WorkspaceRewardStackSettings } from "@/components/admin/workspace-rewardstack-settings"
 
 export default async function AdminSettingsPage({ 
   params 
@@ -157,16 +157,9 @@ export default async function AdminSettingsPage({
         </Card>
 
         {/* RewardSTACK Integration */}
-        <RewardStackConfig
-          workspaceId={workspace.id}
+        <WorkspaceRewardStackSettings
           workspaceSlug={slug}
-          initialConfig={{
-            rewardStackEnabled: fullWorkspace?.rewardStackEnabled || false,
-            rewardStackEnvironment: fullWorkspace?.rewardStackEnvironment || null,
-            rewardStackOrgId: fullWorkspace?.rewardStackOrgId || null,
-            rewardStackProgramId: fullWorkspace?.rewardStackProgramId || null,
-            rewardStackSandboxMode: fullWorkspace?.rewardStackSandboxMode || true
-          }}
+          initialEnabled={fullWorkspace?.rewardStackEnabled || false}
         />
 
         {/* General Settings */}

@@ -416,12 +416,9 @@ async function seed() {
             lastName,
             displayName: admin.name,
             isPending: false, // Admins are not pending
-            // Grant platform_super_admin to designated super admins for testing
-            permissions:
+            platformSuperAdmin:
               admin.email === "jfelke@alldigitalrewards.com" ||
-              admin.email === "krobinson@alldigitalrewards.com"
-                ? { set: ["platform_super_admin"] }
-                : undefined,
+              admin.email === "krobinson@alldigitalrewards.com",
             tenantId:
               admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace ||
               "default",
@@ -433,11 +430,9 @@ async function seed() {
             lastName,
             displayName: admin.name,
             isPending: false, // Admins are not pending
-            permissions:
+            platformSuperAdmin:
               admin.email === "jfelke@alldigitalrewards.com" ||
-              admin.email === "krobinson@alldigitalrewards.com"
-                ? ["platform_super_admin"]
-                : [],
+              admin.email === "krobinson@alldigitalrewards.com",
             tenantId:
               admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace ||
               "default",
@@ -643,6 +638,49 @@ async function seed() {
         console.log(
           `✓ Created points budget for ${workspace.name}: 10,000 points`,
         );
+      }
+
+      // Create WorkspaceSku catalog with QA test SKUs
+      console.log("\n🛍️  Creating workspace SKU catalog...");
+      for (const workspace of createdWorkspaces) {
+        const qaSkus = [
+          {
+            skuId: "CVSEC100",
+            name: "CVS $100 eGift Card",
+            description: "CVS Pharmacy electronic gift card worth $100",
+            value: 10000, // 10000 cents = $100
+            isDefault: true,
+          },
+          {
+            skuId: "CPEC50",
+            name: "$50 Digital Reward",
+            description: "Digital reward card worth $50",
+            value: 5000, // 5000 cents = $50
+            isDefault: true,
+          },
+          {
+            skuId: "APPLEWTCH",
+            name: "Apple Watch",
+            description: "Apple Watch reward (physical product)",
+            value: 40000, // 40000 cents = $400 (approximate value)
+            isDefault: false,
+          },
+        ];
+
+        for (const sku of qaSkus) {
+          await prisma.workspaceSku.create({
+            data: {
+              workspaceId: workspace.id,
+              skuId: sku.skuId,
+              name: sku.name,
+              description: sku.description,
+              value: sku.value,
+              isDefault: sku.isDefault,
+              isActive: true,
+            },
+          });
+        }
+        console.log(`✓ Created ${qaSkus.length} SKUs for ${workspace.name}`);
       }
 
       console.log("\n📨 Creating sample invite codes...");
@@ -1384,7 +1422,7 @@ async function seed() {
               userId: anyParticipant.id,
               workspaceId: workspace.id,
               type: RewardType.sku,
-              skuId: "SKU-GIFT-10",
+              skuId: "CPEC50",
               status: "ISSUED",
               issuedAt: new Date(),
             },

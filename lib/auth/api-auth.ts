@@ -16,13 +16,23 @@ import type { User } from "@prisma/client";
  */
 export async function requireAuth(): Promise<AuthenticatedUser> {
   const supabase = await createClient();
+
+  console.log('[requireAuth] Checking authentication...');
+
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
 
+  console.log('[requireAuth] Supabase getUser result:', {
+    hasUser: !!user,
+    userId: user?.id,
+    userEmail: user?.email,
+    error: error?.message,
+  });
+
   if (error) {
-    console.error("Auth error:", error);
+    console.error("[requireAuth] Auth error:", error);
     throw NextResponse.json(
       { error: "Authentication failed" },
       { status: 401 },
@@ -30,6 +40,7 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
   }
 
   if (!user) {
+    console.error("[requireAuth] No user found in session");
     throw NextResponse.json(
       { error: "Authentication required" },
       { status: 401 },
@@ -59,13 +70,7 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
  */
 export function isPlatformSuperAdmin(user: User | AuthenticatedUser): boolean {
   const dbUser = "dbUser" in user ? user.dbUser : user;
-
-  // PM superadmin access
-  if (dbUser.email === "krobinson@alldigitalrewards.com") {
-    return true;
-  }
-
-  return dbUser.permissions.includes("platform_super_admin");
+  return dbUser.platformSuperAdmin === true;
 }
 
 /**

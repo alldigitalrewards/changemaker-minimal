@@ -46,6 +46,8 @@ export function RewardStackConfig({
   const { toast } = useToast();
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncingParticipants, setSyncingParticipants] = useState(false);
   const [testResult, setTestResult] = useState<TestConnectionResponse | null>(
     null
   );
@@ -184,6 +186,115 @@ export function RewardStackConfig({
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSyncSkus = async () => {
+    if (!initialConfig?.rewardStackEnabled) {
+      toast({
+        title: "Integration Not Enabled",
+        description: "Please save and enable RewardSTACK integration first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSyncing(true);
+
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceSlug}/rewardstack/sync-skus`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to sync SKUs");
+      }
+
+      toast({
+        title: "SKUs Synced Successfully",
+        description: data.message || `Synced ${data.synced} new SKUs and updated ${data.updated} existing SKUs`,
+      });
+
+      // Refresh page to show updated SKUs
+      window.location.reload();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to sync SKUs";
+
+      toast({
+        title: "Sync Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSyncParticipants = async () => {
+    if (!initialConfig?.rewardStackEnabled) {
+      toast({
+        title: "Integration Not Enabled",
+        description: "Please save and enable RewardSTACK integration first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSyncingParticipants(true);
+
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceSlug}/rewardstack/sync-participants`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to sync participants");
+      }
+
+      toast({
+        title: "Participants Synced Successfully",
+        description: data.message || `Synced ${data.synced} participants to RewardSTACK`,
+      });
+
+      // Show warning if there were failures
+      if (data.failed > 0) {
+        toast({
+          title: "Some Participants Failed",
+          description: `${data.failed} participants could not be synced. Check console for details.`,
+          variant: "destructive",
+        });
+        if (data.errors) {
+          console.error("Participant sync errors:", data.errors);
+        }
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to sync participants";
+
+      toast({
+        title: "Sync Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setSyncingParticipants(false);
     }
   };
 
@@ -365,6 +476,62 @@ export function RewardStackConfig({
             )}
           </Button>
         </div>
+
+        {/* Sync SKUs */}
+        {initialConfig?.rewardStackEnabled && (
+          <div className="border-t pt-4">
+            <div className="mb-3">
+              <h3 className="font-medium text-sm mb-1">SKU Catalog Management</h3>
+              <p className="text-sm text-gray-500">
+                Sync all available SKUs from your RewardSTACK program catalog to this workspace.
+                This will add new SKUs and update existing ones.
+              </p>
+            </div>
+            <Button
+              onClick={handleSyncSkus}
+              disabled={syncing}
+              variant="outline"
+              className="w-full"
+            >
+              {syncing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing SKUs from RewardSTACK...
+                </>
+              ) : (
+                "Sync SKUs from Program Catalog"
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Sync Participants */}
+        {initialConfig?.rewardStackEnabled && (
+          <div className="border-t pt-4">
+            <div className="mb-3">
+              <h3 className="font-medium text-sm mb-1">Participant Management</h3>
+              <p className="text-sm text-gray-500">
+                Sync all workspace members to RewardSTACK as participants.
+                This will create new participants and update existing ones.
+              </p>
+            </div>
+            <Button
+              onClick={handleSyncParticipants}
+              disabled={syncingParticipants}
+              variant="outline"
+              className="w-full"
+            >
+              {syncingParticipants ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Syncing Participants to RewardSTACK...
+                </>
+              ) : (
+                "Sync Participants with RewardSTACK"
+              )}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

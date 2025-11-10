@@ -34,13 +34,12 @@ export async function POST(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Add platform_super_admin permission
-    const currentPermissions = targetUser.permissions || [];
-    if (!currentPermissions.includes('platform_super_admin')) {
+    // Grant platform super admin access
+    if (!targetUser.platformSuperAdmin) {
       await prisma.user.update({
         where: { id },
         data: {
-          permissions: [...currentPermissions, 'platform_super_admin']
+          platformSuperAdmin: true
         }
       });
     }
@@ -86,22 +85,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Don't allow removing superadmin from hardcoded list
-    if (isPlatformSuperAdmin([], targetUser.email)) {
-      return NextResponse.json(
-        { error: 'Cannot revoke access from hardcoded superadmin' },
-        { status: 400 }
-      );
+    // Revoke platform super admin access
+    if (targetUser.platformSuperAdmin) {
+      await prisma.user.update({
+        where: { id },
+        data: {
+          platformSuperAdmin: false
+        }
+      });
     }
-
-    // Remove platform_super_admin permission
-    const currentPermissions = targetUser.permissions || [];
-    await prisma.user.update({
-      where: { id },
-      data: {
-        permissions: currentPermissions.filter(p => p !== 'platform_super_admin')
-      }
-    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

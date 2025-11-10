@@ -73,7 +73,9 @@
       "Bash(pnpm tsx:*)",
       "mcp__supabase-stage__execute_sql",
       "mcp__context7__resolve-library-id",
-      "WebFetch(domain:ai-sdk.dev)"
+      "WebFetch(domain:ai-sdk.dev)",
+      "mcp__zen__tracer",
+      "mcp__serena__get_symbols_overview"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1",

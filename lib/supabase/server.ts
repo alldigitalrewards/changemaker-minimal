@@ -18,7 +18,9 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             })
           } catch (error) {
-            // Server component cookie handling
+            // Cookie setting failed - this is expected in Server Components
+            // but should work in Server Actions and Route Handlers
+            console.error('[Supabase] Failed to set cookies:', error)
           }
         },
       },
