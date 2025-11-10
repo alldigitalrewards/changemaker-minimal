@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceAccess, withErrorHandling } from "@/lib/auth/api-auth";
 import { prisma } from "@/lib/prisma";
+import { getParticipantFromRewardStack } from "@/lib/rewardstack/participant-sync";
 
 type Params = Promise<{ slug: string; id: string }>;
 
@@ -57,6 +58,26 @@ export const GET = withErrorHandling(
       user.rewardStackSyncStatus === "SYNCED" &&
       user.rewardStackParticipantId !== null;
 
+    let rewardStackAddress = null;
+
+    // If synced, fetch participant data from RewardSTACK to get address
+    if (isSynced && user.rewardStackParticipantId) {
+      try {
+        const participantData = await getParticipantFromRewardStack(
+          workspace.id,
+          programId,
+          user.rewardStackParticipantId
+        );
+
+        if (participantData && participantData.address) {
+          rewardStackAddress = participantData.address;
+        }
+      } catch (error) {
+        console.error('Failed to fetch participant from RewardSTACK:', error);
+        // Don't fail the whole request if this fails
+      }
+    }
+
     const response = {
       enabled: true,
       synced: isSynced,
@@ -64,6 +85,7 @@ export const GET = withErrorHandling(
       participantId: user.rewardStackParticipantId,
       lastSync: user.rewardStackLastSync,
       programId,
+      rewardStackAddress,
       message: isSynced
         ? `Participant exists in program ${programId}`
         : `Participant will be created in program ${programId}`,

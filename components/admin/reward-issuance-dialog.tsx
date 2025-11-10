@@ -84,6 +84,16 @@ export function RewardIssuanceDialog({
     synced: boolean
     message: string
     programId?: string
+    rewardStackAddress?: {
+      firstname?: string
+      lastname?: string
+      address1?: string
+      address2?: string
+      city?: string
+      state?: string
+      zip?: string
+      country?: string
+    } | null
   } | null>(null)
   const [loadingStatus, setLoadingStatus] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -298,13 +308,21 @@ export function RewardIssuanceDialog({
 
       const data = await res.json()
 
-      const successMessage = rewardType === 'sku'
-        ? `SKU reward issued successfully. Transaction ID: ${data.rewardStackResponse?.rewardStackTransactionId || 'pending'}`
-        : `${amount} points issued successfully`
+      // Build detailed success message
+      let successMessage = ''
+      if (rewardType === 'sku') {
+        const transactionId = data.rewardStackResponse?.rewardStackTransactionId
+        const pointsIssued = data.rewardStackResponse?.details?.points
+        successMessage = transactionId
+          ? `Transaction ID: ${transactionId}${pointsIssued ? ` • ${pointsIssued} points auto-issued` : ''}`
+          : 'SKU reward issued successfully'
+      } else {
+        successMessage = `${amount} points issued to ${selectedParticipant?.email || 'participant'}`
+      }
 
       toast({
         title: 'Reward Issued Successfully',
-        description: data.message || successMessage,
+        description: successMessage,
       })
 
       // Reset form
@@ -336,9 +354,11 @@ export function RewardIssuanceDialog({
     return participant.email
   }
 
+  const selectedParticipant = participants.find(p => p.id === selectedUserId)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Issue Reward</DialogTitle>
@@ -347,7 +367,7 @@ export function RewardIssuanceDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-6 py-4">
             {/* Reward Type Selection */}
             <div className="space-y-2">
               <Label htmlFor="reward-type">Reward Type</Label>
@@ -393,14 +413,14 @@ export function RewardIssuanceDialog({
 
               {/* RewardSTACK Status */}
               {selectedUserId && (
-                <div className="mt-2">
+                <div className="mt-3 space-y-3">
                   {loadingStatus ? (
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Loader2 className="h-3 w-3 animate-spin" />
                       Checking participant status...
                     </div>
                   ) : participantStatus?.enabled ? (
-                    <div className="space-y-2">
+                    <>
                       <div
                         className={`rounded-md px-3 py-2 text-xs ${
                           participantStatus.synced
@@ -429,11 +449,67 @@ export function RewardIssuanceDialog({
                           )}
                         </Button>
                       )}
-                    </div>
+                    </>
                   ) : null}
+
+                  {/* Address Information */}
+                  {selectedParticipant && (
+                    <div className="rounded-lg border bg-gray-50 p-4 space-y-3">
+                      <h4 className="text-sm font-medium text-gray-900">Shipping Address</h4>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Database Address */}
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium text-gray-700">Database</div>
+                          {selectedParticipant.addressLine1 ? (
+                            <div className="text-xs text-gray-600 space-y-0.5">
+                              <div>{selectedParticipant.addressLine1}</div>
+                              {selectedParticipant.addressLine2 && <div>{selectedParticipant.addressLine2}</div>}
+                              <div>
+                                {selectedParticipant.city && `${selectedParticipant.city}, `}
+                                {selectedParticipant.state && `${selectedParticipant.state} `}
+                                {selectedParticipant.zipCode}
+                              </div>
+                              {selectedParticipant.country && <div>{selectedParticipant.country}</div>}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-amber-600">No address</div>
+                          )}
+                        </div>
+
+                        {/* RewardSTACK Address */}
+                        <div className="space-y-1">
+                          <div className="text-xs font-medium text-gray-700">RewardSTACK</div>
+                          {participantStatus?.rewardStackAddress ? (
+                            <div className="text-xs text-gray-600 space-y-0.5">
+                              <div>{participantStatus.rewardStackAddress.address1}</div>
+                              {participantStatus.rewardStackAddress.address2 && (
+                                <div>{participantStatus.rewardStackAddress.address2}</div>
+                              )}
+                              <div>
+                                {participantStatus.rewardStackAddress.city && `${participantStatus.rewardStackAddress.city}, `}
+                                {participantStatus.rewardStackAddress.state && `${participantStatus.rewardStackAddress.state} `}
+                                {participantStatus.rewardStackAddress.zip}
+                              </div>
+                              {participantStatus.rewardStackAddress.country && (
+                                <div>{participantStatus.rewardStackAddress.country}</div>
+                              )}
+                            </div>
+                          ) : participantStatus?.synced ? (
+                            <div className="text-xs text-amber-600">Not synced</div>
+                          ) : (
+                            <div className="text-xs text-gray-400">Not available</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Divider */}
+            <div className="border-t" />
 
             {/* Conditional Fields based on Reward Type */}
             {rewardType === 'points' ? (
