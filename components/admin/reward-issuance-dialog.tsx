@@ -45,14 +45,17 @@ interface RewardIssuanceDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  workspaceSlug?: string
 }
 
 export function RewardIssuanceDialog({
   open,
   onOpenChange,
   onSuccess,
+  workspaceSlug: propSlug,
 }: RewardIssuanceDialogProps) {
   const params = useParams<{ slug: string }>()
+  const workspaceSlug = propSlug || params?.slug
   const { toast } = useToast()
 
   // Form state
@@ -71,17 +74,17 @@ export function RewardIssuanceDialog({
 
   // Load participants and SKUs when dialog opens
   useEffect(() => {
-    if (open && params?.slug) {
+    if (open && workspaceSlug) {
       loadParticipants()
       loadSkus()
     }
-  }, [open, params?.slug])
+  }, [open, workspaceSlug])
 
   const loadParticipants = async () => {
-    if (!params?.slug) return
+    if (!workspaceSlug) return
     setLoadingParticipants(true)
     try {
-      const res = await fetch(`/api/workspaces/${params.slug}/participants`)
+      const res = await fetch(`/api/workspaces/${workspaceSlug}/participants`)
       if (!res.ok) {
         const error = await res.json().catch(() => ({}))
         throw new Error(error.error || 'Failed to load participants')
@@ -100,10 +103,10 @@ export function RewardIssuanceDialog({
   }
 
   const loadSkus = async () => {
-    if (!params?.slug) return
+    if (!workspaceSlug) return
     setLoadingSkus(true)
     try {
-      const res = await fetch(`/api/workspaces/${params.slug}/skus`)
+      const res = await fetch(`/api/workspaces/${workspaceSlug}/skus`)
       if (!res.ok) {
         const error = await res.json().catch(() => ({}))
         throw new Error(error.error || 'Failed to load SKUs')
@@ -180,7 +183,7 @@ export function RewardIssuanceDialog({
               description: description.trim(),
             }
 
-      const res = await fetch(`/api/workspaces/${params.slug}/rewards/issue`, {
+      const res = await fetch(`/api/workspaces/${workspaceSlug}/rewards/issue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
