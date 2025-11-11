@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth";
 import { prisma } from "@/lib/prisma";
 import { issueRewardTransaction } from "@/lib/rewardstack/reward-logic";
+import { sendShippingConfirmationEmail } from "@/lib/email/shipping-confirmation";
 
 type Params = Promise<{ slug: string }>;
 
@@ -253,12 +254,30 @@ export const POST = withErrorHandling(
           },
         });
 
+        // If SKU requires shipping, send confirmation email
+        let shippingEmailSent = false;
+        if (workspaceSku.requiresShipping) {
+          try {
+            await sendShippingConfirmationEmail({
+              rewardIssuanceId: issuance.id,
+              workspaceSlug: slug,
+            });
+            shippingEmailSent = true;
+          } catch (emailError: any) {
+            console.error("Error sending shipping confirmation email:", emailError);
+            // Don't fail the whole request if email fails - just log it
+            // The admin can manually resend the email later
+          }
+        }
+
         return NextResponse.json({
           success: true,
           message: `Successfully issued ${workspaceSku.name} to ${participant.email}`,
           issuance: updatedIssuance,
           sku: workspaceSku,
           rewardStackResponse,
+          shippingEmailSent,
+          requiresShipping: workspaceSku.requiresShipping,
         });
       } else {
         return NextResponse.json(
