@@ -911,7 +911,6 @@ async function seed() {
         const rewardTypes = [
           RewardType.points,
           RewardType.sku,
-          RewardType.monetary,
           null,
           null,
         ] as const;
@@ -919,9 +918,7 @@ async function seed() {
         const rewardConfig =
           rewardType === RewardType.sku
             ? { skuId: "SKU-GIFT-10" }
-            : rewardType === RewardType.monetary
-              ? { amount: 50, currency: "USD" }
-              : null;
+            : null;
 
         const challenge = await prisma.challenge.create({
           data: {
@@ -1059,14 +1056,6 @@ async function seed() {
         points: 0,
         rewardType: RewardType.sku,
         rewardConfig: { skuId: "SKU-GIFT-25", label: "$25 Gift Card" },
-      },
-      {
-        name: "Bonus Task",
-        description: "Complete this task for monetary reward",
-        type: "FILE_UPLOAD",
-        points: 0,
-        rewardType: RewardType.monetary,
-        rewardConfig: { amount: 10, currency: "USD" },
       },
     ];
 
@@ -1370,36 +1359,65 @@ async function seed() {
     }
     console.log(`✓ Completed initial points awards for participants`);
 
-    // Seed tenant SKU catalog
-    console.log("\n🛍️  Seeding tenant SKU catalog...");
-    const uniqueTenantIds = Array.from(
-      new Set(createdWorkspaces.map((w) => (w as any).tenantId || "default")),
-    );
-    for (const tenantId of uniqueTenantIds) {
-      const skus = [
-        { skuId: "SKU-GIFT-10", label: "$10 Gift Card", provider: "stub" },
-        { skuId: "SKU-GIFT-25", label: "$25 Gift Card", provider: "stub" },
-        { skuId: "SKU-SWAG-TEE", label: "Company Tee", provider: "stub" },
+    // Seed workspace SKU catalog with QA test SKUs
+    console.log("\n🛍️  Seeding workspace SKU catalog...");
+    for (const workspace of createdWorkspaces) {
+      const qaSkus = [
+        {
+          skuId: "CVSEC100",
+          name: "CVS $100 eGift Card",
+          description: "CVS Pharmacy electronic gift card worth $100",
+          value: 10000, // 10000 cents = $100
+          isDefault: true,
+          requiresShipping: false, // Digital eGift card
+        },
+        {
+          skuId: "CPEC50",
+          name: "$50 Digital Reward",
+          description: "Digital reward card worth $50",
+          value: 5000, // 5000 cents = $50
+          isDefault: true,
+          requiresShipping: false, // Digital reward
+        },
+        {
+          skuId: "APPLEWTCH",
+          name: "Apple Watch",
+          description: "Apple Watch reward (physical product)",
+          value: 40000, // 40000 cents = $400 (approximate value)
+          isDefault: false,
+          requiresShipping: true, // Physical product - requires shipping address
+        },
       ];
-      for (const sku of skus) {
-        await (prisma as any).tenantSku.upsert({
-          where: { tenantId_skuId: { tenantId, skuId: sku.skuId } },
-          update: { label: sku.label, provider: sku.provider },
+
+      for (const sku of qaSkus) {
+        await prisma.workspaceSku.upsert({
+          where: { workspaceId_skuId: { workspaceId: workspace.id, skuId: sku.skuId } },
+          update: {
+            name: sku.name,
+            description: sku.description,
+            value: sku.value,
+            isDefault: sku.isDefault,
+            isActive: true,
+            requiresShipping: sku.requiresShipping,
+          },
           create: {
-            id: randomUUID(),
-            tenantId,
+            workspaceId: workspace.id,
             skuId: sku.skuId,
-            label: sku.label,
-            provider: sku.provider,
+            name: sku.name,
+            description: sku.description,
+            value: sku.value,
+            isDefault: sku.isDefault,
+            isActive: true,
+            requiresShipping: sku.requiresShipping,
           },
         });
       }
-      console.log(`✓ Seeded ${skus.length} SKUs for tenant '${tenantId}'`);
+      console.log(`✓ Seeded ${qaSkus.length} SKUs for ${workspace.name}`);
     }
 
     // Seed sample reward issuances for demo
-    // TEMPORARILY DISABLED - Schema issue with createdAt column
-    console.log("\n🎁 Skipping reward issuances (schema issue - not critical for demo)...");
+    // Note: Reward issuances are created through the application flow, not seeded
+    console.log("\n🎁 Skipping reward issuances (created through app workflow)...");
 
     // Create workspace communications with various scopes
     console.log("\n💬 Creating workspace communications...");

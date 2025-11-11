@@ -288,6 +288,12 @@ model RewardIssuance {
   rewardStackWebhookReceived Boolean            @default(false)
   rewardStackErrorMessage    String?
 
+  // Shipping Address Confirmation (for physical SKUs)
+  shippingAddressConfirmed        Boolean   @default(false)
+  shippingAddressConfirmedAt      DateTime?
+  shippingAddressConfirmationEmailSent Boolean @default(false)
+  shippingAddressConfirmationEmailSentAt DateTime?
+
   ActivitySubmission       ActivitySubmission?
   Challenge                Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   User                     User                @relation("RewardRecipient", fields: [userId], references: [id], onDelete: Cascade)
@@ -439,17 +445,18 @@ model Workspace {
 }
 
 model WorkspaceSku {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspaceId String    @db.Uuid
-  skuId       String    // RewardSTACK SKU ID (e.g., "CVSEC100", "CPEC50", "APPLEWTCH")
-  name        String    // Display name
-  description String?   // Optional description
-  value       Int?      // Point value equivalent
-  isDefault   Boolean   @default(false) // Default SKUs assigned to all workspaces
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now())
-  addedBy     String?   @db.Uuid // Platform admin who added this SKU
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId     String    @db.Uuid
+  skuId           String    // RewardSTACK SKU ID (e.g., "CVSEC100", "CPEC50", "APPLEWTCH")
+  name            String    // Display name
+  description     String?   // Optional description
+  value           Int?      // Point value equivalent
+  isDefault       Boolean   @default(false) // Default SKUs assigned to all workspaces
+  isActive        Boolean   @default(true)
+  requiresShipping Boolean  @default(false) // Physical SKUs need shipping address confirmation
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
+  addedBy         String?   @db.Uuid // Platform admin who added this SKU
 
   Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   User        User?     @relation("SkuAddedBy", fields: [addedBy], references: [id])
@@ -661,7 +668,6 @@ enum RewardStatus {
 enum RewardType {
   points
   sku
-  monetary
 }
 
 enum Role {

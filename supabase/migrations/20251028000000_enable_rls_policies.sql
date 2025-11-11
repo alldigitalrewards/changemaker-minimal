@@ -16,8 +16,8 @@ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'User') THEN
     ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
   END IF;
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'WorkspaceMembership') THEN
-    ALTER TABLE "WorkspaceMembership" ENABLE ROW LEVEL SECURITY;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'WorkspaceUser') THEN
+    ALTER TABLE "WorkspaceUser" ENABLE ROW LEVEL SECURITY;
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Challenge') THEN
     ALTER TABLE "Challenge" ENABLE ROW LEVEL SECURITY;
@@ -50,24 +50,29 @@ $$;
 GRANT EXECUTE ON FUNCTION current_user_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION current_user_id() TO anon;
 
--- Helper function to check workspace access
-CREATE OR REPLACE FUNCTION user_can_access_workspace(workspace_id uuid)
-RETURNS boolean
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM "WorkspaceMembership"
-    WHERE "userId" = current_user_id()
-      AND "workspaceId" = workspace_id
-  )
-$$;
+-- Helper function to check workspace access (only create if WorkspaceUser table exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'WorkspaceUser') THEN
+    CREATE OR REPLACE FUNCTION user_can_access_workspace(workspace_id uuid)
+    RETURNS boolean
+    LANGUAGE sql
+    SECURITY DEFINER
+    SET search_path = public
+    STABLE
+    AS $func$
+      SELECT EXISTS (
+        SELECT 1
+        FROM "WorkspaceUser"
+        WHERE "userId" = current_user_id()
+          AND "workspaceId" = workspace_id
+      )
+    $func$;
 
-GRANT EXECUTE ON FUNCTION user_can_access_workspace(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION user_can_access_workspace(uuid) TO anon;
+    GRANT EXECUTE ON FUNCTION user_can_access_workspace(uuid) TO authenticated;
+    GRANT EXECUTE ON FUNCTION user_can_access_workspace(uuid) TO anon;
+  END IF;
+END $$;
 
 -- Helper function to get user's role in workspace
 CREATE OR REPLACE FUNCTION get_user_workspace_role(workspace_id uuid)

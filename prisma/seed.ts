@@ -650,6 +650,7 @@ async function seed() {
             description: "CVS Pharmacy electronic gift card worth $100",
             value: 10000, // 10000 cents = $100
             isDefault: true,
+            requiresShipping: false, // Digital eGift card
           },
           {
             skuId: "CPEC50",
@@ -657,6 +658,7 @@ async function seed() {
             description: "Digital reward card worth $50",
             value: 5000, // 5000 cents = $50
             isDefault: true,
+            requiresShipping: false, // Digital reward
           },
           {
             skuId: "APPLEWTCH",
@@ -664,6 +666,7 @@ async function seed() {
             description: "Apple Watch reward (physical product)",
             value: 40000, // 40000 cents = $400 (approximate value)
             isDefault: false,
+            requiresShipping: true, // Physical product - requires shipping address
           },
         ];
 
@@ -677,6 +680,7 @@ async function seed() {
               value: sku.value,
               isDefault: sku.isDefault,
               isActive: true,
+              requiresShipping: sku.requiresShipping,
             },
           });
         }
@@ -897,7 +901,6 @@ async function seed() {
         const rewardTypes = [
           RewardType.points,
           RewardType.sku,
-          RewardType.monetary,
           null,
           null,
         ] as const;
@@ -905,9 +908,7 @@ async function seed() {
         const rewardConfig =
           rewardType === RewardType.sku
             ? { skuId: "SKU-GIFT-10" }
-            : rewardType === RewardType.monetary
-              ? { amount: 50, currency: "USD" }
-              : null;
+            : null;
 
         const challenge = await prisma.challenge.create({
           data: {
@@ -1039,14 +1040,6 @@ async function seed() {
         points: 0,
         rewardType: RewardType.sku,
         rewardConfig: { skuId: "SKU-GIFT-25", label: "$25 Gift Card" },
-      },
-      {
-        name: "Bonus Task",
-        description: "Complete this task for monetary reward",
-        type: "FILE_UPLOAD",
-        points: 0,
-        rewardType: RewardType.monetary,
-        rewardConfig: { amount: 10, currency: "USD" },
       },
     ];
 
