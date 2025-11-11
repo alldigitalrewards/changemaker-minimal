@@ -13,7 +13,7 @@ export function CreateChallengeButton({ workspaceSlug }: CreateChallengeButtonPr
 
   return (
     <Button
-      className="bg-coral-500 hover:bg-coral-600 text-white"
+      className="bg-gray-900 hover:bg-gray-800 text-white"
       onClick={() => router.push(`/w/${workspaceSlug}/admin/challenges/new`)}
     >
       <Plus className="h-4 w-4 mr-2" />

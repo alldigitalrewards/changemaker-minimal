@@ -299,7 +299,7 @@ export function InlineAddressEditor({
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-coral-500 hover:bg-coral-600"
+              className="bg-gray-900 hover:bg-gray-800"
             >
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? 'Saving...' : 'Save Address'}

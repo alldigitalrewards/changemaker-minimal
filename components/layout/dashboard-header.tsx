@@ -77,14 +77,14 @@ export default function DashboardHeader({
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
       {/* Coral accent bar */}
-      <div className="h-1 bg-gradient-to-r from-coral-500 to-terracotta-600" />
+      <div className="h-1 bg-gradient-to-r from-gray-500 to-terracotta-600" />
 
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           {/* Left side - Logo, workspace and title */}
           <div className="flex items-center space-x-6">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-coral-500 to-terracotta-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-gray-500 to-terracotta-600 rounded-lg flex items-center justify-center">
                 <Target className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold text-navy-900">
@@ -115,7 +115,7 @@ export default function DashboardHeader({
               <div
                 className={`px-3 py-1 text-xs font-medium rounded-full ${
                   role === "ADMIN"
-                    ? "bg-coral-100 text-coral-800"
+                    ? "bg-gray-100 text-gray-900"
                     : "bg-blue-100 text-blue-800"
                 }`}
               >
@@ -130,7 +130,7 @@ export default function DashboardHeader({
               </div>
             )}
             {budgetBadge && (
-              <div className="px-3 py-1 text-xs font-medium rounded-full bg-coral-100 text-coral-900">
+              <div className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-900">
                 {budgetBadge.label}: {budgetBadge.value}
               </div>
             )}
@@ -152,7 +152,7 @@ export default function DashboardHeader({
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center space-x-3 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
-                <div className="w-8 h-8 bg-gradient-to-r from-coral-400 to-terracotta-500 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-r from-gray-400 to-terracotta-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
                     {userInitials}
                   </span>
@@ -187,7 +187,7 @@ export default function DashboardHeader({
 
                   <div className="border-t border-gray-100 mt-2 pt-2">
                     <Link href="/account">
-                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:border-l-2 hover:border-coral-500 flex items-center space-x-2 transition-all">
+                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:border-l-2 hover:border-gray-900 flex items-center space-x-2 transition-all">
                         <Settings className="h-4 w-4" />
                         <span>My Account Settings</span>
                       </button>
@@ -197,7 +197,7 @@ export default function DashboardHeader({
                       <Link
                         href={`/w/${workspace.slug}/${role === "ADMIN" ? "admin" : "participant"}/profile`}
                       >
-                        <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:border-l-2 hover:border-coral-500 flex items-center space-x-2 transition-all">
+                        <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:border-l-2 hover:border-gray-900 flex items-center space-x-2 transition-all">
                           <User className="h-4 w-4" />
                           <span>Workspace Profile</span>
                         </button>

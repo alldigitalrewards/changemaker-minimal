@@ -172,10 +172,10 @@ export default async function ManagerDashboardPage({ params }: PageProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Assigned Challenges</CardTitle>
-            <Briefcase className="h-4 w-4 text-coral-500" />
+            <Briefcase className="h-4 w-4 text-gray-900" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-coral-600">{assignedChallengeIds.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{assignedChallengeIds.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {challengesWithSubmissions.size} with submissions
             </p>
@@ -192,7 +192,7 @@ export default async function ManagerDashboardPage({ params }: PageProps) {
         <CardContent>
           <div className="flex flex-wrap gap-3">
             <Link href={`/w/${slug}/admin/manager/queue`}>
-              <Button className="bg-coral-500 hover:bg-coral-600">
+              <Button className="bg-gray-900 hover:bg-gray-800">
                 <ClipboardList className="mr-2 h-4 w-4" />
                 Go to Review Queue
                 <ArrowRight className="ml-2 h-4 w-4" />

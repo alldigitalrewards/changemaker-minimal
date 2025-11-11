@@ -478,7 +478,7 @@ export default async function ChallengeDetailPage({ params, searchParams }: Page
               <details>
                 <summary className="cursor-pointer text-sm text-gray-700 list-none">
                   <span className="[&_span.truncate]:block max-w-full"><span className="truncate inline-block align-top max-w-full">{challenge.description}</span></span>
-                  <span className="text-coral-600 ml-1">Read more</span>
+                  <span className="text-gray-900 ml-1">Read more</span>
                 </summary>
                 <div className="mt-2 text-gray-700 whitespace-pre-line">{challenge.description}</div>
               </details>

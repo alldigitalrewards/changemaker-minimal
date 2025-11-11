@@ -99,15 +99,15 @@ export function ProfileAddress({ initialAddress }: ProfileAddressProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-lg border border-coral-200 bg-coral-50 p-4 text-center">
-                <MapPin className="h-8 w-8 mx-auto text-coral-600 mb-2" />
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-center">
+                <MapPin className="h-8 w-8 mx-auto text-gray-900 mb-2" />
                 <p className="text-sm text-gray-700">
                   No shipping address on file. Add one to redeem physical rewards.
                 </p>
               </div>
               <Button
                 onClick={() => setDialogOpen(true)}
-                className="w-full sm:w-auto bg-coral-500 hover:bg-coral-600"
+                className="w-full sm:w-auto bg-gray-900 hover:bg-gray-800"
               >
                 <MapPin className="h-4 w-4 mr-2" />
                 Add Shipping Address

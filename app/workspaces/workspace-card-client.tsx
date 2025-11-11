@@ -74,15 +74,15 @@ export default function WorkspaceCard({
     <Card 
       className={cn(
         "group relative min-h-[260px] flex flex-col border transition-all duration-300 ease-out",
-        "hover:shadow-xl hover:shadow-coral-500/10",
+        "hover:shadow-xl hover:shadow-gray-500/10",
         isUserWorkspace && [
           "cursor-pointer",
-          "hover:border-coral-300 hover:-translate-y-2",
-          "hover:bg-gradient-to-br hover:from-white hover:to-coral-50/20"
+          "hover:border-gray-300 hover:-translate-y-2",
+          "hover:bg-gradient-to-br hover:from-white hover:to-gray-50/20"
         ],
         isPrimary && [
-          "ring-2 ring-coral-400/60 shadow-lg shadow-coral-500/10",
-          "border-coral-300 bg-gradient-to-br from-white to-coral-50/40"
+          "ring-2 ring-gray-900-400/60 shadow-lg shadow-gray-500/10",
+          "border-gray-300 bg-gradient-to-br from-white to-gray-50/40"
         ]
       )}
       onClick={handleCardClick}
@@ -142,10 +142,10 @@ export default function WorkspaceCard({
               disabled={isLoading}
               className={cn(
                 "p-2 rounded-full transition-all duration-200 flex-shrink-0",
-                "hover:bg-coral-50 hover:scale-110",
+                "hover:bg-gray-50 hover:scale-110",
                 isPrimary 
-                  ? "text-coral-500 bg-coral-50/50" 
-                  : "text-gray-300 hover:text-coral-400",
+                  ? "text-gray-900 bg-gray-50/50" 
+                  : "text-gray-300 hover:text-gray-400",
                 isLoading && "opacity-50 cursor-not-allowed"
               )}
               title={isPrimary ? "Primary workspace" : "Set as primary"}
@@ -165,10 +165,10 @@ export default function WorkspaceCard({
       <CardContent className="flex flex-col flex-1 pt-2">
         {/* Workspace stats with enhanced styling */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-coral-50 to-coral-100/50 rounded-lg border border-coral-200/50">
-            <UsersIcon className="h-4 w-4 text-coral-600" />
-            <span className="text-sm font-semibold text-coral-800">{workspace._count.users}</span>
-            <span className="text-xs text-coral-600/80 font-medium">members</span>
+          <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-lg border border-gray-200/50">
+            <UsersIcon className="h-4 w-4 text-gray-900" />
+            <span className="text-sm font-semibold text-gray-900">{workspace._count.users}</span>
+            <span className="text-xs text-gray-900/80 font-medium">members</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-terracotta-50 to-terracotta-100/50 rounded-lg border border-terracotta-200/50">
             <Trophy className="h-4 w-4 text-terracotta-600" />
@@ -186,7 +186,7 @@ export default function WorkspaceCard({
               workspaceName={workspace.name}
             />
           ) : (
-            <div className="flex items-center justify-between text-sm text-gray-500 bg-gray-50/50 rounded-lg p-3 group-hover:bg-coral-50/30 transition-colors">
+            <div className="flex items-center justify-between text-sm text-gray-500 bg-gray-50/50 rounded-lg p-3 group-hover:bg-gray-50/30 transition-colors">
               <span>Click to enter workspace</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </div>

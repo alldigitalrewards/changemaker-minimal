@@ -96,7 +96,7 @@ export default function WorkspaceSwitcher({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`truncate text-sm font-medium ${
-                        isCurrentWorkspace ? 'text-coral-600' : 'text-gray-900'
+                        isCurrentWorkspace ? 'text-gray-900' : 'text-gray-900'
                       }`}>
                         {workspace.name}
                       </span>
@@ -120,7 +120,7 @@ export default function WorkspaceSwitcher({
                   </div>
                 </div>
                 {isCurrentWorkspace && (
-                  <div className="text-xs text-coral-600 font-medium flex-shrink-0">
+                  <div className="text-xs text-gray-900 font-medium flex-shrink-0">
                     Current
                   </div>
                 )}

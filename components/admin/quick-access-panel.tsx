@@ -60,7 +60,7 @@ export function QuickAccessPanel({
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div
                       className={`w-10 h-10 ${
-                        isAdmin ? "bg-coral-500" : "bg-blue-500"
+                        isAdmin ? "bg-gray-900" : "bg-blue-500"
                       } rounded-lg flex items-center justify-center flex-shrink-0`}
                     >
                       <Building2 className="h-5 w-5 text-white" />

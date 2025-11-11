@@ -86,11 +86,11 @@ const categoryOptions = [
 function FAQItem({ faq, isFeatured = false }: { faq: typeof allFaqs[0]; isFeatured?: boolean }) {
   return (
     <Card className={`transition-all duration-200 hover:shadow-md ${
-      isFeatured ? 'border-coral-200 bg-coral-50/30' : ''
+      isFeatured ? 'border-gray-200 bg-gray-50/30' : ''
     }`}>
       <CardHeader>
         <CardTitle className="text-left text-navy-900 flex items-center gap-2">
-          {isFeatured && <Star className="h-4 w-4 text-coral-500" />}
+          {isFeatured && <Star className="h-4 w-4 text-gray-900" />}
           {faq.question}
         </CardTitle>
         <div className="flex items-center gap-2 mt-2">
@@ -119,7 +119,7 @@ export default function FAQPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-navy-900 mb-4 flex items-center justify-center gap-3">
-              <HelpCircle className="h-10 w-10 text-coral-600" />
+              <HelpCircle className="h-10 w-10 text-gray-900" />
               Frequently Asked Questions
             </h1>
             <p className="text-lg text-navy-600 max-w-2xl mx-auto">
@@ -130,7 +130,7 @@ export default function FAQPage() {
           {/* Featured FAQs */}
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-navy-900 mb-4 flex items-center gap-2">
-              <Star className="h-6 w-6 text-coral-500" />
+              <Star className="h-6 w-6 text-gray-900" />
               Popular Questions
             </h2>
             <div className="space-y-4">
@@ -153,7 +153,7 @@ export default function FAQPage() {
           </div>
 
           {/* Need More Help Section */}
-          <Card className="bg-gradient-to-r from-coral-50 to-terracotta-50 border-coral-200">
+          <Card className="bg-gradient-to-r from-gray-50 to-terracotta-50 border-gray-200">
             <CardHeader className="text-center">
               <CardTitle className="text-2xl text-navy-900">
                 Can't find what you're looking for?
@@ -165,12 +165,12 @@ export default function FAQPage() {
             <CardContent className="text-center">
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a href="/help">
-                  <Badge variant="outline" className="border-coral-300 text-coral-700 hover:bg-coral-50 px-6 py-2 cursor-pointer">
+                  <Badge variant="outline" className="border-gray-300 text-gray-800 hover:bg-gray-50 px-6 py-2 cursor-pointer">
                     Browse Documentation
                   </Badge>
                 </a>
                 <a href="/contact">
-                  <Badge className="bg-gradient-to-r from-coral-500 to-terracotta-600 text-white hover:from-coral-600 hover:to-terracotta-700 px-6 py-2 cursor-pointer">
+                  <Badge className="bg-gradient-to-r from-gray-500 to-terracotta-600 text-white hover:from-gray-600 hover:to-terracotta-700 px-6 py-2 cursor-pointer">
                     Contact Support
                   </Badge>
                 </a>

@@ -87,7 +87,7 @@ export default async function DocsPage({ params }: PageProps) {
                 {doc.frontmatter.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-coral-100 px-3 py-1 text-xs font-medium text-coral-700"
+                    className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-800"
                   >
                     {tag}
                   </span>

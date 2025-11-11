@@ -213,7 +213,7 @@ export function ActivityTemplateSelector({ challengeId, workspaceSlug, onAssigne
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin h-6 w-6 border-b-2 border-coral-500 rounded-full"></div>
+        <div className="animate-spin h-6 w-6 border-b-2 border-gray-900 rounded-full"></div>
       </div>
     );
   }

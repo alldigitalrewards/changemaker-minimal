@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changemaker Design System Comparison</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // Current Palette
+            coral: {
+              50: '#fef2f2',
+              100: '#fde6e6',
+              500: '#e55656',
+              600: '#d63939',
+              700: '#b02828',
+            },
+            terracotta: {
+              50: '#fdf5f3',
+              100: '#fae8e5',
+              500: '#cb6c57',
+              600: '#b54d3a',
+            },
+            navy: {
+              500: '#627d98',
+              600: '#486581',
+              700: '#334e68',
+              900: '#102a43',
+            },
+            // Path A: Bold & Energetic (Rose + Slate)
+            rose: {
+              500: '#f43f5e',
+              600: '#e11d48',
+              700: '#be123c',
+            },
+            slate: {
+              700: '#334155',
+              900: '#0f172a',
+            },
+            // Path B: Professional (Blue + Amber)
+            professional: {
+              500: '#1e40af',
+              600: '#1e3a8a',
+              700: '#1e3a8a',
+            },
+            amber: {
+              500: '#f59e0b',
+              600: '#d97706',
+            },
+            // Path C: Minimal (Violet + Gray)
+            violet: {
+              500: '#7c3aed',
+              600: '#6d28d9',
+              700: '#5b21b6',
+            },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .palette-section {
+      scroll-margin-top: 2rem;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 p-8">
+  <div class="max-w-7xl mx-auto space-y-16">
+
+    <!-- Header -->
+    <div class="text-center space-y-4">
+      <h1 class="text-4xl font-bold text-gray-900">Changemaker Design System</h1>
+      <p class="text-xl text-gray-600">Visual Comparison of Color Palettes</p>
+      <div class="flex justify-center gap-4 text-sm">
+        <a href="#current" class="text-blue-600 hover:underline">Current</a>
+        <a href="#bold" class="text-blue-600 hover:underline">Bold & Energetic</a>
+        <a href="#professional" class="text-blue-600 hover:underline">Professional</a>
+        <a href="#minimal" class="text-blue-600 hover:underline">Minimal & Modern</a>
+      </div>
+    </div>
+
+    <!-- CURRENT PALETTE -->
+    <section id="current" class="palette-section bg-white rounded-lg shadow-lg p-8 space-y-6">
+      <div class="border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-900">Current Palette</h2>
+        <p class="text-gray-600 mt-2">Coral (#e55656) + Terracotta (#cb6c57) + Navy (#486581)</p>
+        <p class="text-sm text-orange-600 mt-1">⚠️ Issues: Colors too similar, lacks hierarchy</p>
+      </div>
+
+      <!-- Color Swatches -->
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <div class="h-16 bg-coral-500 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Coral 500</p>
+          <p class="text-xs text-gray-500">#e55656</p>
+        </div>
+        <div>
+          <div class="h-16 bg-terracotta-500 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Terracotta 500</p>
+          <p class="text-xs text-gray-500">#cb6c57</p>
+        </div>
+        <div>
+          <div class="h-16 bg-navy-600 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Navy 600</p>
+          <p class="text-xs text-gray-500">#486581</p>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div>
+        <h3 class="font-semibold mb-3">Buttons</h3>
+        <div class="flex flex-wrap gap-3">
+          <button class="px-4 py-2 bg-coral-500 hover:bg-coral-600 text-white rounded-md transition">Primary CTA</button>
+          <button class="px-4 py-2 bg-terracotta-500 hover:bg-terracotta-600 text-white rounded-md transition">Secondary</button>
+          <button class="px-4 py-2 border-2 border-navy-600 text-navy-600 hover:bg-navy-50 rounded-md transition">Outline</button>
+          <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition">Ghost</button>
+        </div>
+      </div>
+
+      <!-- Mini Dashboard -->
+      <div>
+        <h3 class="font-semibold mb-3">Dashboard Preview</h3>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="border rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Active Challenges</span>
+              <span class="px-2 py-1 bg-coral-100 text-coral-700 text-xs rounded-full">New</span>
+            </div>
+            <p class="text-3xl font-bold text-navy-900">12</p>
+            <button class="w-full px-3 py-2 bg-coral-500 text-white text-sm rounded-md hover:bg-coral-600">View All</button>
+          </div>
+          <div class="border rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Participants</span>
+              <span class="px-2 py-1 bg-terracotta-100 text-terracotta-700 text-xs rounded-full">+5</span>
+            </div>
+            <p class="text-3xl font-bold text-navy-900">247</p>
+            <button class="w-full px-3 py-2 border-2 border-navy-600 text-navy-600 text-sm rounded-md hover:bg-navy-50">Manage</button>
+          </div>
+          <div class="border rounded-lg p-4 space-y-2">
+            <span class="text-sm text-gray-600">Completion Rate</span>
+            <p class="text-3xl font-bold text-navy-900">78%</p>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div class="bg-terracotta-500 h-2 rounded-full" style="width: 78%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATH A: BOLD & ENERGETIC -->
+    <section id="bold" class="palette-section bg-white rounded-lg shadow-lg p-8 space-y-6">
+      <div class="border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-900">Path A: Bold & Energetic</h2>
+        <p class="text-gray-600 mt-2">Rose (#f43f5e) + Slate (#0f172a)</p>
+        <p class="text-sm text-green-600 mt-1">✓ Modern, high contrast, confident - like Stripe/GitHub</p>
+      </div>
+
+      <!-- Color Swatches -->
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <div class="h-16 bg-rose-500 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Rose 500</p>
+          <p class="text-xs text-gray-500">#f43f5e</p>
+        </div>
+        <div>
+          <div class="h-16 bg-rose-600 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Rose 600</p>
+          <p class="text-xs text-gray-500">#e11d48</p>
+        </div>
+        <div>
+          <div class="h-16 bg-slate-900 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Slate 900</p>
+          <p class="text-xs text-gray-500">#0f172a</p>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div>
+        <h3 class="font-semibold mb-3">Buttons</h3>
+        <div class="flex flex-wrap gap-3">
+          <button class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-md transition shadow-sm">Primary CTA</button>
+          <button class="px-4 py-2 bg-slate-900 hover:bg-slate-700 text-white rounded-md transition shadow-sm">Secondary</button>
+          <button class="px-4 py-2 border-2 border-slate-900 text-slate-900 hover:bg-gray-50 rounded-md transition">Outline</button>
+          <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-slate-700 rounded-md transition">Ghost</button>
+        </div>
+      </div>
+
+      <!-- Mini Dashboard -->
+      <div>
+        <h3 class="font-semibold mb-3">Dashboard Preview</h3>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="border rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-slate-700">Active Challenges</span>
+              <span class="px-2 py-1 bg-rose-100 text-rose-700 text-xs rounded-full font-medium">New</span>
+            </div>
+            <p class="text-3xl font-bold text-slate-900">12</p>
+            <button class="w-full px-3 py-2 bg-rose-500 text-white text-sm rounded-md hover:bg-rose-600 shadow-sm transition">View All</button>
+          </div>
+          <div class="border rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-slate-700">Participants</span>
+              <span class="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full font-medium">+5</span>
+            </div>
+            <p class="text-3xl font-bold text-slate-900">247</p>
+            <button class="w-full px-3 py-2 border-2 border-slate-900 text-slate-900 text-sm rounded-md hover:bg-slate-50 transition">Manage</button>
+          </div>
+          <div class="border rounded-lg p-4 space-y-2">
+            <span class="text-sm text-slate-700">Completion Rate</span>
+            <p class="text-3xl font-bold text-slate-900">78%</p>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div class="bg-rose-500 h-2 rounded-full" style="width: 78%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATH B: PROFESSIONAL -->
+    <section id="professional" class="palette-section bg-white rounded-lg shadow-lg p-8 space-y-6">
+      <div class="border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-900">Path B: Professional & Sophisticated</h2>
+        <p class="text-gray-600 mt-2">Blue (#1e40af) + Amber (#f59e0b)</p>
+        <p class="text-sm text-green-600 mt-1">✓ Trustworthy, corporate-friendly - like Linear/Notion</p>
+      </div>
+
+      <!-- Color Swatches -->
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <div class="h-16 bg-professional-500 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Blue 700</p>
+          <p class="text-xs text-gray-500">#1e40af</p>
+        </div>
+        <div>
+          <div class="h-16 bg-professional-600 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Blue 800</p>
+          <p class="text-xs text-gray-500">#1e3a8a</p>
+        </div>
+        <div>
+          <div class="h-16 bg-amber-500 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Amber 500</p>
+          <p class="text-xs text-gray-500">#f59e0b</p>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div>
+        <h3 class="font-semibold mb-3">Buttons</h3>
+        <div class="flex flex-wrap gap-3">
+          <button class="px-4 py-2 bg-professional-500 hover:bg-professional-600 text-white rounded-md transition shadow-sm">Primary CTA</button>
+          <button class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-md transition shadow-sm">Accent</button>
+          <button class="px-4 py-2 border-2 border-professional-500 text-professional-500 hover:bg-blue-50 rounded-md transition">Outline</button>
+          <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition">Ghost</button>
+        </div>
+      </div>
+
+      <!-- Mini Dashboard -->
+      <div>
+        <h3 class="font-semibold mb-3">Dashboard Preview</h3>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="border rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Active Challenges</span>
+              <span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-medium">New</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">12</p>
+            <button class="w-full px-3 py-2 bg-professional-500 text-white text-sm rounded-md hover:bg-professional-600 shadow-sm transition">View All</button>
+          </div>
+          <div class="border rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Participants</span>
+              <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">+5</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">247</p>
+            <button class="w-full px-3 py-2 border-2 border-professional-500 text-professional-500 text-sm rounded-md hover:bg-blue-50 transition">Manage</button>
+          </div>
+          <div class="border rounded-lg p-4 space-y-2">
+            <span class="text-sm text-gray-600">Completion Rate</span>
+            <p class="text-3xl font-bold text-gray-900">78%</p>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div class="bg-amber-500 h-2 rounded-full" style="width: 78%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PATH C: MINIMAL & MODERN -->
+    <section id="minimal" class="palette-section bg-white rounded-lg shadow-lg p-8 space-y-6">
+      <div class="border-b pb-4">
+        <h2 class="text-2xl font-bold text-gray-900">Path C: Minimal & Modern</h2>
+        <p class="text-gray-600 mt-2">Violet (#7c3aed) + Grayscale</p>
+        <p class="text-sm text-green-600 mt-1">✓ Clean, unique, modern - like Vercel/Railway/Supabase</p>
+      </div>
+
+      <!-- Color Swatches -->
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <div class="h-16 bg-violet-500 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Violet 600</p>
+          <p class="text-xs text-gray-500">#7c3aed</p>
+        </div>
+        <div>
+          <div class="h-16 bg-violet-600 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Violet 700</p>
+          <p class="text-xs text-gray-500">#6d28d9</p>
+        </div>
+        <div>
+          <div class="h-16 bg-gray-900 rounded-lg mb-2"></div>
+          <p class="text-sm font-medium">Gray 900</p>
+          <p class="text-xs text-gray-500">#111827</p>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div>
+        <h3 class="font-semibold mb-3">Buttons</h3>
+        <div class="flex flex-wrap gap-3">
+          <button class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-md transition shadow-sm">Primary CTA</button>
+          <button class="px-4 py-2 bg-gray-900 hover:bg-gray-700 text-white rounded-md transition shadow-sm">Secondary</button>
+          <button class="px-4 py-2 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition">Outline</button>
+          <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition">Ghost</button>
+        </div>
+      </div>
+
+      <!-- Mini Dashboard -->
+      <div>
+        <h3 class="font-semibold mb-3">Dashboard Preview</h3>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="border rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Active Challenges</span>
+              <span class="px-2 py-1 bg-violet-100 text-violet-700 text-xs rounded-full font-medium">New</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">12</p>
+            <button class="w-full px-3 py-2 bg-violet-600 text-white text-sm rounded-md hover:bg-violet-700 shadow-sm transition">View All</button>
+          </div>
+          <div class="border rounded-lg p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600">Participants</span>
+              <span class="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-full font-medium">+5</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900">247</p>
+            <button class="w-full px-3 py-2 border-2 border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition">Manage</button>
+          </div>
+          <div class="border rounded-lg p-4 space-y-2">
+            <span class="text-sm text-gray-600">Completion Rate</span>
+            <p class="text-3xl font-bold text-gray-900">78%</p>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+              <div class="bg-violet-600 h-2 rounded-full" style="width: 78%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison Summary -->
+    <section class="bg-gray-900 text-white rounded-lg shadow-lg p-8">
+      <h2 class="text-2xl font-bold mb-6">Quick Comparison</h2>
+      <div class="grid md:grid-cols-4 gap-6">
+        <div class="space-y-2">
+          <h3 class="font-semibold text-coral-500">Current</h3>
+          <p class="text-sm text-gray-300">Too similar colors, lacks hierarchy, feels dated</p>
+          <p class="text-xs text-gray-400">⚠️ Needs work</p>
+        </div>
+        <div class="space-y-2">
+          <h3 class="font-semibold text-rose-500">Bold & Energetic</h3>
+          <p class="text-sm text-gray-300">High contrast, modern, confident for startups</p>
+          <p class="text-xs text-gray-400">✓ Best for innovation platforms</p>
+        </div>
+        <div class="space-y-2">
+          <h3 class="font-semibold text-blue-400">Professional</h3>
+          <p class="text-sm text-gray-300">Trustworthy, corporate-friendly, safe choice</p>
+          <p class="text-xs text-gray-400">✓ Best for enterprise</p>
+        </div>
+        <div class="space-y-2">
+          <h3 class="font-semibold text-violet-400">Minimal & Modern</h3>
+          <p class="text-sm text-gray-300">Clean, unique, dev-tool aesthetic</p>
+          <p class="text-xs text-gray-400">✓ Best for modern SaaS</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="text-center text-gray-500 text-sm pb-8">
+      <p>Open this file in a browser to compare palettes side-by-side</p>
+      <p class="mt-2">File: design-system-comparison.html</p>
+    </div>
+  </div>
+</body>
+</html>

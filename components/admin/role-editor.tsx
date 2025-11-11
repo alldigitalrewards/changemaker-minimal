@@ -62,7 +62,7 @@ export function RoleEditor({ userId, workspaceId, currentRole, onUpdate }: RoleE
       <div className="flex items-center gap-1">
         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
           currentRole === 'ADMIN'
-            ? 'bg-coral-100 text-coral-800'
+            ? 'bg-gray-100 text-gray-900'
             : 'bg-blue-100 text-blue-800'
         }`}>
           {currentRole === 'ADMIN' ? 'Admin' : 'Participant'}

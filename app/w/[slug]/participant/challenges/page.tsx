@@ -93,7 +93,7 @@ export default async function ParticipantChallengesPage({ params }: PageProps) {
                 <Card 
                   key={challenge.id} 
                   className={`relative hover:shadow-lg transition-shadow ${
-                    isInvited ? 'ring-2 ring-coral-500 bg-coral-50' : ''
+                    isInvited ? 'ring-2 ring-gray-900 bg-gray-50' : ''
                   }`}
                 >
                   <CardHeader>
@@ -113,7 +113,7 @@ export default async function ParticipantChallengesPage({ params }: PageProps) {
                         </Badge>
                       )}
                       {isInvited && (
-                        <Badge className="bg-coral-100 text-coral-800">
+                        <Badge className="bg-gray-100 text-gray-900">
                           Invited
                         </Badge>
                       )}

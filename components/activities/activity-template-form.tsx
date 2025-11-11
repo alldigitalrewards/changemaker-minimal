@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { FileText, Image, Link, Video, CheckSquare, Upload } from 'lucide-react'
+import { RewardStackCatalogSelector } from '@/components/admin/rewardstack-catalog-selector'
+import type { CatalogItem } from '@/lib/rewardstack/types'
 
 interface ActivityTemplateFormProps {
   children?: React.ReactNode
@@ -54,7 +56,8 @@ export default function ActivityTemplateForm({ children, workspace, template, in
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  
+  const [selectedProduct, setSelectedProduct] = useState<CatalogItem | null>(null)
+
   const [formData, setFormData] = useState({
     name: (initialTemplate?.name as string) || template?.name || '',
     description: (initialTemplate?.description as string) || template?.description || '',
@@ -261,30 +264,28 @@ export default function ActivityTemplateForm({ children, workspace, template, in
 
             {formData.rewardType === 'sku' && (
               <div className="space-y-3 mt-2 p-3 bg-gray-50 rounded border">
-                <div>
-                  <Label htmlFor="skuId">SKU/Product ID</Label>
-                  <Input
-                    id="skuId"
-                    value={(formData.rewardConfig as any)?.skuId || ''}
-                    onChange={(e) => setFormData(prev => ({
+                <Label>Select Product from RewardSTACK Catalog</Label>
+                <RewardStackCatalogSelector
+                  workspaceSlug={workspace.slug}
+                  value={selectedProduct}
+                  onChange={(product) => {
+                    setSelectedProduct(product)
+                    setFormData(prev => ({
                       ...prev,
-                      rewardConfig: { ...prev.rewardConfig, skuId: e.target.value }
-                    }))}
-                    placeholder="e.g., PROD-001"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="provider">Provider (optional)</Label>
-                  <Input
-                    id="provider"
-                    value={(formData.rewardConfig as any)?.provider || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      rewardConfig: { ...prev.rewardConfig, provider: e.target.value }
-                    }))}
-                    placeholder="e.g., Amazon, RewardSTACK"
-                  />
-                </div>
+                      rewardConfig: {
+                        ...prev.rewardConfig,
+                        skuId: product?.sku || '',
+                        provider: 'RewardSTACK',
+                        productName: product?.name || '',
+                        productValue: product?.value || 0,
+                      }
+                    }))
+                  }}
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-gray-600 mt-2">
+                  Products are loaded from your RewardSTACK catalog. The selected product will be issued when participants complete this activity.
+                </p>
               </div>
             )}
 

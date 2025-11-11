@@ -152,7 +152,7 @@ async function ChallengeLeaderboardContent({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-coral-500" />
+              <Award className="h-5 w-5 text-gray-900" />
               Challenge Leaderboard
             </CardTitle>
             <CardDescription>
@@ -180,11 +180,11 @@ async function ChallengeLeaderboardContent({
       <div className="space-y-6">
         {/* Current User Rank */}
         {currentUserRank > 0 && (
-          <Card className="bg-gradient-to-r from-coral-50 to-blue-50 border-coral-200">
+          <Card className="bg-gradient-to-r from-gray-50 to-blue-50 border-gray-200">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-coral-500 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center">
                     <Trophy className="h-6 w-6 text-white" />
                   </div>
                   <div>
@@ -195,7 +195,7 @@ async function ChallengeLeaderboardContent({
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-coral-600">#{currentUserRank}</div>
+                  <div className="text-3xl font-bold text-gray-900">#{currentUserRank}</div>
                   <div className="text-sm text-gray-500">of {leaderboardData.length}</div>
                 </div>
               </div>
@@ -253,7 +253,7 @@ async function ChallengeLeaderboardContent({
                           <div className="flex items-center justify-center gap-2">
                             <p className="font-bold text-lg text-gray-900">{displayName}</p>
                             {isCurrentUser && (
-                              <Badge className="bg-coral-500 text-white text-xs">You</Badge>
+                              <Badge className="bg-gray-900 text-white text-xs">You</Badge>
                             )}
                           </div>
                           <div className="flex items-center justify-center gap-1">
@@ -278,7 +278,7 @@ async function ChallengeLeaderboardContent({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-coral-500" />
+              <BarChart3 className="h-5 w-5 text-gray-900" />
               Complete Rankings
             </CardTitle>
             <CardDescription>
@@ -315,13 +315,13 @@ async function ChallengeLeaderboardContent({
                       return "bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200"
                     default:
                       return isCurrentUser 
-                        ? "bg-gradient-to-r from-coral-50 to-pink-50 border-coral-200" 
+                        ? "bg-gradient-to-r from-gray-50 to-pink-50 border-gray-200" 
                         : "bg-white border-gray-200"
                   }
                 }
 
                 return (
-                  <Card key={entry.userId} className={`transition-all duration-200 ${getRankColor(rank)} ${isCurrentUser ? 'ring-2 ring-coral-300' : ''}`}>
+                  <Card key={entry.userId} className={`transition-all duration-200 ${getRankColor(rank)} ${isCurrentUser ? 'ring-2 ring-gray-900-300' : ''}`}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -330,7 +330,7 @@ async function ChallengeLeaderboardContent({
                             <div className="flex items-center gap-2">
                               <p className="font-semibold text-gray-900">{displayName}</p>
                               {isCurrentUser && (
-                                <Badge className="bg-coral-500 text-white text-xs">You</Badge>
+                                <Badge className="bg-gray-900 text-white text-xs">You</Badge>
                               )}
                             </div>
                             <p className="text-sm text-gray-600">
@@ -339,7 +339,7 @@ async function ChallengeLeaderboardContent({
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-2xl font-bold text-coral-600">{entry.totalPoints}</div>
+                          <div className="text-2xl font-bold text-gray-900">{entry.totalPoints}</div>
                           <div className="text-xs text-gray-500">points</div>
                         </div>
                       </div>
@@ -426,9 +426,9 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
 
       {/* Quick Actions Bar - Mobile First */}
       {!isEnrolled && (
-        <div className="bg-coral-50 border border-coral-200 rounded-lg p-4 md:hidden">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 md:hidden">
           <div className="text-center space-y-3">
-            <h3 className="font-semibold text-coral-800">Ready to join this challenge?</h3>
+            <h3 className="font-semibold text-gray-900">Ready to join this challenge?</h3>
             <JoinButton challengeId={challenge.id} workspaceSlug={slug} />
           </div>
         </div>
@@ -460,16 +460,16 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-coral-50 to-coral-100 border-coral-200">
+        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-coral-800">Your Progress</CardTitle>
-            <Trophy className="h-4 w-4 text-coral-600" />
+            <CardTitle className="text-sm font-medium text-gray-900">Your Progress</CardTitle>
+            <Trophy className="h-4 w-4 text-gray-900" />
           </CardHeader>
           <CardContent>
             {isEnrolled ? (
               <div>
-                <div className="text-xl md:text-2xl font-bold text-coral-900">In Progress</div>
-                <p className="text-xs text-coral-700">Keep going!</p>
+                <div className="text-xl md:text-2xl font-bold text-gray-900">In Progress</div>
+                <p className="text-xs text-gray-800">Keep going!</p>
               </div>
             ) : (
               <div>
@@ -518,7 +518,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
           <TabsTrigger value="activities" className="text-xs md:text-sm py-2">
             Activities
             {isEnrolled && challenge.Activity && challenge.Activity.length > 0 && (
-              <Badge className="ml-1 bg-coral-500 text-white text-[10px] px-1.5 py-0.5">
+              <Badge className="ml-1 bg-gray-900 text-white text-[10px] px-1.5 py-0.5">
                 {challenge.Activity.length}
               </Badge>
             )}
@@ -535,7 +535,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
               <Card className="h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-coral-500" />
+                    <FileText className="h-5 w-5 text-gray-900" />
                     Challenge Description
                   </CardTitle>
                 </CardHeader>
@@ -548,10 +548,10 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
             {/* Action Panel - More prominent */}
             <div className="space-y-4">
               {!isEnrolled ? (
-                <Card className="border-coral-200 bg-coral-50">
+                <Card className="border-gray-200 bg-gray-50">
                   <CardHeader>
-                    <CardTitle className="text-coral-800">Join Challenge</CardTitle>
-                    <CardDescription className="text-coral-700">
+                    <CardTitle className="text-gray-900">Join Challenge</CardTitle>
+                    <CardDescription className="text-gray-800">
                       Ready to take on this challenge?
                     </CardDescription>
                   </CardHeader>
@@ -583,7 +583,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center text-sm">
-                    <Calendar className="h-4 w-4 mr-2 text-coral-500" />
+                    <Calendar className="h-4 w-4 mr-2 text-gray-900" />
                     <div>
                       <span className="font-medium block text-xs text-gray-500">Started</span>
                       <span className="text-gray-700">{format(new Date(challenge.createdAt), 'MMM d, yyyy')}</span>
@@ -615,12 +615,12 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
             challenge.Activity && challenge.Activity.length > 0 ? (
               <>
                 {/* Activities Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-coral-50 to-amber-50 rounded-lg border border-coral-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-gray-50 to-amber-50 rounded-lg border border-gray-200">
                   <div>
-                    <h3 className="font-semibold text-coral-800">Challenge Activities</h3>
-                    <p className="text-sm text-coral-700">Complete activities to earn points and progress</p>
+                    <h3 className="font-semibold text-gray-900">Challenge Activities</h3>
+                    <p className="text-sm text-gray-800">Complete activities to earn points and progress</p>
                   </div>
-                  <Badge className="bg-coral-500 text-white w-fit">
+                  <Badge className="bg-gray-900 text-white w-fit">
                     {challenge.Activity.length} activities available
                   </Badge>
                 </div>
@@ -671,7 +671,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                           {/* Activity Metadata */}
                           <div className="flex flex-wrap gap-3 text-xs bg-gray-50 p-3 rounded-lg">
                             <span className="flex items-center gap-1">
-                              <Activity className="h-3 w-3 text-coral-500" />
+                              <Activity className="h-3 w-3 text-gray-900" />
                               {activity.ActivityTemplate.type.replace('_', ' ').toLowerCase()}
                             </span>
                             {activity.ActivityTemplate.requiresApproval && (
@@ -771,11 +771,11 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
               </Card>
             )
           ) : (
-            <Card className="border-coral-200 bg-coral-50">
+            <Card className="border-gray-200 bg-gray-50">
               <CardContent className="text-center py-12">
-                <Trophy className="h-16 w-16 mx-auto text-coral-300 mb-4" />
-                <h3 className="text-lg font-semibold text-coral-800 mb-2">Join to See Activities</h3>
-                <p className="text-coral-700 mb-6">Enroll in this challenge to view and participate in activities.</p>
+                <Trophy className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Join to See Activities</h3>
+                <p className="text-gray-800 mb-6">Enroll in this challenge to view and participate in activities.</p>
                 <JoinButton challengeId={challenge.id} workspaceSlug={slug} />
               </CardContent>
             </Card>
@@ -787,10 +787,10 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
           {isEnrolled ? (
             <>
               {/* Progress Overview */}
-              <Card className="bg-gradient-to-r from-coral-50 to-blue-50 border-coral-200">
+              <Card className="bg-gradient-to-r from-gray-50 to-blue-50 border-gray-200">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-coral-500" />
+                    <TrendingUp className="h-5 w-5 text-gray-900" />
                     Your Challenge Progress
                   </CardTitle>
                   <CardDescription>
@@ -800,7 +800,7 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center p-3 bg-white rounded-lg border">
-                      <div className="text-2xl font-bold text-coral-600">
+                      <div className="text-2xl font-bold text-gray-900">
                         {challenge.Activity?.reduce((count, activity) => 
                           count + (activity.ActivitySubmission && activity.ActivitySubmission.length > 0 ? 1 : 0), 0) || 0}
                       </div>
@@ -932,11 +932,11 @@ export default async function ParticipantChallengeDetailPage({ params }: PagePro
               </Card>
             </>
           ) : (
-            <Card className="border-coral-200 bg-coral-50">
+            <Card className="border-gray-200 bg-gray-50">
               <CardContent className="text-center py-12">
-                <Trophy className="h-16 w-16 mx-auto text-coral-300 mb-4" />
-                <h3 className="text-lg font-semibold text-coral-800 mb-2">Track Your Progress</h3>
-                <p className="text-coral-700 mb-6">Join this challenge to start tracking your progress and achievements.</p>
+                <Trophy className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Track Your Progress</h3>
+                <p className="text-gray-800 mb-6">Join this challenge to start tracking your progress and achievements.</p>
                 <JoinButton challengeId={challenge.id} workspaceSlug={slug} />
               </CardContent>
             </Card>

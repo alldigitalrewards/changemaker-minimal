@@ -18,7 +18,7 @@ export function AnnouncementComposer({ slug }: AnnouncementComposerProps) {
       <CardHeader className="cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg transition-colors ${isOpen ? 'bg-coral-100 text-coral-600' : 'bg-gray-100 text-gray-600'}`}>
+            <div className={`p-2 rounded-lg transition-colors ${isOpen ? 'bg-gray-100 text-gray-900' : 'bg-gray-100 text-gray-600'}`}>
               <MessageSquare className="h-5 w-5" />
             </div>
             <div>

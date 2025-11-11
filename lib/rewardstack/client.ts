@@ -146,6 +146,12 @@ export async function createRewardStackClient(workspaceId: string) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('RewardSTACK API Error:', {
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+        });
         throw new RewardStackError(
           errorData.message || "Request failed",
           RewardStackErrorCode.VALIDATION_ERROR,

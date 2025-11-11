@@ -25,8 +25,14 @@ type RewardIssuance = PrismaRewardIssuance & {
     firstName: string | null
     lastName: string | null
     displayName: string | null
+    rewardStackParticipantId: string | null
   }
   Challenge?: Challenge | null
+  IssuedByUser?: {
+    email: string
+    firstName: string | null
+    lastName: string | null
+  } | null
 }
 
 interface Summary {
@@ -135,7 +141,7 @@ export default function ChallengeRewardsPage() {
         <div className="flex gap-2">
           <Button
             onClick={() => setIssuanceDialogOpen(true)}
-            className="bg-coral-500 hover:bg-coral-600"
+            className="bg-gray-900 hover:bg-gray-800"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -146,7 +152,7 @@ export default function ChallengeRewardsPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-coral-500">
+        <Card className="border-l-4 border-l-gray-900">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <Trophy className="h-4 w-4" />
@@ -253,7 +259,7 @@ export default function ChallengeRewardsPage() {
               </p>
               <Button
                 onClick={() => setIssuanceDialogOpen(true)}
-                className="bg-coral-500 hover:bg-coral-600"
+                className="bg-gray-900 hover:bg-gray-800"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Issue First Reward

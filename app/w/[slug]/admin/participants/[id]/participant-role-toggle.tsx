@@ -114,7 +114,7 @@ export function ParticipantRoleToggle({
               <div className="text-gray-400">↓</div>
             </div>
 
-            <div className="flex items-center justify-between p-4 border-2 border-coral-200 rounded-lg bg-coral-50">
+            <div className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg bg-gray-50">
               <div>
                 <h3 className="font-medium">New Role</h3>
                 <p className="text-sm text-gray-500">

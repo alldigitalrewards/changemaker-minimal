@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, Activity } from 'lucide-react'
+import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronUp, Activity, RefreshCw, ExternalLink } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 interface WebhookLog {
@@ -36,30 +36,40 @@ const eventTypeColors: Record<string, string> = {
 export function RewardWebhookLogs({ rewardId, workspaceSlug }: RewardWebhookLogsProps) {
   const [logs, setLogs] = useState<WebhookLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set())
 
-  useEffect(() => {
-    async function fetchLogs() {
-      try {
-        const response = await fetch(
-          `/api/workspaces/${workspaceSlug}/rewards/${rewardId}/webhook-logs`
-        )
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch webhook logs')
-        }
-
-        const data = await response.json()
-        setLogs(data.logs || [])
-      } catch (err) {
-        console.error('Error fetching webhook logs:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch webhook logs')
-      } finally {
-        setLoading(false)
-      }
+  const fetchLogs = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
     }
 
+    setError(null)
+
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceSlug}/rewards/${rewardId}/webhook-logs`
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch webhook logs')
+      }
+
+      const data = await response.json()
+      setLogs(data.logs || [])
+    } catch (err) {
+      console.error('Error fetching webhook logs:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch webhook logs')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
     fetchLogs()
   }, [rewardId, workspaceSlug])
 
@@ -123,18 +133,46 @@ export function RewardWebhookLogs({ rewardId, workspaceSlug }: RewardWebhookLogs
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Activity className="h-4 w-4" />
-            Webhook Event History
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Webhook Event History
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchLogs(true)}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Clock className="h-8 w-8 text-gray-400 mb-2" />
-            <p className="text-sm text-gray-500">No webhook events received yet</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Events will appear here when RewardSTACK sends status updates
-            </p>
+          <div className="flex flex-col items-center justify-center py-8 text-center space-y-3">
+            <Clock className="h-8 w-8 text-gray-400" />
+            <div>
+              <p className="text-sm font-medium text-gray-700">No webhook events received yet</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Events will appear here when RewardSTACK sends status updates
+              </p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2 max-w-md">
+              <p className="text-xs text-blue-800">
+                Webhooks notify you when transaction statuses change. Configure webhook endpoints in your
+                RewardSTACK settings to receive real-time updates.
+              </p>
+              <a
+                href="https://docs.rewardstack.io/webhooks"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 hover:text-blue-700 underline mt-2 inline-flex items-center gap-1"
+              >
+                Learn more about webhooks
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -144,10 +182,21 @@ export function RewardWebhookLogs({ rewardId, workspaceSlug }: RewardWebhookLogs
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Activity className="h-4 w-4" />
-          Webhook Event History ({logs.length})
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Webhook Event History ({logs.length})
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchLogs(true)}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">

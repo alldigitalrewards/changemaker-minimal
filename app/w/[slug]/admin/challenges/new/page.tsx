@@ -225,15 +225,15 @@ export default function NewChallengePage() {
                   htmlFor="reward-points"
                   className={`flex flex-col items-start space-y-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
                     rewardTypeValue === 'points'
-                      ? 'border-coral-500 bg-coral-50 ring-2 ring-coral-200'
+                      ? 'border-gray-900 bg-gray-50 ring-2 ring-gray-200'
                       : 'border-gray-200 hover:border-gray-300 bg-white'
                   }`}
                 >
                   <div className="flex items-center space-x-3 w-full">
                     <RadioGroupItem value="points" id="reward-points" />
                     <div className="flex items-center space-x-2 flex-1">
-                      <div className={`p-2 rounded-lg ${rewardTypeValue === 'points' ? 'bg-coral-100' : 'bg-gray-100'}`}>
-                        <Coins className={`h-5 w-5 ${rewardTypeValue === 'points' ? 'text-coral-600' : 'text-gray-600'}`} />
+                      <div className={`p-2 rounded-lg ${rewardTypeValue === 'points' ? 'bg-gray-100' : 'bg-gray-100'}`}>
+                        <Coins className={`h-5 w-5 ${rewardTypeValue === 'points' ? 'text-gray-900' : 'text-gray-600'}`} />
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900">Changemaker Points</div>
@@ -389,11 +389,11 @@ export default function NewChallengePage() {
                 </div>
               )}
               {rewardTypeValue === 'points' && (
-                <div className="flex items-start gap-2 p-3 bg-coral-50 border border-coral-200 rounded-lg text-sm">
-                  <Coins className="h-4 w-4 text-coral-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                  <Coins className="h-4 w-4 text-gray-900 mt-0.5 flex-shrink-0" />
                   <div>
-                    <div className="font-medium text-coral-900">Points-Based Challenge</div>
-                    <div className="text-coral-700 mt-1">
+                    <div className="font-medium text-gray-900">Points-Based Challenge</div>
+                    <div className="text-gray-800 mt-1">
                       Activities in this challenge will award Changemaker Points to participants upon completion. Points are tracked internally and can be used for recognition and gamification.
                     </div>
                   </div>

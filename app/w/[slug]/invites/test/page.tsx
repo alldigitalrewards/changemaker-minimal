@@ -3,11 +3,11 @@ import { CheckCircle2, Mail } from 'lucide-react'
 
 export default async function TestInvitePage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-coral-50 to-orange-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-orange-50 p-4">
       <Card className="max-w-md w-full">
         <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-coral-100 rounded-full flex items-center justify-center mb-4">
-            <Mail className="h-8 w-8 text-coral-600" />
+          <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <Mail className="h-8 w-8 text-gray-900" />
           </div>
           <CardTitle className="text-2xl">Test Email Preview</CardTitle>
           <CardDescription>

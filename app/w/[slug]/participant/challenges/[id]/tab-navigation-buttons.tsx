@@ -25,7 +25,7 @@ export function TabNavigationButtons({ hasActivities }: TabNavigationButtonsProp
     <div className="space-y-2">
       {hasActivities && (
         <Button 
-          className="w-full bg-coral-500 hover:bg-coral-600" 
+          className="w-full bg-gray-900 hover:bg-gray-800" 
           size="sm"
           onClick={() => scrollToTab('activities')}
         >

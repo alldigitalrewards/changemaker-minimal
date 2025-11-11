@@ -159,8 +159,8 @@ export function AddressCollectionDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-coral-100 rounded-lg flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-coral-600" />
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <MapPin className="h-5 w-5 text-gray-900" />
             </div>
             <div>
               <DialogTitle>Shipping Address</DialogTitle>
@@ -295,7 +295,7 @@ export function AddressCollectionDialog({
             <Button
               type="submit"
               disabled={loading}
-              className="bg-coral-500 hover:bg-coral-600"
+              className="bg-gray-900 hover:bg-gray-800"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Address

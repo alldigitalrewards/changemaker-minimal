@@ -27,7 +27,7 @@ export function AccessDenied({
           <CardDescription className="text-base">{message}</CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
-          <Button asChild variant="default" className="bg-coral-500 hover:bg-coral-600">
+          <Button asChild variant="default" className="bg-gray-900 hover:bg-gray-800">
             <Link href={returnUrl}>{returnLabel}</Link>
           </Button>
         </CardContent>

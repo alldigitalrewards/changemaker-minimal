@@ -38,14 +38,11 @@ export async function POST(
     // Parse request body
     const body = await request.json();
 
-    // Handle both formats:
-    // 1. useChat format: { messages, data }
-    // 2. Current format: { prompt, conversationHistory, templateType, ... }
-    let messages = body.messages;
-    let prompt = body.prompt;
-    let conversationHistory = body.conversationHistory;
+    // Extract messages and context
+    // Client sends: { messages: [...], data: { templateType, ... } }
+    let messages = body.messages || [];
 
-    // Extract context
+    // Extract context from data object or fallback to body
     const {
       templateType = 'GENERIC',
       workspaceName,
@@ -55,32 +52,12 @@ export async function POST(
       existingSubject,
     } = body.data || body;
 
-    // Build messages array
-    if (!messages) {
-      messages = [];
-    }
-
-    // If we have conversationHistory, start with that
-    if (conversationHistory && Array.isArray(conversationHistory)) {
-      messages = [...conversationHistory];
-    }
-
-    // If we have a new prompt, add it to the conversation
-    if (prompt && typeof prompt === 'string') {
-      messages.push({ role: 'user', content: prompt });
-    }
-
-    // Ensure messages is always an array
-    if (!Array.isArray(messages)) {
-      messages = [];
-    }
-
-    // If still no messages, return error
-    if (messages.length === 0) {
+    // Validate messages
+    if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
         JSON.stringify({
           error: 'No messages provided',
-          message: 'Either messages, conversationHistory, or prompt must be provided',
+          message: 'Messages array is required and must not be empty',
         }),
         {
           status: 400,

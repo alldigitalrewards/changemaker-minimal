@@ -30,7 +30,7 @@ export function RankingRow({
   isHidden = false
 }: RankingRowProps) {
   const borderClass = isCurrentUser
-    ? 'border-l-4 border-coral-500 bg-coral-50/30'
+    ? 'border-l-4 border-gray-900 bg-gray-50/30'
     : rank <= Math.ceil(100 * 0.1)
     ? 'border-l-4 border-amber-400'
     : rank <= Math.ceil(100 * 0.25)
@@ -73,7 +73,7 @@ export function RankingRow({
             {name}
           </p>
           {isCurrentUser && (
-            <Badge className="bg-coral-500 hover:bg-coral-600 text-white text-xs px-2 py-0.5">
+            <Badge className="bg-gray-900 hover:bg-gray-800 text-white text-xs px-2 py-0.5">
               You
             </Badge>
           )}

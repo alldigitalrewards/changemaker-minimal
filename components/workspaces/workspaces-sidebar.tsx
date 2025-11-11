@@ -109,7 +109,7 @@ export default function WorkspacesSidebar({
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-coral-500 to-terracotta-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-gray-500 to-terracotta-600 rounded-lg flex items-center justify-center">
               <Building className="h-4 w-4 text-white" />
             </div>
             <span className="font-semibold text-gray-900">Workspaces</span>
@@ -200,7 +200,7 @@ export default function WorkspacesSidebar({
                 className={cn(
                   "w-full justify-start",
                   item.active &&
-                    "bg-coral-50 text-coral-700 hover:bg-coral-100",
+                    "bg-gray-50 text-gray-800 hover:bg-gray-100",
                   collapsed && "justify-center px-2",
                 )}
               >
@@ -209,7 +209,7 @@ export default function WorkspacesSidebar({
                   <span className="flex-1 text-left">{item.label}</span>
                 )}
                 {!collapsed && item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-auto bg-coral-500 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                  <span className="ml-auto bg-gray-900 text-white text-xs font-medium px-2 py-0.5 rounded-full">
                     {item.badge}
                   </span>
                 )}
@@ -262,7 +262,7 @@ export default function WorkspacesSidebar({
           <Button
             variant="default"
             className={cn(
-              "w-full bg-coral-500 hover:bg-coral-600",
+              "w-full bg-gray-900 hover:bg-gray-800",
               collapsed && "px-2",
             )}
             size="sm"

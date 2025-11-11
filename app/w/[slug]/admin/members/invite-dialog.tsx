@@ -97,7 +97,7 @@ export function InviteDialog({ workspaceSlug, trigger }: InviteDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="default" className="bg-coral-500 hover:bg-coral-600">
+          <Button variant="default" className="bg-gray-900 hover:bg-gray-800">
             <UserPlus className="h-4 w-4 mr-2" />
             Invite Members
           </Button>

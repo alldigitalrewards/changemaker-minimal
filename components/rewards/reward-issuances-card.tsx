@@ -15,6 +15,7 @@ interface RewardIssuance {
   status: string
   rewardStackStatus: string | null
   rewardStackTransactionId: string | null
+  rewardStackAdjustmentId: string | null
   rewardStackErrorMessage: string | null
   createdAt: string
   issuedAt: string | null
@@ -22,6 +23,7 @@ interface RewardIssuance {
   type: string
   skuId: string | null
   externalTransactionId: string | null
+  externalResponse: any
   error: string | null
   User: {
     id: string
@@ -29,6 +31,7 @@ interface RewardIssuance {
     firstName: string | null
     lastName: string | null
     displayName: string | null
+    rewardStackParticipantId: string | null
   }
   Challenge: {
     id: string
@@ -141,7 +144,7 @@ export function RewardIssuancesCard({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-coral-500" />
+                <DollarSign className="h-5 w-5 text-gray-900" />
                 {title}
               </CardTitle>
               <CardDescription>{description}</CardDescription>
@@ -161,7 +164,7 @@ export function RewardIssuancesCard({
               {rewards.map((reward) => (
                 <div
                   key={reward.id}
-                  className="p-3 border border-gray-200 rounded-lg hover:border-coral-300 hover:shadow-sm transition-all cursor-pointer"
+                  className="p-3 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
                   onClick={() => handleViewDetails(reward)}
                 >
                   <div className="flex items-start justify-between gap-3">

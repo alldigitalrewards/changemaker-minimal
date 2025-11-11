@@ -141,15 +141,15 @@ export default async function WorkspacesPage() {
       <Suspense fallback={<WorkspacesSummaryStatsSkeleton />}>
         {memberships.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card className="bg-gradient-to-br from-coral-50 to-white border-coral-200">
+            <Card className="bg-gradient-to-br from-gray-50 to-white border-gray-200">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Your Workspaces</p>
-                    <p className="text-3xl font-bold text-coral-600">{totalWorkspaces}</p>
+                    <p className="text-3xl font-bold text-gray-900">{totalWorkspaces}</p>
                     <p className="text-xs text-gray-500 mt-1">Active memberships</p>
                   </div>
-                  <Building className="h-10 w-10 text-coral-500 opacity-75" />
+                  <Building className="h-10 w-10 text-gray-900 opacity-75" />
                 </div>
               </CardContent>
             </Card>
@@ -186,15 +186,15 @@ export default async function WorkspacesPage() {
       <div className="grid gap-8">
         {/* User's Workspaces */}
         {memberships.length > 0 ? (
-          <Card className="border-coral-200 bg-gradient-to-br from-coral-50/50 to-white shadow-sm">
+          <Card className="border-gray-200 bg-gradient-to-br from-gray-50/50 to-white shadow-sm">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-coral-100 rounded-lg">
-                  <Building className="h-5 w-5 text-coral-600" />
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <Building className="h-5 w-5 text-gray-900" />
                 </div>
                 <div>
-                  <CardTitle className="text-coral-900 text-xl">Your Workspaces</CardTitle>
-                  <CardDescription className="text-coral-700">
+                  <CardTitle className="text-gray-900 text-xl">Your Workspaces</CardTitle>
+                  <CardDescription className="text-gray-800">
                     Workspaces you are a member of ({memberships.length} total)
                   </CardDescription>
                 </div>

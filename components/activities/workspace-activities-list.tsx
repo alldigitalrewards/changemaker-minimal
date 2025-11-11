@@ -112,12 +112,12 @@ export function WorkspaceActivitiesList({
         {activitiesByChallenge.map(({ challenge, activities }) =>
           activities.length > 0 ? (
             <Card key={challenge.id} className="overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-coral-50 to-terracotta-50 border-b">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-terracotta-50 border-b">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <CardTitle className="text-xl flex items-center gap-2">
-                        <Trophy className="h-5 w-5 text-coral-600" />
+                        <Trophy className="h-5 w-5 text-gray-900" />
                         {challenge.title}
                       </CardTitle>
                       {(() => {
@@ -147,7 +147,7 @@ export function WorkspaceActivitiesList({
                   </div>
                   <button
                     onClick={() => handleChallengeClick(challenge.id)}
-                    className="ml-4 flex items-center gap-2 px-3 py-1.5 text-sm text-coral-700 hover:text-coral-800 hover:bg-white/50 rounded-md transition-colors"
+                    className="ml-4 flex items-center gap-2 px-3 py-1.5 text-sm text-gray-800 hover:text-gray-900 hover:bg-white/50 rounded-md transition-colors"
                   >
                     <span className="font-medium">View Challenge</span>
                     <ExternalLink className="h-4 w-4" />
@@ -179,10 +179,10 @@ export function WorkspaceActivitiesList({
                     <button
                       key={a.id}
                       onClick={() => setSelectedActivity({ activity: a, challenge })}
-                      className="border rounded-lg p-4 hover:border-coral-300 hover:shadow-md transition-all text-left bg-white group"
+                      className="border rounded-lg p-4 hover:border-gray-300 hover:shadow-md transition-all text-left bg-white group"
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <div className="font-semibold text-gray-900 group-hover:text-coral-700 transition-colors flex-1">
+                        <div className="font-semibold text-gray-900 group-hover:text-gray-800 transition-colors flex-1">
                           {a.ActivityTemplate.name}
                         </div>
                         {a.isRequired && (

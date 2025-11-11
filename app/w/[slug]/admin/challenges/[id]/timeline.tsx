@@ -34,7 +34,7 @@ export interface TimelineEvent {
 function iconFor(type: EventType) {
   switch (type) {
     case 'INVITE_SENT':
-      return <Mail className="h-4 w-4 text-coral-500" />
+      return <Mail className="h-4 w-4 text-gray-900" />
     case 'INVITE_REDEEMED':
       return <CheckCircle className="h-4 w-4 text-green-600" />
     case 'ENROLLED':

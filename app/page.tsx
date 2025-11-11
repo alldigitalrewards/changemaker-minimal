@@ -45,7 +45,7 @@ function PublicLandingPage() {
 
           <h1 className="text-5xl md:text-6xl font-bold text-navy-900 leading-tight">
             Inspire Change Through
-            <span className="text-coral-600 block">Community Challenges</span>
+            <span className="text-gray-900 block">Community Challenges</span>
           </h1>
 
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
@@ -84,9 +84,9 @@ function PublicLandingPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white border-coral-200 hover:shadow-lg transition-shadow duration-300">
+          <Card className="bg-white border-gray-200 hover:shadow-lg transition-shadow duration-300">
             <CardHeader className="text-center">
-              <Users className="h-12 w-12 text-coral-500 mx-auto mb-4" />
+              <Users className="h-12 w-12 text-gray-900 mx-auto mb-4" />
               <CardTitle className="text-navy-900">Community Driven</CardTitle>
             </CardHeader>
             <CardContent>
@@ -141,7 +141,7 @@ function PublicLandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-coral-600 py-16">
+      <section className="bg-gray-800 py-16">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-3xl mx-auto text-white space-y-6">
             <h2 className="text-3xl md:text-4xl font-bold">

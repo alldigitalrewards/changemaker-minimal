@@ -160,7 +160,7 @@ export default async function ManagerQueuePage({ params, searchParams }: PagePro
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <ClipboardList className="h-5 w-5 text-coral-500" />
+              <ClipboardList className="h-5 w-5 text-gray-900" />
               Manager Review Queue
             </CardTitle>
             <CardDescription>Review submissions for your assigned challenges</CardDescription>
@@ -206,9 +206,9 @@ export default async function ManagerQueuePage({ params, searchParams }: PagePro
             <div className="rounded-lg border bg-muted/30 p-4">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Assigned Challenges</span>
-                <Briefcase className="h-4 w-4 text-coral-500" />
+                <Briefcase className="h-4 w-4 text-gray-900" />
               </div>
-              <p className="mt-2 text-2xl font-semibold text-coral-600">{totalAssignedChallenges}</p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">{totalAssignedChallenges}</p>
               <p className="mt-1 text-xs text-muted-foreground">Active assignments</p>
             </div>
           </div>

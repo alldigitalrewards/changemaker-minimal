@@ -113,19 +113,6 @@ export default async function AdminParticipantsPage({
     rows = rows.sort((a, b) => dir === 'desc' ? b.totalPoints - a.totalPoints : a.totalPoints - b.totalPoints)
   }
 
-  const qs = (overrides: Record<string, string | undefined>) => {
-    const p = new URLSearchParams()
-    if (pointsFilter) p.set('points', pointsFilter)
-    if (sort) p.set('sort', sort)
-    if (dir) p.set('dir', dir)
-    Object.entries(overrides).forEach(([k, v]) => {
-      if (v === undefined || v === '') p.delete(k)
-      else p.set(k, v)
-    })
-    const s = p.toString()
-    return s ? `?${s}` : ''
-  }
-
   // Get enrollment statistics
   const enrollmentStats = await prisma.enrollment.groupBy({
     by: ["status"],
@@ -192,7 +179,6 @@ export default async function AdminParticipantsPage({
           pointsFilter={pointsFilter}
           sort={sort}
           dir={dir}
-          qs={qs}
         />
       </div>
     </div>

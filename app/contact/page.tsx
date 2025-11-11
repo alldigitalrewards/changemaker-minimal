@@ -25,7 +25,7 @@ export default function ContactPage() {
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-navy-900 mb-4 flex items-center justify-center gap-3">
-              <MessageCircle className="h-10 w-10 text-coral-600" />
+              <MessageCircle className="h-10 w-10 text-gray-900" />
               Get in Touch
             </h1>
             <p className="text-lg text-navy-600 max-w-2xl mx-auto">
@@ -37,10 +37,10 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Contact Information */}
             <div className="lg:col-span-1 space-y-6">
-              <Card className="border-coral-200 bg-gradient-to-br from-coral-50 to-terracotta-50">
+              <Card className="border-gray-200 bg-gradient-to-br from-gray-50 to-terracotta-50">
                 <CardHeader>
                   <CardTitle className="text-navy-900 flex items-center gap-2">
-                    <Phone className="h-5 w-5 text-coral-600" />
+                    <Phone className="h-5 w-5 text-gray-900" />
                     Contact Information
                   </CardTitle>
                   <CardDescription className="text-navy-600">
@@ -49,7 +49,7 @@ export default function ContactPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <Mail className="h-5 w-5 text-coral-600 mt-1" />
+                    <Mail className="h-5 w-5 text-gray-900 mt-1" />
                     <div>
                       <h4 className="font-medium text-navy-900">Email Support</h4>
                       <p className="text-navy-600">support@changemaker.im</p>
@@ -58,7 +58,7 @@ export default function ContactPage() {
                   </div>
                   
                   <div className="flex items-start gap-3">
-                    <MessageCircle className="h-5 w-5 text-coral-600 mt-1" />
+                    <MessageCircle className="h-5 w-5 text-gray-900 mt-1" />
                     <div>
                       <h4 className="font-medium text-navy-900">Live Chat</h4>
                       <p className="text-navy-600">Available in-app</p>
@@ -67,7 +67,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-coral-600 mt-1" />
+                    <MapPin className="h-5 w-5 text-gray-900 mt-1" />
                     <div>
                       <h4 className="font-medium text-navy-900">Office</h4>
                       <p className="text-navy-600">San Francisco, CA</p>
@@ -76,7 +76,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Clock className="h-5 w-5 text-coral-600 mt-1" />
+                    <Clock className="h-5 w-5 text-gray-900 mt-1" />
                     <div>
                       <h4 className="font-medium text-navy-900">Business Hours</h4>
                       <p className="text-navy-600">Monday - Friday</p>
@@ -131,7 +131,7 @@ export default function ContactPage() {
               <Card className="border-gray-200">
                 <CardHeader>
                   <CardTitle className="text-navy-900 flex items-center gap-2">
-                    <Send className="h-5 w-5 text-coral-600" />
+                    <Send className="h-5 w-5 text-gray-900" />
                     Send us a Message
                   </CardTitle>
                   <CardDescription className="text-navy-600">
@@ -147,7 +147,7 @@ export default function ContactPage() {
                         </label>
                         <input
                           type="text"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-coral-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                           placeholder="John"
                           required
                         />
@@ -158,7 +158,7 @@ export default function ContactPage() {
                         </label>
                         <input
                           type="text"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-coral-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                           placeholder="Doe"
                           required
                         />
@@ -171,7 +171,7 @@ export default function ContactPage() {
                       </label>
                       <input
                         type="email"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-coral-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                         placeholder="john@example.com"
                         required
                       />
@@ -183,7 +183,7 @@ export default function ContactPage() {
                       </label>
                       <input
                         type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-coral-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                         placeholder="Your Organization"
                       />
                     </div>
@@ -193,7 +193,7 @@ export default function ContactPage() {
                         Subject *
                       </label>
                       <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-coral-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                         required
                       >
                         <option value="">Select a topic</option>
@@ -213,7 +213,7 @@ export default function ContactPage() {
                       </label>
                       <textarea
                         rows={6}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-coral-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                         placeholder="Tell us how we can help you..."
                         required
                       />
@@ -222,7 +222,7 @@ export default function ContactPage() {
                     <Button
                       type="submit"
                       size="lg"
-                      className="w-full bg-gradient-to-r from-coral-500 to-terracotta-600 text-white hover:from-coral-600 hover:to-terracotta-700 shadow-lg hover:shadow-xl transition-all duration-300"
+                      className="w-full bg-gradient-to-r from-gray-500 to-terracotta-600 text-white hover:from-gray-600 hover:to-terracotta-700 shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       <Send className="mr-2 h-5 w-5" />
                       Send Message

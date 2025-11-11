@@ -230,5 +230,8 @@ export async function getCatalog(
 
   return await client.request<CatalogResponse>(endpoint, {
     method: "GET",
+    headers: {
+      "Accept-Language": "en-US",
+    },
   });
 }

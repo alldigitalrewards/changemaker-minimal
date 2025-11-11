@@ -24,7 +24,7 @@ export function YourStatsCard({
   const percentile = Math.round((1 - (rank - 1) / totalParticipants) * 100)
 
   return (
-    <Card className="bg-gradient-to-br from-white to-coral-50 border-2 border-coral-300 shadow-sm">
+    <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-300 shadow-sm">
       <CardHeader>
         <CardTitle className="text-lg">Your Performance</CardTitle>
       </CardHeader>
@@ -37,7 +37,7 @@ export function YourStatsCard({
               <span>Your Rank</span>
             </div>
             <div className="space-y-1">
-              <p className="text-3xl font-bold text-coral-600">#{rank}</p>
+              <p className="text-3xl font-bold text-gray-900">#{rank}</p>
               <p className="text-xs text-slate-500">Top {percentile}%</p>
             </div>
           </div>

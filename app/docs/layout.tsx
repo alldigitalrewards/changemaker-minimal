@@ -49,7 +49,7 @@ export default async function DocsLayout({
                 <div key={item.slug}>
                   <Link
                     href={`/docs/${item.slug}`}
-                    className="block font-semibold text-foreground hover:text-coral-600"
+                    className="block font-semibold text-foreground hover:text-gray-900"
                   >
                     {item.title}
                   </Link>

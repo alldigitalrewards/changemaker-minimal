@@ -111,7 +111,7 @@ function ActivitySubmissionCard({ submission, workspaceSlug }: ActivitySubmissio
               </Badge>
             </div>
             <CardDescription className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-coral-500" />
+              <Trophy className="w-4 h-4 text-gray-900" />
               <span>{submission.Activity.Challenge.title}</span>
             </CardDescription>
           </div>
@@ -128,7 +128,7 @@ function ActivitySubmissionCard({ submission, workspaceSlug }: ActivitySubmissio
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-3 text-xs bg-gray-50 p-3 rounded-lg">
           <span className="flex items-center gap-1">
-            <Activity className="h-3 w-3 text-coral-500" />
+            <Activity className="h-3 w-3 text-gray-900" />
             {submission.Activity.ActivityTemplate.type.replace('_', ' ').toLowerCase()}
           </span>
           {submission.Activity.ActivityTemplate.requiresApproval && (
@@ -189,7 +189,7 @@ function ActivitySubmissionCard({ submission, workspaceSlug }: ActivitySubmissio
         <div className="flex justify-between items-center pt-2 border-t">
           <Link
             href={`/w/${workspaceSlug}/participant/challenges/${submission.Activity.Challenge.id}`}
-            className="inline-flex items-center text-sm text-coral-600 hover:text-coral-700 font-medium transition-colors"
+            className="inline-flex items-center text-sm text-gray-900 hover:text-gray-800 font-medium transition-colors"
           >
             <Eye className="w-4 h-4 mr-1" />
             View Challenge
@@ -259,7 +259,7 @@ export default async function ParticipantActivitiesPage({
     <Suspense fallback={<ActivitiesSkeleton />}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-coral-50 to-blue-50 rounded-lg p-6 border border-coral-100">
+        <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border border-gray-200">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">My Activities</h1>
           <p className="text-gray-600">
             Track all your activity submissions across challenges in {workspace.name}
@@ -304,14 +304,14 @@ export default async function ParticipantActivitiesPage({
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-coral-500">
+          <Card className="border-l-4 border-l-gray-900">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Rewards Earned</p>
-                  <p className="text-3xl font-bold text-coral-600">{totalPointsEarned}</p>
+                  <p className="text-3xl font-bold text-gray-900">{totalPointsEarned}</p>
                 </div>
-                <Star className="h-8 w-8 text-coral-500 opacity-75" />
+                <Star className="h-8 w-8 text-gray-900 opacity-75" />
               </div>
             </CardContent>
           </Card>
@@ -321,7 +321,7 @@ export default async function ParticipantActivitiesPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-coral-500" />
+              <Activity className="h-5 w-5 text-gray-900" />
               Activity Submissions
             </CardTitle>
             <CardDescription>
@@ -390,7 +390,7 @@ export default async function ParticipantActivitiesPage({
                     <p className="text-gray-500 mb-6 max-w-md mx-auto">
                       Start participating in challenges to submit activities and earn points.
                     </p>
-                    <Button asChild className="bg-coral-500 hover:bg-coral-600">
+                    <Button asChild className="bg-gray-900 hover:bg-gray-800">
                       <Link href={`/w/${slug}/participant/challenges`}>
                         <Trophy className="h-4 w-4 mr-2" />
                         Browse Challenges
@@ -500,8 +500,8 @@ export default async function ParticipantActivitiesPage({
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-coral-100 rounded-lg flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-coral-600" />
+                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Trophy className="h-6 w-6 text-gray-900" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 mb-1">Browse Challenges</h3>

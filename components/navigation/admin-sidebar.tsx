@@ -96,14 +96,14 @@ function CollapsibleSection({ title, items, workspace, pathname, collapsed, defa
                 href={href}
                 className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-coral-50 text-coral-700 border border-coral-200'
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
+                    ? 'bg-gray-50 text-gray-800 border border-gray-200'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                 }`}
                 title={item.name}
               >
                 <item.icon
                   className={`flex-shrink-0 h-5 w-5 mx-auto ${
-                    isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
+                    isActive ? 'text-gray-900' : 'text-gray-500 group-hover:text-gray-900'
                   }`}
                 />
               </Link>
@@ -120,7 +120,7 @@ function CollapsibleSection({ title, items, workspace, pathname, collapsed, defa
         onClick={() => setExpanded(!expanded)}
         className={`w-full flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors rounded-lg border ${
           hasActiveItem
-            ? 'text-coral-700 bg-coral-50 border-coral-200'
+            ? 'text-gray-800 bg-gray-50 border-gray-200'
             : 'text-gray-600 hover:bg-gray-50 border-gray-200 hover:border-gray-300'
         }`}
       >
@@ -141,13 +141,13 @@ function CollapsibleSection({ title, items, workspace, pathname, collapsed, defa
                   href={href}
                   className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-coral-50 text-coral-700 border border-coral-200'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
+                      ? 'bg-gray-50 text-gray-800 border border-gray-200'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   <item.icon
                     className={`flex-shrink-0 h-5 w-5 mr-3 ${
-                      isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
+                      isActive ? 'text-gray-900' : 'text-gray-500 group-hover:text-gray-900'
                     }`}
                   />
                   <span>{item.name}</span>
@@ -177,7 +177,7 @@ export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminS
           <div className="flex items-center justify-between">
             {!collapsed && (
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-coral-500 to-terracotta-600 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-r from-gray-500 to-terracotta-600 rounded-lg flex items-center justify-center">
                   <Building2 className="h-5 w-5 text-white" />
                 </div>
                 <div className="min-w-0">
@@ -244,7 +244,7 @@ export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminS
 
             {/* Primary Navigation - Always visible, not collapsible */}
             {!collapsed && isSuperAdmin && (
-              <h3 className="px-3 text-xs font-semibold text-coral-600 uppercase tracking-wider">
+              <h3 className="px-3 text-xs font-semibold text-gray-900 uppercase tracking-wider">
                 Workspace Admin
               </h3>
             )}
@@ -260,14 +260,14 @@ export default function AdminSidebar({ workspace, isSuperAdmin = false }: AdminS
                       href={href}
                       className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-coral-50 text-coral-700 border border-coral-200'
-                          : 'text-gray-700 hover:bg-gray-50 hover:text-coral-600'
+                          ? 'bg-gray-50 text-gray-800 border border-gray-200'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                       }`}
                       title={collapsed ? item.name : undefined}
                     >
                       <item.icon
                         className={`flex-shrink-0 h-5 w-5 ${
-                          isActive ? 'text-coral-600' : 'text-gray-500 group-hover:text-coral-500'
+                          isActive ? 'text-gray-900' : 'text-gray-500 group-hover:text-gray-900'
                         } ${collapsed ? 'mx-auto' : 'mr-3'}`}
                       />
                       {!collapsed && <span>{item.name}</span>}

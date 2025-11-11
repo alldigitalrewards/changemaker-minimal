@@ -21,14 +21,14 @@ export default function ProfileStats({
           </div>
         </CardContent>
       </Card>
-      <Card className="border-l-4 border-l-coral-500">
+      <Card className="border-l-4 border-l-gray-900">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Enrollments</p>
-              <p className="text-3xl font-bold text-coral-600">{enrollments.total}</p>
+              <p className="text-3xl font-bold text-gray-900">{enrollments.total}</p>
             </div>
-            <Trophy className="h-8 w-8 text-coral-500 opacity-75" />
+            <Trophy className="h-8 w-8 text-gray-900 opacity-75" />
           </div>
         </CardContent>
       </Card>
