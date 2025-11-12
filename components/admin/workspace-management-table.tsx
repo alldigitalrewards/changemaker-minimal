@@ -27,8 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreVertical, ExternalLink, Users, Trophy, Search, Award, DollarSign, Settings } from 'lucide-react';
+import { MoreVertical, ExternalLink, Users, Trophy, Search, Award, DollarSign, Settings, Download } from 'lucide-react';
 import { getUserDisplayName } from '@/lib/user-utils';
+import { exportWorkspacesToCSV } from '@/lib/utils/csv-export';
 
 interface Workspace {
   id: string;
@@ -184,6 +185,15 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
             <SelectItem value="challenges-desc">Most Challenges</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button
+          variant="outline"
+          onClick={() => exportWorkspacesToCSV(workspaces)}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Export CSV
+        </Button>
       </div>
 
       {/* Bulk Actions */}

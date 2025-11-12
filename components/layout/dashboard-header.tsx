@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { LogOut, Settings, User, ChevronDown, Target } from "lucide-react";
+import { LogOut, Settings, User, ChevronDown, Target, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/components/auth/logout-button";
 import WorkspaceSwitcher from "@/components/workspace-switcher";
@@ -33,6 +33,7 @@ interface DashboardHeaderProps {
     variant?: "purple" | "default";
   } | null;
   isGlobalPage?: boolean; // Set to true for /workspaces and other non-workspace pages
+  isPlatformAdmin?: boolean; // Indicates if user is platform super admin
 }
 
 export default function DashboardHeader({
@@ -46,6 +47,7 @@ export default function DashboardHeader({
   budgetBadge,
   customBadge,
   isGlobalPage = false,
+  isPlatformAdmin = false,
 }: DashboardHeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -186,6 +188,15 @@ export default function DashboardHeader({
                   </div>
 
                   <div className="border-t border-gray-100 mt-2 pt-2">
+                    {isPlatformAdmin && (
+                      <Link href="/admin/dashboard">
+                        <button className="w-full text-left px-4 py-2 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 hover:border-l-2 hover:border-purple-600 flex items-center space-x-2 transition-all">
+                          <Shield className="h-4 w-4" />
+                          <span>Platform Admin</span>
+                        </button>
+                      </Link>
+                    )}
+
                     <Link href="/account">
                       <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:border-l-2 hover:border-gray-900 flex items-center space-x-2 transition-all">
                         <Settings className="h-4 w-4" />
