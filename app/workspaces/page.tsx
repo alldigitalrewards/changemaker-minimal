@@ -34,7 +34,7 @@ export default async function WorkspacesPage() {
   const dashboardData = await getOptimizedWorkspaceDashboardData(dbUser.id)
   const memberships = dashboardData.memberships
 
-  const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser?.permissions, user.email!)
+  const userIsPlatformAdmin = isPlatformSuperAdmin(dbUser)
   const userIsWorkspaceAdmin = memberships.some(m => m.role === 'ADMIN')
 
   // Discoverable workspaces based on role
@@ -111,6 +111,7 @@ export default async function WorkspacesPage() {
         showRoleSwitcher={false}
         showWorkspaceSwitcher={false}
         isGlobalPage={true}
+        isPlatformAdmin={userIsPlatformAdmin}
         customBadge={userIsPlatformAdmin ? {
           label: 'Platform Admin',
           value: '🔱 Superadmin',

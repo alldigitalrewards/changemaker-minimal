@@ -8,6 +8,10 @@ import ManagerSidebar from "@/components/navigation/manager-sidebar"
 import { WorkspaceProvider } from "@/providers/workspace-provider"
 import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
 import { ReactNode } from "react"
+import ThemeStyleInjector from "@/components/theme/theme-style-injector"
+import { ThemeProvider } from "@/components/theme/theme-provider"
+import { isValidTheme } from "@/lib/theme/utils"
+import type { ThemeName } from "@/lib/theme/types"
 
 // Force dynamic rendering - this layout requires database access at request time
 export const dynamic = 'force-dynamic'
@@ -55,18 +59,30 @@ export default async function ManagerLayout({
   // Get all user workspaces for the provider
   const userWorkspaces = await getUserWorkspacesServer()
 
+  const themeValue: ThemeName = workspace.theme && isValidTheme(workspace.theme)
+    ? workspace.theme
+    : "bold";
+
   return (
-    <WorkspaceProvider
-      initialWorkspace={workspace}
-      initialRole="MANAGER"
-      initialWorkspaces={userWorkspaces}
-    >
-      <DashboardLayout
-        header={header}
-        sidebar={sidebar}
+    <>
+      <ThemeStyleInjector theme={themeValue} />
+      <ThemeProvider
+        initialTheme={themeValue}
+        workspaceSlug={slug}
       >
-        {children}
-      </DashboardLayout>
-    </WorkspaceProvider>
+        <WorkspaceProvider
+          initialWorkspace={workspace}
+          initialRole="MANAGER"
+          initialWorkspaces={userWorkspaces}
+        >
+          <DashboardLayout
+            header={header}
+            sidebar={sidebar}
+          >
+            {children}
+          </DashboardLayout>
+        </WorkspaceProvider>
+      </ThemeProvider>
+    </>
   )
 }

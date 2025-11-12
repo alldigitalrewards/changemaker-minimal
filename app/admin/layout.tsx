@@ -26,7 +26,7 @@ export default async function PlatformAdminLayout({
     where: { email: user.email! }
   })
 
-  const isSuperAdmin = isPlatformSuperAdmin(dbUser?.permissions, user.email!)
+  const isSuperAdmin = isPlatformSuperAdmin(dbUser)
 
   if (!isSuperAdmin) {
     redirect("/workspaces")
