@@ -6,13 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { updateWorkspace, deleteWorkspace, leaveWorkspace } from "./actions"
-import { setPointsBalance } from "./actions"
-import { getUserBySupabaseId, getWorkspacePointsBudget, upsertWorkspacePointsBudget } from "@/lib/db/queries"
-import { isWorkspaceOwner } from "@/lib/db/workspace-membership"
-import { getWorkspaceEmailSettings } from "@/lib/db/queries"
-import { WorkspaceRewardStackSettings } from "@/components/admin/workspace-rewardstack-settings"
+import { updateWorkspace, deleteWorkspace, leaveWorkspace, transferOwnership } from "./actions"
+import { getUserBySupabaseId } from "@/lib/db/queries"
+import { isWorkspaceOwner, listWorkspaceMemberships } from "@/lib/db/workspace-membership"
+import { ThemeSelector } from "@/components/admin/theme-selector"
+import { WorkspaceMemberships } from "@/components/admin/workspace-memberships"
+import { WorkspaceOwnershipTransferDialog } from "@/components/admin/workspace-ownership-transfer-dialog"
 
 export default async function AdminSettingsPage({ 
   params 
@@ -44,21 +43,6 @@ export default async function AdminSettingsPage({
   }
 
   // Check if current user is workspace owner
-  const fullWorkspace = await prisma.workspace.findUnique({
-    where: { id: workspace.id },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      // RewardSTACK Configuration
-      rewardStackEnabled: true,
-      rewardStackEnvironment: true,
-      rewardStackOrgId: true,
-      rewardStackProgramId: true,
-      rewardStackSandboxMode: true
-    }
-  })
-
   const isOwner = await isWorkspaceOwner(dbUser.id, workspace.id)
 
   // Get workspace statistics
@@ -74,8 +58,13 @@ export default async function AdminSettingsPage({
     }
   })
 
-  const emailSettings = await getWorkspaceEmailSettings(workspace.id)
-  const budget = await getWorkspacePointsBudget(workspace.id)
+  // Get all workspace memberships for admins/managers display
+  // Exclude platform super admins - they have platform-wide access and aren't workspace-specific
+  const allMemberships = await listWorkspaceMemberships(workspace.id)
+  const memberships = allMemberships.filter(m => {
+    const user = (m as any).User;
+    return !user.platformSuperAdmin; // Filter out platform super admins
+  })
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -85,121 +74,120 @@ export default async function AdminSettingsPage({
       </div>
 
       <div className="grid gap-6">
+        {/* Theme */}
         <Card>
           <CardHeader>
-            <CardTitle>Branding Preview</CardTitle>
-            <CardDescription>Preview header/sidebar branding for this workspace</CardDescription>
+            <CardTitle>Theme</CardTitle>
+            <CardDescription>Choose a color palette for your workspace</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="border rounded-lg overflow-hidden">
-              <div className="h-12 flex items-center px-4" style={{ background: emailSettings?.brandColor || '#F97316' }}>
-                <span className="text-white font-semibold">{workspace.name}</span>
+            <ThemeSelector />
+          </CardContent>
+        </Card>
+
+        {/* Workspace Memberships - Admins & Managers */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Workspace Leadership</CardTitle>
+                <CardDescription>
+                  Admins and managers who can manage this workspace
+                </CardDescription>
               </div>
-              <div className="flex">
-                <div className="w-48 border-r p-4">Sidebar</div>
-                <div className="flex-1 p-4">
-                  <div className="h-24 bg-gray-50 rounded" />
-                </div>
-              </div>
+              {isOwner && (
+                <WorkspaceOwnershipTransferDialog
+                  workspaceId={workspace.id}
+                  workspaceName={workspace.name}
+                  currentOwnerId={dbUser.id}
+                  admins={memberships
+                    .filter(m => m.role === 'ADMIN')
+                    .map(m => ({
+                      id: m.id,
+                      userId: m.userId,
+                      user: {
+                        id: (m as any).User.id,
+                        email: (m as any).User.email,
+                        displayName: (m as any).User.displayName,
+                        firstName: (m as any).User.firstName,
+                        lastName: (m as any).User.lastName,
+                      },
+                    }))}
+                  onTransfer={async (fromUserId: string, toUserId: string) => {
+                    "use server"
+                    const formData = new FormData()
+                    formData.append("workspaceId", workspace.id)
+                    formData.append("fromUserId", fromUserId)
+                    formData.append("toUserId", toUserId)
+                    await transferOwnership(formData)
+                  }}
+                />
+              )}
             </div>
+          </CardHeader>
+          <CardContent>
+            <WorkspaceMemberships
+              memberships={memberships.map(m => ({
+                id: m.id,
+                userId: m.userId,
+                role: m.role as "ADMIN" | "MANAGER" | "PARTICIPANT",
+                isOwner: (m as any).isOwner || false,
+                joinedAt: m.joinedAt,
+                user: {
+                  id: (m as any).User.id,
+                  email: (m as any).User.email,
+                  firstName: (m as any).User.firstName,
+                  lastName: (m as any).User.lastName,
+                  displayName: (m as any).User.displayName,
+                },
+              }))}
+              currentUserId={dbUser.id}
+            />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Roles & Permissions</CardTitle>
-            <CardDescription>Guardrails to prevent last-admin removal</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600">Admins cannot demote themselves if they are the last admin. Transfers of ownership are required to leave.</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Email Defaults</CardTitle>
-            <CardDescription>Sender details and brand color, used by all workspace emails</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={async (formData: FormData) => {
-              "use server"
-              const fromName = String(formData.get('fromName') || '')
-              const fromEmail = String(formData.get('fromEmail') || '')
-              const replyTo = String(formData.get('replyTo') || '')
-              const brandColor = String(formData.get('brandColor') || '')
-              const footerHtml = String(formData.get('footerHtml') || '')
-              const { upsertWorkspaceEmailSettings } = await import("@/lib/db/queries")
-              await upsertWorkspaceEmailSettings(workspace.id, { fromName, fromEmail, replyTo, brandColor, footerHtml }, dbUser.id)
-            }} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="fromName">From name</Label>
-                <Input id="fromName" name="fromName" defaultValue={emailSettings?.fromName || ''} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="fromEmail">From email</Label>
-                <Input id="fromEmail" name="fromEmail" defaultValue={emailSettings?.fromEmail || ''} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="replyTo">Reply-to</Label>
-                <Input id="replyTo" name="replyTo" defaultValue={emailSettings?.replyTo || ''} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="brandColor">Brand color</Label>
-                <Input id="brandColor" name="brandColor" defaultValue={emailSettings?.brandColor || ''} placeholder="#F97316" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="footerHtml">Footer HTML</Label>
-                <Input id="footerHtml" name="footerHtml" defaultValue={emailSettings?.footerHtml || ''} />
-              </div>
-              <Button type="submit">Save Email Defaults</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* RewardSTACK Integration */}
-        <WorkspaceRewardStackSettings
-          workspaceSlug={slug}
-          initialEnabled={fullWorkspace?.rewardStackEnabled || false}
-        />
-
-        {/* General Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>General Settings</CardTitle>
-            <CardDescription>Update your workspace information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={updateWorkspace}>
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Workspace Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    defaultValue={workspace.name}
-                    required
-                  />
+        {/* General Settings - Owner Only */}
+        {isOwner && (
+          <Card>
+            <CardHeader>
+              <CardTitle>General Settings</CardTitle>
+              <CardDescription>
+                Update your workspace information (workspace owner only)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={updateWorkspace}>
+                <input type="hidden" name="workspaceId" value={workspace.id} />
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Workspace Name</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      defaultValue={workspace.name}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="slug">URL Slug</Label>
+                    <Input
+                      id="slug"
+                      name="slug"
+                      defaultValue={workspace.slug}
+                      pattern="[a-z0-9-]+"
+                      title="Only lowercase letters, numbers, and hyphens"
+                      required
+                    />
+                    <p className="text-sm text-gray-500">
+                      Workspace URL: /w/{workspace.slug}
+                    </p>
+                  </div>
+                  <Button type="submit">Save Changes</Button>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="slug">URL Slug</Label>
-                  <Input
-                    id="slug"
-                    name="slug"
-                    defaultValue={workspace.slug}
-                    pattern="[a-z0-9-]+"
-                    title="Only lowercase letters, numbers, and hyphens"
-                    required
-                  />
-                  <p className="text-sm text-gray-500">
-                    Workspace URL: /w/{workspace.slug}
-                  </p>
-                </div>
-                <Button type="submit">Save Changes</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Workspace Stats */}
         <Card>
@@ -217,33 +205,6 @@ export default async function AdminSettingsPage({
                 <p className="text-2xl font-bold">{stats?._count.Challenge || 0}</p>
                 <p className="text-sm text-gray-600">Active Challenges</p>
               </div>
-            </div>
-            <div className="mt-6 border-t pt-4">
-              <div className="mb-4">
-                <h3 className="font-medium mb-1">Points Budget</h3>
-                <div className="text-sm text-gray-600 mb-2">Total: {budget?.totalBudget || 0} · Allocated: {budget?.allocated || 0} · Remaining: {Math.max(0, (budget?.totalBudget || 0) - (budget?.allocated || 0))}</div>
-                <form action={async (formData: FormData) => {
-                  "use server"
-                  const total = Number(formData.get('totalBudget') || 0)
-                  await upsertWorkspacePointsBudget(workspace.id, isNaN(total) ? 0 : total, dbUser.id)
-                }} className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Label htmlFor="totalBudget">Set Total Budget</Label>
-                    <Input id="totalBudget" name="totalBudget" type="number" min={0} step={1} defaultValue={budget?.totalBudget || 0} />
-                  </div>
-                  <Button type="submit">Save Budget</Button>
-                </form>
-              </div>
-              <form action={setPointsBalance} className="grid gap-3 max-w-md">
-                <input type="hidden" name="workspaceId" value={workspace.id} />
-                <input type="hidden" name="userId" value={dbUser.id} />
-                <Label htmlFor="totalPoints">Activities completed (total)</Label>
-                <Input id="totalPoints" name="totalPoints" type="number" min={0} step={1} defaultValue={0} />
-                <Label htmlFor="availablePoints">Activities completed (available)</Label>
-                <Input id="availablePoints" name="availablePoints" type="number" min={0} step={1} defaultValue={0} />
-                <Button type="submit">Update activities completed</Button>
-              </form>
-              <p className="text-xs text-gray-500 mt-2">Admins and participants each have a per-workspace PointsBalance. This form updates your own allocation in this workspace.</p>
             </div>
           </CardContent>
         </Card>
