@@ -21,7 +21,7 @@ export async function POST(
       where: { email: user.email! }
     });
 
-    if (!isPlatformSuperAdmin(currentUser?.permissions, user.email!)) {
+    if (!isPlatformSuperAdmin(currentUser)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -72,7 +72,7 @@ export async function DELETE(
       where: { email: user.email! }
     });
 
-    if (!isPlatformSuperAdmin(currentUser?.permissions, user.email!)) {
+    if (!isPlatformSuperAdmin(currentUser)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
