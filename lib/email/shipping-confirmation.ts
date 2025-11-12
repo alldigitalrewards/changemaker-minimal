@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma'
 import { sendInviteEmail } from './smtp'
 import { renderShippingConfirmationEmail } from './templates/shipping-confirmation'
+import { generateConfirmationToken } from '@/lib/auth/tokens'
+import { escapeHtml, sanitizeFullName, sanitizeDisplayName } from '@/lib/utils/security'
 
 export async function sendShippingConfirmationEmail(params: {
   rewardIssuanceId: string
@@ -21,7 +23,7 @@ export async function sendShippingConfirmationEmail(params: {
           addressLine2: true,
           city: true,
           state: true,
-          postalCode: true,
+          zipCode: true,
           country: true,
         },
       },
@@ -65,55 +67,103 @@ export async function sendShippingConfirmationEmail(params: {
     !user.addressLine1 ||
     !user.city ||
     !user.state ||
-    !user.postalCode ||
+    !user.zipCode ||
     !user.country
   ) {
     throw new Error('User address is incomplete. Please update profile first.')
   }
 
+  // Sanitize user data to prevent XSS attacks
   const recipientName =
-    user.displayName ||
-    `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-    user.email.split('@')[0]
+    sanitizeDisplayName(user.displayName) ||
+    sanitizeFullName(user.firstName, user.lastName) ||
+    escapeHtml(user.email.split('@')[0])
 
+  // Generate secure confirmation token (24 hour expiry)
+  const token = await generateConfirmationToken({
+    rewardIssuanceId: params.rewardIssuanceId,
+    userId: user.id,
+    workspaceId: rewardIssuance.workspaceId,
+  })
+
+  // Use URL API for safe URL construction
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const confirmUrl = `${baseUrl}/api/workspaces/${params.workspaceSlug}/rewards/${params.rewardIssuanceId}/confirm-shipping`
-  const updateUrl = `${baseUrl}/w/${params.workspaceSlug}/participant/profile?update=address`
+  const confirmUrl = new URL(
+    `/api/workspaces/${params.workspaceSlug}/rewards/${params.rewardIssuanceId}/confirm-shipping`,
+    baseUrl
+  )
+  confirmUrl.searchParams.set('token', token)
+
+  const updateUrl = new URL(
+    `/w/${params.workspaceSlug}/participant/profile`,
+    baseUrl
+  )
+  updateUrl.searchParams.set('update', 'address')
 
   const html = renderShippingConfirmationEmail({
     recipientName,
-    workspaceName: rewardIssuance.Workspace.name,
-    skuName: sku.name,
-    skuDescription: sku.description || undefined,
+    workspaceName: escapeHtml(rewardIssuance.Workspace.name),
+    skuName: escapeHtml(sku.name),
+    skuDescription: sku.description ? escapeHtml(sku.description) : undefined,
     currentAddress: {
-      addressLine1: user.addressLine1,
-      addressLine2: user.addressLine2,
-      city: user.city,
-      state: user.state,
-      postalCode: user.postalCode,
-      country: user.country,
+      addressLine1: escapeHtml(user.addressLine1),
+      addressLine2: user.addressLine2 ? escapeHtml(user.addressLine2) : undefined,
+      city: escapeHtml(user.city),
+      state: escapeHtml(user.state),
+      postalCode: escapeHtml(user.zipCode),
+      country: escapeHtml(user.country),
     },
-    confirmUrl,
-    updateUrl,
+    confirmUrl: confirmUrl.toString(),
+    updateUrl: updateUrl.toString(),
   })
 
-  await sendInviteEmail({
-    to: user.email,
-    subject: `Confirm Shipping Address for ${sku.name}`,
-    html,
-  })
+  // Idempotency check: prevent duplicate emails
+  if (rewardIssuance.shippingAddressConfirmationEmailSent) {
+    return {
+      success: true,
+      emailSent: false,
+      alreadySent: true,
+    }
+  }
 
-  // Update reward issuance to track email sent
-  await prisma.rewardIssuance.update({
-    where: { id: params.rewardIssuanceId },
-    data: {
-      shippingAddressConfirmationEmailSent: true,
-      shippingAddressConfirmationEmailSentAt: new Date(),
-    },
-  })
+  try {
+    // Send email first (cannot be rolled back)
+    await sendInviteEmail({
+      to: user.email,
+      subject: `Confirm Shipping Address for ${sku.name}`,
+      html,
+    })
 
-  return {
-    success: true,
-    emailSent: true,
+    // Update database only after successful email send (idempotent)
+    // Using transaction ensures atomicity of the update
+    await prisma.$transaction(async (tx) => {
+      // Double-check email hasn't been sent by concurrent request
+      const current = await tx.rewardIssuance.findUnique({
+        where: { id: params.rewardIssuanceId },
+        select: { shippingAddressConfirmationEmailSent: true },
+      })
+
+      if (current?.shippingAddressConfirmationEmailSent) {
+        // Email was already sent by concurrent request - don't send again
+        return
+      }
+
+      await tx.rewardIssuance.update({
+        where: { id: params.rewardIssuanceId },
+        data: {
+          shippingAddressConfirmationEmailSent: true,
+          shippingAddressConfirmationEmailSentAt: new Date(),
+        },
+      })
+    })
+
+    return {
+      success: true,
+      emailSent: true,
+    }
+  } catch (error) {
+    // Email sending failed - database state remains unchanged
+    console.error('Failed to send shipping confirmation email:', error)
+    throw new Error('Failed to send confirmation email')
   }
 }

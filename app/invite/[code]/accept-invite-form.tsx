@@ -33,7 +33,7 @@ export function AcceptInviteForm({ code, role: inviteRole }: AcceptInviteFormPro
       if (response.status === 401 || response.status === 404) {
         toast.message("Create an account to join this workspace")
         const roleQS = inviteRole ? `&role=${inviteRole}` : ''
-        router.push(`/auth/signup?redirectTo=${encodeURIComponent(`/invite/${code}`)}${roleQS}`)
+        router.push(`/auth/signup?invite=${code}${roleQS}`)
         return
       }
 
