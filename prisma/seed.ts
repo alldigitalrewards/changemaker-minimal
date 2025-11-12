@@ -445,6 +445,15 @@ async function seed() {
             (w) => w.slug === membership.workspace,
           );
           if (workspace) {
+            // Determine if this user should be the workspace owner
+            // Kim Robinson owns AllDigitalRewards and ACME
+            // Josh Houghtelin owns Sharecare
+            const isOwner =
+              (admin.email === "krobinson@alldigitalrewards.com" &&
+                (workspace.slug === "alldigitalrewards" || workspace.slug === "acme")) ||
+              (admin.email === "jhoughtelin@alldigitalrewards.com" &&
+                workspace.slug === "sharecare");
+
             await prisma.workspaceMembership.upsert({
               where: {
                 userId_workspaceId: {
@@ -455,6 +464,7 @@ async function seed() {
               update: {
                 role: 'ADMIN',
                 isPrimary: membership.isPrimary,
+                isOwner,
                 preferences: membership.isPrimary
                   ? {
                       notifications: {
@@ -491,6 +501,7 @@ async function seed() {
                 workspaceId: workspace.id,
                 role: 'ADMIN',
                 isPrimary: membership.isPrimary,
+                isOwner,
                 preferences: membership.isPrimary
                   ? {
                       notifications: {
@@ -524,7 +535,7 @@ async function seed() {
               },
             });
             console.log(
-              `  ✓ Added ${admin.email} to ${workspace.name}${membership.isPrimary ? " (primary)" : ""}`,
+              `  ✓ Added ${admin.email} to ${workspace.name}${membership.isPrimary ? " (primary)" : ""}${isOwner ? " (owner)" : ""}`,
             );
           }
         }
