@@ -1,12 +1,17 @@
-import { getPlatformStats } from '@/lib/db/queries';
+import { getPlatformStats, getPlatformRecentActivity, getWorkspaceHealthMetrics } from '@/lib/db/queries';
 import { PlatformOverviewCards } from '@/components/admin/platform-overview-cards';
+import { RecentActivityFeed } from '@/components/admin/recent-activity-feed';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Globe, UserCog, Building } from 'lucide-react';
+import { Globe, UserCog, Building, CheckCircle, XCircle, AlertTriangle, Users } from 'lucide-react';
 
 export default async function AdminDashboard() {
-  // Fetch platform statistics
-  const stats = await getPlatformStats();
+  // Fetch platform statistics, health metrics, and recent activity
+  const [stats, healthMetrics, recentActivity] = await Promise.all([
+    getPlatformStats(),
+    getWorkspaceHealthMetrics(),
+    getPlatformRecentActivity(10)
+  ]);
 
   return (
     <div className="space-y-6">
@@ -20,6 +25,71 @@ export default async function AdminDashboard() {
 
       {/* Platform Statistics */}
       <PlatformOverviewCards stats={stats} />
+
+      {/* Workspace Health Indicators */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Workspace Health</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Active Workspaces */}
+          <Card className="border-emerald-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Workspaces</CardTitle>
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-700">{healthMetrics.activeCount}</div>
+              <p className="text-xs text-gray-600 mt-1">
+                Workspaces currently active
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Inactive Workspaces */}
+          <Card className="border-amber-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Inactive Workspaces</CardTitle>
+              <XCircle className="h-4 w-4 text-amber-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-700">{healthMetrics.inactiveCount}</div>
+              <p className="text-xs text-gray-600 mt-1">
+                Workspaces marked inactive
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Workspaces Without Owners */}
+          <Card className="border-red-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">No Owner</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-700">{healthMetrics.withoutOwners}</div>
+              <p className="text-xs text-gray-600 mt-1">
+                Workspaces missing owner
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Workspaces Without Challenges */}
+          <Card className="border-orange-200">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">No Challenges</CardTitle>
+              <Users className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-700">{healthMetrics.withoutChallenges}</div>
+              <p className="text-xs text-gray-600 mt-1">
+                Empty workspaces
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Recent Activity Feed */}
+      <RecentActivityFeed events={recentActivity} />
 
       {/* Quick Actions */}
       <Card className="border-purple-200">
