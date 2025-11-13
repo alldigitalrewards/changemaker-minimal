@@ -13,6 +13,7 @@ import { prisma } from "../prisma";
 import { generateRewardStackToken, getRewardStackBaseUrl } from "./auth";
 import { syncParticipantToRewardStack, getParticipantFromRewardStack, getCountryCode } from "./participant-sync";
 import { Prisma, RewardStackStatus, RewardStatus, RewardType } from "@prisma/client";
+import { createShippingAddressNotification, hasIncompleteShippingAddress } from "@/lib/services/notifications";
 
 /**
  * RewardSTACK point adjustment request
@@ -611,6 +612,36 @@ export async function issueCatalogReward(
     if (missingFields.length > 0) {
       console.log('\n❌ VALIDATION FAILED - Missing required fields:', missingFields.join(', '));
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+      // Create notification for user to add shipping address
+      try {
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: rewardIssuance.workspaceId },
+          select: { slug: true },
+        });
+
+        const skuDetails = await prisma.workspaceSku.findFirst({
+          where: {
+            workspaceId: rewardIssuance.workspaceId,
+            skuId: rewardIssuance.skuId || '',
+          },
+          select: { name: true },
+        });
+
+        if (workspace) {
+          await createShippingAddressNotification({
+            userId: rewardIssuance.userId,
+            workspaceId: rewardIssuance.workspaceId,
+            workspaceSlug: workspace.slug,
+            skuName: skuDetails?.name || 'your reward',
+            rewardIssuanceId: rewardIssuanceId,
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to create shipping address notification:', notificationError);
+        // Don't fail the reward issuance if notification creation fails
+      }
+
       throw new Error(
         `Participant missing required shipping address fields: ${missingFields.join(', ')}. Please update participant profile before issuing catalog rewards.`
       );

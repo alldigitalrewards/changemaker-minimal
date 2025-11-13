@@ -335,6 +335,33 @@ model TenantSku {
   @@index([tenantId])
 }
 
+model Notification {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String           @db.Uuid
+  workspaceId    String           @db.Uuid
+  type           NotificationType
+  title          String
+  message        String
+  actionUrl      String?
+  actionText     String?
+  read           Boolean          @default(false)
+  readAt         DateTime?
+  dismissed      Boolean          @default(false)
+  dismissedAt    DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @default(now())
+
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, dismissed])
+  @@index([workspaceId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
 model User {
   id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email String @unique
@@ -386,6 +413,7 @@ model User {
   Enrollment                                    Enrollment[]
   InviteCode                                    InviteCode[]
   InviteRedemption                              InviteRedemption[]
+  Notification                                  Notification[]
   PointsBalance                                 PointsBalance[]
   PointsLedger_PointsLedger_actorUserIdToUser   PointsLedger[]                   @relation("PointsLedger_actorUserIdToUser")
   PointsLedger_PointsLedger_toUserIdToUser      PointsLedger[]                   @relation("PointsLedger_toUserIdToUser")
@@ -430,6 +458,7 @@ model Workspace {
   ChallengeAssignment            ChallengeAssignment[]
   ChallengePointsBudget          ChallengePointsBudget[]
   InviteCode                     InviteCode[]
+  Notification                   Notification[]
   PointsBalance                  PointsBalance[]
   PointsLedger                   PointsLedger[]
   RewardIssuance                 RewardIssuance[]
@@ -706,6 +735,17 @@ enum CommunicationPriority {
   NORMAL
   IMPORTANT
   URGENT
+}
+
+enum NotificationType {
+  SHIPPING_ADDRESS_REQUIRED
+  CHALLENGE_INVITED
+  CHALLENGE_ENROLLED
+  REWARD_ISSUED
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  ANNOUNCEMENT
+  SYSTEM
 }
 
 enum RewardStackSyncStatus {
