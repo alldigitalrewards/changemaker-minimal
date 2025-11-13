@@ -172,7 +172,7 @@ export default async function SubmissionReviewPage({ params }: PageProps) {
                 href={submission.linkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-coral-600 hover:text-coral-700 underline"
+                className="text-sm text-gray-900 hover:text-gray-800 underline"
               >
                 {submission.linkUrl}
               </a>
@@ -189,7 +189,7 @@ export default async function SubmissionReviewPage({ params }: PageProps) {
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-coral-600 hover:text-coral-700 underline"
+                    className="flex items-center gap-2 text-sm text-gray-900 hover:text-gray-800 underline"
                   >
                     <FileText className="h-4 w-4" />
                     Attachment {index + 1}

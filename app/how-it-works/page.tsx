@@ -24,15 +24,15 @@ export default function HowItWorksPage() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 lg:py-32 text-center">
         <div className="max-w-4xl mx-auto space-y-8">
-          <div className="inline-flex items-center gap-2 bg-coral-100 text-coral-700 px-6 py-3 rounded-full text-sm font-semibold shadow-md">
-            <Play className="h-4 w-4 text-coral-700" />
-            <span className="text-coral-700 font-semibold">Platform Guide</span>
+          <div className="inline-flex items-center gap-2 bg-gray-100 text-gray-800 px-6 py-3 rounded-full text-sm font-semibold shadow-md">
+            <Play className="h-4 w-4 text-gray-800" />
+            <span className="text-gray-800 font-semibold">Platform Guide</span>
           </div>
 
           <div className="space-y-6">
             <h1 className="text-5xl lg:text-7xl font-bold leading-tight tracking-tight">
               <span className="text-navy-900">How </span>
-              <span className="text-coral-600">
+              <span className="text-gray-900">
                 Changemaker
               </span>
               <br className="hidden sm:block" />
@@ -386,14 +386,14 @@ export default function HowItWorksPage() {
       {/* CTA Section */}
       <section className="py-20 lg:py-32 bg-gray-50 relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-coral-500/5"></div>
+          <div className="absolute inset-0 bg-gray-900/5"></div>
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-5xl mx-auto space-y-10">
             <div className="space-y-8">
               <h2 className="text-5xl lg:text-7xl font-bold leading-tight tracking-tight">
                 <span className="text-gray-900">Transform Ideas Into </span>
-                <span className="text-coral-600">Real Change</span>
+                <span className="text-gray-900">Real Change</span>
               </h2>
 
               <p className="text-xl lg:text-2xl text-gray-700 leading-relaxed max-w-4xl mx-auto font-medium">

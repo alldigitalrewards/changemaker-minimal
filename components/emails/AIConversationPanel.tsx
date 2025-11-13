@@ -1,0 +1,568 @@
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Bot, User, Send, Loader2, Save, Code, X } from 'lucide-react'
+import { EmailPreview } from '@/components/emails/email-preview'
+import { cn } from '@/lib/utils'
+import { EmailTemplateType } from '@prisma/client'
+import { SaveTemplateModal } from './SaveTemplateModal'
+import { toast } from 'sonner'
+import type { GenerationSettings } from './GenerationSettingsPanel'
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
+
+interface AIConversationPanelProps {
+  workspaceSlug: string
+  workspaceName: string
+  brandColor?: string
+  generationSettings?: GenerationSettings
+  initialTemplate?: {
+    id: string
+    name: string | null
+    type: EmailTemplateType
+    subject: string | null
+    html: string | null
+    description?: string | null
+    tags?: string[]
+    conversationHistory?: ConversationMessage[]
+  }
+  onSave?: (data: {
+    subject: string
+    html: string
+    conversationHistory: ConversationMessage[]
+  }) => void
+  onContentUpdate?: (subject: string, html: string) => void
+  onGeneratingChange?: (isGenerating: boolean) => void
+}
+
+export function AIConversationPanel({
+  workspaceSlug,
+  workspaceName,
+  brandColor,
+  generationSettings,
+  initialTemplate,
+  onSave,
+  onContentUpdate,
+  onGeneratingChange,
+}: AIConversationPanelProps) {
+  const [messages, setMessages] = useState<ConversationMessage[]>(
+    initialTemplate?.conversationHistory || []
+  )
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [currentHtml, setCurrentHtml] = useState(initialTemplate?.html || '')
+  const [currentSubject, setCurrentSubject] = useState(initialTemplate?.subject || '')
+  const [showHtmlEditor, setShowHtmlEditor] = useState(false)
+  const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(initialTemplate?.id || null)
+  const [loadedTemplateName, setLoadedTemplateName] = useState<string | null>(initialTemplate?.name || null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Helper function to extract HTML from AI response
+  const extractHtmlFromResponse = (content: string): { subject: string; html: string } | null => {
+    // Look for HTML code blocks
+    const htmlMatch = content.match(/```html\s*([\s\S]*?)```/);
+    if (htmlMatch && htmlMatch[1]) {
+      const html = htmlMatch[1].trim();
+
+      // Try to extract subject from HTML title or h1
+      let subject = currentSubject;
+      const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+      if (titleMatch && titleMatch[1]) {
+        subject = titleMatch[1];
+      }
+
+      return { subject, html };
+    }
+    return null;
+  }
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Focus input on mount
+  useEffect(() => {
+    textareaRef.current?.focus()
+  }, [])
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return
+
+    const userMessage: ConversationMessage = {
+      role: 'user',
+      content: input.trim(),
+      timestamp: new Date(),
+    }
+
+    // Add user message to conversation
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
+    setInput('')
+    setIsLoading(true)
+    onGeneratingChange?.(true)
+
+    try {
+      // Prepare messages for API (convert ConversationMessage to simple format)
+      const apiMessages = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }))
+
+      const response = await fetch(`/api/workspaces/${workspaceSlug}/emails/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: apiMessages,
+          data: {
+            templateType: initialTemplate?.type || 'GENERIC',
+            workspaceName,
+            brandColor,
+            generationSettings,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate response')
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('No response stream available')
+      }
+
+      let accumulatedText = ''
+
+      // Read the stream
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        accumulatedText += chunk
+      }
+
+      // Extract HTML from response
+      const extracted = extractHtmlFromResponse(accumulatedText)
+      if (extracted) {
+        setCurrentHtml(extracted.html)
+        setCurrentSubject(extracted.subject)
+        onContentUpdate?.(extracted.subject, extracted.html)
+      }
+
+      // Add assistant message
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: accumulatedText,
+          timestamp: new Date(),
+        },
+      ])
+    } catch (error) {
+      console.error('Error generating response:', error)
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error. Please try again.',
+          timestamp: new Date(),
+        },
+      ])
+    } finally {
+      setIsLoading(false)
+      onGeneratingChange?.(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  // Update when initialTemplate changes
+  useEffect(() => {
+    if (initialTemplate) {
+      // Note: useChat initialMessages are set on mount, so we handle template loading
+      // by reloading the component when a new template is selected
+      setCurrentHtml(initialTemplate.html || '')
+      setCurrentSubject(initialTemplate.subject || '')
+      setLoadedTemplateId(initialTemplate.id)
+      setLoadedTemplateName(initialTemplate.name)
+    }
+  }, [initialTemplate?.id])
+
+  const handleClearTemplate = () => {
+    setLoadedTemplateId(null)
+    setLoadedTemplateName(null)
+    setMessages([])
+    setCurrentHtml('')
+    setCurrentSubject('')
+    onContentUpdate?.('', '')
+  }
+
+  const handleSaveTemplate = () => {
+    setShowSaveModal(true)
+  }
+
+  const handleSaveModalSubmit = async (data: {
+    name: string
+    type: EmailTemplateType
+    description?: string
+    tags: string[]
+    updateExisting?: boolean
+  }) => {
+    try {
+      // Messages are already in ConversationMessage format
+      const conversationHistory = messages;
+
+      const payload = {
+        name: data.name,
+        type: data.type,
+        subject: currentSubject,
+        html: currentHtml,
+        description: data.description,
+        tags: data.tags,
+        conversationHistory,
+        aiModel: 'claude-sonnet-4-5-20250929',
+        updateExisting: data.updateExisting,
+        existingTemplateId: loadedTemplateId,
+      }
+
+      const response = await fetch(
+        `/api/workspaces/${workspaceSlug}/emails/templates/ai-save`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      )
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save template')
+      }
+
+      const result = await response.json()
+      toast.success(
+        data.updateExisting
+          ? 'Template updated successfully'
+          : 'Template saved successfully'
+      )
+
+      // Update loaded template info
+      setLoadedTemplateId(result.template.id)
+      setLoadedTemplateName(result.template.name)
+
+      // Call parent onSave if provided
+      if (onSave) {
+        onSave({
+          subject: currentSubject,
+          html: currentHtml,
+          conversationHistory,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to save template:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to save template')
+      throw error
+    }
+  }
+
+  // Context-aware suggestions based on conversation state
+  const getSuggestedPrompts = () => {
+    // No messages yet - show template type examples
+    if (messages.length === 0) {
+      const typeExamples = {
+        INVITE: [
+          'Create a professional challenge invitation with call-to-action',
+          'Generate an exciting invitation email with deadline',
+          'Design a formal invitation with RSVP button',
+        ],
+        REMINDER: [
+          'Generate a friendly reminder email with urgency',
+          'Create a reminder with clear action items',
+          'Design a reminder email with deadline emphasis',
+        ],
+        ENROLLMENT_UPDATE: [
+          'Create an enrollment status update email',
+          'Generate a progress update with next steps',
+          'Design an update email with achievement highlights',
+        ],
+        GENERIC: [
+          'Design a newsletter-style email with sections',
+          'Create a professional announcement email',
+          'Generate a branded communication template',
+        ],
+        EMAIL_RESENT: [
+          'Create a follow-up email template',
+          'Generate a resend notification',
+          'Design a polite reminder to check inbox',
+        ],
+      }
+
+      return typeExamples[initialTemplate?.type || 'GENERIC'] || [
+        'Create a professional email template',
+        'Generate a branded email with clear structure',
+        'Design an engaging email with call-to-action',
+      ]
+    }
+
+    // After generation - show refinement suggestions
+    const refinements = []
+
+    // Add save suggestion if there's content
+    if (currentHtml) {
+      refinements.push('Save this template')
+    }
+
+    // Check for missing personalization
+    if (currentHtml && !currentHtml.includes('{{recipientName}}') && !currentHtml.includes('{{firstName}}')) {
+      refinements.push('Add recipient name personalization')
+    }
+
+    // Check for CTA button
+    if (currentHtml && !currentHtml.toLowerCase().includes('button') && !currentHtml.includes('{{actionUrl}}')) {
+      refinements.push('Add a clear call-to-action button')
+    }
+
+    // Check for workspace branding
+    if (currentHtml && !currentHtml.includes(workspaceName)) {
+      refinements.push('Include workspace name and branding')
+    }
+
+    // General refinements
+    refinements.push('Make it more formal')
+    refinements.push('Make it more casual')
+    refinements.push('Shorten the content')
+
+    // Template type specific suggestions
+    if (initialTemplate?.type === 'INVITE') {
+      refinements.push('Add RSVP deadline')
+      refinements.push('Include challenge details section')
+    } else if (initialTemplate?.type === 'REMINDER') {
+      refinements.push('Add sense of urgency')
+      refinements.push('List action items clearly')
+    }
+
+    return refinements.slice(0, 5) // Limit to 5 suggestions
+  }
+
+  const suggestedPrompts = getSuggestedPrompts()
+
+  return (
+    <div className="space-y-4">
+      {/* Loaded Template Indicator */}
+      {loadedTemplateName && (
+        <Card className="bg-muted/50">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Editing:</span>
+                <Badge variant="secondary">{loadedTemplateName}</Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearTemplate}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Conversation History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Conversation</span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowHtmlEditor(!showHtmlEditor)}
+              >
+                <Code className="h-4 w-4 mr-1" />
+                {showHtmlEditor ? 'Hide' : 'View'} HTML
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveTemplate}
+                disabled={!currentHtml}
+              >
+                <Save className="h-4 w-4 mr-1" />
+                Save Template
+              </Button>
+            </div>
+          </CardTitle>
+          <CardDescription>
+            Chat with AI to create or refine your email template
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            {messages.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="mb-2">Start a conversation to generate an email template</p>
+                <p className="text-sm">
+                  Try: "Create a professional invitation email for a challenge"
+                </p>
+              </div>
+            )}
+
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={cn(
+                  'flex gap-3 items-start',
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                )}
+              >
+                {message.role === 'assistant' && (
+                  <div className="shrink-0 mt-1">
+                    <Bot className="h-5 w-5 text-primary" />
+                  </div>
+                )}
+                <div
+                  className={cn(
+                    'rounded-lg px-4 py-2 max-w-[80%]',
+                    message.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  )}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-xs opacity-70 mt-1">
+                    {message.timestamp.toLocaleTimeString()}
+                  </p>
+                </div>
+                {message.role === 'user' && (
+                  <div className="shrink-0 mt-1">
+                    <User className="h-5 w-5" />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex gap-3 items-start">
+                <div className="shrink-0 mt-1">
+                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                </div>
+                <div className="rounded-lg px-4 py-2 bg-muted">
+                  <p className="text-sm">Generating email template...</p>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <div className="mt-4 space-y-3">
+            {/* Suggested Prompts */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground">
+                {messages.length === 0 ? 'Try:' : 'Refine:'}
+              </span>
+              {suggestedPrompts.map((prompt, index) => (
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="cursor-pointer hover:bg-secondary/80"
+                  onClick={() => setInput(prompt)}
+                >
+                  {prompt}
+                </Badge>
+              ))}
+            </div>
+
+            {/* Input Field */}
+            <div className="flex gap-2">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type your message or use suggestions..."
+                className="min-h-[60px] resize-none"
+                disabled={isLoading}
+              />
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                className="shrink-0"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Press Enter to send, Shift+Enter for new line
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* HTML Editor (conditional) */}
+      {showHtmlEditor && currentHtml && (
+        <Card>
+          <CardHeader>
+            <CardTitle>HTML Source</CardTitle>
+            <CardDescription>
+              You can edit the HTML directly if needed
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={currentHtml}
+              onChange={(e) => setCurrentHtml(e.target.value)}
+              className="font-mono text-xs min-h-[300px]"
+              placeholder="HTML will appear here..."
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Save Template Modal */}
+      <SaveTemplateModal
+        open={showSaveModal}
+        onOpenChange={setShowSaveModal}
+        onSave={handleSaveModalSubmit}
+        existingTemplate={
+          loadedTemplateId && initialTemplate
+            ? {
+                id: loadedTemplateId,
+                name: loadedTemplateName,
+                type: initialTemplate.type,
+                description: initialTemplate.description || null,
+                tags: initialTemplate.tags || [],
+              }
+            : undefined
+        }
+      />
+    </div>
+  )
+}

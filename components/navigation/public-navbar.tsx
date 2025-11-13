@@ -15,7 +15,7 @@ export default function PublicNavbar() {
           {/* Logo and Brand */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-coral-500 to-terracotta-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-gray-500 to-terracotta-600 rounded-lg flex items-center justify-center">
                 <Target className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold text-navy-900">Changemaker</span>
@@ -26,19 +26,19 @@ export default function PublicNavbar() {
           <div className="hidden md:flex items-center space-x-8">
             <Link
               href="/how-it-works"
-              className="text-gray-600 hover:text-coral-600 px-3 py-2 text-sm font-medium transition-colors"
+              className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
             >
               How It Works
             </Link>
             <Link
               href="/faq"
-              className="text-gray-600 hover:text-coral-600 px-3 py-2 text-sm font-medium transition-colors"
+              className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
             >
               FAQ
             </Link>
             <Link
               href="/contact"
-              className="text-gray-600 hover:text-coral-600 px-3 py-2 text-sm font-medium transition-colors"
+              className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
             >
               Contact
             </Link>
@@ -56,7 +56,7 @@ export default function PublicNavbar() {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-600 hover:text-coral-600 p-2"
+              className="text-gray-600 hover:text-gray-900 p-2"
               aria-label="Toggle menu"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -71,21 +71,21 @@ export default function PublicNavbar() {
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
             <Link
               href="/how-it-works"
-              className="block px-3 py-2 text-gray-600 hover:text-coral-600 text-base font-medium"
+              className="block px-3 py-2 text-gray-600 hover:text-gray-900 text-base font-medium"
               onClick={() => setIsOpen(false)}
             >
               How It Works
             </Link>
             <Link
               href="/faq"
-              className="block px-3 py-2 text-gray-600 hover:text-coral-600 text-base font-medium"
+              className="block px-3 py-2 text-gray-600 hover:text-gray-900 text-base font-medium"
               onClick={() => setIsOpen(false)}
             >
               FAQ
             </Link>
             <Link
               href="/contact"
-              className="block px-3 py-2 text-gray-600 hover:text-coral-600 text-base font-medium"
+              className="block px-3 py-2 text-gray-600 hover:text-gray-900 text-base font-medium"
               onClick={() => setIsOpen(false)}
             >
               Contact

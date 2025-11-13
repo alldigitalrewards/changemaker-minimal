@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CoralButton } from "@/components/ui/coral-button"
 import { ParticipantDetailCard } from "@/components/ui/participant-detail-card"
+import { InlineAddressEditor } from "@/components/ui/inline-address-editor"
 import { ParticipantRoleToggle } from "./participant-role-toggle"
 import { RemoveParticipantAction } from "./remove-participant-action"
 import { EmailActions } from "./email-actions"
@@ -134,6 +135,22 @@ export default async function ParticipantDetailPage({
       <div className="grid gap-6">
         {/* Participant Info Card */}
         <ParticipantDetailCard participant={participant} slug={slug} />
+
+        {/* Shipping Address Editor */}
+        <InlineAddressEditor
+          userId={participant.id}
+          workspaceSlug={slug}
+          initialAddress={{
+            addressLine1: participant.addressLine1,
+            addressLine2: participant.addressLine2,
+            city: participant.city,
+            state: participant.state,
+            zipCode: participant.zipCode,
+            country: participant.country,
+            phone: participant.phone,
+          }}
+          isAdmin={true}
+        />
 
         {/* Quick Actions */}
         <Card>

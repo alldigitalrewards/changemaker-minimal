@@ -136,7 +136,7 @@ export function RedeemInviteDialog({ trigger, onSuccess }: RedeemInviteDialogPro
             <Button
               onClick={handleRedeem}
               disabled={!code.trim() || loading}
-              className="bg-coral-500 hover:bg-coral-600"
+              className="bg-gray-900 hover:bg-gray-800"
             >
               {loading ? 'Redeeming...' : 'Redeem Code'}
             </Button>

@@ -58,9 +58,9 @@ export default function JoinWorkspaceDialog({
     if (discoverSection) {
       discoverSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
       // Add a highlight effect
-      discoverSection.classList.add('ring-2', 'ring-coral-500', 'ring-offset-4')
+      discoverSection.classList.add('ring-2', 'ring-gray-900', 'ring-offset-4')
       setTimeout(() => {
-        discoverSection.classList.remove('ring-2', 'ring-coral-500', 'ring-offset-4')
+        discoverSection.classList.remove('ring-2', 'ring-gray-900', 'ring-offset-4')
       }, 2000)
     }
   }
@@ -81,7 +81,7 @@ export default function JoinWorkspaceDialog({
         onClick={handleScrollToDiscover}
         variant="default"
         className={cn(
-          "bg-coral-500 hover:bg-coral-600 text-white font-medium focus:ring-2 focus:ring-coral-500 focus:ring-offset-2",
+          "bg-gray-900 hover:bg-gray-800 text-white font-medium focus:ring-2 focus:ring-gray-900 focus:ring-offset-2",
           className
         )}
         aria-label="Browse available workspaces"
@@ -98,10 +98,10 @@ export default function JoinWorkspaceDialog({
         <Button
           variant={workspaceName ? "outline" : "default"}
           className={cn(
-            "min-h-[40px] focus:ring-2 focus:ring-coral-500 focus:ring-offset-2",
+            "min-h-[40px] focus:ring-2 focus:ring-gray-900 focus:ring-offset-2",
             workspaceName
-              ? "w-full hover:bg-coral-50 hover:border-coral-300"
-              : "bg-coral-500 hover:bg-coral-600 text-white font-medium",
+              ? "w-full hover:bg-gray-50 hover:border-gray-300"
+              : "bg-gray-900 hover:bg-gray-800 text-white font-medium",
             className
           )}
           aria-label={workspaceName ? `Join ${workspaceName} workspace` : "Join an existing workspace"}
@@ -113,7 +113,7 @@ export default function JoinWorkspaceDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-coral-500" />
+            <UserPlus className="h-5 w-5 text-gray-900" />
             Join {workspaceName || "Workspace"}
           </DialogTitle>
           <DialogDescription>
@@ -127,7 +127,7 @@ export default function JoinWorkspaceDialog({
           <Button
             onClick={handleJoin}
             disabled={loading}
-            className="bg-coral-500 hover:bg-coral-600"
+            className="bg-gray-900 hover:bg-gray-800"
           >
             {loading ? "Joining..." : "Join Workspace"}
           </Button>

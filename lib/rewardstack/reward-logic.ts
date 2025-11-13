@@ -2,16 +2,18 @@
  * RewardSTACK Reward Issuance Logic
  * Handles point adjustments and catalog item transactions via RewardSTACK API
  *
- * API Version: 2.2
- * Endpoints:
- * - POST /api/2.2/programs/{programId}/participants/{participantId}/adjustments (points)
- * - POST /api/2.2/programs/{programId}/participants/{participantId}/transactions (SKU)
+ * API Endpoints (per official RewardSTACK docs):
+ * - POST /api/program/{programId}/participant/{uniqueId}/adjustment (points)
+ * - POST /api/program/{programId}/participant/{uniqueId}/transaction (SKU)
+ *
+ * Note: uniqueId is our internal user ID, not RewardSTACK's generated participantId
  */
 
 import { prisma } from "../prisma";
 import { generateRewardStackToken, getRewardStackBaseUrl } from "./auth";
-import { syncParticipantToRewardStack } from "./participant-sync";
+import { syncParticipantToRewardStack, getParticipantFromRewardStack, getCountryCode } from "./participant-sync";
 import { Prisma, RewardStackStatus, RewardStatus, RewardType } from "@prisma/client";
+import { createShippingAddressNotification, hasIncompleteShippingAddress } from "@/lib/services/notifications";
 
 /**
  * RewardSTACK point adjustment request
@@ -276,7 +278,7 @@ async function checkExistingIssuance(
 
 /**
  * Issue point adjustment via RewardSTACK API
- * POST /api/2.2/programs/{programId}/participants/{participantId}/adjustments
+ * POST /api/program/{programId}/participant/{participantId}/adjustment
  *
  * @param rewardIssuanceId - RewardIssuance record ID
  * @returns Reward issuance result
@@ -330,8 +332,8 @@ export async function issuePointsAdjustment(
       rewardIssuance.workspaceId
     );
 
-    // Ensure participant is synced
-    const participantId = await ensureParticipantSynced(
+    // Ensure participant is synced and get their RewardSTACK unique_id
+    const uniqueId = await ensureParticipantSynced(
       rewardIssuance.userId,
       rewardIssuance.workspaceId
     );
@@ -342,16 +344,16 @@ export async function issuePointsAdjustment(
       rewardStackStatus: "PROCESSING",
     });
 
-    // Prepare adjustment request
-    const adjustmentRequest: PointAdjustmentRequest = {
+    // Prepare adjustment request (per RewardSTACK API v2 docs)
+    const adjustmentRequest = {
       amount: rewardIssuance.amount,
-      reason: `Challenge reward - ${rewardIssuance.challengeId || "Manual"}`,
+      type: 'credit' as const, // Required by API
+      description: `Challenge reward - ${rewardIssuance.challengeId || "Manual"}`, // Changed from "reason"
       metadata: {
         ...(rewardIssuance.metadata as Record<string, unknown>),
         changemaker_reward_id: rewardIssuanceId,
         changemaker_challenge_id: rewardIssuance.challengeId,
       },
-      idempotencyKey: generateIdempotencyKey(rewardIssuanceId, "adjustment"),
     };
 
     // Call RewardSTACK API with retry
@@ -363,7 +365,7 @@ export async function issuePointsAdjustment(
         rewardIssuance.workspaceId
       );
 
-      const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}/adjustments`;
+      const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(uniqueId)}/adjustment`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -380,10 +382,21 @@ export async function issuePointsAdjustment(
           .json()
           .catch(() => ({ message: `HTTP ${response.status}` }));
 
+        // Format error message (handle both string and array)
+        const formatErrorMessage = (msg: unknown): string => {
+          if (Array.isArray(msg)) {
+            return msg.join('; ');
+          }
+          if (typeof msg === 'string') {
+            return msg;
+          }
+          return 'Validation failed';
+        };
+
         // Classify errors
         if (response.status === 400) {
           throw new Error(
-            `Invalid adjustment request: ${errorData.message || "Validation failed"}`
+            `Invalid adjustment request: ${formatErrorMessage(errorData.message)}`
           );
         }
 
@@ -399,7 +412,7 @@ export async function issuePointsAdjustment(
 
         if (response.status === 404) {
           throw new Error(
-            `Participant not found: ${participantId}`
+            `Participant not found: ${uniqueId}`
           );
         }
 
@@ -438,7 +451,7 @@ export async function issuePointsAdjustment(
     await updateRewardIssuance(rewardIssuanceId, {
       status: "ISSUED",
       rewardStackStatus: "COMPLETED",
-      rewardStackAdjustmentId: adjustmentId,
+      rewardStackAdjustmentId: String(adjustmentId), // Convert to string for Prisma
       issuedAt: new Date(),
       externalResponse: result,
     });
@@ -463,7 +476,7 @@ export async function issuePointsAdjustment(
       success: true,
       rewardIssuanceId,
       adjustmentId,
-      details: { amount: rewardIssuance.amount, participantId },
+      details: { amount: rewardIssuance.amount, uniqueId },
     };
   } catch (error) {
     // Update reward issuance with failure
@@ -491,7 +504,7 @@ export async function issuePointsAdjustment(
 
 /**
  * Issue catalog item transaction via RewardSTACK API
- * POST /api/2.2/programs/{programId}/participants/{participantId}/transactions
+ * POST /api/program/{programId}/participant/{participantId}/transaction
  *
  * @param rewardIssuanceId - RewardIssuance record ID
  * @returns Reward issuance result
@@ -543,11 +556,175 @@ export async function issueCatalogReward(
       rewardIssuance.workspaceId
     );
 
-    // Ensure participant is synced
-    const participantId = await ensureParticipantSynced(
+    // Ensure participant is synced and get their RewardSTACK unique_id
+    const uniqueId = await ensureParticipantSynced(
       rewardIssuance.userId,
       rewardIssuance.workspaceId
     );
+
+    // Validate participant has shipping address for catalog items
+    const participant = await prisma.user.findUnique({
+      where: { id: rewardIssuance.userId },
+      select: {
+        email: true,
+        firstName: true,
+        lastName: true,
+        addressLine1: true,
+        addressLine2: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
+        phone: true,
+        rewardStackParticipantId: true,
+      },
+    });
+
+    if (!participant) {
+      throw new Error(`User not found: ${rewardIssuance.userId}`);
+    }
+
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📦 CATALOG REWARD ISSUANCE - Participant Address Data');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Participant:', {
+      email: participant.email,
+      name: `${participant.firstName || ''} ${participant.lastName || ''}`.trim(),
+      rewardStackId: participant.rewardStackParticipantId || uniqueId,
+    });
+    console.log('\nAddress in Changemaker DB:');
+    console.log('  Line 1:', participant.addressLine1 || '❌ MISSING');
+    console.log('  Line 2:', participant.addressLine2 || '(not set)');
+    console.log('  City:   ', participant.city || '❌ MISSING');
+    console.log('  State:  ', participant.state || '❌ MISSING');
+    console.log('  Zip:    ', participant.zipCode || '❌ MISSING');
+    console.log('  Country:', participant.country || '❌ MISSING');
+    console.log('  Phone:  ', participant.phone || '(not set)');
+
+    // Check if required address fields are present
+    const missingFields: string[] = [];
+    if (!participant.addressLine1) missingFields.push('Street Address');
+    if (!participant.city) missingFields.push('City');
+    if (!participant.state) missingFields.push('State');
+    if (!participant.zipCode) missingFields.push('Zip Code');
+    if (!participant.country) missingFields.push('Country');
+
+    if (missingFields.length > 0) {
+      console.log('\n❌ VALIDATION FAILED - Missing required fields:', missingFields.join(', '));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+      // Create notification for user to add shipping address
+      try {
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: rewardIssuance.workspaceId },
+          select: { slug: true },
+        });
+
+        const skuDetails = await prisma.workspaceSku.findFirst({
+          where: {
+            workspaceId: rewardIssuance.workspaceId,
+            skuId: rewardIssuance.skuId || '',
+          },
+          select: { name: true },
+        });
+
+        if (workspace) {
+          await createShippingAddressNotification({
+            userId: rewardIssuance.userId,
+            workspaceId: rewardIssuance.workspaceId,
+            workspaceSlug: workspace.slug,
+            skuName: skuDetails?.name || 'your reward',
+            rewardIssuanceId: rewardIssuanceId,
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to create shipping address notification:', notificationError);
+        // Don't fail the reward issuance if notification creation fails
+      }
+
+      throw new Error(
+        `Participant missing required shipping address fields: ${missingFields.join(', ')}. Please update participant profile before issuing catalog rewards.`
+      );
+    }
+
+    console.log('\n✅ Address validation passed - All required fields present');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+    // Fetch participant from RewardSTACK to verify address data
+    if (participant.rewardStackParticipantId) {
+      console.log('🔍 Fetching participant data from RewardSTACK...\n');
+      try {
+        const rewardStackParticipant = await getParticipantFromRewardStack(
+          rewardIssuance.workspaceId,
+          programId,
+          participant.rewardStackParticipantId
+        );
+
+      if (rewardStackParticipant) {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📡 PARTICIPANT DATA IN REWARDSTACK');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('Participant ID:', rewardStackParticipant.unique_id);
+        console.log('Email:', rewardStackParticipant.email_address);
+        console.log('Name:', `${rewardStackParticipant.firstname || ''} ${rewardStackParticipant.lastname || ''}`.trim() || '(not set)');
+        console.log('\nAddress in RewardSTACK:');
+
+        // Handle nested address object (new format)
+        const address = (rewardStackParticipant as any).address;
+        if (address && typeof address === 'object') {
+          console.log('  Line 1:', address.address1 || '❌ MISSING');
+          console.log('  Line 2:', address.address2 || '(not set)');
+          console.log('  City:   ', address.city || '❌ MISSING');
+          console.log('  State:  ', address.state || '❌ MISSING');
+          console.log('  Zip:    ', address.zip || '❌ MISSING');
+          console.log('  Country:', address.country || '❌ MISSING');
+        } else {
+          // Fallback to flat structure (old format)
+          console.log('  Line 1:', (rewardStackParticipant as any).address1 || '❌ MISSING');
+          console.log('  Line 2:', (rewardStackParticipant as any).address2 || '(not set)');
+          console.log('  City:   ', (rewardStackParticipant as any).city || '❌ MISSING');
+          console.log('  State:  ', (rewardStackParticipant as any).state || '❌ MISSING');
+          console.log('  Zip:    ', (rewardStackParticipant as any).zip || '❌ MISSING');
+          console.log('  Country:', (rewardStackParticipant as any).country || '❌ MISSING');
+        }
+        console.log('  Phone:  ', rewardStackParticipant.phone || '(not set)');
+
+        // Check if RewardSTACK has the required fields (nested or flat)
+        const rewardStackMissingFields: string[] = [];
+        if (address && typeof address === 'object') {
+          if (!address.address1) rewardStackMissingFields.push('Street Address');
+          if (!address.city) rewardStackMissingFields.push('City');
+          if (!address.state) rewardStackMissingFields.push('State');
+          if (!address.zip) rewardStackMissingFields.push('Zip Code');
+          if (!address.country) rewardStackMissingFields.push('Country');
+        } else {
+          if (!(rewardStackParticipant as any).address1) rewardStackMissingFields.push('Street Address');
+          if (!(rewardStackParticipant as any).city) rewardStackMissingFields.push('City');
+          if (!(rewardStackParticipant as any).state) rewardStackMissingFields.push('State');
+          if (!(rewardStackParticipant as any).zip) rewardStackMissingFields.push('Zip Code');
+          if (!(rewardStackParticipant as any).country) rewardStackMissingFields.push('Country');
+        }
+
+        if (rewardStackMissingFields.length > 0) {
+          console.log('\n❌ REWARDSTACK MISSING FIELDS:', rewardStackMissingFields.join(', '));
+          console.log('⚠️  This explains why the catalog transaction is failing!');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+          throw new Error(
+            `Participant in RewardSTACK is missing required address fields: ${rewardStackMissingFields.join(', ')}. The participant needs to be re-synced.`
+          );
+        } else {
+          console.log('\n✅ RewardSTACK has all required address fields');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        }
+      } else {
+        console.log('⚠️  Could not fetch participant from RewardSTACK');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      }
+      } catch (error: any) {
+        console.log('⚠️  Error fetching participant from RewardSTACK:', error.message);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      }
+    }
 
     // Update status to PROCESSING
     await updateRewardIssuance(rewardIssuanceId, {
@@ -555,17 +732,46 @@ export async function issueCatalogReward(
       rewardStackStatus: "PROCESSING",
     });
 
-    // Prepare transaction request
-    const transactionRequest: CatalogTransactionRequest = {
-      skuId: rewardIssuance.skuId,
-      quantity: 1, // Default to 1 for challenge rewards
+    // Prepare transaction request (per RewardSTACK API v2 docs)
+    // Note: Use "shipping" property (not "shipping_address") per API spec
+    // Note: issue_points: true automatically gives participant enough points for the reward
+    const countryCode = getCountryCode(participant.country);
+    const transactionRequest = {
+      products: [
+        {
+          sku: rewardIssuance.skuId,
+          quantity: 1,
+        },
+      ],
+      shipping: {
+        firstname: participant.firstName || '',
+        lastname: participant.lastName || '',
+        address1: participant.addressLine1 || '',
+        address2: participant.addressLine2 || '',
+        city: participant.city || '',
+        state: participant.state || '',
+        zip: participant.zipCode || '',
+        country: countryCode || participant.country || '',
+      },
+      issue_points: true,
       metadata: {
         ...(rewardIssuance.metadata as Record<string, unknown>),
         changemaker_reward_id: rewardIssuanceId,
         changemaker_challenge_id: rewardIssuance.challengeId,
       },
-      idempotencyKey: generateIdempotencyKey(rewardIssuanceId, "transaction"),
     };
+
+    console.log('📤 Sending catalog transaction to RewardSTACK:');
+    console.log('  SKU:', rewardIssuance.skuId);
+    console.log('  Quantity: 1');
+    console.log('  Participant ID:', uniqueId);
+    console.log('  Program ID:', programId);
+    console.log('  Auto-issue points: true');
+    console.log('  Shipping Address:');
+    console.log('    Name:', transactionRequest.shipping.firstname, transactionRequest.shipping.lastname);
+    console.log('    Address:', transactionRequest.shipping.address1);
+    console.log('    City/State/Zip:', `${transactionRequest.shipping.city}, ${transactionRequest.shipping.state} ${transactionRequest.shipping.zip}`);
+    console.log('    Country:', transactionRequest.shipping.country);
 
     // Call RewardSTACK API with retry
     const result = await executeWithRetry(async () => {
@@ -576,7 +782,7 @@ export async function issueCatalogReward(
         rewardIssuance.workspaceId
       );
 
-      const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}/transactions`;
+      const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(uniqueId)}/transaction`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -587,16 +793,34 @@ export async function issueCatalogReward(
         body: JSON.stringify(transactionRequest),
       });
 
+      console.log('\n📡 RewardSTACK API Response:', response.status, response.statusText);
+
       // Handle error responses
       if (!response.ok) {
         const errorData: RewardStackError = await response
           .json()
           .catch(() => ({ message: `HTTP ${response.status}` }));
 
+        // Format error message (handle both string and array)
+        const formatErrorMessage = (msg: unknown): string => {
+          if (Array.isArray(msg)) {
+            return msg.join('; ');
+          }
+          if (typeof msg === 'string') {
+            return msg;
+          }
+          return 'Validation failed';
+        };
+
+        console.log('\n❌ RewardSTACK API Error:');
+        console.log('  Status:', response.status, response.statusText);
+        console.log('  Error Message:', formatErrorMessage(errorData.message));
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
         // Classify errors
         if (response.status === 400) {
           throw new Error(
-            `Invalid transaction request: ${errorData.message || "Validation failed"}`
+            `Invalid transaction request: ${formatErrorMessage(errorData.message)}`
           );
         }
 
@@ -612,7 +836,7 @@ export async function issueCatalogReward(
 
         if (response.status === 404) {
           throw new Error(
-            `Participant or SKU not found: ${errorData.message || participantId}`
+            `Participant or SKU not found: ${errorData.message || uniqueId}`
           );
         }
 
@@ -651,7 +875,7 @@ export async function issueCatalogReward(
     await updateRewardIssuance(rewardIssuanceId, {
       status: "ISSUED",
       rewardStackStatus: "COMPLETED",
-      rewardStackTransactionId: transactionId,
+      rewardStackTransactionId: String(transactionId), // Convert to string for Prisma
       issuedAt: new Date(),
       externalResponse: result,
     });
@@ -676,7 +900,7 @@ export async function issueCatalogReward(
       success: true,
       rewardIssuanceId,
       transactionId,
-      details: { skuId: rewardIssuance.skuId, participantId },
+      details: { skuId: rewardIssuance.skuId, uniqueId },
     };
   } catch (error) {
     // Update reward issuance with failure
@@ -762,18 +986,18 @@ interface RewardStackStatusResponse {
 
 /**
  * Get adjustment status from RewardSTACK
- * GET /api/2.2/programs/{programId}/participants/{participantId}/adjustments/{adjustmentId}
+ * GET /api/program/{programId}/participant/{uniqueId}/adjustment/{adjustmentId}
  */
 export async function getAdjustmentStatus(
   workspaceId: string,
-  participantId: string,
+  uniqueId: string,
   adjustmentId: string
 ): Promise<RewardStackStatusResponse> {
   const { programId } = await validateWorkspaceConfig(workspaceId);
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}/adjustments/${encodeURIComponent(adjustmentId)}`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(uniqueId)}/adjustment/${encodeURIComponent(adjustmentId)}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -802,18 +1026,18 @@ export async function getAdjustmentStatus(
 
 /**
  * Get transaction status from RewardSTACK
- * GET /api/2.2/programs/{programId}/participants/{participantId}/transactions/{transactionId}
+ * GET /api/program/{programId}/participant/{uniqueId}/transaction/{transactionId}
  */
 export async function getTransactionStatus(
   workspaceId: string,
-  participantId: string,
+  uniqueId: string,
   transactionId: string
 ): Promise<RewardStackStatusResponse> {
   const { programId } = await validateWorkspaceConfig(workspaceId);
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}/transactions/${encodeURIComponent(transactionId)}`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(uniqueId)}/transaction/${encodeURIComponent(transactionId)}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -929,13 +1153,13 @@ export async function checkRewardIssuanceStatus(
     if (rewardIssuance.type === "points") {
       statusResponse = await getAdjustmentStatus(
         rewardIssuance.workspaceId,
-        rewardIssuance.User.rewardStackParticipantId,
+        rewardIssuance.userId, // Use userId as uniqueId
         externalId
       );
     } else {
       statusResponse = await getTransactionStatus(
         rewardIssuance.workspaceId,
-        rewardIssuance.User.rewardStackParticipantId,
+        rewardIssuance.userId, // Use userId as uniqueId
         externalId
       );
     }

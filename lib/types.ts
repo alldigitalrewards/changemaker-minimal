@@ -177,7 +177,8 @@ export interface WorkspaceMembership {
   readonly userId: UserId
   readonly workspaceId: WorkspaceId
   readonly role: Role
-  readonly isPrimary: boolean
+  readonly isPrimary: boolean // User's default/primary workspace
+  readonly isOwner: boolean    // Workspace owner (only one per workspace)
   readonly joinedAt: Date
   readonly createdAt: Date
   readonly updatedAt: Date

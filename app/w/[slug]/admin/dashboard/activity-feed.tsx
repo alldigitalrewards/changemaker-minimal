@@ -163,7 +163,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
               variant="ghost"
               size="sm"
               onClick={() => setFilter('all')}
-              className={filter === 'all' ? 'bg-coral-500 hover:bg-coral-600 text-white' : 'hover:bg-gray-200'}
+              className={filter === 'all' ? 'bg-gray-900 hover:bg-gray-800 text-white' : 'hover:bg-gray-200'}
             >
               All
             </Button>
@@ -171,7 +171,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
               variant="ghost"
               size="sm"
               onClick={() => setFilter('submissions')}
-              className={filter === 'submissions' ? 'bg-coral-500 hover:bg-coral-600 text-white' : 'hover:bg-gray-200'}
+              className={filter === 'submissions' ? 'bg-gray-900 hover:bg-gray-800 text-white' : 'hover:bg-gray-200'}
             >
               Submissions
               {queue.length > 0 && (
@@ -184,7 +184,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
               variant="ghost"
               size="sm"
               onClick={() => setFilter('enrollments')}
-              className={filter === 'enrollments' ? 'bg-coral-500 hover:bg-coral-600 text-white' : 'hover:bg-gray-200'}
+              className={filter === 'enrollments' ? 'bg-gray-900 hover:bg-gray-800 text-white' : 'hover:bg-gray-200'}
             >
               Enrollments
             </Button>
@@ -192,7 +192,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
               variant="ghost"
               size="sm"
               onClick={() => setFilter('challenges')}
-              className={filter === 'challenges' ? 'bg-coral-500 hover:bg-coral-600 text-white' : 'hover:bg-gray-200'}
+              className={filter === 'challenges' ? 'bg-gray-900 hover:bg-gray-800 text-white' : 'hover:bg-gray-200'}
             >
               Challenges
             </Button>
@@ -203,7 +203,7 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
       <div className="h-[500px] overflow-y-auto pr-2">
           {queue.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-coral-600 mb-3">Pending Approvals</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Pending Approvals</h3>
               <div className="space-y-3">
                 {queue.map((submission) => (
                   <div
@@ -219,9 +219,9 @@ export function ActivityFeed({ workspaceId, slug, events, pendingSubmissions }: 
                             {getRelativeTime(submission.submittedAt)}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-coral-100 rounded-md">
-                          <Trophy className="h-3.5 w-3.5 text-coral-600" />
-                          <span className="text-sm font-bold text-coral-700">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-md">
+                          <Trophy className="h-3.5 w-3.5 text-gray-900" />
+                          <span className="text-sm font-bold text-gray-800">
                             {submission.Activity.pointsValue}
                           </span>
                         </div>

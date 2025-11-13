@@ -124,3 +124,34 @@ export async function setPointsBalance(formData: FormData) {
   // Revalidate settings page path
   await revalidatePath(`/w/${workspaceId}/admin/settings`)
 }
+
+export async function transferOwnership(formData: FormData) {
+  const workspaceId = formData.get("workspaceId") as string
+  const fromUserId = formData.get("fromUserId") as string
+  const toUserId = formData.get("toUserId") as string
+
+  try {
+    const { transferWorkspaceOwnership } = await import("@/lib/db/workspace-membership")
+
+    const result = await transferWorkspaceOwnership(workspaceId, fromUserId, toUserId)
+
+    if (!result.success) {
+      throw new Error(result.error || "Failed to transfer ownership")
+    }
+
+    // Get workspace slug for redirect
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { slug: true }
+    })
+
+    if (workspace) {
+      revalidatePath(`/w/${workspace.slug}/admin/settings`)
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error("Error transferring ownership:", error)
+    throw error
+  }
+}

@@ -77,7 +77,7 @@ export function WorkspacesPageSkeleton() {
     <div className="flex h-screen flex-col">
       {/* Header Skeleton */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="h-1 bg-gradient-to-r from-coral-500 to-terracotta-600" />
+        <div className="h-1 bg-gradient-to-r from-gray-500 to-terracotta-600" />
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">

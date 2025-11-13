@@ -21,6 +21,10 @@ export {
 
 export {
   REWARDSTACK_ENDPOINTS_PATHS,
+  type RewardStackConfig,
+  type TokenResponse,
+  type PointAdjustmentResponse,
+  type RewardStackError as RewardStackErrorType,
   type RewardStackParticipant,
   type TransactionRequest,
   type AdjustmentRequest,
@@ -28,3 +32,10 @@ export {
   type WebhookEventType,
   type WebhookPayload,
 } from "./types";
+
+export {
+  issuePoints,
+  generateMarketplaceSsoUrl,
+  getParticipant,
+  syncParticipant,
+} from "./service";

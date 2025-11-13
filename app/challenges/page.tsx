@@ -144,13 +144,13 @@ const getDifficultyColor = (difficulty: string) => {
 function ChallengeCard({ challenge, featured = false }: { challenge: typeof allChallenges[0]; featured?: boolean }) {
   return (
     <Card className={`transition-all duration-200 hover:shadow-lg ${
-      featured ? 'border-coral-200 bg-gradient-to-br from-coral-50 to-terracotta-50' : 'hover:border-coral-200'
+      featured ? 'border-gray-200 bg-gradient-to-br from-gray-50 to-terracotta-50' : 'hover:border-gray-200'
     }`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-navy-900 flex items-center gap-2 mb-2">
-              {featured && <Target className="h-5 w-5 text-coral-500" />}
+              {featured && <Target className="h-5 w-5 text-gray-900" />}
               {challenge.title}
             </CardTitle>
             <CardDescription className="text-navy-600">
@@ -190,7 +190,7 @@ function ChallengeCard({ challenge, featured = false }: { challenge: typeof allC
           <Button 
             asChild
             size="sm" 
-            className="flex-1 bg-coral-600 hover:bg-coral-700 text-white"
+            className="flex-1 bg-gray-800 hover:bg-gray-700 text-white"
           >
             <Link href="/auth/login">
               Join Challenge
@@ -201,7 +201,7 @@ function ChallengeCard({ challenge, featured = false }: { challenge: typeof allC
             asChild
             variant="outline" 
             size="sm"
-            className="border-coral-300 text-coral-600 hover:bg-coral-50"
+            className="border-gray-300 text-gray-900 hover:bg-gray-50"
           >
             <Link href={`/challenges/${challenge.id}`}>
               Learn More
@@ -222,7 +222,7 @@ export default function ChallengesPage() {
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-navy-900 mb-4 flex items-center justify-center gap-3">
-              <Target className="h-10 w-10 text-coral-600" />
+              <Target className="h-10 w-10 text-gray-900" />
               Community Challenges
             </h1>
             <p className="text-lg text-navy-600 max-w-3xl mx-auto">
@@ -233,9 +233,9 @@ export default function ChallengesPage() {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-            <Card className="text-center border-coral-200 bg-gradient-to-br from-coral-50 to-terracotta-50">
+            <Card className="text-center border-gray-200 bg-gradient-to-br from-gray-50 to-terracotta-50">
               <CardContent className="pt-6">
-                <div className="text-3xl font-bold text-coral-600 mb-2">150+</div>
+                <div className="text-3xl font-bold text-gray-900 mb-2">150+</div>
                 <div className="text-sm text-navy-600">Active Challenges</div>
               </CardContent>
             </Card>
@@ -263,7 +263,7 @@ export default function ChallengesPage() {
           <div className="mb-12">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-bold text-navy-900">Featured Challenges</h2>
-              <Button asChild variant="outline" className="border-coral-300 text-coral-600 hover:bg-coral-50">
+              <Button asChild variant="outline" className="border-gray-300 text-gray-900 hover:bg-gray-50">
                 <Link href="/auth/login">
                   Join to See All
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -295,7 +295,7 @@ export default function ChallengesPage() {
                 <Button
                   key={category}
                   variant="outline"
-                  className="h-auto p-4 text-left justify-start border-gray-300 hover:border-coral-300 hover:bg-coral-50"
+                  className="h-auto p-4 text-left justify-start border-gray-300 hover:border-gray-300 hover:bg-gray-50"
                   asChild
                 >
                   <Link href={`/challenges?category=${encodeURIComponent(category)}`}>
@@ -310,7 +310,7 @@ export default function ChallengesPage() {
           </div>
 
           {/* CTA Section */}
-          <Card className="bg-gradient-to-r from-coral-500 to-terracotta-600 border-none text-white">
+          <Card className="bg-gradient-to-r from-gray-500 to-terracotta-600 border-none text-white">
             <CardContent className="text-center py-12">
               <h2 className="text-3xl font-bold mb-4">Ready to Make a Difference?</h2>
               <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
@@ -322,7 +322,7 @@ export default function ChallengesPage() {
                   asChild
                   size="lg"
                   variant="secondary"
-                  className="bg-white text-coral-600 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all duration-300"
+                  className="bg-white text-gray-900 hover:bg-gray-50 shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                   <Link href="/auth/signup">
                     Get Started Today
@@ -333,7 +333,7 @@ export default function ChallengesPage() {
                   asChild
                   size="lg"
                   variant="outline"
-                  className="border-white text-white hover:bg-white hover:text-coral-600"
+                  className="border-white text-white hover:bg-white hover:text-gray-900"
                 >
                   <Link href="/how-it-works">
                     Learn How It Works

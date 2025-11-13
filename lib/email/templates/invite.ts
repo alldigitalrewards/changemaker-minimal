@@ -10,6 +10,7 @@ export function renderInviteEmail(args: {
   inviteUrl: string
   expiresAt: Date
   challengeTitle?: string | null
+  customMessage?: string | null
 }) {
   const expireStr = args.expiresAt.toLocaleString()
   const title = `You're invited to join ${args.workspaceName}`
@@ -23,6 +24,7 @@ export function renderInviteEmail(args: {
   <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; line-height:1.6; color:#111">
     <h2 style="margin:0 0 12px">${title}</h2>
     <p><strong>${inviterName}</strong> invited you to join <strong>${args.workspaceName}</strong>${args.challengeTitle ? ` for the challenge <strong>${args.challengeTitle}</strong>` : ''} as <strong>${args.role}</strong>.</p>
+    ${args.customMessage ? `<div style="padding:12px;background:#f9fafb;border-left:3px solid #ef4444;margin:16px 0"><p style="margin:0;color:#374151">${args.customMessage}</p></div>` : ''}
     <p><a href="${args.inviteUrl}" style="display:inline-block;padding:10px 16px;background:#ef4444;color:#fff;border-radius:6px;text-decoration:none">Accept invitation</a></p>
     <p>Or copy and paste this link:
       <br><a href="${args.inviteUrl}">${args.inviteUrl}</a>

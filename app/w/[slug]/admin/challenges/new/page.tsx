@@ -15,9 +15,12 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { ParticipantSelector } from '@/components/ui/participant-selector';
 import { ActivityAddDialog } from '@/components/activities/ActivityAddDialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Coins, ShoppingCart } from 'lucide-react';
 
 const formSchema = z
   .object({
+    rewardType: z.enum(['points', 'sku', 'monetary'], { message: 'Please select a reward type' }),
     title: z.string().trim().min(3, 'Title must be at least 3 characters').max(100, 'Title must be at most 100 characters'),
     description: z.string().trim().min(10, 'Description must be at least 10 characters').max(500, 'Description must be at most 500 characters'),
     startDate: z.string().min(1, 'Start date is required').refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid start date'),
@@ -48,12 +51,13 @@ export default function NewChallengePage() {
   const [workspaceBudget, setWorkspaceBudget] = useState<{ totalBudget: number; allocated: number } | null>(null)
   const [initialChallengeBudget, setInitialChallengeBudget] = useState<string>('')
 
-  const { register, handleSubmit, watch, reset, formState: { errors, isValid, isDirty } } = useForm<FormValues>({
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors, isValid, isDirty } } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
-    defaultValues: { title: '', description: '', startDate: '', endDate: '', enrollmentDeadline: '' },
+    defaultValues: { rewardType: 'points', title: '', description: '', startDate: '', endDate: '', enrollmentDeadline: '' },
   });
 
+  const rewardTypeValue = watch('rewardType');
   const startDateValue = watch('startDate');
   const endDateValue = watch('endDate');
   const enrollmentDeadlineValue = watch('enrollmentDeadline');
@@ -65,7 +69,8 @@ export default function NewChallengePage() {
       const response = await fetch(`/api/workspaces/${params.slug}/challenges`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
+          rewardType: values.rewardType,
           title: values.title.trim(),
           description: values.description.trim(),
           startDate: values.startDate,
@@ -138,6 +143,7 @@ export default function NewChallengePage() {
   const setToday = () => {
     const todayStr = formatDate(new Date());
     reset({
+      rewardType: rewardTypeValue,
       title: watch('title'),
       description: watch('description'),
       startDate: todayStr,
@@ -150,6 +156,7 @@ export default function NewChallengePage() {
     const d = new Date(startDateValue);
     d.setDate(d.getDate() + 7);
     reset({
+      rewardType: rewardTypeValue,
       title: watch('title'),
       description: watch('description'),
       startDate: startDateValue,
@@ -197,6 +204,78 @@ export default function NewChallengePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Reward Type Selection - FIRST STEP */}
+            <div className="space-y-3 pb-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">
+                  Reward Type <span className="text-red-500">*</span>
+                </Label>
+                <span className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">Step 1 of 3</span>
+              </div>
+              <p className="text-sm text-gray-600">
+                Choose the reward system for this challenge. This cannot be changed after creation.
+              </p>
+
+              <RadioGroup
+                value={rewardTypeValue}
+                onValueChange={(value: 'points' | 'sku') => setValue('rewardType', value, { shouldValidate: true, shouldDirty: true })}
+                className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"
+              >
+                <Label
+                  htmlFor="reward-points"
+                  className={`flex flex-col items-start space-y-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    rewardTypeValue === 'points'
+                      ? 'border-gray-900 bg-gray-50 ring-2 ring-gray-200'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 w-full">
+                    <RadioGroupItem value="points" id="reward-points" />
+                    <div className="flex items-center space-x-2 flex-1">
+                      <div className={`p-2 rounded-lg ${rewardTypeValue === 'points' ? 'bg-gray-100' : 'bg-gray-100'}`}>
+                        <Coins className={`h-5 w-5 ${rewardTypeValue === 'points' ? 'text-gray-900' : 'text-gray-600'}`} />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900">Changemaker Points</div>
+                        <div className="text-xs text-gray-500">Internal points system</div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 pl-8">
+                    Participants earn points for completing activities. Best for internal recognition and gamification.
+                  </p>
+                </Label>
+
+                <Label
+                  htmlFor="reward-sku"
+                  className={`flex flex-col items-start space-y-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    rewardTypeValue === 'sku'
+                      ? 'border-purple-500 bg-purple-50 ring-2 ring-purple-200'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 w-full">
+                    <RadioGroupItem value="sku" id="reward-sku" />
+                    <div className="flex items-center space-x-2 flex-1">
+                      <div className={`p-2 rounded-lg ${rewardTypeValue === 'sku' ? 'bg-purple-100' : 'bg-gray-100'}`}>
+                        <ShoppingCart className={`h-5 w-5 ${rewardTypeValue === 'sku' ? 'text-purple-600' : 'text-gray-600'}`} />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-900">RewardSTACK Marketplace</div>
+                        <div className="text-xs text-gray-500">Physical rewards & gift cards</div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 pl-8">
+                    Participants select rewards from the AllDigitalRewards marketplace. Requires RewardSTACK integration.
+                  </p>
+                </Label>
+              </RadioGroup>
+              {errors.rewardType && (
+                <span className="text-sm text-red-500">{errors.rewardType.message}</span>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="title">
                 Challenge Title <span className="text-red-500">*</span>
@@ -298,6 +377,28 @@ export default function NewChallengePage() {
             {/* Activities before create (optional) */}
             <div className="space-y-3">
               <Label>Activities (optional)</Label>
+              {rewardTypeValue === 'sku' && (
+                <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm">
+                  <ShoppingCart className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-purple-900">RewardSTACK Marketplace Challenge</div>
+                    <div className="text-purple-700 mt-1">
+                      Activities in this challenge will allow participants to select rewards from the AllDigitalRewards marketplace upon completion. Point values here represent the redemption value participants can use to select their rewards.
+                    </div>
+                  </div>
+                </div>
+              )}
+              {rewardTypeValue === 'points' && (
+                <div className="flex items-start gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                  <Coins className="h-4 w-4 text-gray-900 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <div className="font-medium text-gray-900">Points-Based Challenge</div>
+                    <div className="text-gray-800 mt-1">
+                      Activities in this challenge will award Changemaker Points to participants upon completion. Points are tracked internally and can be used for recognition and gamification.
+                    </div>
+                  </div>
+                </div>
+              )}
               {draftActivities.length === 0 ? (
                 <div className="text-sm text-gray-600">No activities added yet</div>
               ) : (
@@ -321,26 +422,28 @@ export default function NewChallengePage() {
               />
             </div>
 
-            {/* Initial Budget (optional) */}
-            <div className="space-y-2">
-              <Label htmlFor="initialBudget">Challenge Points Budget (optional)</Label>
-              <div className="text-sm text-gray-500">Set an initial budget for this challenge. If left blank, the workspace budget will be used for awards.</div>
-              {workspaceBudget && (
-                <div className="text-xs text-gray-600">Workspace budget: total {workspaceBudget.totalBudget} · allocated {workspaceBudget.allocated} · remaining {Math.max(0, (workspaceBudget.totalBudget||0)-(workspaceBudget.allocated||0))}</div>
-              )}
-              <div className="flex items-end gap-2 max-w-md">
-                <Input
-                  id="initialBudget"
-                  type="number"
-                  min={0}
-                  step={1}
-                  placeholder="e.g., 2000"
-                  value={initialChallengeBudget}
-                  onChange={(e) => setInitialChallengeBudget(e.target.value)}
-                  disabled={isSaving}
-                />
+            {/* Initial Budget (optional) - Only for points-based challenges */}
+            {rewardTypeValue === 'points' && (
+              <div className="space-y-2">
+                <Label htmlFor="initialBudget">Challenge Points Budget (optional)</Label>
+                <div className="text-sm text-gray-500">Set an initial budget for this challenge. If left blank, the workspace budget will be used for awards.</div>
+                {workspaceBudget && (
+                  <div className="text-xs text-gray-600">Workspace budget: total {workspaceBudget.totalBudget} · allocated {workspaceBudget.allocated} · remaining {Math.max(0, (workspaceBudget.totalBudget||0)-(workspaceBudget.allocated||0))}</div>
+                )}
+                <div className="flex items-end gap-2 max-w-md">
+                  <Input
+                    id="initialBudget"
+                    type="number"
+                    min={0}
+                    step={1}
+                    placeholder="e.g., 2000"
+                    value={initialChallengeBudget}
+                    onChange={(e) => setInitialChallengeBudget(e.target.value)}
+                    disabled={isSaving}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-end space-x-2">
               <Button

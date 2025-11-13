@@ -74,7 +74,7 @@ export function ChallengeEnrollmentButton({
         variant={variant}
         onClick={handleEnroll}
         disabled={enrolling}
-        className={variant === 'default' ? 'bg-coral-500 hover:bg-coral-600' : ''}
+        className={variant === 'default' ? 'bg-gray-900 hover:bg-gray-800' : ''}
       >
         {enrolling ? (
           <>

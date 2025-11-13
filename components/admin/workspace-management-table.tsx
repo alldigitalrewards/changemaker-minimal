@@ -27,8 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreVertical, ExternalLink, Users, Trophy, Search } from 'lucide-react';
+import { MoreVertical, ExternalLink, Users, Trophy, Search, Award, DollarSign, Settings, Download } from 'lucide-react';
 import { getUserDisplayName } from '@/lib/user-utils';
+import { exportWorkspacesToCSV } from '@/lib/utils/csv-export';
 
 interface Workspace {
   id: string;
@@ -36,6 +37,7 @@ interface Workspace {
   name: string;
   active: boolean;
   published: boolean;
+  rewardStackEnabled: boolean;
   createdAt: Date;
   _count: {
     WorkspaceMembership: number;
@@ -183,6 +185,15 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
             <SelectItem value="challenges-desc">Most Challenges</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button
+          variant="outline"
+          onClick={() => exportWorkspacesToCSV(workspaces)}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Export CSV
+        </Button>
       </div>
 
       {/* Bulk Actions */}
@@ -233,6 +244,7 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
               </TableHead>
               <TableHead className="font-semibold text-purple-900">Workspace</TableHead>
               <TableHead className="font-semibold text-purple-900">Status</TableHead>
+              <TableHead className="font-semibold text-purple-900">RewardSTACK</TableHead>
               <TableHead className="font-semibold text-purple-900">Members</TableHead>
               <TableHead className="font-semibold text-purple-900">Challenges</TableHead>
               <TableHead className="font-semibold text-purple-900">Admin</TableHead>
@@ -243,7 +255,7 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
           <TableBody>
             {filteredWorkspaces.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
                   No workspaces found
                 </TableCell>
               </TableRow>
@@ -263,17 +275,26 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
                     <TableCell>
                       <div className="flex flex-col">
                         <Link
-                          href={`/w/${workspace.slug}/admin/dashboard`}
-                          className="font-medium text-purple-700 hover:text-purple-900 hover:underline flex items-center gap-1"
+                          href={`/admin/workspaces/${workspace.id}`}
+                          className="font-medium text-purple-700 hover:text-purple-900 hover:underline"
                         >
                           {workspace.name}
-                          <ExternalLink className="h-3 w-3" />
                         </Link>
                         <span className="text-xs text-gray-500">/w/{workspace.slug}</span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={status} />
+                    </TableCell>
+                    <TableCell>
+                      {workspace.rewardStackEnabled ? (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+                          <Award className="h-4 w-4" />
+                          <span>Enabled</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">Not enabled</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-gray-700">
@@ -309,20 +330,29 @@ export function WorkspaceManagementTable({ workspaces }: WorkspaceManagementTabl
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-56">
                           <DropdownMenuItem asChild>
-                            <Link href={`/w/${workspace.slug}/admin/dashboard`}>
-                              View Dashboard
+                            <Link href={`/admin/workspaces/${workspace.id}`} className="flex items-center gap-2">
+                              <Settings className="h-4 w-4" />
+                              Manage Workspace
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/w/${workspace.slug}/admin/settings`}>
-                              Settings
+                            <Link href={`/admin/workspaces/${workspace.id}?tab=rewardstack`} className="flex items-center gap-2">
+                              <Award className="h-4 w-4" />
+                              RewardSTACK Config
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/w/${workspace.slug}/admin/participants`}>
-                              Manage Members
+                            <Link href={`/admin/workspaces/${workspace.id}?tab=points`} className="flex items-center gap-2">
+                              <DollarSign className="h-4 w-4" />
+                              Points Budget
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/w/${workspace.slug}/admin/dashboard`} className="flex items-center gap-2">
+                              <ExternalLink className="h-4 w-4" />
+                              View as Admin
                             </Link>
                           </DropdownMenuItem>
                         </DropdownMenuContent>

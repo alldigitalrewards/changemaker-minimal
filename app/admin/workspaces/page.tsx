@@ -1,6 +1,8 @@
 import { getAllWorkspacesWithDetails } from '@/lib/db/queries';
 import { WorkspaceManagementTable } from '@/components/admin/workspace-management-table';
 import { PlatformAdminWorkspaceDialog } from '@/components/admin/platform-admin-workspace-dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Building } from 'lucide-react';
 
 export default async function WorkspacesManagementPage() {
   // Fetch all workspaces with details
@@ -19,8 +21,23 @@ export default async function WorkspacesManagementPage() {
         <PlatformAdminWorkspaceDialog />
       </div>
 
-      {/* Workspace Table */}
-      <WorkspaceManagementTable workspaces={workspaces} />
+      {/* Workspace Table or Empty State */}
+      {workspaces.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Building className="h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No workspaces yet
+            </h3>
+            <p className="text-sm text-gray-600 mb-6 text-center max-w-md">
+              Get started by creating your first workspace. Workspaces are isolated environments where teams can collaborate on challenges.
+            </p>
+            <PlatformAdminWorkspaceDialog />
+          </CardContent>
+        </Card>
+      ) : (
+        <WorkspaceManagementTable workspaces={workspaces} />
+      )}
     </div>
   );
 }

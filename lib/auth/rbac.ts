@@ -94,20 +94,19 @@ export function isManager(userRole: Role): boolean {
 }
 
 // Platform-level authorization
-// Detect elevated, cross-tenant capability via user permissions or specific email
-const PLATFORM_SUPERADMIN_EMAILS = [
-  'krobinson@alldigitalrewards.com',
-  'jhoughtelin@alldigitalrewards.com',
-  'kfelke@alldigitalrewards.com',
-  'jfelke@alldigitalrewards.com',
-];
-
-export function isPlatformSuperAdmin(input: { permissions?: string[] } | string[] | null | undefined, email?: string): boolean {
-  // Check for superadmin emails
-  if (email && PLATFORM_SUPERADMIN_EMAILS.includes(email)) {
-    return true;
+// Detect elevated, cross-tenant capability via platformSuperAdmin boolean field
+export function isPlatformSuperAdmin(
+  input: { permissions?: string[]; platformSuperAdmin?: boolean } | string[] | null | undefined,
+  email?: string
+): boolean {
+  // If input is an object with platformSuperAdmin field, use that (preferred)
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    if ('platformSuperAdmin' in input) {
+      return input.platformSuperAdmin === true;
+    }
   }
 
+  // Fallback to legacy permissions array check (for backwards compatibility)
   const permissions = Array.isArray(input) ? input : (input?.permissions ?? []);
   return permissions.includes('platform_super_admin');
 }

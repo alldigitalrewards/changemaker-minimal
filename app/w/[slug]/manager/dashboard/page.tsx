@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Users, Trophy, ClipboardList, Eye, MessageSquare } from "lucide-react"
 import { CollapsibleActivityFeed } from "../../admin/dashboard/collapsible-activity-feed"
+import { RewardIssuancesCard } from "@/components/rewards/reward-issuances-card"
 import { formatDistanceToNow } from "date-fns"
 
 export default async function ManagerDashboard({
@@ -150,7 +151,7 @@ export default async function ManagerDashboard({
                   </p>
                 </div>
               </div>
-              <Button asChild size="lg" className="bg-coral-500 hover:bg-coral-600">
+              <Button asChild size="lg" className="bg-gray-900 hover:bg-gray-800">
                 <Link href={`/w/${slug}/admin/challenges/${firstPendingChallengeId}/submissions?status=pending`}>
                   Review Now
                 </Link>
@@ -163,10 +164,10 @@ export default async function ManagerDashboard({
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href={`/w/${slug}/admin/participants`}>
-          <Card className="hover:shadow-md hover:border-coral-300 transition-all cursor-pointer group">
+          <Card className="hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-coral-600 transition-colors">Participants</CardTitle>
-              <Users className="h-4 w-4 text-coral-500" />
+              <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-gray-900 transition-colors">Participants</CardTitle>
+              <Users className="h-4 w-4 text-gray-900" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-gray-900">{participantCount}</div>
@@ -178,10 +179,10 @@ export default async function ManagerDashboard({
         </Link>
 
         <Link href={`/w/${slug}/admin/challenges`}>
-          <Card className="hover:shadow-md hover:border-coral-300 transition-all cursor-pointer group">
+          <Card className="hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-coral-600 transition-colors">Challenges</CardTitle>
-              <Trophy className="h-4 w-4 text-coral-500" />
+              <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-gray-900 transition-colors">Challenges</CardTitle>
+              <Trophy className="h-4 w-4 text-gray-900" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-gray-900">{challengeCount}</div>
@@ -195,7 +196,7 @@ export default async function ManagerDashboard({
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Enrollments</CardTitle>
-            <ClipboardList className="h-4 w-4 text-coral-500" />
+            <ClipboardList className="h-4 w-4 text-gray-900" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">{totalEnrollments}</div>
@@ -211,7 +212,7 @@ export default async function ManagerDashboard({
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 group-hover:text-amber-700 transition-colors">Pending Review</CardTitle>
                 <div className="relative">
-                  <ClipboardList className="h-4 w-4 text-coral-500" />
+                  <ClipboardList className="h-4 w-4 text-gray-900" />
                   <span className="absolute -top-1 -right-1 flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
@@ -232,7 +233,7 @@ export default async function ManagerDashboard({
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Pending Review</CardTitle>
-              <ClipboardList className="h-4 w-4 text-coral-500" />
+              <ClipboardList className="h-4 w-4 text-gray-900" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-gray-900">
@@ -253,7 +254,7 @@ export default async function ManagerDashboard({
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-coral-100 text-coral-600">
+                <div className="p-2 rounded-lg bg-gray-100 text-gray-900">
                   <MessageSquare className="h-5 w-5" />
                 </div>
                 <div>
@@ -320,65 +321,74 @@ export default async function ManagerDashboard({
         />
       </div>
 
-      {/* Recent Challenges */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Recent Challenges</CardTitle>
-              <CardDescription>Latest challenges in your workspace</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {stats?.Challenge.length === 0 ? (
-            <div className="text-center py-12 px-4">
-              <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Trophy className="h-8 w-8 text-gray-400" />
+      {/* Recent Challenges and Rewards side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recent Challenges</CardTitle>
+                <CardDescription>Latest challenges in your workspace</CardDescription>
               </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-2">No challenges yet</h3>
-              <p className="text-sm text-gray-600 max-w-sm mx-auto">
-                Challenges will appear here once they are created by workspace admins
-              </p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {stats?.Challenge.slice(0, 3).map((challenge) => (
-                <div
-                  key={challenge.id}
-                  className="group p-4 border border-gray-200 rounded-lg hover:border-coral-300 hover:shadow-sm transition-all"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 group-hover:text-coral-600 transition-colors">
-                          {challenge.title}
-                        </h3>
-                        <span className="shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                          {challenge.Enrollment.length} enrolled
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 line-clamp-1">{challenge.description}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" className="shrink-0" asChild>
-                      <Link href={`/w/${slug}/admin/challenges/${challenge.id}`}>
-                        View
-                      </Link>
-                    </Button>
-                  </div>
+          </CardHeader>
+          <CardContent>
+            {stats?.Challenge.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <Trophy className="h-8 w-8 text-gray-400" />
                 </div>
-              ))}
-              {stats?.Challenge && stats.Challenge.length > 3 && (
-                <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                  <Link href={`/w/${slug}/admin/challenges`}>
-                    View all {stats.Challenge.length} challenges
-                  </Link>
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <h3 className="text-base font-semibold text-gray-900 mb-2">No challenges yet</h3>
+                <p className="text-sm text-gray-600 max-w-sm mx-auto">
+                  Challenges will appear here once they are created by workspace admins
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {stats?.Challenge.slice(0, 3).map((challenge) => (
+                  <div
+                    key={challenge.id}
+                    className="group p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-gray-900 group-hover:text-gray-900 transition-colors">
+                            {challenge.title}
+                          </h3>
+                          <span className="shrink-0 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded">
+                            {challenge.Enrollment.length} enrolled
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-1">{challenge.description}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" className="shrink-0" asChild>
+                        <Link href={`/w/${slug}/admin/challenges/${challenge.id}`}>
+                          View
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {stats?.Challenge && stats.Challenge.length > 3 && (
+                  <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                    <Link href={`/w/${slug}/admin/challenges`}>
+                      View all {stats.Challenge.length} challenges
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <RewardIssuancesCard
+          workspaceId={workspace.id}
+          title="Recent Reward Issuances"
+          description="Latest rewards issued in workspace"
+          maxDisplay={5}
+        />
+      </div>
 
       {/* Quick Actions */}
       <Card>
@@ -391,14 +401,14 @@ export default async function ManagerDashboard({
             <Button
               asChild
               variant="outline"
-              className="h-auto p-4 justify-start hover:border-coral-300 hover:bg-coral-50 group transition-colors"
+              className="h-auto p-4 justify-start hover:border-gray-300 hover:bg-gray-50 group transition-colors"
             >
               <Link href={`/w/${slug}/admin/challenges`} className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-coral-100 text-coral-600 group-hover:bg-coral-200 transition-colors">
+                <div className="p-2 rounded-lg bg-gray-100 text-gray-900 group-hover:bg-gray-200 transition-colors">
                   <Trophy className="h-5 w-5" />
                 </div>
                 <div className="text-left flex-1">
-                  <div className="font-medium text-gray-900 group-hover:text-coral-700 transition-colors">View Challenges</div>
+                  <div className="font-medium text-gray-900 group-hover:text-gray-800 transition-colors">View Challenges</div>
                   <div className="text-sm text-gray-500">Browse all challenges</div>
                 </div>
               </Link>
@@ -407,14 +417,14 @@ export default async function ManagerDashboard({
             <Button
               asChild
               variant="outline"
-              className="h-auto p-4 justify-start hover:border-coral-300 hover:bg-coral-50 group transition-colors"
+              className="h-auto p-4 justify-start hover:border-gray-300 hover:bg-gray-50 group transition-colors"
             >
               <Link href={`/w/${slug}/admin/participants`} className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-coral-100 text-coral-600 group-hover:bg-coral-200 transition-colors">
+                <div className="p-2 rounded-lg bg-gray-100 text-gray-900 group-hover:bg-gray-200 transition-colors">
                   <Users className="h-5 w-5" />
                 </div>
                 <div className="text-left flex-1">
-                  <div className="font-medium text-gray-900 group-hover:text-coral-700 transition-colors">View Participants</div>
+                  <div className="font-medium text-gray-900 group-hover:text-gray-800 transition-colors">View Participants</div>
                   <div className="text-sm text-gray-500">See workspace members</div>
                 </div>
               </Link>
@@ -423,14 +433,14 @@ export default async function ManagerDashboard({
             <Button
               asChild
               variant="outline"
-              className="h-auto p-4 justify-start hover:border-coral-300 hover:bg-coral-50 group transition-colors"
+              className="h-auto p-4 justify-start hover:border-gray-300 hover:bg-gray-50 group transition-colors"
             >
               <Link href={`/w/${slug}/admin/challenges`} className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-coral-100 text-coral-600 group-hover:bg-coral-200 transition-colors">
+                <div className="p-2 rounded-lg bg-gray-100 text-gray-900 group-hover:bg-gray-200 transition-colors">
                   <ClipboardList className="h-5 w-5" />
                 </div>
                 <div className="text-left flex-1">
-                  <div className="font-medium text-gray-900 group-hover:text-coral-700 transition-colors">View All Submissions</div>
+                  <div className="font-medium text-gray-900 group-hover:text-gray-800 transition-colors">View All Submissions</div>
                   <div className="text-sm text-gray-500">Review participant work</div>
                 </div>
               </Link>

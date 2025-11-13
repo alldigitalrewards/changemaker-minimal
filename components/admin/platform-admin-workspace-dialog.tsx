@@ -107,7 +107,7 @@ export function PlatformAdminWorkspaceDialog() {
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5 text-coral-500" />
+            <Building className="h-5 w-5 text-gray-900" />
             Create New Workspace
           </DialogTitle>
           <DialogDescription>

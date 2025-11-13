@@ -77,8 +77,8 @@ export default function ActivityTemplateCard({ template, workspace }: ActivityTe
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-2">
-              <div className="p-2 rounded-lg bg-coral-50 border border-coral-200">
-                <IconComponent className="h-4 w-4 text-coral-600" />
+              <div className="p-2 rounded-lg bg-gray-50 border border-gray-200">
+                <IconComponent className="h-4 w-4 text-gray-900" />
               </div>
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-base font-semibold truncate">

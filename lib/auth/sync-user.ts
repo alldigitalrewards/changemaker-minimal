@@ -9,13 +9,27 @@ export async function syncSupabaseUser(supabaseUser: User): Promise<void> {
   try {
     // Use transaction to handle race conditions and existing placeholder rows
     await prisma.$transaction(async (tx: any) => {
+      // Check if user exists with this email
+      const existingByEmail = await tx.user.findUnique({ where: { email: supabaseUser.email! } })
+
       // If a placeholder user exists with this email, attach supabaseUserId to it
-      const placeholder = await tx.user.findUnique({ where: { email: supabaseUser.email! } })
-      if (placeholder && !placeholder.supabaseUserId) {
+      if (existingByEmail && !existingByEmail.supabaseUserId) {
         await tx.user.update({
-          where: { id: placeholder.id },
+          where: { id: existingByEmail.id },
           data: {
             supabaseUserId: supabaseUser.id
+          }
+        })
+        return
+      }
+
+      // If user exists with same email but different supabaseUserId, update it
+      if (existingByEmail && existingByEmail.supabaseUserId !== supabaseUser.id) {
+        await tx.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            supabaseUserId: supabaseUser.id,
+            email: supabaseUser.email!
           }
         })
         return

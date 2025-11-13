@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -15,13 +15,20 @@ const databaseUrl = isTestEnvironment && process.env.DIRECT_URL
   ? process.env.DIRECT_URL
   : process.env.DATABASE_URL
 
+// Determine log level based on environment
+// Set PRISMA_LOG_QUERIES=false to disable query logging in development
+const shouldLogQueries = process.env.PRISMA_LOG_QUERIES !== 'false'
+const logConfig: Prisma.LogLevel[] = process.env.NODE_ENV === 'development'
+  ? (shouldLogQueries ? ['query', 'error', 'warn'] : ['error', 'warn'])
+  : ['error']
+
 let prismaInstance = globalForPrisma.prisma ?? new PrismaClient({
   datasources: {
     db: {
       url: databaseUrl
     }
   },
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']
+  log: logConfig
 })
 
 if (process.env.NODE_ENV !== 'production') {

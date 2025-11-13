@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: workspace.name,
           slug: workspace.slug,
+          tenantId: workspace.slug,
           active: true,
           published: true,
         } as any,
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
           workspaceId: newWorkspace.id,
           role: 'ADMIN',
           isPrimary: true,
+          isOwner: true,
         }
       });
 

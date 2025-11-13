@@ -294,13 +294,30 @@ async function getOrCreateSupabaseUser(
       return createData.user;
     }
 
-    // If user already exists (error code 'user_already_exists'), get the existing user
-    if (createError?.message?.includes("already been registered")) {
-      const { data: userData } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = userData?.users?.find((u) => u.email === email);
+    // If user already exists, search through paginated results to find them
+    if (createError?.message?.includes("already been registered") || createError?.message?.includes("already exists")) {
+      // List users with pagination to find the existing user
+      let page = 1;
+      const perPage = 1000;
+      let existingUser = null;
+
+      while (page <= 10 && !existingUser) { // Max 10 pages = 10,000 users
+        const { data: userData } = await supabaseAdmin.auth.admin.listUsers({
+          page,
+          perPage,
+        });
+
+        if (!userData?.users || userData.users.length === 0) break;
+
+        existingUser = userData.users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        page++;
+      }
 
       if (existingUser) {
-        // Update user metadata and password
+        // Update user metadata and password to ensure consistency
         const { data: updateData } =
           await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
             password,
@@ -308,6 +325,11 @@ async function getOrCreateSupabaseUser(
           });
         return updateData?.user || existingUser;
       }
+
+      // If we still can't find the user after pagination, log warning
+      console.warn(
+        `Could not find existing user ${email} after searching ${(page - 1) * perPage} users`
+      );
     }
 
     console.error(`Failed to create/get user ${email}:`, createError);
@@ -394,12 +416,9 @@ async function seed() {
             lastName,
             displayName: admin.name,
             isPending: false, // Admins are not pending
-            // Grant platform_super_admin to designated super admins for testing
-            permissions:
+            platformSuperAdmin:
               admin.email === "jfelke@alldigitalrewards.com" ||
-              admin.email === "krobinson@alldigitalrewards.com"
-                ? { set: ["platform_super_admin"] }
-                : undefined,
+              admin.email === "krobinson@alldigitalrewards.com",
             tenantId:
               admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace ||
               "default",
@@ -411,11 +430,9 @@ async function seed() {
             lastName,
             displayName: admin.name,
             isPending: false, // Admins are not pending
-            permissions:
+            platformSuperAdmin:
               admin.email === "jfelke@alldigitalrewards.com" ||
-              admin.email === "krobinson@alldigitalrewards.com"
-                ? ["platform_super_admin"]
-                : [],
+              admin.email === "krobinson@alldigitalrewards.com",
             tenantId:
               admin.workspaceMemberships.find((m) => m.isPrimary)?.workspace ||
               "default",
@@ -428,6 +445,15 @@ async function seed() {
             (w) => w.slug === membership.workspace,
           );
           if (workspace) {
+            // Determine if this user should be the workspace owner
+            // Kim Robinson owns AllDigitalRewards and ACME
+            // Josh Houghtelin owns Sharecare
+            const isOwner =
+              (admin.email === "krobinson@alldigitalrewards.com" &&
+                (workspace.slug === "alldigitalrewards" || workspace.slug === "acme")) ||
+              (admin.email === "jhoughtelin@alldigitalrewards.com" &&
+                workspace.slug === "sharecare");
+
             await prisma.workspaceMembership.upsert({
               where: {
                 userId_workspaceId: {
@@ -438,6 +464,7 @@ async function seed() {
               update: {
                 role: 'ADMIN',
                 isPrimary: membership.isPrimary,
+                isOwner,
                 preferences: membership.isPrimary
                   ? {
                       notifications: {
@@ -474,6 +501,7 @@ async function seed() {
                 workspaceId: workspace.id,
                 role: 'ADMIN',
                 isPrimary: membership.isPrimary,
+                isOwner,
                 preferences: membership.isPrimary
                   ? {
                       notifications: {
@@ -507,7 +535,7 @@ async function seed() {
               },
             });
             console.log(
-              `  ✓ Added ${admin.email} to ${workspace.name}${membership.isPrimary ? " (primary)" : ""}`,
+              `  ✓ Added ${admin.email} to ${workspace.name}${membership.isPrimary ? " (primary)" : ""}${isOwner ? " (owner)" : ""}`,
             );
           }
         }
@@ -621,6 +649,53 @@ async function seed() {
         console.log(
           `✓ Created points budget for ${workspace.name}: 10,000 points`,
         );
+      }
+
+      // Create WorkspaceSku catalog with QA test SKUs
+      console.log("\n🛍️  Creating workspace SKU catalog...");
+      for (const workspace of createdWorkspaces) {
+        const qaSkus = [
+          {
+            skuId: "CVSEC100",
+            name: "CVS $100 eGift Card",
+            description: "CVS Pharmacy electronic gift card worth $100",
+            value: 10000, // 10000 cents = $100
+            isDefault: true,
+            requiresShipping: false, // Digital eGift card
+          },
+          {
+            skuId: "CPEC50",
+            name: "$50 Digital Reward",
+            description: "Digital reward card worth $50",
+            value: 5000, // 5000 cents = $50
+            isDefault: true,
+            requiresShipping: false, // Digital reward
+          },
+          {
+            skuId: "APPLEWTCH",
+            name: "Apple Watch",
+            description: "Apple Watch reward (physical product)",
+            value: 40000, // 40000 cents = $400 (approximate value)
+            isDefault: false,
+            requiresShipping: true, // Physical product - requires shipping address
+          },
+        ];
+
+        for (const sku of qaSkus) {
+          await prisma.workspaceSku.create({
+            data: {
+              workspaceId: workspace.id,
+              skuId: sku.skuId,
+              name: sku.name,
+              description: sku.description,
+              value: sku.value,
+              isDefault: sku.isDefault,
+              isActive: true,
+              requiresShipping: sku.requiresShipping,
+            },
+          });
+        }
+        console.log(`✓ Created ${qaSkus.length} SKUs for ${workspace.name}`);
       }
 
       console.log("\n📨 Creating sample invite codes...");
@@ -837,7 +912,6 @@ async function seed() {
         const rewardTypes = [
           RewardType.points,
           RewardType.sku,
-          RewardType.monetary,
           null,
           null,
         ] as const;
@@ -845,9 +919,7 @@ async function seed() {
         const rewardConfig =
           rewardType === RewardType.sku
             ? { skuId: "SKU-GIFT-10" }
-            : rewardType === RewardType.monetary
-              ? { amount: 50, currency: "USD" }
-              : null;
+            : null;
 
         const challenge = await prisma.challenge.create({
           data: {
@@ -979,14 +1051,6 @@ async function seed() {
         points: 0,
         rewardType: RewardType.sku,
         rewardConfig: { skuId: "SKU-GIFT-25", label: "$25 Gift Card" },
-      },
-      {
-        name: "Bonus Task",
-        description: "Complete this task for monetary reward",
-        type: "FILE_UPLOAD",
-        points: 0,
-        rewardType: RewardType.monetary,
-        rewardConfig: { amount: 10, currency: "USD" },
       },
     ];
 
@@ -1121,6 +1185,7 @@ async function seed() {
       const activities = await prisma.activity.findMany({
         where: { challengeId: enrollment.challengeId },
         include: { ActivityTemplate: true },
+        orderBy: { createdAt: 'asc' }, // Deterministic ordering
         take: 5, // Up to 5 activities per enrollment
       });
 
@@ -1361,7 +1426,7 @@ async function seed() {
               userId: anyParticipant.id,
               workspaceId: workspace.id,
               type: RewardType.sku,
-              skuId: "SKU-GIFT-10",
+              skuId: "CPEC50",
               status: "ISSUED",
               issuedAt: new Date(),
             },
@@ -1471,6 +1536,7 @@ async function seed() {
       // Get invite codes for this workspace
       const workspaceInvites = await prisma.inviteCode.findMany({
         where: { workspaceId: workspace.id },
+        orderBy: { createdAt: 'asc' }, // Deterministic ordering
       });
 
       // Create redemptions for first 2 participants using the general invite

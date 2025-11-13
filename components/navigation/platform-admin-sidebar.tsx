@@ -12,23 +12,15 @@ import {
   ChevronRight,
   Crown,
   Building2,
-  BookOpen,
-  FileCode,
-  HelpCircle,
-  ExternalLink,
+  FileText,
 } from 'lucide-react';
 
 const platformNavigation = [
   { name: 'Platform Overview', href: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'All Workspaces', href: '/admin/workspaces', icon: Globe },
   { name: 'Manage Members', href: '/admin/users', icon: UserCog },
+  { name: 'Audit Log', href: '/admin/audit-log', icon: FileText },
   { name: 'Platform Settings', href: '/admin/settings', icon: Settings },
-];
-
-const documentationLinks = [
-  { name: 'Public API Docs', href: '/docs/public-api', icon: FileCode, external: false },
-  { name: 'Platform Help', href: '/help', icon: HelpCircle, external: false },
-  { name: 'Workspace Help', href: '/help/workspace', icon: BookOpen, external: false },
 ];
 
 export default function PlatformAdminSidebar() {
@@ -103,46 +95,6 @@ export default function PlatformAdminSidebar() {
                           } ${collapsed ? 'mx-auto' : 'mr-3'}`}
                         />
                         {!collapsed && <span>{item.name}</span>}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-
-            {/* Documentation Section */}
-            <div className="space-y-1">
-              {!collapsed && (
-                <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Documentation
-                </h3>
-              )}
-              <ul className="space-y-1">
-                {documentationLinks.map((item) => {
-                  const isActive = pathname === item.href;
-
-                  return (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                          isActive
-                            ? 'bg-gray-50 text-gray-900 border border-gray-200'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                        title={collapsed ? item.name : undefined}
-                      >
-                        <item.icon
-                          className={`flex-shrink-0 h-5 w-5 ${
-                            isActive ? 'text-gray-700' : 'text-gray-400 group-hover:text-gray-600'
-                          } ${collapsed ? 'mx-auto' : 'mr-3'}`}
-                        />
-                        {!collapsed && (
-                          <span className="flex items-center justify-between flex-1">
-                            {item.name}
-                            <span className="text-xs text-gray-400 ml-1">(Soon)</span>
-                          </span>
-                        )}
                       </Link>
                     </li>
                   );

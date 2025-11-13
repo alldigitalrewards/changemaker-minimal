@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAuth, withErrorHandling } from '@/lib/auth/api-auth'
 import { getUserBySupabaseId } from '@/lib/db/queries'
 import { prisma } from '@/lib/prisma'
+import { syncParticipant } from '@/lib/rewardstack/service'
 
 export const GET = withErrorHandling(async () => {
   const { supabaseUser, dbUser } = await requireAuth()
@@ -136,6 +137,65 @@ export const PUT = withErrorHandling(async (request: Request) => {
     if (error) {
       console.error('Failed to update user metadata:', error)
       return NextResponse.json({ error: 'Failed to update user preferences' }, { status: 500 })
+    }
+  }
+
+  // Auto-sync to RewardSTACK if relevant fields were updated
+  // Do this AFTER updates, and log errors without failing the profile update
+  const shouldSync = Object.keys(dbUpdates).length > 0 && (
+    dbUpdates.firstName !== undefined ||
+    dbUpdates.lastName !== undefined ||
+    dbUpdates.addressLine1 !== undefined ||
+    dbUpdates.addressLine2 !== undefined ||
+    dbUpdates.city !== undefined ||
+    dbUpdates.state !== undefined ||
+    dbUpdates.zipCode !== undefined ||
+    dbUpdates.country !== undefined ||
+    dbUpdates.phone !== undefined
+  );
+
+  if (shouldSync) {
+    try {
+      // Get user's workspace memberships
+      const userWithWorkspaces = await prisma.user.findUnique({
+        where: { id: dbUser.id },
+        select: {
+          id: true,
+          email: true,
+          WorkspaceMembership: {
+            select: {
+              workspaceId: true,
+              Workspace: {
+                select: {
+                  rewardStackEnabled: true,
+                  slug: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (userWithWorkspaces) {
+        // Sync to all workspaces where user is a member and RewardSTACK is enabled
+        for (const membership of userWithWorkspaces.WorkspaceMembership) {
+          if (membership.Workspace.rewardStackEnabled) {
+            try {
+              // Import dynamically to avoid circular dependency
+              const { syncParticipantToRewardStack } = await import('@/lib/rewardstack/participant-sync');
+
+              await syncParticipantToRewardStack(userWithWorkspaces.id, membership.workspaceId);
+
+              console.log(`✅ Auto-synced participant ${userWithWorkspaces.email} to RewardSTACK for workspace ${membership.Workspace.slug}`);
+            } catch (syncError: any) {
+              console.error(`❌ Failed to sync participant to workspace ${membership.Workspace.slug}:`, syncError.message);
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      // Log but don't fail profile update
+      console.error('❌ Failed to auto-sync participant to RewardSTACK:', error.message);
     }
   }
 

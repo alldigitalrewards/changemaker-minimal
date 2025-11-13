@@ -9,7 +9,7 @@ export function ProgressBar({ value, className = '' }: ProgressBarProps) {
   return (
     <div className={`w-full bg-slate-200 rounded-full h-2 overflow-hidden ${className}`}>
       <div
-        className="bg-coral-500 h-full transition-all duration-500 ease-out"
+        className="bg-gray-900 h-full transition-all duration-500 ease-out"
         style={{ width: `${percentage}%` }}
       />
     </div>

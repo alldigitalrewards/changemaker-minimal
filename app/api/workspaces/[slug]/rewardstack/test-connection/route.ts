@@ -17,7 +17,10 @@ interface TestConnectionRequest {
  * POST /api/workspaces/[slug]/rewardstack/test-connection
  * Test RewardSTACK credentials and program connectivity
  *
- * Does NOT persist credentials - only validates connectivity
+ * Supports two modes:
+ * 1. With credentials in body (platform admin testing before save)
+ * 2. Without credentials (workspace admin testing stored config)
+ *
  * Requires admin authentication
  */
 export const POST = withErrorHandling(
@@ -27,29 +30,41 @@ export const POST = withErrorHandling(
     // Require admin access
     const { workspace } = await requireWorkspaceAdmin(slug);
 
-    // Parse request body
-    const body = (await request.json()) as TestConnectionRequest;
-    const { programId, apiKey, environment } = body;
+    // Parse request body (may be empty for workspace admin)
+    const body = (await request.json().catch(() => ({}))) as Partial<TestConnectionRequest>;
 
-    // Validate required fields
+    // Use provided credentials OR workspace stored credentials
+    let programId = body.programId;
+    let apiKey = body.apiKey;
+    let environment = body.environment;
+
+    // If credentials not provided in body, use workspace stored config
     if (!programId || !apiKey || !environment) {
-      return NextResponse.json(
-        {
-          error: "Missing required fields",
-          details: "programId, apiKey, and environment are required",
-        },
-        { status: 400 }
-      );
+      if (!workspace.rewardStackProgramId || !workspace.rewardStackApiKey || !workspace.rewardStackEnvironment) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "RewardSTACK not configured",
+            details: "Platform administrator must configure RewardSTACK credentials first",
+          },
+          { status: 200 }
+        );
+      }
+
+      programId = workspace.rewardStackProgramId;
+      apiKey = workspace.rewardStackApiKey;
+      environment = workspace.rewardStackEnvironment;
     }
 
     // Validate environment
     if (environment !== "QA" && environment !== "PRODUCTION") {
       return NextResponse.json(
         {
+          success: false,
           error: "Invalid environment",
           details: "environment must be 'QA' or 'PRODUCTION'",
         },
-        { status: 400 }
+        { status: 200 }
       );
     }
 

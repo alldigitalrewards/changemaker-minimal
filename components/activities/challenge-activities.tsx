@@ -206,7 +206,7 @@ export function ChallengeActivities({ challengeId, workspaceSlug }: ChallengeAct
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
-          <div className="animate-spin h-8 w-8 border-b-2 border-coral-500 rounded-full"></div>
+          <div className="animate-spin h-8 w-8 border-b-2 border-gray-900 rounded-full"></div>
         </CardContent>
       </Card>
     );

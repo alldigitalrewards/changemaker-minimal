@@ -134,7 +134,8 @@ export const PUT = withErrorHandling(
       });
 
       // Clear cached token since configuration changed
-      clearTokenCache(workspace.id);
+      // Use the updated environment from the workspace, fallback to QA
+      clearTokenCache(updated.rewardStackEnvironment || "QA");
 
       // TODO: Log configuration change for audit
       // Note: Need to add WORKSPACE_SETTINGS_UPDATED to ActivityEventType enum

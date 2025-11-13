@@ -130,7 +130,7 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
         <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <ClipboardList className="h-5 w-5 text-coral-500" />
+              <ClipboardList className="h-5 w-5 text-gray-900" />
               Submission Queue
             </CardTitle>
             <CardDescription>Review recent activity submissions for {challenge.title}</CardDescription>
@@ -242,7 +242,7 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
                     </CardTitle>
                     <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                       <span className="inline-flex items-center gap-1">
-                        <Mail className="h-3.5 w-3.5 text-coral-500" />
+                        <Mail className="h-3.5 w-3.5 text-gray-900" />
                         {submission.User.email}
                       </span>
                       <span>•</span>
@@ -277,7 +277,7 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
                       {submission.textContent && (
                         <div>
                           <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                            <FileText className="h-4 w-4 text-coral-500" />
+                            <FileText className="h-4 w-4 text-gray-900" />
                             Text Response
                           </div>
                           <p className="mt-1 whitespace-pre-line rounded-md border bg-muted/30 p-3 text-sm text-gray-800">
@@ -344,12 +344,14 @@ export default async function ChallengeSubmissionsPage({ params, searchParams }:
                               submissionId={submission.id}
                               action="approve"
                               workspaceSlug={slug}
+                              challengeId={id}
                               pointsValue={submission.Activity.pointsValue}
                             />
                             <SubmissionReviewButton
                               submissionId={submission.id}
                               action="reject"
                               workspaceSlug={slug}
+                              challengeId={id}
                               pointsValue={submission.Activity.pointsValue}
                             />
                           </>

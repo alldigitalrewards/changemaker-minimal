@@ -75,6 +75,63 @@ export class ResourceNotFoundError extends DatabaseError {
 }
 
 // =============================================================================
+// REWARD QUERIES
+// =============================================================================
+
+/**
+ * Get reward issuances for a challenge (for RewardSTACK integration display)
+ * @param challengeId The challenge ID
+ * @param options Pagination options
+ */
+export async function getChallengeRewardIssuances(
+  challengeId: string,
+  options: {
+    take?: number
+    skip?: number
+  } = {}
+) {
+  const { take = 20, skip = 0 } = options
+
+  try {
+    const rewardIssuances = await prisma.rewardIssuance.findMany({
+      where: {
+        challengeId,
+      },
+      select: {
+        id: true,
+        amount: true,
+        status: true,
+        rewardStackStatus: true,
+        rewardStackTransactionId: true,
+        rewardStackAdjustmentId: true,
+        issuedAt: true,
+        createdAt: true,
+        skuId: true,
+        type: true,
+        User: {
+          select: {
+            email: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take,
+      skip,
+    })
+
+    return rewardIssuances
+  } catch (error) {
+    console.error('Error fetching challenge reward issuances:', error)
+    throw new DatabaseError('Failed to fetch reward issuances')
+  }
+}
+
+// =============================================================================
 // RESULT TYPES (with optimized includes)
 // =============================================================================
 
@@ -2424,13 +2481,30 @@ export async function acceptInviteCode(
   if (invite.expiresAt < new Date()) {
     throw new DatabaseError('Invite code has expired', 'INVITE_EXPIRED')
   }
-  
+
   if (invite.usedCount >= invite.maxUses) {
     throw new DatabaseError('Invite code has reached maximum uses', 'INVITE_MAX_USES')
   }
 
   // Enforce target email binding when present
-  if ((invite as any).targetEmail && (invite as any).targetEmail !== userEmail.toLowerCase()) {
+  const inviteTargetEmail = (invite as any).targetEmail;
+  const normalizedUserEmail = userEmail.toLowerCase();
+
+  console.log('[INVITE ACCEPT] Email validation:', {
+    inviteCode: code,
+    inviteTargetEmail,
+    userEmail,
+    normalizedUserEmail,
+    hasTargetEmail: !!inviteTargetEmail,
+    emailsMatch: inviteTargetEmail === normalizedUserEmail
+  });
+
+  if (inviteTargetEmail && inviteTargetEmail !== normalizedUserEmail) {
+    console.error('[INVITE ACCEPT] Email mismatch!', {
+      expected: inviteTargetEmail,
+      received: normalizedUserEmail,
+      inviteCode: code
+    });
     throw new DatabaseError('Invite not valid for this email', 'INVITE_EMAIL_MISMATCH')
   }
   
@@ -2439,6 +2513,14 @@ export async function acceptInviteCode(
   const existingMembership = await prisma.workspaceMembership.findUnique({
     where: { userId_workspaceId: { userId, workspaceId: invite.workspaceId } }
   })
+
+  console.log('[INVITE ACCEPT] User and membership check:', {
+    userId,
+    dbUserFound: !!dbUser,
+    dbUserEmail: dbUser?.email,
+    hasExistingMembership: !!existingMembership,
+    workspaceId: invite.workspaceId
+  });
   
   let enrollment: Enrollment | null = null
   let isExistingMember = !!existingMembership
@@ -2502,7 +2584,13 @@ export async function acceptInviteCode(
           throw new DatabaseError('Invite code has reached maximum uses', 'INVITE_MAX_USES')
         }
 
-        await (tx as any).inviteRedemption.create({ data: { inviteId: invite.id, userId } })
+        await (tx as any).inviteRedemption.create({
+          data: {
+            id: crypto.randomUUID(),
+            inviteId: invite.id,
+            userId
+          }
+        })
         await tx.inviteCode.update({
           where: { id: invite.id },
           data: { usedCount: { increment: 1 } }
@@ -2760,10 +2848,52 @@ export async function reconcileRewards(
 // =============================================================================
 
 /**
+ * Get platform-wide recent activity events
+ * Returns the most recent activity across all workspaces for the platform admin dashboard
+ */
+export async function getPlatformRecentActivity(limit: number = 10) {
+  try {
+    const events = await prisma.activityEvent.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        Workspace: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
+        },
+        User_ActivityEvent_actorUserIdToUser: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        Challenge: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    })
+
+    return events
+  } catch (error) {
+    console.error('Error fetching platform recent activity:', error)
+    return []
+  }
+}
+
+/**
  * Get platform-wide statistics for superadmin dashboard
  * Returns aggregated metrics across all workspaces
  */
-export async function getPlatformStats(tenantId: string = 'default'): Promise<{
+export async function getPlatformStats(tenantId?: string | null): Promise<{
   totalWorkspaces: number
   activeWorkspaces: number
   totalUsers: number
@@ -2792,16 +2922,18 @@ export async function getPlatformStats(tenantId: string = 'default'): Promise<{
       recentPointsResult
     ] = await Promise.all([
       // Total counts
-      prisma.workspace.count({ where: { tenantId } }),
-      prisma.workspace.count({ where: { tenantId, active: true, published: true } }),
+      prisma.workspace.count({ where: tenantId ? { tenantId } : {} }),
+      prisma.workspace.count({ where: tenantId ? { tenantId, active: true, published: true } : { active: true, published: true } }),
       prisma.workspaceMembership.count(),
       prisma.challenge.count(),
       prisma.pointsBalance.aggregate({ _sum: { totalPoints: true } }),
 
       // Trend data (last 30 days)
       prisma.workspace.count({
-        where: {
+        where: tenantId ? {
           tenantId,
+          createdAt: { gte: thirtyDaysAgo }
+        } : {
           createdAt: { gte: thirtyDaysAgo }
         }
       }),
@@ -2851,10 +2983,139 @@ export async function getPlatformStats(tenantId: string = 'default'): Promise<{
 }
 
 /**
+ * Get platform audit log with filtering and pagination
+ * Returns activity events with filters for type, workspace, and date range
+ */
+export async function getPlatformAuditLog(params: {
+  page: number;
+  limit: number;
+  eventType?: string;
+  workspaceId?: string;
+  startDate?: Date;
+  endDate?: Date;
+}) {
+  try {
+    const skip = (params.page - 1) * params.limit;
+
+    const where: any = {};
+
+    if (params.eventType && params.eventType !== 'ALL') {
+      where.type = params.eventType;
+    }
+
+    if (params.workspaceId && params.workspaceId !== 'ALL') {
+      where.workspaceId = params.workspaceId;
+    }
+
+    if (params.startDate || params.endDate) {
+      where.createdAt = {};
+      if (params.startDate) {
+        where.createdAt.gte = params.startDate;
+      }
+      if (params.endDate) {
+        where.createdAt.lte = params.endDate;
+      }
+    }
+
+    const [events, total] = await Promise.all([
+      prisma.activityEvent.findMany({
+        where,
+        include: {
+          User_ActivityEvent_actorUserIdToUser: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              firstName: true,
+              lastName: true
+            }
+          },
+          Workspace: {
+            select: {
+              id: true,
+              slug: true,
+              name: true
+            }
+          },
+          Challenge: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: params.limit
+      }),
+      prisma.activityEvent.count({ where })
+    ]);
+
+    return {
+      events,
+      total,
+      pages: Math.ceil(total / params.limit),
+      currentPage: params.page
+    };
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch platform audit log: ${error}`);
+  }
+}
+
+/**
+ * Get workspace health metrics for platform admin dashboard
+ * Returns counts of workspaces by health status
+ */
+export async function getWorkspaceHealthMetrics(tenantId?: string | null) {
+  try {
+    const [activeCount, inactiveCount, withoutOwners, withoutChallenges] = await Promise.all([
+      // Active workspaces
+      prisma.workspace.count({
+        where: tenantId ? { tenantId, active: true } : { active: true }
+      }),
+      // Inactive workspaces
+      prisma.workspace.count({
+        where: tenantId ? { tenantId, active: false } : { active: false }
+      }),
+      // Workspaces without owners (no ADMIN with isOwner true)
+      prisma.workspace.count({
+        where: {
+          ...(tenantId && { tenantId }),
+          WorkspaceMembership: {
+            none: {
+              isOwner: true,
+              role: 'ADMIN'
+            }
+          }
+        }
+      }),
+      // Workspaces without challenges
+      prisma.workspace.count({
+        where: {
+          ...(tenantId && { tenantId }),
+          Challenge: {
+            none: {}
+          }
+        }
+      })
+    ]);
+
+    return {
+      activeCount,
+      inactiveCount,
+      withoutOwners,
+      withoutChallenges
+    };
+  } catch (error) {
+    throw new DatabaseError(`Failed to fetch workspace health metrics: ${error}`);
+  }
+}
+
+/**
  * Get all workspaces with admin details (superadmin only)
  * Returns workspace data with membership and activity metrics
  */
-export async function getAllWorkspacesWithDetails(tenantId: string = 'default'): Promise<(Workspace & {
+export async function getAllWorkspacesWithDetails(tenantId?: string | null): Promise<(Workspace & {
   _count: {
     WorkspaceMembership: number
     Challenge: number
@@ -2866,7 +3127,7 @@ export async function getAllWorkspacesWithDetails(tenantId: string = 'default'):
 })[]> {
   try {
     return await prisma.workspace.findMany({
-      where: { tenantId },
+      where: tenantId ? { tenantId } : {},
       include: {
         _count: {
           select: {

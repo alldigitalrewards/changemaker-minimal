@@ -16,13 +16,14 @@ import type { User } from "@prisma/client";
  */
 export async function requireAuth(): Promise<AuthenticatedUser> {
   const supabase = await createClient();
+
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
 
   if (error) {
-    console.error("Auth error:", error);
+    console.error("🔒 Authentication error:", error.message);
     throw NextResponse.json(
       { error: "Authentication failed" },
       { status: 401 },
@@ -30,6 +31,7 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
   }
 
   if (!user) {
+    console.error("[requireAuth] No user found in session");
     throw NextResponse.json(
       { error: "Authentication required" },
       { status: 401 },
@@ -59,13 +61,7 @@ export async function requireAuth(): Promise<AuthenticatedUser> {
  */
 export function isPlatformSuperAdmin(user: User | AuthenticatedUser): boolean {
   const dbUser = "dbUser" in user ? user.dbUser : user;
-
-  // PM superadmin access
-  if (dbUser.email === "krobinson@alldigitalrewards.com") {
-    return true;
-  }
-
-  return dbUser.permissions.includes("platform_super_admin");
+  return dbUser.platformSuperAdmin === true;
 }
 
 /**
@@ -182,6 +178,26 @@ export async function requireManagerOrAdmin(
   }
 
   return context;
+}
+
+/**
+ * Requires authentication and platform super admin privileges
+ * Returns authenticated user with verified platform admin status
+ * Use this for platform-level administrative endpoints
+ */
+export async function requirePlatformAdmin(): Promise<AuthenticatedUser> {
+  const user = await requireAuth();
+
+  if (!isPlatformSuperAdmin(user)) {
+    throw NextResponse.json(
+      {
+        error: "Platform administrator privileges required for this operation",
+      },
+      { status: 403 },
+    );
+  }
+
+  return user;
 }
 
 /**

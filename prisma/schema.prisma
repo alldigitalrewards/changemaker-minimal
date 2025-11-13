@@ -261,7 +261,7 @@ model PointsLedger {
 }
 
 model RewardIssuance {
-  id                    String       @id @db.Uuid
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                String       @db.Uuid
   workspaceId           String       @db.Uuid
   challengeId           String?      @db.Uuid
@@ -274,6 +274,8 @@ model RewardIssuance {
   createdAt             DateTime     @default(now())
   issuedAt              DateTime?
   error                 String?
+  description           String? // Reason for reward issuance
+  issuedBy              String? @db.Uuid // Admin who issued the reward
   metadata              Json?
   externalTransactionId String?
   externalStatus        String?
@@ -286,10 +288,17 @@ model RewardIssuance {
   rewardStackWebhookReceived Boolean            @default(false)
   rewardStackErrorMessage    String?
 
-  ActivitySubmission ActivitySubmission?
-  Challenge          Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  User               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  // Shipping Address Confirmation (for physical SKUs)
+  shippingAddressConfirmed        Boolean   @default(false)
+  shippingAddressConfirmedAt      DateTime?
+  shippingAddressConfirmationEmailSent Boolean @default(false)
+  shippingAddressConfirmationEmailSentAt DateTime?
+
+  ActivitySubmission       ActivitySubmission?
+  Challenge                Challenge?          @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  User                     User                @relation("RewardRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  IssuedByUser             User?               @relation("RewardIssuer", fields: [issuedBy], references: [id], onDelete: SetNull)
+  Workspace                Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([challengeId])
   @@index([status])
@@ -326,6 +335,33 @@ model TenantSku {
   @@index([tenantId])
 }
 
+model Notification {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String           @db.Uuid
+  workspaceId    String           @db.Uuid
+  type           NotificationType
+  title          String
+  message        String
+  actionUrl      String?
+  actionText     String?
+  read           Boolean          @default(false)
+  readAt         DateTime?
+  dismissed      Boolean          @default(false)
+  dismissedAt    DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @default(now())
+
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, dismissed])
+  @@index([workspaceId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
 model User {
   id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email String @unique
@@ -358,6 +394,7 @@ model User {
   isPending          Boolean  @default(false)
   emailChangePending Json?
   permissions        String[] @default([])
+  platformSuperAdmin Boolean  @default(false)
   tenantId           String   @default("default")
 
   // RewardSTACK Participant Sync
@@ -376,10 +413,12 @@ model User {
   Enrollment                                    Enrollment[]
   InviteCode                                    InviteCode[]
   InviteRedemption                              InviteRedemption[]
+  Notification                                  Notification[]
   PointsBalance                                 PointsBalance[]
   PointsLedger_PointsLedger_actorUserIdToUser   PointsLedger[]                   @relation("PointsLedger_actorUserIdToUser")
   PointsLedger_PointsLedger_toUserIdToUser      PointsLedger[]                   @relation("PointsLedger_toUserIdToUser")
-  RewardIssuance                                RewardIssuance[]
+  RewardIssuance_Recipient                      RewardIssuance[]                 @relation("RewardRecipient")
+  RewardIssuance_Issuer                         RewardIssuance[]                 @relation("RewardIssuer")
   WorkspaceEmailSettings                        WorkspaceEmailSettings[]
   WorkspaceEmailTemplate                        WorkspaceEmailTemplate[]
   WorkspaceMembership                           WorkspaceMembership[]
@@ -387,6 +426,7 @@ model User {
   WorkspacePointsBudget                         WorkspacePointsBudget[]
   WorkspaceParticipantSegment                   WorkspaceParticipantSegment[]    @relation("SegmentCreator")
   WorkspaceCommunication                        WorkspaceCommunication[]         @relation("CommunicationSender")
+  WorkspaceSku                                  WorkspaceSku[]                   @relation("SkuAddedBy")
 
   @@index([tenantId])
 }
@@ -400,6 +440,7 @@ model Workspace {
   active    Boolean  @default(true)
   published Boolean  @default(true)
   tenantId  String   @default("default")
+  theme     String?  @default("bold")
 
   // RewardSTACK Integration
   rewardStackOrgId         String?
@@ -417,6 +458,7 @@ model Workspace {
   ChallengeAssignment            ChallengeAssignment[]
   ChallengePointsBudget          ChallengePointsBudget[]
   InviteCode                     InviteCode[]
+  Notification                   Notification[]
   PointsBalance                  PointsBalance[]
   PointsLedger                   PointsLedger[]
   RewardIssuance                 RewardIssuance[]
@@ -427,8 +469,32 @@ model Workspace {
   WorkspacePointsBudget          WorkspacePointsBudget?
   WorkspaceParticipantSegment    WorkspaceParticipantSegment[]
   WorkspaceCommunication         WorkspaceCommunication[]
+  WorkspaceSku                   WorkspaceSku[]
 
   @@index([tenantId])
+}
+
+model WorkspaceSku {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId     String    @db.Uuid
+  skuId           String    // RewardSTACK SKU ID (e.g., "CVSEC100", "CPEC50", "APPLEWTCH")
+  name            String    // Display name
+  description     String?   // Optional description
+  value           Int?      // Point value equivalent
+  isDefault       Boolean   @default(false) // Default SKUs assigned to all workspaces
+  isActive        Boolean   @default(true)
+  requiresShipping Boolean  @default(false) // Physical SKUs need shipping address confirmation
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
+  addedBy         String?   @db.Uuid // Platform admin who added this SKU
+
+  Workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  User        User?     @relation("SkuAddedBy", fields: [addedBy], references: [id])
+
+  @@unique([workspaceId, skuId])
+  @@index([workspaceId])
+  @@index([skuId])
+  @@index([isDefault])
 }
 
 model WorkspaceEmailSettings {
@@ -456,11 +522,26 @@ model WorkspaceEmailTemplate {
   updatedBy   String?           @db.Uuid
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @default(now())
+
+  // AI-specific fields
+  name                String?  // User-friendly name: "Challenge Invitation", "Weekly Reminder"
+  description         String?  // Brief description of template purpose
+  tags                String[] @default([]) // Tags for categorization: ["onboarding", "reminder"]
+  conversationHistory Json?    // Array of AI conversation messages that generated this template
+  aiModel             String?  // Model used: "claude-sonnet-4-5-20250929"
+  generatedByAI       Boolean  @default(false) // Whether created via AI composer
+
+  // Version tracking
+  version             Int      @default(1)
+  previousVersionId   String?  @db.Uuid // Parent template if this is a version
+
   User        User?             @relation(fields: [updatedBy], references: [id])
   Workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, type])
   @@index([workspaceId])
+  @@index([workspaceId, type])
+  @@index([workspaceId, generatedByAI])
 }
 
 model WorkspaceMembership {
@@ -469,7 +550,8 @@ model WorkspaceMembership {
   workspaceId    String    @db.Uuid
   supabaseUserId String?   @db.Uuid
   role           Role
-  isPrimary      Boolean   @default(false)
+  isPrimary      Boolean   @default(false) // User's default/primary workspace
+  isOwner        Boolean   @default(false) // Workspace owner (only one per workspace)
   joinedAt       DateTime  @default(now())
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @default(now())
@@ -481,6 +563,7 @@ model WorkspaceMembership {
   @@index([userId])
   @@index([userId, isPrimary])
   @@index([workspaceId])
+  @@index([workspaceId, isOwner])
   @@index([supabaseUserId])
 }
 
@@ -652,6 +735,17 @@ enum CommunicationPriority {
   NORMAL
   IMPORTANT
   URGENT
+}
+
+enum NotificationType {
+  SHIPPING_ADDRESS_REQUIRED
+  CHALLENGE_INVITED
+  CHALLENGE_ENROLLED
+  REWARD_ISSUED
+  SUBMISSION_APPROVED
+  SUBMISSION_REJECTED
+  ANNOUNCEMENT
+  SYSTEM
 }
 
 enum RewardStackSyncStatus {

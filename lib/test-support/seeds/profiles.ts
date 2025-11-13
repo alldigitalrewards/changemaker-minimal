@@ -411,5 +411,49 @@ async function clearSeedData(prisma: PrismaClient): Promise<void> {
   await prisma.user.deleteMany();
   await prisma.workspace.deleteMany();
 
+  // Clear Supabase Auth users
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+
+    // Delete all auth users
+    let page = 1;
+    const perPage = 1000;
+    let deletedCount = 0;
+
+    while (page < 10) {
+      // Max 10 pages = 10,000 users
+      const { data: userData } = await supabase.auth.admin.listUsers({
+        page,
+        perPage,
+      });
+
+      if (!userData?.users || userData.users.length === 0) break;
+
+      // Delete users in batch
+      for (const user of userData.users) {
+        await supabase.auth.admin.deleteUser(user.id);
+        deletedCount++;
+      }
+
+      page++;
+    }
+
+    if (deletedCount > 0) {
+      console.log(`✓ Deleted ${deletedCount} Supabase Auth users`);
+    }
+  } catch (error) {
+    console.warn("⚠️  Could not clear Supabase Auth users:", error);
+  }
+
   console.log("✓ Cleared all seed data");
 }

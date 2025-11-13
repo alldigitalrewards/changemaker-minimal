@@ -85,7 +85,7 @@ export function AnnouncementCard({ communication }: AnnouncementCardProps) {
           label: 'Info',
           className: 'bg-blue-100 text-blue-800 border-blue-300',
           icon: Info,
-          borderColor: 'border-l-coral-500'
+          borderColor: 'border-l-gray-900'
         }
     }
   }
@@ -102,7 +102,7 @@ export function AnnouncementCard({ communication }: AnnouncementCardProps) {
     <>
       <div
         onClick={() => setIsOpen(true)}
-        className={`border border-l-4 ${priorityConfig.borderColor} rounded-lg p-3 space-y-2 cursor-pointer hover:border-coral-300 hover:bg-coral-50/30 transition-all duration-200`}
+        className={`border border-l-4 ${priorityConfig.borderColor} rounded-lg p-3 space-y-2 cursor-pointer hover:border-gray-300 hover:bg-gray-50/30 transition-all duration-200`}
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">

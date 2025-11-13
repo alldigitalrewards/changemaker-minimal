@@ -256,7 +256,7 @@ export function AccountSettingsForm({ user, dbUser }: AccountSettingsFormProps) 
             <Button
               type="submit"
               disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
-              className="bg-coral-500 hover:bg-coral-600"
+              className="bg-gray-900 hover:bg-gray-800"
             >
               {passwordLoading ? (
                 <>
@@ -321,7 +321,7 @@ export function AccountSettingsForm({ user, dbUser }: AccountSettingsFormProps) 
             <Button
               type="submit"
               disabled={emailLoading || !newEmail || !!pendingEmail}
-              className="bg-coral-500 hover:bg-coral-600"
+              className="bg-gray-900 hover:bg-gray-800"
             >
               {emailLoading ? (
                 <>

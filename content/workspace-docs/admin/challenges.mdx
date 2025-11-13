@@ -1,0 +1,264 @@
+---
+title: Managing Challenges
+description: Create, configure, and manage challenges in your workspace
+roles: ['ADMIN']
+order: 1
+tags: ['admin', 'challenges']
+---
+
+# Managing Challenges
+
+As a workspace admin, you have full control over challenge creation, configuration, and management. This guide covers everything you need to know about running successful challenges.
+
+## Creating a Challenge
+
+### Basic Setup
+
+1. Navigate to **Admin > Challenges**
+2. Click **Create Challenge**
+3. Complete the required fields:
+
+```typescript
+{
+  title: "Innovation Challenge 2024",
+  description: "Submit your best ideas for improving our product",
+  startDate: "2024-01-01",
+  endDate: "2024-03-31"
+}
+```
+
+### Challenge Configuration
+
+#### Enrollment Settings
+
+Control who can participate:
+
+- **Open Enrollment**: Anyone in the workspace can join
+- **Invitation Only**: Participants must be invited
+- **Approval Required**: Admins review enrollment requests
+
+#### Submission Requirements
+
+Define what participants need to submit:
+
+- Text descriptions
+- File uploads (documents, images, videos)
+- Links to external resources
+- Custom form fields
+
+#### Evaluation Criteria
+
+Set how submissions will be judged:
+
+- **Automated**: Based on completion and requirements
+- **Manual Review**: Admin approval required
+- **Peer Voting**: Participants vote on submissions
+- **Hybrid**: Combination of methods
+
+## Managing Participants
+
+### Viewing Enrollments
+
+Track who's participating:
+
+```sql
+SELECT
+  u.email,
+  e.status,
+  e.created_at
+FROM enrollments e
+JOIN users u ON e.user_id = u.id
+WHERE e.challenge_id = 'challenge-uuid'
+ORDER BY e.created_at DESC
+```
+
+### Sending Communications
+
+Keep participants informed:
+
+- **Announcements**: Broadcast updates to all participants
+- **Reminders**: Automated deadline notifications
+- **Direct Messages**: One-on-one communication
+
+## Reviewing Submissions
+
+### Submission Dashboard
+
+Access all submissions from **Admin > Challenges > [Challenge Name] > Submissions**
+
+Each submission shows:
+- Participant information
+- Submission content
+- Timestamp
+- Current status
+
+### Approval Workflow
+
+1. **Review**: Examine submission details
+2. **Evaluate**: Check against criteria
+3. **Decide**: Approve, reject, or request changes
+4. **Notify**: Participant receives automatic notification
+
+### Bulk Actions
+
+Handle multiple submissions efficiently:
+
+- **Approve Selected**: Approve multiple submissions at once
+- **Export Data**: Download submission details as CSV
+- **Filter by Status**: View only pending, approved, or rejected
+
+## Reward Distribution
+
+### Configure Rewards
+
+Set up reward rules:
+
+1. Navigate to **Challenge Settings > Rewards**
+2. Choose reward type:
+   - Fixed amount per completion
+   - Tiered based on performance
+   - Random drawings
+   - Top N winners
+
+3. Connect to RewardStack:
+
+```typescript
+{
+  apiKey: process.env.REWARDSTACK_API_KEY,
+  skuId: "reward-sku-id",
+  distributionRule: "automatic_on_approval"
+}
+```
+
+### Issue Rewards
+
+Distribute rewards to winners:
+
+1. Select approved submissions
+2. Click **Issue Rewards**
+3. Confirm SKU and quantity
+4. Track distribution status
+
+### Monitor Rewards
+
+View reward distribution:
+
+- **Pending**: Queued for distribution
+- **Issued**: Sent to RewardStack
+- **Claimed**: Participant redeemed
+- **Failed**: Requires attention
+
+## Challenge Analytics
+
+### Engagement Metrics
+
+Track challenge performance:
+
+- **Total Enrollments**: Number of participants
+- **Submission Rate**: Percentage who submitted
+- **Completion Rate**: Percentage who completed
+- **Average Time**: Time from enrollment to submission
+
+### Participation Trends
+
+Visualize activity over time:
+
+- Daily enrollment graph
+- Submission timeline
+- Peak engagement periods
+- Drop-off points
+
+## Best Practices
+
+### Clear Communication
+
+- Write detailed challenge descriptions
+- Set realistic deadlines
+- Provide submission examples
+- Clarify evaluation criteria
+
+### Timely Management
+
+- Review submissions promptly
+- Respond to participant questions
+- Send reminder notifications
+- Celebrate successes
+
+### Fair Evaluation
+
+- Use consistent criteria
+- Document decision rationale
+- Provide constructive feedback
+- Maintain transparency
+
+## Troubleshooting
+
+### Low Enrollment
+
+If participation is low:
+
+1. **Review messaging**: Is the challenge clearly explained?
+2. **Check visibility**: Are participants aware of the challenge?
+3. **Assess barriers**: Are requirements too restrictive?
+4. **Increase promotion**: Send additional announcements
+
+### High Drop-off Rate
+
+If participants enroll but don't complete:
+
+1. **Simplify requirements**: Reduce submission complexity
+2. **Extend deadline**: Give more time
+3. **Send reminders**: Nudge inactive participants
+4. **Offer support**: Provide help resources
+
+### Reward Issues
+
+If reward distribution fails:
+
+1. **Verify RewardStack connection**: Check API credentials
+2. **Confirm SKU availability**: Ensure rewards are in stock
+3. **Review error logs**: Check for specific error messages
+4. **Contact support**: Escalate persistent issues
+
+## Advanced Features
+
+### Custom Fields
+
+Add workspace-specific data to challenges:
+
+```typescript
+{
+  customFields: [
+    {
+      name: "department",
+      type: "select",
+      required: true,
+      options: ["Engineering", "Design", "Marketing"]
+    },
+    {
+      name: "budget_impact",
+      type: "number",
+      required: false
+    }
+  ]
+}
+```
+
+### Automated Workflows
+
+Set up rules for automatic actions:
+
+- Auto-approve submissions meeting criteria
+- Trigger reward distribution on completion
+- Send notifications at specific stages
+- Archive completed challenges
+
+### API Integration
+
+Integrate challenges with external systems via API. See [API Reference](/docs/api-reference/challenges) for details.
+
+## Next Steps
+
+- [Reward Management](/w/[slug]/docs/admin/rewards) - Configure RewardStack integration
+- [Workspace Settings](/w/[slug]/docs/admin/settings) - Customize your workspace
+- [Analytics Dashboard](/w/[slug]/docs/admin/analytics) - Deep-dive into metrics

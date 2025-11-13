@@ -14,21 +14,23 @@ import { RewardStackSyncStatus } from "@prisma/client";
  * RewardSTACK Participant data structure (API v2.2)
  */
 interface RewardStackParticipant {
-  id?: string; // Participant ID (returned by API)
-  email: string;
-  firstName?: string;
-  lastName?: string;
+  unique_id?: string; // Participant ID (returned by API)
+  email_address: string;
+  firstname?: string;
+  lastname?: string;
   phone?: string;
   address?: {
-    line1?: string;
-    line2?: string;
+    firstname?: string;
+    lastname?: string;
+    address1?: string;
+    address2?: string;
     city?: string;
     state?: string;
-    zipCode?: string;
-    country?: string;
+    zip?: string;
+    country?: string; // ISO 3166-1 numeric country code (e.g., "840" for USA)
   };
-  externalId?: string; // Our user ID for reference
-  metadata?: Record<string, unknown>;
+  program?: string; // Program unique ID (required for creation)
+  external_id?: string; // Our user ID for reference
 }
 
 /**
@@ -56,6 +58,32 @@ export interface ParticipantSyncResult {
  * @param user - Prisma User object
  * @returns RewardStackParticipant data structure
  */
+/**
+ * Convert country name to ISO 3166-1 numeric code
+ * RewardSTACK requires numeric country codes for addresses
+ */
+export function getCountryCode(countryName?: string | null): string | undefined {
+  if (!countryName) return undefined;
+
+  const normalized = countryName.toLowerCase().trim();
+
+  // Common country codes
+  const countryMap: Record<string, string> = {
+    'united states': '840',
+    'usa': '840',
+    'us': '840',
+    'canada': '124',
+    'mexico': '484',
+    'united kingdom': '826',
+    'uk': '826',
+    'australia': '036',
+    'germany': '276',
+    'france': '250',
+  };
+
+  return countryMap[normalized];
+}
+
 export function mapUserToParticipant(
   user: {
     id: string;
@@ -72,30 +100,37 @@ export function mapUserToParticipant(
   }
 ): RewardStackParticipant {
   const participant: RewardStackParticipant = {
-    email: user.email,
-    externalId: user.id,
+    email_address: user.email,
+    external_id: user.id,
   };
 
   // Add optional fields if present
-  if (user.firstName) participant.firstName = user.firstName;
-  if (user.lastName) participant.lastName = user.lastName;
+  if (user.firstName) participant.firstname = user.firstName;
+  if (user.lastName) participant.lastname = user.lastName;
   if (user.phone) participant.phone = user.phone;
 
-  // Add address if any address fields are present
-  if (
-    user.addressLine1 ||
-    user.city ||
-    user.state ||
-    user.zipCode ||
-    user.country
-  ) {
+  // Build nested address object if any address fields are present
+  const hasAddress = user.addressLine1 || user.city || user.state || user.zipCode || user.country;
+
+  if (hasAddress) {
     participant.address = {};
-    if (user.addressLine1) participant.address.line1 = user.addressLine1;
-    if (user.addressLine2) participant.address.line2 = user.addressLine2;
+
+    // Include name in address object (required by RewardSTACK)
+    if (user.firstName) participant.address.firstname = user.firstName;
+    if (user.lastName) participant.address.lastname = user.lastName;
+
+    // Add address fields
+    if (user.addressLine1) participant.address.address1 = user.addressLine1;
+    if (user.addressLine2) participant.address.address2 = user.addressLine2;
     if (user.city) participant.address.city = user.city;
     if (user.state) participant.address.state = user.state;
-    if (user.zipCode) participant.address.zipCode = user.zipCode;
-    if (user.country) participant.address.country = user.country;
+    if (user.zipCode) participant.address.zip = user.zipCode;
+
+    // Convert country name to numeric code
+    const countryCode = getCountryCode(user.country);
+    if (countryCode) {
+      participant.address.country = countryCode;
+    }
   }
 
   return participant;
@@ -118,7 +153,15 @@ export async function createParticipant(
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant`;
+
+  // Add program ID to participant data
+  const participantData = {
+    ...participant,
+    program: programId,
+  };
+
+  console.log('[createParticipant] Sending participant data to RewardSTACK:', JSON.stringify(participantData, null, 2));
 
   const response = await fetch(url, {
     method: "POST",
@@ -126,7 +169,7 @@ export async function createParticipant(
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(participant),
+    body: JSON.stringify(participantData),
   });
 
   // Handle error responses
@@ -134,6 +177,12 @@ export async function createParticipant(
     const errorData: RewardStackError = await response
       .json()
       .catch(() => ({ message: `HTTP ${response.status}` }));
+
+    console.error('[createParticipant] API error:', {
+      status: response.status,
+      errorData,
+      url
+    });
 
     // Handle specific error cases
     if (response.status === 400) {
@@ -143,7 +192,7 @@ export async function createParticipant(
     }
 
     if (response.status === 401) {
-      throw new Error("Authentication failed: Invalid API key");
+      throw new Error(`Authentication failed: ${errorData.message || "Invalid API key"}`);
     }
 
     if (response.status === 403) {
@@ -172,8 +221,38 @@ export async function createParticipant(
   }
 
   const data = await response.json();
+
+  // Log raw response for debugging
+  console.log('\n[DEBUG] Raw API Response:', JSON.stringify(data, null, 2));
+
+  console.log('\n✅ Participant Created in RewardSTACK:');
+  console.log('  Unique ID:', data.unique_id);
+  console.log('  Email:', data.email_address);
+  console.log('  Name:', data.firstname || '(none)', data.lastname || '');
+  console.log('  Phone:', data.phone || '(none)');
+  console.log('  Address:');
+
+  // Handle nested address object
+  if (data.address && typeof data.address === 'object') {
+    console.log('    Line 1:', data.address.address1 || '(none)');
+    console.log('    Line 2:', data.address.address2 || '(none)');
+    console.log('    City:', data.address.city || '(none)');
+    console.log('    State:', data.address.state || '(none)');
+    console.log('    Zip:', data.address.zip || '(none)');
+    console.log('    Country:', data.address.country || '(none)');
+  } else {
+    // Fallback to flat structure
+    console.log('    Line 1:', data.address1 || '(none)');
+    console.log('    Line 2:', data.address2 || '(none)');
+    console.log('    City:', data.city || '(none)');
+    console.log('    State:', data.state || '(none)');
+    console.log('    Zip:', data.zip || '(none)');
+    console.log('    Country:', data.country || '(none)');
+  }
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
   return {
-    id: data.id || data.participantId,
+    id: data.unique_id,
     data: data,
   };
 }
@@ -197,7 +276,9 @@ export async function updateParticipant(
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(participantId)}`;
+
+  console.log('[updateParticipant] Sending participant data to RewardSTACK:', JSON.stringify(participant, null, 2));
 
   const response = await fetch(url, {
     method: "PATCH",
@@ -213,10 +294,20 @@ export async function updateParticipant(
       .json()
       .catch(() => ({ message: `HTTP ${response.status}` }));
 
+    console.error('[updateParticipant] API error:', {
+      status: response.status,
+      errorData,
+      url
+    });
+
     if (response.status === 400) {
       throw new Error(
         `Invalid participant data: ${errorData.message || "Validation failed"}`
       );
+    }
+
+    if (response.status === 401) {
+      throw new Error(`Authentication failed: ${errorData.message || "Invalid API key"}`);
     }
 
     if (response.status === 404) {
@@ -236,8 +327,40 @@ export async function updateParticipant(
     );
   }
 
-  return await response.json();
+  const data = await response.json();
+
+  // Log raw response for debugging
+  console.log('\n[DEBUG] Raw API Response:', JSON.stringify(data, null, 2));
+
+  console.log('\n✅ Participant Updated in RewardSTACK:');
+  console.log('  Unique ID:', data.unique_id);
+  console.log('  Email:', data.email_address);
+  console.log('  Name:', data.firstname || '(none)', data.lastname || '');
+  console.log('  Phone:', data.phone || '(none)');
+  console.log('  Address:');
+
+  // Handle nested address object
+  if (data.address && typeof data.address === 'object') {
+    console.log('    Line 1:', data.address.address1 || '(none)');
+    console.log('    Line 2:', data.address.address2 || '(none)');
+    console.log('    City:', data.address.city || '(none)');
+    console.log('    State:', data.address.state || '(none)');
+    console.log('    Zip:', data.address.zip || '(none)');
+    console.log('    Country:', data.address.country || '(none)');
+  } else {
+    // Fallback to flat structure
+    console.log('    Line 1:', data.address1 || '(none)');
+    console.log('    Line 2:', data.address2 || '(none)');
+    console.log('    City:', data.city || '(none)');
+    console.log('    State:', data.state || '(none)');
+    console.log('    Zip:', data.zip || '(none)');
+    console.log('    Country:', data.country || '(none)');
+  }
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+  return data;
 }
+
 
 /**
  * Get participant details from RewardSTACK
@@ -256,7 +379,7 @@ export async function getParticipantFromRewardStack(
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(participantId)}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -305,7 +428,7 @@ export async function deleteParticipant(
   const token = await generateRewardStackToken(workspaceId);
   const baseUrl = await getRewardStackBaseUrl(workspaceId);
 
-  const url = `${baseUrl}/api/2.2/programs/${encodeURIComponent(programId)}/participants/${encodeURIComponent(participantId)}`;
+  const url = `${baseUrl}/api/program/${encodeURIComponent(programId)}/participant/${encodeURIComponent(participantId)}`;
 
   const response = await fetch(url, {
     method: "DELETE",
@@ -524,6 +647,25 @@ export async function syncParticipantToRewardStack(
     // Map user to participant format
     const participantData = mapUserToParticipant(user);
 
+    // Log participant data from Changemaker
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔄 PARTICIPANT SYNC - Changemaker → RewardSTACK');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Participant:', user.email);
+    console.log('Action:', user.rewardStackParticipantId ? 'UPDATE' : 'CREATE');
+    console.log('\nData from Changemaker DB:');
+    console.log('  Name:', user.firstName || '(none)', user.lastName || '');
+    console.log('  Phone:', user.phone || '(none)');
+    console.log('  Address Line 1:', user.addressLine1 || '(none)');
+    console.log('  Address Line 2:', user.addressLine2 || '(none)');
+    console.log('  City:', user.city || '(none)');
+    console.log('  State:', user.state || '(none)');
+    console.log('  Zip:', user.zipCode || '(none)');
+    console.log('  Country:', user.country || '(none)');
+    console.log('\nSync Status:');
+    console.log('  Current RewardSTACK ID:', user.rewardStackParticipantId || '(not yet synced)');
+    console.log('  Sync Status:', user.rewardStackSyncStatus || 'NEVER_SYNCED');
+
     let participantId: string;
     let action: "created" | "updated";
 
@@ -540,8 +682,15 @@ export async function syncParticipantToRewardStack(
         participantId = user.rewardStackParticipantId;
         action = "updated";
       } catch (error) {
-        // If participant not found, create new one
-        if (error instanceof Error && error.message.includes("not found")) {
+        // If participant not found or server error (stale ID), create new one
+        if (
+          error instanceof Error &&
+          (error.message.includes("not found") ||
+            error.message.includes("server error"))
+        ) {
+          console.log(
+            `[syncParticipantToRewardStack] Update failed for ${user.email}, creating new participant...`
+          );
           const result = await createParticipant(
             workspaceId,
             workspace.rewardStackProgramId,
@@ -563,6 +712,7 @@ export async function syncParticipantToRewardStack(
       participantId = result.id;
       action = "created";
     }
+
 
     // Update status to SYNCED
     await updateUserSyncStatus(userId, "SYNCED", participantId);

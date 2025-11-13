@@ -1,0 +1,593 @@
+---
+title: Reward Distribution Guide
+description: Learn how to configure and distribute rewards to participants
+order: 3
+tags: ['rewards', 'rewardstack', 'admin', 'guide']
+author: Changemaker Team
+date: 2025-01-10
+---
+
+# Reward Distribution Guide
+
+Master the art of rewarding participants effectively with Changemaker's integrated reward system.
+
+## Overview
+
+Rewards are a powerful motivator for driving participation and recognizing contributions. This guide covers:
+- Setting up RewardStack integration
+- Configuring reward SKUs
+- Issuing rewards to participants
+- Tracking reward distribution
+- Best practices for reward programs
+
+## Understanding the Reward System
+
+### How Rewards Work
+
+1. **Configuration**: Set up RewardStack integration and import available SKUs
+2. **Challenge Setup**: Link reward SKUs to challenges or set custom amounts
+3. **Participant Action**: Participants complete challenges and meet criteria
+4. **Reward Issuance**: Admins issue rewards manually or automatically
+5. **Distribution**: RewardStack sends digital rewards to participants via email
+6. **Claim**: Participants receive and redeem their rewards
+
+### Reward Types
+
+**Digital Gift Cards**
+- Amazon, Visa, Target, Starbucks, etc.
+- Instant delivery
+- Various denominations
+- Global options available
+
+**Experiences**
+- Online courses
+- Streaming subscriptions
+- Event tickets
+- Virtual experiences
+
+**Custom Rewards**
+- Company swag
+- Internal points systems
+- Recognition badges
+- Career opportunities
+
+**Points and Credits**
+- Accumulate over time
+- Exchange for rewards
+- Tiered redemption
+- Flexible value
+
+## Setting Up RewardStack
+
+### Initial Configuration
+
+1. **Get RewardStack Account**
+   - Sign up at rewardstack.com
+   - Complete verification
+   - Fund your account
+   - Note your API credentials
+
+2. **Connect to Changemaker**
+   - Go to **Admin → Settings → Integrations**
+   - Click **Connect RewardStack**
+   - Enter API credentials:
+     - Client ID
+     - Client Secret
+     - Environment (sandbox/production)
+   - Test connection
+   - Save configuration
+
+3. **Sync SKUs**
+   - Click **Sync SKUs** in RewardStack settings
+   - Import available reward products
+   - Review SKU catalog
+   - Set default options
+
+### Testing the Integration
+
+Before going live:
+
+1. **Use Sandbox Mode**
+   - Test without real money
+   - Verify API connection
+   - Practice reward issuance
+   - Check email delivery
+
+2. **Test Workflow**
+   - Create test challenge
+   - Enroll test participant
+   - Issue test reward
+   - Verify receipt
+   - Confirm redemption flow
+
+3. **Go Live**
+   - Switch to production mode
+   - Update API credentials
+   - Re-sync SKUs
+   - Verify real rewards work
+
+## Configuring Reward SKUs
+
+### Understanding SKUs
+
+Each SKU represents a specific reward product:
+- **SKU ID**: Unique identifier (e.g., `sku_amazon_25`)
+- **Name**: Display name (e.g., "Amazon $25 Gift Card")
+- **Cost**: Your cost per reward
+- **Value**: Face value to recipient
+- **Currency**: USD, EUR, GBP, etc.
+- **Status**: Active or inactive
+
+### Managing Your SKU Catalog
+
+**View Available SKUs**
+1. Go to **Admin → Rewards → SKU Catalog**
+2. See all imported SKUs
+3. Filter by:
+   - Type (gift card, experience, etc.)
+   - Value range
+   - Currency
+   - Status
+
+**Activate/Deactivate SKUs**
+- Enable SKUs you want to offer
+- Disable unused options
+- Simplifies reward selection
+- Controls budget
+
+**Set Default SKUs**
+- Choose commonly used rewards
+- Quick selection when issuing
+- Consistency across challenges
+- Easier reporting
+
+### Custom SKU Configuration
+
+Create custom reward options:
+
+1. Go to **Admin → Rewards → Custom SKUs**
+2. Click **Create Custom SKU**
+3. Configure:
+   - Name and description
+   - Internal value
+   - Custom redemption process
+   - Fulfillment method
+4. Save and activate
+
+**Use cases:**
+- Company merchandise
+- Internal recognition
+- Event invitations
+- Career opportunities
+- Mentorship sessions
+
+## Issuing Rewards
+
+### Manual Reward Issuance
+
+**Single Participant**
+
+1. Navigate to participant profile or enrollment
+2. Click **Issue Reward**
+3. Select reward:
+   - Choose from available SKUs
+   - Or enter custom amount
+4. Add message (optional):
+   - Congratulations
+   - Reason for reward
+   - Next steps
+5. Review and confirm
+6. Click **Issue Reward**
+
+**Bulk Issuance**
+
+For multiple participants:
+
+1. Go to challenge detail page
+2. Select participants to reward:
+   - Check individual participants
+   - Or select all completed
+3. Click **Bulk Issue Rewards**
+4. Choose reward option:
+   - Same SKU for all
+   - Same amount for all
+   - Custom per participant (CSV upload)
+5. Add bulk message
+6. Review total cost
+7. Confirm issuance
+
+### Automatic Reward Issuance
+
+**Challenge Completion Rewards**
+
+Configure automatic rewards:
+
+1. Edit challenge settings
+2. Enable **Auto-Issue Rewards**
+3. Set criteria:
+   - Upon enrollment completion
+   - After submission approval
+   - When challenge ends
+4. Select reward:
+   - Fixed SKU
+   - Fixed amount
+   - Tiered by performance
+5. Save settings
+
+When criteria met:
+- Reward issued automatically
+- Participant notified
+- Admin receives confirmation
+- Tracked in dashboard
+
+**Milestone Rewards**
+
+Reward participants for achievements:
+
+1. Define milestones:
+   - First challenge completion
+   - 5 challenges completed
+   - 10 challenges completed
+   - Top performer
+2. Set reward for each milestone
+3. Enable automatic tracking
+4. Rewards issued when milestone reached
+
+## Tracking Reward Distribution
+
+### Reward Dashboard
+
+View comprehensive reward metrics:
+
+**Summary Statistics**
+- Total rewards issued
+- Total value distributed
+- Average reward value
+- Rewards pending/claimed
+- Current month spend
+
+**Recent Activity**
+- Latest reward issuances
+- Participant claims
+- Failed distributions
+- Pending approvals
+
+**Charts and Trends**
+- Rewards over time
+- Distribution by challenge
+- Top reward types
+- Budget utilization
+
+### Individual Reward Tracking
+
+For each reward issued:
+
+**Reward Details**
+- Recipient name and email
+- SKU or amount
+- Issue date and time
+- Status (pending, sent, claimed, failed)
+- Challenge association
+- Issuer admin
+
+**Status Updates**
+- Email sent to participant
+- Participant opened email
+- Reward claimed
+- Redemption completed
+- Any errors or issues
+
+**Actions Available**
+- Resend notification email
+- Cancel pending reward
+- Issue replacement
+- View full history
+- Download receipt
+
+### Reporting
+
+**Standard Reports**
+
+**Rewards Summary Report**
+- Total rewards by time period
+- Breakdown by type
+- Cost analysis
+- ROI metrics
+
+**Participant Rewards Report**
+- Rewards per participant
+- Distribution patterns
+- Top recipients
+- Unclaimed rewards
+
+**Challenge Rewards Report**
+- Rewards per challenge
+- Budget vs. actual
+- Participation vs. rewards
+- Effectiveness metrics
+
+**Export Options**
+- CSV for spreadsheets
+- PDF for presentations
+- JSON for integrations
+- Scheduled email delivery
+
+## Budget Management
+
+### Setting Reward Budgets
+
+**Workspace-Level Budget**
+
+1. Go to **Admin → Settings → Budgets**
+2. Set overall reward budget:
+   - Monthly limit
+   - Quarterly limit
+   - Annual limit
+3. Enable alerts:
+   - At 75% of budget
+   - At 90% of budget
+   - When exceeded
+4. Save budget settings
+
+**Challenge-Level Budget**
+
+For each challenge:
+1. Edit challenge settings
+2. Set reward budget
+3. Define allocation:
+   - Per participant
+   - Total for challenge
+   - Tiered amounts
+4. Track spending vs. budget
+
+### Budget Tracking
+
+Monitor spending in real-time:
+
+**Budget Dashboard**
+- Current spend vs. budget
+- Remaining budget
+- Projected spend
+- Historical trends
+
+**Alerts and Notifications**
+- Email when threshold reached
+- Dashboard warnings
+- Approval required when over budget
+- Budget renewal reminders
+
+### Cost Optimization
+
+**Strategies to Maximize Value**
+
+1. **Mix Reward Types**
+   - High value for winners
+   - Moderate for completion
+   - Small for participation
+
+2. **Use Tiered Rewards**
+   - $10 for submission
+   - $25 for quality submission
+   - $100 for winner
+
+3. **Volume Discounts**
+   - Negotiate with RewardStack
+   - Buy in bulk
+   - Annual commitments
+
+4. **Non-Monetary Recognition**
+   - Public recognition
+   - Certificates
+   - Profile badges
+   - Leaderboard placement
+
+## Best Practices
+
+### Reward Strategy
+
+**Match Rewards to Effort**
+
+❌ **Poor matching:**
+- $5 for complex month-long project
+- $500 for simple 5-minute survey
+
+✅ **Good matching:**
+- $10-25 for quick surveys
+- $50-100 for moderate challenges
+- $250+ for significant efforts
+
+**Be Consistent**
+
+- Similar challenges = similar rewards
+- Set clear criteria up front
+- Follow through on promises
+- Document your reward structure
+
+**Communicate Clearly**
+
+Before challenge:
+- What rewards are available
+- How to earn them
+- When they'll be distributed
+- How to claim them
+
+After completion:
+- Congratulations message
+- Reward details
+- Claim instructions
+- Timeline for delivery
+
+### Timing
+
+**Issue Rewards Promptly**
+
+- Within 24-48 hours of completion
+- Don't make participants wait
+- Maintains motivation
+- Shows appreciation
+
+**Plan for Delays**
+
+- Some SKUs may have delays
+- Communicate timelines
+- Offer updates if delayed
+- Have backup options
+
+### Participant Experience
+
+**Make Claiming Easy**
+
+- Clear email instructions
+- Simple redemption process
+- Mobile-friendly
+- Support available
+
+**Handle Issues Gracefully**
+
+Common issues:
+- Email not received
+- Claim link expired
+- Wrong reward sent
+- Redemption problems
+
+Quick solutions:
+1. Resend email immediately
+2. Issue replacement reward
+3. Provide direct support
+4. Follow up to confirm resolution
+
+### Legal and Compliance
+
+**Tax Considerations**
+
+- Rewards may be taxable income
+- Requirements vary by country
+- Consult tax professional
+- Provide documentation
+
+**Terms and Conditions**
+
+- Clear reward terms
+- Expiration policies
+- Geographic restrictions
+- Substitution rights
+
+**Data Privacy**
+
+- Secure reward information
+- Comply with GDPR
+- Protect participant data
+- Audit reward access
+
+## Troubleshooting
+
+### Rewards Not Sending
+
+**Check:**
+1. RewardStack integration active
+2. API credentials valid
+3. SKU is active and available
+4. Participant email is correct
+5. No account holds or limits
+
+**Solutions:**
+- Reconnect RewardStack
+- Update API credentials
+- Choose different SKU
+- Verify participant email
+- Contact RewardStack support
+
+### Participant Can't Claim Reward
+
+**Common causes:**
+- Email in spam folder
+- Claim link expired
+- Geographic restriction
+- RewardStack account issue
+
+**Solutions:**
+1. Resend reward email
+2. Issue new reward
+3. Check SKU restrictions
+4. Contact RewardStack support
+
+### Budget Overruns
+
+**Prevention:**
+- Set clear budgets
+- Enable alerts
+- Require approvals
+- Regular monitoring
+
+**When it happens:**
+1. Pause new reward issuance
+2. Review commitments
+3. Request budget increase
+4. Adjust future challenges
+
+## Advanced Features
+
+### Reward Workflows
+
+Create approval workflows:
+
+1. **Participant completes challenge**
+2. **Admin reviews submission**
+3. **Admin recommends reward**
+4. **Manager approves**
+5. **Reward issued automatically**
+
+Configure in **Settings → Workflows**
+
+### Integration with Other Tools
+
+**Slack Integration**
+- Reward notifications in Slack
+- Approval requests in channels
+- Celebrate wins publicly
+
+**Email Marketing**
+- Sync reward data
+- Segment by rewards earned
+- Personalized campaigns
+
+**Analytics Tools**
+- Export reward data
+- Track ROI
+- Measure engagement impact
+
+### Custom Reward Programs
+
+**Points Systems**
+
+1. Participants earn points
+2. Points accumulate over time
+3. Redeem for rewards at thresholds
+4. Encourages ongoing participation
+
+**Recognition Tiers**
+
+- Bronze: $25 rewards
+- Silver: $50 rewards
+- Gold: $100+ rewards
+- Platinum: Premium experiences
+
+**Team Rewards**
+
+- Issue to entire team
+- Split reward amounts
+- Team celebrations
+- Collaborative recognition
+
+## Related Resources
+
+- [RewardStack Integration Guide](/docs/integrations/rewardstack)
+- [Challenge Management](/docs/guides/challenges)
+- [Participant Management](/docs/guides/participants)
+- [API Reference](/docs/api-reference)
+
+## Need Help?
+
+- **Reward Questions**: [support@changemaker.im](mailto:support@changemaker.im)
+- **RewardStack Support**: [support@rewardstack.com](mailto:support@rewardstack.com)
+- **Budget Planning**: [sales@changemaker.im](mailto:sales@changemaker.im)

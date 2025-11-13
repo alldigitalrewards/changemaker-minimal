@@ -114,7 +114,7 @@ export default function RoleViewSwitcher({
   const getViewColor = (view: RoleView): string => {
     switch (view) {
       case 'admin':
-        return 'bg-coral-500 hover:bg-coral-600'
+        return 'bg-gray-900 hover:bg-gray-800'
       case 'manager':
         return 'bg-blue-500 hover:bg-blue-600'
       case 'participant':
@@ -166,12 +166,12 @@ export default function RoleViewSwitcher({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`text-sm font-medium ${
-                        isCurrentView ? 'text-coral-600' : 'text-gray-900'
+                        isCurrentView ? 'text-gray-900' : 'text-gray-900'
                       }`}>
                         {view.label}
                       </span>
                       {isCurrentView && (
-                        <Badge variant="outline" className="text-xs bg-coral-50 border-coral-200 text-coral-700">
+                        <Badge variant="outline" className="text-xs bg-gray-50 border-gray-200 text-gray-800">
                           Current
                         </Badge>
                       )}

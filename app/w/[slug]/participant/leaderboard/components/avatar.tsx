@@ -28,7 +28,7 @@ export function Avatar({ name, email, avatarUrl, size = 'md' }: AvatarProps) {
   return (
     <UIAvatar className={sizeClasses[size]}>
       {avatarUrl && <AvatarImage src={avatarUrl} alt={name} />}
-      <AvatarFallback className="bg-coral-100 text-coral-700 font-semibold">
+      <AvatarFallback className="bg-gray-100 text-gray-800 font-semibold">
         {initials}
       </AvatarFallback>
     </UIAvatar>

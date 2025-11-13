@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { syncSupabaseUser } from '@/lib/auth/sync-user'
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient()
 
   // Exchange the code for a session and set auth cookies
-  const { error } = await supabase.auth.exchangeCodeForSession(code)
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
     // On failure, redirect to login with a message
     const loginUrl = new URL('/auth/login', url.origin)
@@ -22,11 +23,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Best-effort: sync user record into Prisma
-  try {
-    await fetch(new URL('/api/auth/sync-user', url.origin), { method: 'POST' })
-  } catch (_) {
-    // no-op: do not block redirect
+  // Sync user to Prisma - best-effort, don't block redirect
+  if (data.user) {
+    try {
+      await syncSupabaseUser(data.user)
+    } catch (syncError) {
+      console.error('Failed to sync user in callback:', syncError)
+      // Continue with redirect even if sync fails
+    }
   }
 
   // Smart redirect logic:

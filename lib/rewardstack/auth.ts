@@ -3,17 +3,23 @@
  * Handles JWT bearer token generation and management for ADR Marketplace Platform API
  *
  * API Documentation: https://admin.adrqa.info/api (QA)
- * Authentication: JWT Bearer Token
+ * Authentication: JWT Bearer Token obtained via POST /token endpoint with Basic Auth
+ * Token Expiration: 1 year (8760 hours) - configurable via hoursUntilExpiry
+ *
+ * Credentials are platform-wide (not workspace-specific) and stored in environment variables:
+ * - REWARDSTACK_USERNAME (e.g., admin@alldigitalrewards.com)
+ * - REWARDSTACK_PASSWORD
  */
 
-import { getWorkspaceBySlug } from "../db/queries";
+import { prisma } from "../prisma";
+import type { TokenResponse } from "./types";
 
 /**
  * RewardSTACK API environment endpoints
  */
 export const REWARDSTACK_ENDPOINTS = {
-  QA: "https://admin.adrqa.info/api",
-  PRODUCTION: "https://admin.adr.info/api", // TBD - update when provided
+  QA: "https://admin.adrqa.info",
+  PRODUCTION: "https://admin.adr.info", // TBD - update when provided
 } as const;
 
 /**
@@ -26,35 +32,105 @@ interface TokenCacheEntry {
 
 /**
  * In-memory token cache
- * Key: workspaceId
+ * Key: environment (QA or PRODUCTION)
  * Value: TokenCacheEntry
+ *
+ * Note: Token is shared across all workspaces for a given environment
+ * since authentication is platform-wide, not workspace-specific
  */
 const tokenCache = new Map<string, TokenCacheEntry>();
 
 /**
- * Default token TTL in milliseconds (23 hours)
- * Tokens are refreshed before expiry
+ * Token safety buffer in milliseconds (5 minutes)
+ * Refresh tokens 5 minutes before they expire
  */
-const DEFAULT_TOKEN_TTL = 23 * 60 * 60 * 1000;
+const TOKEN_REFRESH_BUFFER = 5 * 60 * 1000;
+
+/**
+ * Obtain JWT token from RewardSTACK API using username/password
+ *
+ * @param environment - API environment (QA or PRODUCTION)
+ * @returns JWT bearer token
+ * @throws Error if credentials missing or authentication fails
+ */
+async function obtainJwtToken(environment: keyof typeof REWARDSTACK_ENDPOINTS): Promise<TokenCacheEntry> {
+  const username = process.env.REWARDSTACK_USERNAME;
+  const password = process.env.REWARDSTACK_PASSWORD;
+
+  if (!username || !password) {
+    throw new Error(
+      "RewardSTACK credentials not configured. Set REWARDSTACK_USERNAME and REWARDSTACK_PASSWORD environment variables."
+    );
+  }
+
+  const baseUrl = REWARDSTACK_ENDPOINTS[environment];
+  const tokenEndpoint = `${baseUrl}/token`;
+
+  try {
+    // Create Basic Auth header
+    const basicAuth = Buffer.from(`${username}:${password}`).toString('base64');
+
+    const response = await fetch(tokenEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Basic ${basicAuth}`,
+      },
+      body: JSON.stringify({
+        hoursUntilExpiry: 8760, // 1 year
+        tokenName: "Changemaker Platform",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `RewardSTACK authentication failed (${response.status}): ${errorText}`
+      );
+    }
+
+    const data: TokenResponse = await response.json();
+
+    if (!data.token || !data.expires) {
+      throw new Error("Invalid token response from RewardSTACK API");
+    }
+
+    // Calculate expiration time with safety buffer
+    // expires is a Unix timestamp in seconds, convert to milliseconds and subtract buffer
+    const expiresAt = (data.expires * 1000) - TOKEN_REFRESH_BUFFER;
+
+    return {
+      token: data.token,
+      expiresAt,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to obtain RewardSTACK token: ${error.message}`);
+    }
+    throw error;
+  }
+}
 
 /**
  * Generate JWT bearer token for RewardSTACK API authentication
  *
- * @param workspaceId - Workspace UUID
+ * @param workspaceId - Workspace UUID or slug
  * @returns JWT bearer token string
- * @throws Error if workspace not found or API key missing
+ * @throws Error if workspace not found or RewardSTACK not enabled
  */
 export async function generateRewardStackToken(
   workspaceId: string
 ): Promise<string> {
-  // Check cache first
-  const cached = tokenCache.get(workspaceId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.token;
-  }
+  // Fetch workspace to determine environment
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: {
+      slug: true,
+      rewardStackEnabled: true,
+      rewardStackEnvironment: true,
+    },
+  });
 
-  // Fetch workspace with RewardSTACK configuration
-  const workspace = await getWorkspaceBySlug(workspaceId);
   if (!workspace) {
     throw new Error(`Workspace not found: ${workspaceId}`);
   }
@@ -63,25 +139,23 @@ export async function generateRewardStackToken(
     throw new Error(`RewardSTACK not enabled for workspace: ${workspace.slug}`);
   }
 
-  if (!workspace.rewardStackApiKey) {
-    throw new Error(
-      `RewardSTACK API key not configured for workspace: ${workspace.slug}`
-    );
+  const environment = workspace.rewardStackEnvironment || "QA";
+
+  // Check cache first
+  const cacheKey = environment;
+  const cached = tokenCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.token;
   }
 
-  // For MVP: API key is stored as plain text
-  // Phase 2: Decrypt using pgcrypto if encryption is enabled
-  const apiKey = workspace.rewardStackApiKey;
+  // Obtain fresh token
+  const tokenEntry = await obtainJwtToken(environment);
+  console.log('🔑 Generated fresh RewardSTACK token for', environment, '- expires', new Date(tokenEntry.expiresAt).toLocaleString());
 
-  // Generate JWT bearer token
-  // Note: RewardSTACK uses API key directly as bearer token
-  const token = apiKey;
+  // Cache token
+  tokenCache.set(cacheKey, tokenEntry);
 
-  // Cache token with TTL
-  const expiresAt = Date.now() + DEFAULT_TOKEN_TTL;
-  tokenCache.set(workspaceId, { token, expiresAt });
-
-  return token;
+  return tokenEntry.token;
 }
 
 /**
@@ -93,7 +167,11 @@ export async function generateRewardStackToken(
 export async function getRewardStackBaseUrl(
   workspaceId: string
 ): Promise<string> {
-  const workspace = await getWorkspaceBySlug(workspaceId);
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { rewardStackEnvironment: true },
+  });
+
   if (!workspace) {
     throw new Error(`Workspace not found: ${workspaceId}`);
   }
@@ -103,17 +181,17 @@ export async function getRewardStackBaseUrl(
 }
 
 /**
- * Clear cached token for workspace
+ * Clear cached token for a specific environment
  * Useful for forcing token refresh after configuration changes
  *
- * @param workspaceId - Workspace UUID
+ * @param environment - API environment to clear (QA or PRODUCTION)
  */
-export function clearTokenCache(workspaceId: string): void {
-  tokenCache.delete(workspaceId);
+export function clearTokenCache(environment: keyof typeof REWARDSTACK_ENDPOINTS = "QA"): void {
+  tokenCache.delete(environment);
 }
 
 /**
- * Clear all cached tokens
+ * Clear all cached tokens across all environments
  * Useful for testing or manual cache invalidation
  */
 export function clearAllTokenCache(): void {

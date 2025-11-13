@@ -1,16 +1,40 @@
--- Fix missing default value for ActivitySubmission.id
+-- Fix missing default value for ActivitySubmission.id (if table exists)
 -- This is needed because Prisma schema has @id but no @default(uuid())
-ALTER TABLE "ActivitySubmission" ALTER COLUMN id SET DEFAULT gen_random_uuid();
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ActivitySubmission') THEN
+    ALTER TABLE "ActivitySubmission" ALTER COLUMN id SET DEFAULT gen_random_uuid();
+  END IF;
+END $$;
 
--- Enable RLS on all tables
-ALTER TABLE "Workspace" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "WorkspaceMembership" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Challenge" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "ChallengeAssignment" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Enrollment" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "Activity" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "ActivitySubmission" ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on all tables (conditionally - only if they exist)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Workspace') THEN
+    ALTER TABLE "Workspace" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'User') THEN
+    ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'WorkspaceUser') THEN
+    ALTER TABLE "WorkspaceUser" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Challenge') THEN
+    ALTER TABLE "Challenge" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ChallengeAssignment') THEN
+    ALTER TABLE "ChallengeAssignment" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Enrollment') THEN
+    ALTER TABLE "Enrollment" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Activity') THEN
+    ALTER TABLE "Activity" ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'ActivitySubmission') THEN
+    ALTER TABLE "ActivitySubmission" ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- Helper function to get current user's internal ID from supabaseUserId
 CREATE OR REPLACE FUNCTION current_user_id()
@@ -26,24 +50,29 @@ $$;
 GRANT EXECUTE ON FUNCTION current_user_id() TO authenticated;
 GRANT EXECUTE ON FUNCTION current_user_id() TO anon;
 
--- Helper function to check workspace access
-CREATE OR REPLACE FUNCTION user_can_access_workspace(workspace_id uuid)
-RETURNS boolean
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-STABLE
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM "WorkspaceMembership"
-    WHERE "userId" = current_user_id()
-      AND "workspaceId" = workspace_id
-  )
-$$;
+-- Helper function to check workspace access (only create if WorkspaceUser table exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'WorkspaceUser') THEN
+    CREATE OR REPLACE FUNCTION user_can_access_workspace(workspace_id uuid)
+    RETURNS boolean
+    LANGUAGE sql
+    SECURITY DEFINER
+    SET search_path = public
+    STABLE
+    AS $func$
+      SELECT EXISTS (
+        SELECT 1
+        FROM "WorkspaceUser"
+        WHERE "userId" = current_user_id()
+          AND "workspaceId" = workspace_id
+      )
+    $func$;
 
-GRANT EXECUTE ON FUNCTION user_can_access_workspace(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION user_can_access_workspace(uuid) TO anon;
+    GRANT EXECUTE ON FUNCTION user_can_access_workspace(uuid) TO authenticated;
+    GRANT EXECUTE ON FUNCTION user_can_access_workspace(uuid) TO anon;
+  END IF;
+END $$;
 
 -- Helper function to get user's role in workspace
 CREATE OR REPLACE FUNCTION get_user_workspace_role(workspace_id uuid)

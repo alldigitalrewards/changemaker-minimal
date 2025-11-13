@@ -75,13 +75,15 @@ export async function createUserWithMemberships(
   }
 
   // Create user record
+  const permissions = data.permissions || [];
   const user = await prisma.user.create({
     data: {
       id: data.id || randomUUID(),
       email: data.email,
       supabaseUserId,
       isPending: data.isPending ?? false,
-      permissions: data.permissions || [],
+      permissions,
+      platformSuperAdmin: permissions.includes('platform_super_admin'),
       tenantId: await getTenantIdForWorkspace(
         data.memberships.find((m) => m.isPrimary)?.workspaceId,
         prisma,

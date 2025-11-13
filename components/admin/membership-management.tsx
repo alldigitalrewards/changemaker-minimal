@@ -31,6 +31,7 @@ interface User {
   id: string;
   email: string;
   createdAt: Date;
+  platformSuperAdmin: boolean;
   WorkspaceMembership: {
     Workspace: {
       id: string;
@@ -261,7 +262,7 @@ export function MembershipManagement({ users }: MembershipManagementProps) {
             ) : (
               filteredUsers.map((user) => {
                 const primaryWorkspace = user.WorkspaceMembership.find((m) => m.isPrimary);
-                const isSuperAdmin = isPlatformSuperAdmin([], user.email);
+                const isSuperAdmin = isPlatformSuperAdmin(user);
 
                 return (
                   <TableRow key={user.id}>

@@ -78,11 +78,11 @@ function ResetPasswordForm() {
 
   if (!validSession) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-coral-50 to-coral-100">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <Card className="w-full max-w-md shadow-xl">
           <CardContent className="pt-6">
             <div className="flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-coral-500" />
+              <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
             </div>
           </CardContent>
         </Card>
@@ -91,12 +91,12 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-coral-50 to-coral-100">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-center mb-2">
-            <div className="bg-coral-100 p-3 rounded-full">
-              <KeyRound className="h-6 w-6 text-coral-600" />
+            <div className="bg-gray-100 p-3 rounded-full">
+              <KeyRound className="h-6 w-6 text-gray-900" />
             </div>
           </div>
           <CardTitle className="text-2xl text-center">Reset your password</CardTitle>
@@ -134,7 +134,7 @@ function ResetPasswordForm() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-coral-500 hover:bg-coral-600"
+              className="w-full bg-gray-900 hover:bg-gray-800"
               disabled={loading}
             >
               {loading ? (
@@ -156,11 +156,11 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-coral-50 to-coral-100">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <Card className="w-full max-w-md shadow-xl">
           <CardContent className="pt-6">
             <div className="flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-coral-500" />
+              <Loader2 className="h-8 w-8 animate-spin text-gray-900" />
             </div>
           </CardContent>
         </Card>

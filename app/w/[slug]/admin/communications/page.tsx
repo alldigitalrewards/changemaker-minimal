@@ -67,7 +67,7 @@ export default async function CommunicationsPage({
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-coral-100 text-coral-600">
+            <div className="p-2 rounded-lg bg-gray-100 text-gray-900">
               <Send className="h-5 w-5" />
             </div>
             <div>

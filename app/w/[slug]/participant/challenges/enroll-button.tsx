@@ -43,7 +43,7 @@ export default function EnrollButton({
       onClick={handleEnroll} 
       disabled={loading}
       size="sm"
-      className={isInvited ? "bg-coral-500 hover:bg-coral-600" : "bg-blue-500 hover:bg-blue-600"}
+      className={isInvited ? "bg-gray-900 hover:bg-gray-800" : "bg-blue-500 hover:bg-blue-600"}
     >
       <UserPlus className="h-4 w-4 mr-1" />
       {loading ? "Joining..." : isInvited ? "Accept" : "Join"}

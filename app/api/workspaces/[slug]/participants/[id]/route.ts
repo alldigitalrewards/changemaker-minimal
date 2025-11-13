@@ -1,470 +1,201 @@
-import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
-import { prisma } from "@/lib/db"
-import { getCurrentWorkspace, getUserWorkspaceRole } from "@/lib/workspace-context"
-import { Role } from "@/lib/types"
-import { logActivityEvent, getUserBySupabaseId } from "@/lib/db/queries"
-import { sendInviteEmail } from "@/lib/email/smtp"
-import { renderInviteEmail } from "@/lib/email/templates/invite"
+import { NextRequest, NextResponse } from "next/server";
+import { requireWorkspaceAccess } from "@/lib/auth/api-auth";
+import { prisma } from "@/lib/prisma";
+import { syncParticipantToRewardStack } from "@/lib/rewardstack/participant-sync";
 
-export async function GET(
-  request: Request,
-  context: { params: Promise<{ slug: string; id: string }> }
+type Params = Promise<{ slug: string; id: string }>;
+
+/**
+ * PATCH /api/workspaces/[slug]/participants/[id]
+ * Update participant profile (address, phone, etc.)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Params }
 ) {
   try {
-    const { slug, id } = await context.params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { slug, id } = await params;
+    const { workspace, user: currentUser } = await requireWorkspaceAccess(slug);
 
-    if (!user) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      )
-    }
+    const body = await request.json();
 
-    // Check admin access
-    const role = await getUserWorkspaceRole(slug)
-    if (!role || role !== "ADMIN") {
-      return NextResponse.json(
-        { message: "Forbidden: Admin access required" },
-        { status: 403 }
-      )
-    }
-
-    const workspace = await getCurrentWorkspace(slug)
-    if (!workspace) {
-      return NextResponse.json(
-        { message: "Workspace not found" },
-        { status: 404 }
-      )
-    }
-
-    // Get participant with enrollments (must be a member of this workspace to view)
-    const participant = await prisma.user.findFirst({
+    // Check if user is updating their own profile or is an admin
+    const membership = await prisma.workspaceMembership.findFirst({
       where: {
-        id,
-        WorkspaceMembership: { some: { workspaceId: workspace.id } }
+        userId: currentUser.dbUser.id,
+        workspaceId: workspace.id,
       },
-      include: {
-        Enrollment: {
-          where: {
-            Challenge: {
-              workspaceId: workspace.id
-            }
-          },
-          include: {
-            Challenge: {
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                startDate: true,
-                endDate: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        }
-      }
-    })
+    });
 
-    if (!participant) {
+    const isAdmin = membership?.role === "ADMIN";
+    const isSelf = currentUser.dbUser.id === id;
+
+    if (!isAdmin && !isSelf) {
       return NextResponse.json(
-        { message: "Participant not found" },
-        { status: 404 }
-      )
+        { error: "Unauthorized to update this participant" },
+        { status: 403 }
+      );
     }
 
-    // Transform Enrollment to enrollments for API consistency
-    const { Enrollment, ...rest } = participant
+    // Update user profile
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: {
+        addressLine1: body.addressLine1,
+        addressLine2: body.addressLine2,
+        city: body.city,
+        state: body.state,
+        zipCode: body.zipCode,
+        country: body.country,
+        phone: body.phone,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        displayName: body.displayName,
+        company: body.company,
+        jobTitle: body.jobTitle,
+        department: body.department,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        displayName: true,
+        addressLine1: true,
+        addressLine2: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
+        phone: true,
+        rewardStackParticipantId: true,
+        rewardStackSyncStatus: true,
+      },
+    });
+
+    // If address was updated and user is synced to RewardSTACK, re-sync participant
+    const addressUpdated =
+      body.addressLine1 !== undefined ||
+      body.addressLine2 !== undefined ||
+      body.city !== undefined ||
+      body.state !== undefined ||
+      body.zipCode !== undefined ||
+      body.country !== undefined;
+
+    if (
+      addressUpdated &&
+      workspace.rewardStackEnabled &&
+      updatedUser.rewardStackParticipantId
+    ) {
+      console.log(
+        `[PATCH /participants/${id}] Address updated, re-syncing to RewardSTACK...`
+      );
+
+      // Re-sync participant to update address in RewardSTACK
+      await syncParticipantToRewardStack(id, workspace.id);
+
+      // Retry any failed SKU reward issuances for this user
+      await retryFailedSkuRewards(id, workspace.id);
+    }
+
     return NextResponse.json({
-      participant: {
-        ...rest,
-        enrollments: Enrollment
-      }
-    })
+      user: updatedUser,
+      message: "Profile updated successfully",
+    });
   } catch (error) {
-    console.error("Error fetching participant:", error)
+    console.error("Failed to update participant:", error);
     return NextResponse.json(
-      { message: "Failed to fetch participant" },
+      {
+        error: "Failed to update participant",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
-    )
+    );
   }
 }
 
-export async function PUT(
-  request: Request,
-  context: { params: Promise<{ slug: string; id: string }> }
-) {
+/**
+ * Retry failed SKU reward issuances for a user after address update
+ */
+async function retryFailedSkuRewards(
+  userId: string,
+  workspaceId: string
+): Promise<void> {
   try {
-    const { slug, id } = await context.params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      )
-    }
-
-    // Check admin access
-    const role = await getUserWorkspaceRole(slug)
-    if (!role || role !== "ADMIN") {
-      return NextResponse.json(
-        { message: "Forbidden: Admin access required" },
-        { status: 403 }
-      )
-    }
-
-    const workspace = await getCurrentWorkspace(slug)
-    if (!workspace) {
-      return NextResponse.json(
-        { message: "Workspace not found" },
-        { status: 404 }
-      )
-    }
-
-    const { role: newRole } = await request.json()
-
-    if (!newRole || !['ADMIN', 'PARTICIPANT'].includes(newRole)) {
-      return NextResponse.json(
-        { message: "Invalid role. Must be ADMIN or PARTICIPANT" },
-        { status: 400 }
-      )
-    }
-
-    // Check if participant exists and belongs to this workspace (membership-aware)
-    const membership = await prisma.workspaceMembership.findUnique({
-      where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } }
-    })
-    const participant = membership ? await prisma.user.findUnique({ where: { id } }) : null
-
-    if (!participant || !membership) {
-      return NextResponse.json(
-        { message: "Participant not found" },
-        { status: 404 }
-      )
-    }
-
-    // Defensive check to satisfy TypeScript narrowing and ensure membership exists
-    if (!membership) {
-      return NextResponse.json(
-        { message: "Membership not found" },
-        { status: 404 }
-      )
-    }
-
-    // Update participant role with guardrails
-    const previousRole = membership.role as Role
-    const dbUser = await getUserBySupabaseId(user.id)
-    if (!dbUser) {
-      return NextResponse.json(
-        { message: "User record not found" },
-        { status: 401 }
-      )
-    }
-
-    // Prevent demoting the last admin in the workspace
-    if (previousRole === 'ADMIN' && newRole === 'PARTICIPANT') {
-      const adminCount = await prisma.workspaceMembership.count({
-        where: { workspaceId: workspace.id, role: 'ADMIN' as any }
-      })
-      if (adminCount <= 1) {
-        return NextResponse.json(
-          { message: "Cannot demote the last admin in this workspace" },
-          { status: 400 }
-        )
-      }
-      if (dbUser.id === id && adminCount <= 1) {
-        return NextResponse.json(
-          { message: "You cannot demote yourself as the last admin" },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Update participant role in WorkspaceMembership (role only exists here now)
-    await prisma.workspaceMembership.update({
-      where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } },
-      data: { role: newRole as any }
-    })
-
-    // Get updated participant
-    const updatedParticipant = await prisma.user.findUnique({ where: { id } })
-    if (!updatedParticipant) {
-      return NextResponse.json(
-        { message: "Participant not found after update" },
-        { status: 500 }
-      )
-    }
-
-    if (previousRole !== newRole) {
-      await logActivityEvent({
-        workspaceId: workspace.id,
-        userId: updatedParticipant.id,
-        actorUserId: dbUser.id as any,
-        type: 'RBAC_ROLE_CHANGED' as any,
-        metadata: { oldRole: previousRole, newRole }
-      })
-    }
-
-    return NextResponse.json({ 
-      participant: updatedParticipant,
-      message: `Participant role updated to ${newRole}` 
-    })
-  } catch (error) {
-    console.error("Error updating participant:", error)
-    return NextResponse.json(
-      { message: "Failed to update participant" },
-      { status: 500 }
-    )
-  }
-}
-
-export async function DELETE(
-  request: Request,
-  context: { params: Promise<{ slug: string; id: string }> }
-) {
-  try {
-    const { slug, id } = await context.params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      )
-    }
-    const dbUser = await getUserBySupabaseId(user.id)
-    if (!dbUser) {
-      return NextResponse.json(
-        { message: "User record not found" },
-        { status: 401 }
-      )
-    }
-
-    // Check admin access
-    const role = await getUserWorkspaceRole(slug)
-    if (!role || role !== "ADMIN") {
-      return NextResponse.json(
-        { message: "Forbidden: Admin access required" },
-        { status: 403 }
-      )
-    }
-
-    const workspace = await getCurrentWorkspace(slug)
-    if (!workspace) {
-      return NextResponse.json(
-        { message: "Workspace not found" },
-        { status: 404 }
-      )
-    }
-
-    // Check membership in this workspace (membership-aware)
-    const membership = await prisma.workspaceMembership.findUnique({
-      where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } }
-    })
-
-    if (!membership) {
-      return NextResponse.json(
-        { message: "Participant not found" },
-        { status: 404 }
-      )
-    }
-
-    // Prevent removing admins; also prevent removing self if admin
-    if (membership.role === 'ADMIN') {
-      return NextResponse.json(
-        { message: "Cannot remove an admin from the workspace" },
-        { status: 403 }
-      )
-    }
-
-    // Delete all enrollments first (due to foreign key constraints)
-    await prisma.enrollment.deleteMany({
+    // Find failed SKU rewards for this user
+    const failedRewards = await prisma.rewardIssuance.findMany({
       where: {
-        userId: id,
-        Challenge: {
-          workspaceId: workspace.id
-        }
-      }
-    })
+        userId,
+        workspaceId,
+        type: "sku",
+        status: "FAILED",
+        rewardStackStatus: "FAILED",
+      },
+      select: {
+        id: true,
+        rewardStackErrorMessage: true,
+      },
+    });
 
-    // Remove membership record for this workspace (new system)
-    await prisma.workspaceMembership.deleteMany({
-      where: { userId: id, workspaceId: workspace.id }
-    })
+    if (failedRewards.length === 0) {
+      return;
+    }
 
-    // Legacy cleanup removed; rely on WorkspaceMembership only
+    console.log(
+      `[retryFailedSkuRewards] Found ${failedRewards.length} failed SKU rewards for user ${userId}`
+    );
 
-    await logActivityEvent({
-      workspaceId: workspace.id,
-      userId: id,
-      actorUserId: dbUser.id as any,
-      type: 'UNENROLLED' as any,
-      metadata: { reason: 'Removed from workspace' }
-    })
+    // Only retry rewards that failed due to address validation
+    const addressRelatedErrors = failedRewards.filter(
+      (r) =>
+        r.rewardStackErrorMessage?.toLowerCase().includes("address") ||
+        r.rewardStackErrorMessage?.toLowerCase().includes("shipping") ||
+        r.rewardStackErrorMessage?.toLowerCase().includes("state") ||
+        r.rewardStackErrorMessage?.toLowerCase().includes("zip")
+    );
 
-    // If this was a pending placeholder user with no other memberships, delete the user row
-    try {
-      const [userRecord, otherMemberships] = await Promise.all([
-        prisma.user.findUnique({ where: { id } }),
-        prisma.workspaceMembership.count({ where: { userId: id } })
-      ])
-      if (userRecord && userRecord.isPending && !userRecord.supabaseUserId && otherMemberships === 0) {
-        await prisma.user.delete({ where: { id } })
-      }
-    } catch (_) {}
+    if (addressRelatedErrors.length === 0) {
+      console.log(
+        `[retryFailedSkuRewards] No address-related failures found, skipping retry`
+      );
+      return;
+    }
 
-    return NextResponse.json({ 
-      message: "Participant removed successfully" 
-    })
+    console.log(
+      `[retryFailedSkuRewards] Retrying ${addressRelatedErrors.length} address-related failures...`
+    );
+
+    // Import dynamically to avoid circular dependency
+    const { issueRewardTransaction } = await import(
+      "@/lib/rewardstack/reward-logic"
+    );
+
+    // Retry each failed reward
+    for (const reward of addressRelatedErrors) {
+      // Reset status to PENDING to allow retry
+      await prisma.rewardIssuance.update({
+        where: { id: reward.id },
+        data: {
+          status: "PENDING",
+          rewardStackStatus: "PENDING",
+          rewardStackErrorMessage: null,
+        },
+      });
+
+      // Retry the issuance (fire and forget - don't wait)
+      issueRewardTransaction(reward.id).catch((err) => {
+        console.error(
+          `[retryFailedSkuRewards] Failed to retry reward ${reward.id}:`,
+          err
+        );
+      });
+    }
+
+    console.log(
+      `[retryFailedSkuRewards] Initiated retry for ${addressRelatedErrors.length} rewards`
+    );
   } catch (error) {
-    console.error("Error removing participant:", error)
-    return NextResponse.json(
-      { message: "Failed to remove participant" },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(
-  request: Request,
-  context: { params: Promise<{ slug: string; id: string }> }
-) {
-  try {
-    const { slug, id } = await context.params
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      )
-    }
-
-    // Check admin access
-    const role = await getUserWorkspaceRole(slug)
-    if (!role || role !== "ADMIN") {
-      return NextResponse.json(
-        { message: "Forbidden: Admin access required" },
-        { status: 403 }
-      )
-    }
-
-    const workspace = await getCurrentWorkspace(slug)
-    if (!workspace) {
-      return NextResponse.json(
-        { message: "Workspace not found" },
-        { status: 404 }
-      )
-    }
-
-    const { action } = await request.json()
-
-    // Get participant (membership-aware)
-    const membership = await prisma.workspaceMembership.findUnique({
-      where: { userId_workspaceId: { userId: id, workspaceId: workspace.id } }
-    })
-    if (!membership) {
-      return NextResponse.json(
-        { message: "Participant not found" },
-        { status: 404 }
-      )
-    }
-    const participant = await prisma.user.findUnique({ where: { id } })
-    if (!participant) {
-      return NextResponse.json(
-        { message: "Participant not found" },
-        { status: 404 }
-      )
-    }
-
-    if (action === 'send_password_reset') {
-      // Use Supabase Auth to send password reset email
-      const { error } = await supabase.auth.resetPasswordForEmail(participant.email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`
-      })
-
-      if (error) {
-        console.error("Error sending password reset:", error)
-        return NextResponse.json(
-          { message: "Failed to send password reset email" },
-          { status: 500 }
-        )
-      }
-
-      return NextResponse.json({ 
-        message: "Password reset email sent successfully" 
-      })
-    }
-
-    if (action === 'resend_invite') {
-      // Use the canonical invite link format and send via internal sender
-      const invite = await prisma.inviteCode.findFirst({
-        where: { workspaceId: workspace.id },
-        orderBy: { createdAt: 'desc' }
-      })
-      if (!invite) {
-        return NextResponse.json({ message: 'No invite code available to resend' }, { status: 404 })
-      }
-
-      const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
-      const host = request.headers.get('host') || process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
-      const baseUrl = `${proto}://${host}`
-      const inviteUrl = `${baseUrl}/invite/${invite.code}`
-
-      // Get full database user for name fields
-      const dbUser = await getUserBySupabaseId(user.id)
-      if (!dbUser) {
-        return NextResponse.json({ message: 'User not found' }, { status: 404 })
-      }
-
-      try {
-        const html = renderInviteEmail({
-          workspaceName: workspace.name,
-          inviterEmail: dbUser.email,
-          inviterFirstName: dbUser.firstName,
-          inviterLastName: dbUser.lastName,
-          inviterDisplayName: dbUser.displayName,
-          role: membership.role,
-          inviteUrl,
-          expiresAt: invite.expiresAt,
-          challengeTitle: null
-        })
-        await sendInviteEmail({
-          to: participant.email,
-          subject: `Invitation to join ${workspace.name}`,
-          html
-        })
-      } catch (e) {
-        return NextResponse.json({ message: 'Failed to resend invite email' }, { status: 500 })
-      }
-
-      await logActivityEvent({
-        workspaceId: workspace.id,
-        userId: id,
-        actorUserId: dbUser.id as any,
-        type: 'EMAIL_RESENT' as any,
-        metadata: { inviteCode: invite.code }
-      })
-
-      return NextResponse.json({ message: 'Invite email sent successfully' })
-    }
-
-    return NextResponse.json(
-      { message: "Invalid action" },
-      { status: 400 }
-    )
-  } catch (error) {
-    console.error("Error processing email action:", error)
-    return NextResponse.json(
-      { message: "Failed to process email action" },
-      { status: 500 }
-    )
+    console.error("[retryFailedSkuRewards] Error:", error);
+    // Don't throw - we don't want to fail the address update if retry fails
   }
 }

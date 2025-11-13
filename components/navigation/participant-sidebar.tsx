@@ -9,7 +9,10 @@ import {
   Activity,
   TrendingUp,
   User as UserIcon,
+  Gift,
+  Bell,
 } from 'lucide-react';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 interface ParticipantSidebarProps {
   workspace: {
@@ -23,7 +26,9 @@ const navigation = [
   { name: 'Dashboard', href: '/participant/dashboard', icon: LayoutDashboard },
   { name: 'Challenges', href: '/participant/challenges', icon: Trophy },
   { name: 'My Activities', href: '/participant/activities', icon: Activity },
+  { name: 'My Rewards', href: '/participant/rewards', icon: Gift },
   { name: 'Leaderboard', href: '/participant/leaderboard', icon: TrendingUp },
+  { name: 'Notifications', href: '/participant/notifications', icon: Bell },
   { name: 'Profile', href: '/participant/profile', icon: UserIcon },
 ];
 
@@ -35,16 +40,19 @@ export default function ParticipantSidebar({ workspace }: ParticipantSidebarProp
       <div className="flex flex-col h-full">
         {/* Workspace info */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {workspace.name}
+                </p>
+                <p className="text-xs text-gray-500">Participant View</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {workspace.name}
-              </p>
-              <p className="text-xs text-gray-500">Participant View</p>
-            </div>
+            <NotificationBell workspaceSlug={workspace.slug} />
           </div>
         </div>
 

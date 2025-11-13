@@ -1,12 +1,20 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { SplitViewEditor } from '@/components/emails/split-view-editor'
+import { ChevronDown, ChevronUp, Bot } from 'lucide-react'
+import { EmailTemplate } from '@/components/emails/TemplateBrowser'
+import { AIConversationPanel } from '@/components/emails/AIConversationPanel'
+import { TemplateLoadSavePanel } from '@/components/emails/TemplateLoadSavePanel'
+import { EmailLivePreview } from '@/components/emails/EmailLivePreview'
+import { GenerationSettingsPanel, DEFAULT_GENERATION_SETTINGS, type GenerationSettings } from '@/components/emails/GenerationSettingsPanel'
 
 export function DefaultEmailsPanel({ slug, workspaceName, userEmail }: { slug: string; workspaceName: string; userEmail: string }) {
   const [toEmail, setToEmail] = useState(userEmail)
@@ -63,16 +71,28 @@ export function DefaultEmailsPanel({ slug, workspaceName, userEmail }: { slug: s
 }
 
 export type TemplateRow = {
+  id?: string
   type: 'INVITE' | 'EMAIL_RESENT' | 'ENROLLMENT_UPDATE' | 'REMINDER' | 'GENERIC'
   subject: string | null
   html: string | null
   enabled: boolean
   updatedAt: string
+  name?: string | null
+  description?: string | null
+  tags?: string[]
+  generatedByAI?: boolean
+  conversationHistory?: any
 }
 
-export function TemplatesPanel({ slug }: { slug: string }) {
+export function TemplatesPanel({ slug, userEmail, onOpenInAI }: { slug: string; userEmail: string; onOpenInAI?: (templateData: any) => void }) {
   const [templates, setTemplates] = useState<TemplateRow[] | null>(null)
   const [loading, setLoading] = useState(true)
+  const [expandedTemplate, setExpandedTemplate] = useState<string | null>(null)
+  const [workspaceInfo, setWorkspaceInfo] = useState<{ name: string; brandColor?: string } | null>(null)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [sendingTest, setSendingTest] = useState<string | null>(null)
+  const [testEmails, setTestEmails] = useState<Record<string, string>>({})
+  const [editState, setEditState] = useState<Record<string, { subject: string; html: string; enabled: boolean }>>({})
 
   const load = async () => {
     setLoading(true)
@@ -80,6 +100,20 @@ export function TemplatesPanel({ slug }: { slug: string }) {
       const res = await fetch(`/api/workspaces/${slug}/emails/templates`)
       const data = await res.json()
       setTemplates(data.templates || [])
+
+      // Load initial edit state
+      const initialState: Record<string, { subject: string; html: string; enabled: boolean }> = {}
+      const initialTestEmails: Record<string, string> = {}
+      data.templates?.forEach((t: TemplateRow) => {
+        initialState[t.type] = {
+          subject: t.subject ?? '',
+          html: t.html ?? '',
+          enabled: t.enabled
+        }
+        initialTestEmails[t.type] = userEmail
+      })
+      setEditState(initialState)
+      setTestEmails(initialTestEmails)
     } catch (e) {
       toast.error('Failed to load templates')
     } finally {
@@ -87,7 +121,24 @@ export function TemplatesPanel({ slug }: { slug: string }) {
     }
   }
 
-  useEffect(() => { load() // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadWorkspaceInfo = async () => {
+    try {
+      const res = await fetch(`/api/workspaces/${slug}/emails/settings`)
+      const data = await res.json()
+      setWorkspaceInfo({
+        name: data.settings?.fromName || slug,
+        brandColor: data.settings?.brandColor || '#F97316'
+      })
+    } catch (e) {
+      // Fallback to basic info
+      setWorkspaceInfo({ name: slug })
+    }
+  }
+
+  useEffect(() => {
+    load()
+    loadWorkspaceInfo()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const types: TemplateRow['type'][] = ['INVITE', 'EMAIL_RESENT', 'ENROLLMENT_UPDATE', 'REMINDER', 'GENERIC']
@@ -105,57 +156,364 @@ export function TemplatesPanel({ slug }: { slug: string }) {
     return found || { type: t, subject: null, html: null, enabled: false, updatedAt: new Date().toISOString() }
   }
 
+  const toggleExpanded = (type: string) => {
+    setExpandedTemplate(expandedTemplate === type ? null : type)
+  }
+
+  const updateEditState = (type: string, field: 'subject' | 'html' | 'enabled', value: string | boolean) => {
+    setEditState(prev => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: value
+      }
+    }))
+  }
+
+  const save = async (type: TemplateRow['type']) => {
+    setSaving(type)
+    try {
+      const state = editState[type]
+      const res = await fetch(`/api/workspaces/${slug}/emails/templates/${type.toLowerCase()}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: state.subject,
+          html: state.html,
+          enabled: state.enabled
+        })
+      })
+      if (!res.ok) throw new Error('Save failed')
+      toast.success(`${type} template saved`)
+      await load()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save template')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const sendTestEmail = async (type: TemplateRow['type']) => {
+    setSendingTest(type)
+    try {
+      const state = editState[type]
+      const testEmail = testEmails[type]
+
+      if (!testEmail) {
+        toast.error('Please enter a test email address')
+        return
+      }
+
+      const res = await fetch(`/api/workspaces/${slug}/emails/templates/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: testEmail,
+          subject: state.subject,
+          html: state.html,
+          templateType: type
+        })
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Failed to send test email')
+      }
+
+      const data = await res.json()
+      toast.success(`Test email sent to ${data.sentTo}`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to send test email')
+    } finally {
+      setSendingTest(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {types.map(type => {
         const row = getRow(type)
-        const [subject, setSubject] = [row.subject ?? '', (v: string) => { row.subject = v }]
-        const [html, setHtml] = [row.html ?? '', (v: string) => { row.html = v }]
-        const [enabled, setEnabled] = [row.enabled, (v: boolean) => { row.enabled = v }]
-
-        const save = async () => {
-          try {
-            const res = await fetch(`/api/workspaces/${slug}/emails/templates/${type.toLowerCase()}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ subject: row.subject, html: row.html, enabled: row.enabled })
-            })
-            if (!res.ok) throw new Error('Save failed')
-            toast.success(`${type} template saved`)
-            await load()
-          } catch (e) {
-            toast.error(e instanceof Error ? e.message : 'Failed to save template')
-          }
-        }
+        const isExpanded = expandedTemplate === type
+        const state = editState[type] || { subject: row.subject ?? '', html: row.html ?? '', enabled: row.enabled }
+        const isSaving = saving === type
 
         return (
           <Card key={type}>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{type}</span>
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <CardTitle className="flex items-center gap-2">
+                    <span>{type}</span>
+                    {row.generatedByAI && (
+                      <Badge variant="secondary" className="shrink-0">
+                        <Bot className="h-3 w-3 mr-1" />
+                        AI
+                      </Badge>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleExpanded(type)}
+                      className="h-8"
+                    >
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="h-4 w-4 mr-1" />
+                          Collapse
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-4 w-4 mr-1" />
+                          Edit Template
+                        </>
+                      )}
+                    </Button>
+                    {row.generatedByAI && onOpenInAI && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onOpenInAI(row)}
+                        className="h-8"
+                      >
+                        <Bot className="h-4 w-4 mr-1" />
+                        Open in AI Composer
+                      </Button>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Override subject and body to customize this email for the workspace.
+                  </CardDescription>
+                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-gray-600">Enabled</span>
-                  <Switch checked={enabled} onCheckedChange={setEnabled as any} />
+                  <Switch
+                    checked={state.enabled}
+                    onCheckedChange={(checked) => updateEditState(type, 'enabled', checked)}
+                  />
                 </div>
-              </CardTitle>
-              <CardDescription>Override subject and body to customize this email for the workspace.</CardDescription>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-600">Subject</label>
-                <Input defaultValue={subject} onChange={e => setSubject(e.target.value)} placeholder={`Subject for ${type}`} />
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">HTML</label>
-                <Textarea defaultValue={html} onChange={e => setHtml(e.target.value)} placeholder="HTML content with tokens like {{workspace.name}}" rows={8} />
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={save}>Save</Button>
-              </div>
-            </CardContent>
+            {isExpanded && (
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm text-gray-600 block mb-2">Subject</label>
+                  <Input
+                    value={state.subject}
+                    onChange={e => updateEditState(type, 'subject', e.target.value)}
+                    placeholder={`Subject for ${type}`}
+                  />
+                </div>
+                <SplitViewEditor
+                  value={state.html}
+                  onChange={(html) => updateEditState(type, 'html', html)}
+                  workspaceSlug={slug}
+                  templateType={type}
+                  workspaceName={workspaceInfo?.name}
+                  brandColor={workspaceInfo?.brandColor}
+                  subject={state.subject}
+                />
+                <div className="border-t pt-4">
+                  <div className="flex items-end gap-2 mb-4">
+                    <div className="flex-1">
+                      <label className="text-sm text-gray-600 block mb-2">Send test email to</label>
+                      <Input
+                        type="email"
+                        value={testEmails[type] || ''}
+                        onChange={(e) => setTestEmails(prev => ({ ...prev, [type]: e.target.value }))}
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => sendTestEmail(type)}
+                      disabled={sendingTest === type || !testEmails[type]}
+                    >
+                      {sendingTest === type ? 'Sending...' : 'Send Test Email'}
+                    </Button>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={() => save(type)}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? 'Saving...' : 'Save Template'}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            )}
           </Card>
         )
       })}
+    </div>
+  )
+}
+
+export function AIComposerPanel({ slug, workspaceName, initialTemplate }: { slug: string; workspaceName: string; initialTemplate?: EmailTemplate | null }) {
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(initialTemplate || null)
+  const [brandColor, setBrandColor] = useState<string>('#F97316')
+  const [currentSubject, setCurrentSubject] = useState<string>('')
+  const [currentHtml, setCurrentHtml] = useState<string>('')
+  const [isGenerating, setIsGenerating] = useState<boolean>(false)
+  const [generationSettings, setGenerationSettings] = useState<GenerationSettings>(DEFAULT_GENERATION_SETTINGS)
+
+  // Update selectedTemplate when initialTemplate changes
+  useEffect(() => {
+    if (initialTemplate) {
+      setSelectedTemplate(initialTemplate)
+      setCurrentSubject(initialTemplate.subject || '')
+      setCurrentHtml(initialTemplate.html || '')
+    }
+  }, [initialTemplate])
+
+  // Sync initial template content to preview on mount
+  useEffect(() => {
+    if (initialTemplate?.subject || initialTemplate?.html) {
+      setCurrentSubject(initialTemplate.subject || '')
+      setCurrentHtml(initialTemplate.html || '')
+    }
+  }, [])
+
+  // Load workspace settings for brand color
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await fetch(`/api/workspaces/${slug}/emails/settings`)
+        const data = await res.json()
+        if (data.settings?.brandColor) {
+          setBrandColor(data.settings.brandColor)
+        }
+      } catch (error) {
+        console.error('Failed to load workspace settings:', error)
+      }
+    }
+    loadSettings()
+  }, [slug])
+
+  const handleLoadTemplate = useCallback(async (templateId: string) => {
+    try {
+      const res = await fetch(`/api/workspaces/${slug}/emails/templates/ai-list`)
+      const data = await res.json()
+      const template = data.templates?.find((t: EmailTemplate) => t.id === templateId)
+      if (template) {
+        setSelectedTemplate(template)
+        setCurrentSubject(template.subject || '')
+        setCurrentHtml(template.html || '')
+      }
+    } catch (error) {
+      toast.error('Failed to load template')
+    }
+  }, [slug])
+
+  const handleNewTemplate = useCallback(() => {
+    setSelectedTemplate(null)
+    setCurrentSubject('')
+    setCurrentHtml('')
+  }, [])
+
+  const handleSaveTemplate = useCallback(async (metadata: {
+    name: string
+    description: string
+    type: any
+  }) => {
+    try {
+      if (!currentSubject || !currentHtml) {
+        toast.error('Please generate email content before saving')
+        return
+      }
+
+      const response = await fetch(`/api/workspaces/${slug}/emails/templates/ai-save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: metadata.name,
+          type: metadata.type,
+          subject: currentSubject,
+          html: currentHtml,
+          description: metadata.description,
+          tags: [],
+          conversationHistory: selectedTemplate?.conversationHistory || [],
+          aiModel: 'claude-sonnet-4-5-20250929',
+          updateExisting: !!selectedTemplate?.id,
+          existingTemplateId: selectedTemplate?.id,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save template')
+      }
+
+      const { template } = await response.json()
+      setSelectedTemplate(template)
+      toast.success('Template saved successfully')
+    } catch (error) {
+      console.error('Save error:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to save template')
+    }
+  }, [currentSubject, currentHtml, selectedTemplate, slug])
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left Side (2/3): Conversation + Preview */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Conversation - Top */}
+        <AIConversationPanel
+          workspaceSlug={slug}
+          workspaceName={workspaceName}
+          brandColor={brandColor}
+          generationSettings={generationSettings}
+          initialTemplate={selectedTemplate ? {
+            id: selectedTemplate.id,
+            name: selectedTemplate.name,
+            type: selectedTemplate.type,
+            subject: selectedTemplate.subject,
+            html: selectedTemplate.html,
+            conversationHistory: selectedTemplate.conversationHistory as any,
+          } : undefined}
+          onContentUpdate={(subject: string, html: string) => {
+            setCurrentSubject(subject)
+            setCurrentHtml(html)
+          }}
+          onGeneratingChange={(generating: boolean) => {
+            setIsGenerating(generating)
+          }}
+        />
+
+        {/* Live Preview - Bottom */}
+        <EmailLivePreview
+          subject={currentSubject}
+          html={currentHtml}
+          isGenerating={isGenerating}
+          workspaceName={workspaceName}
+          workspaceSlug={slug}
+        />
+      </div>
+
+      {/* Right Side (1/3): Settings & Template Management */}
+      <div className="lg:col-span-1">
+        <div className="sticky top-6 space-y-6">
+          {/* Generation Settings */}
+          <GenerationSettingsPanel
+            settings={generationSettings}
+            onChange={setGenerationSettings}
+          />
+
+          {/* Template Management */}
+          <TemplateLoadSavePanel
+            workspaceSlug={slug}
+            currentTemplate={selectedTemplate ? {
+              id: selectedTemplate.id,
+              name: selectedTemplate.name || undefined,
+              type: selectedTemplate.type,
+              description: selectedTemplate.description || undefined,
+            } : null}
+            onLoadTemplate={handleLoadTemplate}
+            onNewTemplate={handleNewTemplate}
+            onSaveTemplate={handleSaveTemplate}
+          />
+        </div>
+      </div>
     </div>
   )
 }

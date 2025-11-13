@@ -21,12 +21,18 @@ export const POST = withErrorHandling(async (
     return NextResponse.json({ error: 'Too many attempts', code: 'RATE_LIMITED', retryAfter: rl.retryAfter }, { status: 429 })
   }
   const user = await requireAuth()
-  
+
   const body: InviteCodeAcceptRequest = await request.json()
-  
+
   if (!body.code || typeof body.code !== 'string' || body.code.trim().length === 0) {
     return NextResponse.json({ error: 'Valid invite code is required' }, { status: 400 })
   }
+
+  console.log('[INVITE ACCEPT] Attempting to accept invite:', {
+    code: body.code,
+    userId: user.dbUser.id,
+    userEmail: user.dbUser.email
+  });
 
   const result = await acceptInviteCode(body.code, user.dbUser.id, user.dbUser.email)
 

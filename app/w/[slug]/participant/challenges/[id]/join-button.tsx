@@ -49,7 +49,7 @@ export default function JoinButton({ challengeId, workspaceSlug }: JoinButtonPro
 
   return (
     <Button 
-      className="w-full bg-coral-500 hover:bg-coral-600"
+      className="w-full bg-gray-900 hover:bg-gray-800"
       onClick={handleJoin}
       disabled={isLoading}
     >
@@ -147,25 +147,25 @@ export function SimpleSubmissionDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-coral-500 hover:bg-coral-600 flex-1">
+        <Button className="bg-gray-900 hover:bg-gray-800 flex-1">
           Submit Activity
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-coral-800">Submit Activity</DialogTitle>
+          <DialogTitle className="text-gray-900">Submit Activity</DialogTitle>
           <DialogDescription>
             <span className="font-medium">{activityName}</span> - Worth {pointsValue} points
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {/* Activity Info */}
-          <div className="p-3 bg-coral-50 rounded-lg border border-coral-200">
-            <p className="text-sm text-coral-700 mb-1">
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-800 mb-1">
               <strong>Activity Type:</strong> {activityType.replace('_', ' ').toLowerCase()}
             </p>
             {requiresApproval && (
-              <p className="text-xs text-coral-600">
+              <p className="text-xs text-gray-900">
                 📋 This submission will be reviewed before points are awarded
               </p>
             )}
@@ -179,7 +179,7 @@ export function SimpleSubmissionDialog({
               placeholder="Enter your submission content..."
               rows={4}
               maxLength={500}
-              className="w-full p-3 border rounded-md resize-none focus:ring-2 focus:ring-coral-500 focus:border-coral-500"
+              className="w-full p-3 border rounded-md resize-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
             />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
               <span>Be detailed and specific</span>
@@ -198,7 +198,7 @@ export function SimpleSubmissionDialog({
               Cancel
             </Button>
             <Button 
-              className="flex-1 bg-coral-500 hover:bg-coral-600"
+              className="flex-1 bg-gray-900 hover:bg-gray-800"
               onClick={handleSubmit}
               disabled={isSubmitting || !textContent.trim()}
             >

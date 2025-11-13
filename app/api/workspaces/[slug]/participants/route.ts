@@ -1,187 +1,242 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { requireWorkspaceAccess, requireWorkspaceAdmin, withErrorHandling } from '@/lib/auth/api-auth';
-import { prisma } from '@/lib/prisma';
-import { createInviteCode, logActivityEvent } from '@/lib/db/queries';
-import { sendInviteEmail } from '@/lib/email/smtp';
-import { renderInviteEmail } from '@/lib/email/templates/invite';
-import { rateLimit } from '@/lib/rate-limit';
+import { NextRequest, NextResponse } from "next/server";
+import { requireWorkspaceAdmin, withErrorHandling } from "@/lib/auth/api-auth";
+import { prisma } from "@/lib/prisma";
+import { createInviteCode, logActivityEvent } from "@/lib/db/queries";
+import { sendInviteEmail } from "@/lib/email/smtp";
+import { renderInviteEmail } from "@/lib/email/templates/invite";
+import { rateLimit } from "@/lib/rate-limit";
 
-export const GET = withErrorHandling(async (
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) => {
-  const { slug } = await params;
-  const { workspace } = await requireWorkspaceAccess(slug);
+type Params = Promise<{ slug: string }>;
 
-  const memberships = await prisma.workspaceMembership.findMany({
-    where: { workspaceId: workspace.id },
-    include: {
-      User: {
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          displayName: true,
+/**
+ * GET /api/workspaces/[slug]/participants
+ * Get all participants (users) in a workspace
+ * Used by workspace admins to see available users for reward issuance
+ */
+export const GET = withErrorHandling(
+  async (request: NextRequest, { params }: { params: Params }) => {
+    const { slug } = await params;
+    const { workspace } = await requireWorkspaceAdmin(slug);
+
+    const participants = await prisma.user.findMany({
+      where: {
+        WorkspaceMembership: {
+          some: {
+            workspaceId: workspace.id,
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        displayName: true,
+        addressLine1: true,
+        addressLine2: true,
+        city: true,
+        state: true,
+        zipCode: true,
+        country: true,
+      },
+      orderBy: [
+        { firstName: "asc" },
+        { lastName: "asc" },
+        { email: "asc" },
+      ],
+    });
+
+    return NextResponse.json({ participants });
+  }
+);
+
+/**
+ * POST /api/workspaces/[slug]/participants
+ * Add a single participant to the workspace
+ * Supports detailed profile data and custom invitation messages
+ */
+export const POST = withErrorHandling(
+  async (request: NextRequest, { params }: { params: Params }) => {
+    const { slug } = await params;
+    const { workspace, user } = await requireWorkspaceAdmin(slug);
+
+    // Rate limit
+    const ip = request.headers.get('x-forwarded-for') || 'local';
+    const rl = rateLimit(`participants-add:${workspace.id}:${user.dbUser.id}:${ip}`, 10, 60_000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment.', code: 'RATE_LIMITED', retryAfter: rl.retryAfter },
+        { status: 429 }
+      );
+    }
+
+    // Parse request body
+    const body = await request.json();
+    const {
+      email,
+      firstName,
+      lastName,
+      phone,
+      company,
+      jobTitle,
+      department,
+      role,
+      sendInvite,
+      customMessage
+    } = body;
+
+    // Validate required fields
+    if (!email || !firstName || !lastName) {
+      return NextResponse.json(
+        { error: 'Missing required fields: email, firstName, lastName' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email address' },
+        { status: 400 }
+      );
+    }
+
+    // Validate role
+    const participantRole = (role === 'ADMIN' || role === 'PARTICIPANT') ? role : 'PARTICIPANT';
+
+    // Check for duplicate membership
+    const existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (existingUser) {
+      const existingMembership = await prisma.workspaceMembership.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId: existingUser.id,
+            workspaceId: workspace.id
+          }
         }
+      });
+      if (existingMembership) {
+        return NextResponse.json(
+          { error: 'User is already a member of this workspace' },
+          { status: 409 }
+        );
       }
-    },
-    orderBy: { createdAt: 'asc' }
-  })
+    }
 
-  const participants = memberships.map(m => ({
-    id: m.User.id,
-    email: m.User.email,
-    role: m.role,
-  }));
-
-  return NextResponse.json({ participants });
-});
-
-export const POST = withErrorHandling(async (
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) => {
-  const { slug } = await params;
-  const { workspace, user } = await requireWorkspaceAdmin(slug);
-
-  const body = await request.json();
-  const { email, role, firstName, lastName, phone, company, jobTitle, department } = body;
-
-  // Rate limit per admin+workspace to prevent abuse
-  const ip = request.headers.get('x-forwarded-for') || 'local'
-  const rl = rateLimit(`participants-add:${workspace.id}:${user.dbUser.id}:${ip}`, 10, 60_000)
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: 'Too many invites. Please wait a moment.', code: 'RATE_LIMITED', retryAfter: rl.retryAfter },
-      { status: 429 }
-    )
-  }
-
-  // Basic validation
-  if (!email || !role) {
-    return NextResponse.json(
-      { error: 'Email and role are required' },
-      { status: 400 }
-    );
-  }
-
-  if (!firstName || !lastName) {
-    return NextResponse.json(
-      { error: 'First name and last name are required' },
-      { status: 400 }
-    );
-  }
-
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email.trim())) {
-    return NextResponse.json(
-      { error: 'Invalid email format' },
-      { status: 400 }
-    );
-  }
-
-  // Validate role
-  if (!['ADMIN', 'PARTICIPANT'].includes(role)) {
-    return NextResponse.json(
-      { error: 'Invalid role. Must be ADMIN or PARTICIPANT' },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const lowerEmail = email.trim().toLowerCase()
-
-    const result = await prisma.$transaction(async (tx) => {
-      const existingByEmail = await tx.user.findUnique({ where: { email: lowerEmail } })
-
-      const userRecord = existingByEmail || await tx.user.create({
-        data: {
-          email: lowerEmail,
-          role,
-          isPending: true,
+    // Create user and membership in transaction
+    const { participant, invite } = await prisma.$transaction(async (tx) => {
+      // Create or get user
+      const participant = await tx.user.upsert({
+        where: { email: email.toLowerCase() },
+        create: {
+          email: email.toLowerCase(),
           firstName,
           lastName,
           phone: phone || null,
           company: company || null,
           jobTitle: jobTitle || null,
           department: department || null,
-        } as any,
-      })
+          isPending: true
+        },
+        update: {
+          // Update profile data if user exists but not in this workspace
+          firstName: firstName || undefined,
+          lastName: lastName || undefined,
+          phone: phone || undefined,
+          company: company || undefined,
+          jobTitle: jobTitle || undefined,
+          department: department || undefined,
+        }
+      });
 
-      const membership = await tx.workspaceMembership.findUnique({
-        where: { userId_workspaceId: { userId: userRecord.id, workspaceId: workspace.id } }
-      })
-      if (!membership) {
-        await tx.workspaceMembership.create({
-          data: {
-            userId: userRecord.id,
-            workspaceId: workspace.id,
-            role,
-            isPrimary: false
-          }
-        })
-      }
+      // Create workspace membership
+      await tx.workspaceMembership.create({
+        data: {
+          userId: participant.id,
+          workspaceId: workspace.id,
+          role: participantRole,
+          isPrimary: false
+        }
+      });
 
-      const invite = await createInviteCode({ role: role, maxUses: 1, targetEmail: lowerEmail }, workspace.id, user.dbUser.id)
+      // Generate invite code
+      const inviteEmail = email.toLowerCase();
+      console.log('[PARTICIPANT ADD] Creating invite:', {
+        participantEmail: participant.email,
+        targetEmail: inviteEmail,
+        role: participantRole,
+        workspaceId: workspace.id
+      });
 
-      return { userRecord, invite }
-    })
+      const invite = await createInviteCode({
+        role: participantRole,
+        maxUses: 1,
+        targetEmail: inviteEmail
+      }, workspace.id, user.dbUser.id);
 
-    // Build base URL that works in local/preview/prod
-    const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
-    const host = request.headers.get('host') || process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
-    const baseUrl = `${proto}://${host}`
-    const inviteUrl = `${baseUrl}/invite/${result.invite.code}`
+      console.log('[PARTICIPANT ADD] Invite created:', {
+        code: invite.code,
+        targetEmail: (invite as any).targetEmail,
+        expiresAt: invite.expiresAt
+      });
 
-    // Send email (best-effort)
-    try {
+      return { participant, invite };
+    });
+
+    // Send invitation email if requested (default true)
+    if (sendInvite !== false) {
+      const proto = request.headers.get('x-forwarded-proto') || (process.env.NODE_ENV === 'production' ? 'https' : 'http');
+      const host = request.headers.get('host') || process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000';
+      const inviteUrl = `${proto}://${host}/invite/${invite.code}`;
+
       const html = renderInviteEmail({
         workspaceName: workspace.name,
         inviterEmail: user.dbUser.email,
         inviterFirstName: user.dbUser.firstName,
         inviterLastName: user.dbUser.lastName,
         inviterDisplayName: user.dbUser.displayName,
-        role,
+        role: participantRole,
         inviteUrl,
-        expiresAt: result.invite.expiresAt,
-        challengeTitle: null
-      })
+        expiresAt: invite.expiresAt,
+        challengeTitle: null,
+        customMessage: customMessage || null
+      });
+
       await sendInviteEmail({
-        to: lowerEmail,
+        to: email.toLowerCase(),
         subject: `You're invited to join ${workspace.name}`,
         html
-      })
+      });
+
       await logActivityEvent({
         workspaceId: workspace.id,
         challengeId: null,
         actorUserId: user.dbUser.id,
         type: 'INVITE_SENT',
-        metadata: { inviteCode: result.invite.code, recipients: [lowerEmail], via: 'email' }
-      })
-    } catch (e) {
-      console.error('Failed to send invite email:', e)
+        metadata: {
+          inviteCode: invite.code,
+          recipients: [email.toLowerCase()],
+          via: 'email'
+        }
+      });
     }
 
-    return NextResponse.json(
-      {
-        participant: {
-          id: result.userRecord.id,
-          email: result.userRecord.email,
-          workspaceId: workspace.id,
-        },
-        invite: { code: result.invite.code, url: inviteUrl }
+    // Return success response
+    return NextResponse.json({
+      participant: {
+        id: participant.id,
+        email: participant.email,
+        firstName: participant.firstName,
+        lastName: participant.lastName,
+        phone: participant.phone,
+        company: participant.company,
+        jobTitle: participant.jobTitle,
+        department: participant.department,
+        role: participantRole
       },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Error creating user:', error);
-    return NextResponse.json(
-      { error: 'Failed to create user' },
-      { status: 500 }
-    );
+      inviteCode: sendInvite !== false ? invite.code : undefined,
+      inviteUrl: sendInvite !== false ? `${request.headers.get('x-forwarded-proto') || 'http'}://${request.headers.get('host') || 'localhost:3000'}/invite/${invite.code}` : undefined
+    });
   }
-});
-
-// TODO: Create separate activity-submissions API route
+);

@@ -49,7 +49,7 @@ export default function CreateWorkspaceDialog({
       <DialogTrigger asChild>
         <Button 
           variant="default" 
-          className="bg-coral-500 hover:bg-coral-600 text-white font-medium focus:ring-2 focus:ring-coral-500 focus:ring-offset-2"
+          className="bg-gray-900 hover:bg-gray-800 text-white font-medium focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
           aria-label="Create a new workspace"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -59,7 +59,7 @@ export default function CreateWorkspaceDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5 text-coral-500" />
+            <Building className="h-5 w-5 text-gray-900" />
             Create New Workspace
           </DialogTitle>
           <DialogDescription>
@@ -103,7 +103,7 @@ export default function CreateWorkspaceDialog({
             <Button 
               type="submit" 
               disabled={loading}
-              className="bg-coral-500 hover:bg-coral-600"
+              className="bg-gray-900 hover:bg-gray-800"
             >
               <Building className="h-4 w-4 mr-2" />
               {loading ? "Creating..." : "Create Workspace"}

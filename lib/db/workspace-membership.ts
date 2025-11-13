@@ -145,15 +145,17 @@ export async function hasWorkspaceAccess(
 }
 
 /**
- * Check if a user is the owner of a workspace (primary admin)
+ * Check if a user is the owner of a workspace
+ * Note: isOwner determines workspace ownership (who created/owns the workspace)
+ * This is different from isPrimary (user's default workspace preference)
  */
 export async function isWorkspaceOwner(
-  userId: string, 
+  userId: string,
   workspaceId: string
 ): Promise<boolean> {
   try {
     const membership = await getMembership(userId, workspaceId)
-    return membership?.role === 'ADMIN' && membership?.isPrimary === true
+    return membership?.role === 'ADMIN' && membership?.isOwner === true
   } catch (error) {
     console.error('Error checking workspace ownership:', error)
     return false
@@ -362,17 +364,17 @@ export async function getWorkspaceMembershipCount(workspaceId: string): Promise<
 }
 
 /**
- * Ensure a workspace has a primary admin (owner)
- * Used for migration from ownerId system to membership-based ownership
+ * Ensure a workspace has an owner
+ * Used for migration or initialization to ensure each workspace has exactly one owner
  */
 export async function ensureWorkspaceOwnership(workspaceId: string): Promise<boolean> {
   try {
-    // Check if workspace already has a primary admin (owner)
+    // Check if workspace already has an owner
     const existingOwner = await prisma.workspaceMembership.findFirst({
       where: {
         workspaceId,
         role: 'ADMIN',
-        isPrimary: true
+        isOwner: true
       }
     })
 
@@ -380,21 +382,34 @@ export async function ensureWorkspaceOwnership(workspaceId: string): Promise<boo
       return true // Already has an owner
     }
 
-    // Find the first admin to make primary
-    const firstAdmin = await prisma.workspaceMembership.findFirst({
+    // Find the first non-platform-super-admin to make owner
+    const firstRegularAdmin = await prisma.workspaceMembership.findFirst({
       where: {
         workspaceId,
         role: 'ADMIN'
+      },
+      include: {
+        User: true
       },
       orderBy: {
         joinedAt: 'asc' // Oldest admin first
       }
     })
 
-    if (firstAdmin) {
-      // Make the first admin the primary owner
-      await setPrimaryMembership(firstAdmin.userId, workspaceId)
-      console.log(`✓ Set primary ownership for workspace ${workspaceId} to user ${firstAdmin.userId}`)
+    if (firstRegularAdmin) {
+      // Clear any existing isOwner flags (safety check)
+      await prisma.workspaceMembership.updateMany({
+        where: { workspaceId },
+        data: { isOwner: false }
+      })
+
+      // Set this admin as owner
+      await prisma.workspaceMembership.update({
+        where: { id: firstRegularAdmin.id },
+        data: { isOwner: true }
+      })
+
+      console.log(`✓ Set workspace owner for workspace ${workspaceId} to user ${firstRegularAdmin.userId}`)
       return true
     }
 
@@ -408,7 +423,7 @@ export async function ensureWorkspaceOwnership(workspaceId: string): Promise<boo
 
 /**
  * Transfer workspace ownership from one admin to another
- * Only the current primary admin can transfer ownership
+ * Only the current workspace owner can transfer ownership
  */
 export async function transferWorkspaceOwnership(
   workspaceId: string,
@@ -416,7 +431,7 @@ export async function transferWorkspaceOwnership(
   toUserId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Verify fromUser is current primary owner
+    // Verify fromUser is current workspace owner
     const currentOwner = await prisma.workspaceMembership.findUnique({
       where: {
         userId_workspaceId: {
@@ -426,7 +441,7 @@ export async function transferWorkspaceOwnership(
       }
     })
 
-    if (!currentOwner || currentOwner.role !== 'ADMIN' || !currentOwner.isPrimary) {
+    if (!currentOwner || currentOwner.role !== 'ADMIN' || !currentOwner.isOwner) {
       return { success: false, error: 'Only the workspace owner can transfer ownership' }
     }
 
@@ -450,7 +465,7 @@ export async function transferWorkspaceOwnership(
 
     // Perform atomic transfer
     await prisma.$transaction([
-      // Remove primary from current owner
+      // Remove owner flag from current owner
       prisma.workspaceMembership.update({
         where: {
           userId_workspaceId: {
@@ -458,9 +473,9 @@ export async function transferWorkspaceOwnership(
             workspaceId
           }
         },
-        data: { isPrimary: false }
+        data: { isOwner: false }
       }),
-      // Set new owner as primary
+      // Set new user as owner
       prisma.workspaceMembership.update({
         where: {
           userId_workspaceId: {
@@ -468,7 +483,7 @@ export async function transferWorkspaceOwnership(
             workspaceId
           }
         },
-        data: { isPrimary: true }
+        data: { isOwner: true }
       })
     ])
 

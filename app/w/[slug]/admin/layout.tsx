@@ -10,6 +10,10 @@ import { getUserWorkspacesServer } from "@/app/lib/workspace-server"
 import { isPlatformSuperAdmin } from "@/lib/auth/rbac"
 import { prisma } from "@/lib/prisma"
 import { ReactNode } from "react"
+import ThemeStyleInjector from "@/components/theme/theme-style-injector"
+import { ThemeProvider } from "@/components/theme/theme-provider"
+import { isValidTheme } from "@/lib/theme/utils"
+import type { ThemeName } from "@/lib/theme/types"
 
 // Force dynamic rendering - this layout requires database access at request time
 export const dynamic = 'force-dynamic'
@@ -48,7 +52,7 @@ export default async function AdminLayout({
   const dbUser = await prisma.user.findUnique({
     where: { email: user.email! }
   })
-  const isSuperAdmin = isPlatformSuperAdmin(dbUser?.permissions, user.email!)
+  const isSuperAdmin = isPlatformSuperAdmin(dbUser)
 
   const header = (
     <DashboardHeader
@@ -66,18 +70,30 @@ export default async function AdminLayout({
   // Get all user workspaces for the provider
   const userWorkspaces = await getUserWorkspacesServer()
 
+  const themeValue: ThemeName = workspace.theme && isValidTheme(workspace.theme)
+    ? workspace.theme
+    : "bold";
+
   return (
-    <WorkspaceProvider 
-      initialWorkspace={workspace}
-      initialRole="ADMIN"
-      initialWorkspaces={userWorkspaces}
-    >
-      <DashboardLayout
-        header={header}
-        sidebar={sidebar}
+    <>
+      <ThemeStyleInjector theme={themeValue} />
+      <ThemeProvider
+        initialTheme={themeValue}
+        workspaceSlug={slug}
       >
-        {children}
-      </DashboardLayout>
-    </WorkspaceProvider>
+        <WorkspaceProvider
+          initialWorkspace={workspace}
+          initialRole="ADMIN"
+          initialWorkspaces={userWorkspaces}
+        >
+          <DashboardLayout
+            header={header}
+            sidebar={sidebar}
+          >
+            {children}
+          </DashboardLayout>
+        </WorkspaceProvider>
+      </ThemeProvider>
+    </>
   )
 }
