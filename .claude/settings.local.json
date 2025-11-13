@@ -26,7 +26,10 @@
       "Bash(docker exec:*)",
       "mcp__zen__debug",
       "mcp__serena__search_for_pattern",
-      "mcp__zen__planner"
+      "mcp__zen__planner",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_type"
     ],
     "additionalDirectories": [
       "/Users/jack/Projects/changemaker-project/changemaker-1"
