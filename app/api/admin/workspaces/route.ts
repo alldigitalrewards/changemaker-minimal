@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Create invite code for admin
+      // Use adminUser.id as creator since they have ADMIN membership in the new workspace
       const invite = await createInviteCode(
         {
           role: 'ADMIN',
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
           targetEmail: lowerEmail
         },
         newWorkspace.id,
-        dbUser.id
+        adminUser.id
       );
 
       return { workspace: newWorkspace, adminUser, invite };
